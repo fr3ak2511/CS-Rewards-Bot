@@ -1,0 +1,36 @@
+name: Hub Merged Rewards
+
+on:
+  schedule:
+    - cron: "30 4 * * *"   # 10:00 AM IST
+    - cron: "30 11 * * *"  # 5:00 PM IST
+  workflow_dispatch:
+
+jobs:
+  run-merged-rewards:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium
+
+      - name: Run script and email log
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          python send_email_with_log.py hub_merged_rewards.py "Hub Merged Rewards"
