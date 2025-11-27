@@ -2,7 +2,7 @@ name: Hub Progression Rewards
 
 on:
   schedule:
-    # Runs at 6:00 AM IST (00:30 UTC)
+    # Runs at 6:00 PM IST (00:30 UTC)
     - cron: '30 0 * * *'
   workflow_dispatch:
 
@@ -41,3 +41,4 @@ jobs:
           body: file://progression_log.txt
           to: ${{ secrets.MAIL_USERNAME }}
           from: Rewards Bot
+
