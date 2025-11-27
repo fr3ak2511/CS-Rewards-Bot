@@ -2,15 +2,19 @@ name: Hub Progression Rewards
 
 on:
   schedule:
-    # Runs at 6:00 PM IST (00:30 UTC)
-    - cron: '30 0 * * *'
-  workflow_dispatch:
+    # 06:00 PM IST = 12:30 UTC
+    - cron: '30 12 * * *'
+    # 07:00 PM IST = 13:30 UTC
+    - cron: '30 13 * * *'
+  
+  workflow_dispatch: # Allows manual run
 
 jobs:
-  run-progression:
+  run-progression-script:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -18,27 +22,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Tools
+      - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Script & Save Output
-        run: python 2_hub_ProgressionProgram_rewards_updated.py > progression_log.txt
-      
-      - name: Show Output
-        if: always()
-        run: cat progression_log.txt
-
-      - name: Send Email
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: Progression Rewards Status
-          body: file://progression_log.txt
-          to: ${{ secrets.MAIL_USERNAME }}
-          from: Rewards Bot
-
+      - name: Run Progression Script
+        run: python 2_hub_ProgressionProgram_rewards_updated.py
