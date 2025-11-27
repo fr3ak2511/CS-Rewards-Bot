@@ -2,7 +2,7 @@ name: Hub Merged Rewards
 
 on:
   schedule:
-    # Runs at 5:30 AM IST (00:00 UTC)
+    # Runs at 10:00 AM IST (00:00 UTC)
     - cron: '0 0 * * *'
   workflow_dispatch: # Allows manual run button
 
@@ -43,3 +43,4 @@ jobs:
           body: file://output.txt
           to: ${{ secrets.MAIL_USERNAME }} # Sends to yourself
           from: Rewards Bot
+
