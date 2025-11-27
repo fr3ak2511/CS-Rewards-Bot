@@ -1,0 +1,45 @@
+name: Hub Merged Rewards
+
+on:
+  schedule:
+    # Runs at 5:30 AM IST (00:00 UTC)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual run button
+
+jobs:
+  run-merged:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Tools
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Script & Save Output
+        # We run the script and save what it prints to "output.txt"
+        run: python hub_merged_rewards_updated.py > output.txt
+      
+      - name: Show Output (for logs)
+        if: always()
+        run: cat output.txt
+
+      - name: Send Email
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: Daily Rewards Status
+          # Read the body from the file we saved
+          body: file://output.txt
+          to: ${{ secrets.MAIL_USERNAME }} # Sends to yourself
+          from: Rewards Bot
