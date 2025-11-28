@@ -592,8 +592,11 @@ def main():
     ]
     all_results = []
 
+def main():
     start_time = time.time()
+    batches = create_batches()  # assuming your batching logic exists
 
+    all_results = []
     for batch_num, batch in enumerate(batches, 1):
         batch_results = process_batch(batch, batch_num)
         all_results.extend(batch_results)
@@ -606,15 +609,33 @@ def main():
     total_monthly = sum(r["monthly_rewards"] for r in all_results)
     avg_time_per_id = total_time / total_players if total_players > 0 else 0
 
-    thread_safe_print(f"\n{'='*70}")
+    # ---- Print Summary ----
+    thread_safe_print("\n" + "-" * 70)
     thread_safe_print("PROGRESSION PROGRAM - FINAL SUMMARY")
-    thread_safe_print(f"{'='*70}")
+    thread_safe_print("-" * 70)
     thread_safe_print(f"Total Players: {total_players}")
     thread_safe_print(f"Total Successful Logins: {successful_logins}")
     thread_safe_print(f"Total Monthly Rewards Claimed: {total_monthly}")
     thread_safe_print(f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)")
     thread_safe_print(f"Avg. Time per ID: {avg_time_per_id:.1f}s")
-    thread_safe_print(f"{'='*70}")
+    thread_safe_print("-" * 70)
+
+    # ---- Write to Log File ----
+    summary_text = (
+        "\n============================\n"
+        "PROGRESSION PROGRAM SUMMARY\n"
+        "============================\n"
+        f"Total Players: {total_players}\n"
+        f"Successful Logins: {successful_logins}\n"
+        f"Total Monthly Rewards Claimed: {total_monthly}\n"
+        f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)\n"
+        f"Avg Time per ID: {avg_time_per_id:.1f}s\n"
+    )
+
+    with open("workflow_summary.log", "w", encoding="utf-8") as f:
+        f.write(summary_text)
+
+    print(summary_text)
 
 
 if __name__ == "__main__":
