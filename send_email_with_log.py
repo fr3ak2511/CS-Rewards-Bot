@@ -1,81 +1,42 @@
-import os
-import sys
-import subprocess
 import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+import os
 
+def send_email_with_log():
+    smtp_server = os.environ["SMTP_SERVER"]
+    smtp_port = int(os.environ.get("SMTP_PORT", 587))
+    username = os.environ["SMTP_USERNAME"]
+    password = os.environ["SMTP_PASSWORD"]
+    sender = os.environ["SMTP_FROM"]
+    recipient = os.environ["SMTP_TO"]
 
-def run_script_and_capture_output(script_path: str):
-    """Run the target script and capture stdout/stderr as text."""
-    result = subprocess.run(
-        [sys.executable, script_path],
-        capture_output=True,
-        text=True,
-    )
-    stdout = result.stdout or ""
-    stderr = result.stderr or ""
+    subject = "Hub Rewards Execution Log"
+    body = "Attached is the log file from the latest GitHub Action run."
 
-    full_output = stdout
-    if stderr.strip():
-        full_output += "\n\n--- STDERR ---\n" + stderr
+    message = MIMEMultipart()
+    message["From"] = sender
+    message["To"] = recipient
+    message["Subject"] = subject
+    message.attach(MIMEText(body, "plain"))
 
-    return result.returncode, full_output
+    # Attach log file if present
+    if os.path.exists("action.log"):
+        with open("action.log", "rb") as f:
+            part = MIMEApplication(f.read(), Name="action.log")
+            part['Content-Disposition'] = 'attachment; filename="action.log"'
+            message.attach(part)
 
-
-def send_email(subject: str, body: str):
-    smtp_host = os.environ["SMTP_HOST"]
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    smtp_user = os.environ["SMTP_USER"]
-    smtp_pass = os.environ["SMTP_PASS"]
-    email_from = os.environ["EMAIL_FROM"]
-    email_to = os.environ["EMAIL_TO"]
-
-    msg = MIMEMultipart()
-    msg["From"] = email_from
-    msg["To"] = email_to
-    msg["Subject"] = subject
-
-    msg.attach(MIMEText(body, "plain"))
-
+    # Secure connection
     context = ssl.create_default_context()
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.ehlo()
         server.starttls(context=context)
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-
-
-def main():
-    if len(sys.argv) < 3:
-        print("Usage: python send_email_with_log.py <script_name.py> <job_label>")
-        sys.exit(1)
-
-    script_name = sys.argv[1]
-    job_label = sys.argv[2]
-
-    return_code, output = run_script_and_capture_output(script_name)
-
-    status = "SUCCESS" if return_code == 0 else "FAILED"
-    subject = f"[{job_label}] {status}"
-    body = (
-        f"Job: {job_label}\n"
-        f"Exit code: {return_code}\n\n"
-        f"--- OUTPUT START ---\n{output}\n--- OUTPUT END ---"
-    )
-
-    # Print to GitHub Actions log
-    print(body)
-
-    # Email the log
-    try:
-        send_email(subject, body)
-        print("Email sent")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
-
-    sys.exit(return_code)
-
+        server.ehlo()
+        server.login(username, password)
+        server.send_message(message)
 
 if __name__ == "__main__":
-    main()
+    send_email_with_log()
