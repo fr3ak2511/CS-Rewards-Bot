@@ -2,28 +2,23 @@ name: Hub Merged Rewards
 
 on:
   schedule:
-    # IST = UTC +5:30
-    # 10:00 AM IST = 04:30 UTC
-    - cron: "30 4 * * *"
-    # 11:00 AM IST = 05:30 UTC
-    - cron: "30 5 * * *"
-    # 05:00 PM IST = 11:30 UTC
-    - cron: "30 11 * * *"
-    # 06:00 PM IST = 12:30 UTC
-    - cron: "30 12 * * *"
-  workflow_dispatch:  # Allows manual run
+    - cron: "30 4 * * *"   # 10:00 AM IST
+    - cron: "30 5 * * *"   # 11:00 AM IST
+    - cron: "30 11 * * *"  # 5:00 PM IST
+    - cron: "30 12 * * *"  # 6:00 PM IST
+  workflow_dispatch:
 
 jobs:
   run-merged-script:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
@@ -33,41 +28,12 @@ jobs:
       - name: Run Merged Rewards Script
         run: python g_hub_merged_rewards_updated.py
 
-      - name: Send success email
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_HOST }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "✅ Hub Merged Rewards Job Successful"
-          to: ${{ secrets.SMTP_TO }}
-          from: ${{ secrets.SMTP_FROM }}
-          content_type: text/plain
-          body: |
-            The **Hub Merged Rewards** script ran successfully.
-            Repository: ${{ github.repository }}
-            Commit: ${{ github.sha }}
-            Workflow: ${{ github.workflow }}
-            Run #: ${{ github.run_number }}
-
-      - name: Send failure email
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: ${{ secrets.SMTP_HOST }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "❌ Hub Merged Rewards Job Failed"
-          to: ${{ secrets.SMTP_TO }}
-          from: ${{ secrets.SMTP_FROM }}
-          content_type: text/plain
-          body: |
-            The **Hub Merged Rewards** script failed.
-            Repository: ${{ github.repository }}
-            Commit: ${{ github.sha }}
-            Workflow: ${{ github.workflow }}
-            Run #: ${{ github.run_number }}
-            Please check the Actions logs for details.
+      - name: Send Email with Log
+        run: python send_email_with_log.py
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO: ${{ secrets.SMTP_TO }}
