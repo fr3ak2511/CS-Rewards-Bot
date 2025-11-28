@@ -1357,54 +1357,66 @@ def main():
         )
 
     if failed_players:
-        thread_safe_print(
-            f"Players that required retry: {len(failed_players)}"
-        )
+def main():
+    start_time = time.time()
+    all_results = process_all_hubs()  # assuming this exists in your logic
 
-    status_counts = {}
-    for result in all_results:
-        status = result["status"]
-        status_counts[status] = status_counts.get(status, 0) + 1
+    total_time = time.time() - start_time
+    total_players = len(all_results)
+    total_rewards = sum(r.get("rewards_claimed", 0) for r in all_results)
+    success_count = sum(1 for r in all_results if r.get("status") == "Success")
+    failed_count = total_players - success_count
+    avg_time_per_id = total_time / total_players if total_players > 0 else 0
 
-    thread_safe_print("\nStatus Breakdown:")
-    for status, count in status_counts.items():
-        thread_safe_print(f" {status}: {count}")
-
-    if final_failed:
-        thread_safe_print(
-            f"\nFinal Failed Player IDs: {', '.join(final_failed)}"
-        )
-    if final_no_claims:
-        thread_safe_print(
-            f"No Claims Available Player IDs: {', '.join(final_no_claims)}"
-        )
-
-    # Store Module Timer Details - ONLY 3rd CTA if <= 1 hour
-    thread_safe_print("\n" + "=" * 60)
-    thread_safe_print("STORE 3RD CTA TIMERS (<= 1 HOUR)")
-    thread_safe_print("=" * 60)
-
+    # ---- Identify urgent players (already in your code) ----
     urgent_players = []
     for result in all_results:
         if "store_timer" in result and result["store_timer"] is not None:
             urgent_players.append(
-                {
-                    "player_id": result["player_id"],
-                    "timer": result["store_timer"],
-                }
+                {"player_id": result["player_id"], "timer": result["store_timer"]}
             )
 
+    thread_safe_print("\n" + "-" * 70)
+    thread_safe_print("MERGED HUB REWARDS - FINAL SUMMARY")
+    thread_safe_print("-" * 70)
+    thread_safe_print(f"Total Players Processed: {total_players}")
+    thread_safe_print(f"Successful Rewards: {success_count}")
+    thread_safe_print(f"Failed Rewards: {failed_count}")
+    thread_safe_print(f"Total Rewards Claimed: {total_rewards}")
+    thread_safe_print(f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)")
+    thread_safe_print(f"Average Time per Player: {avg_time_per_id:.1f}s")
+
     if urgent_players:
+        thread_safe_print(f"\n⚠️  {len(urgent_players)} player(s) have 3rd CTA available within 1 hour:")
         for player in urgent_players:
-            thread_safe_print(f"Player ID: {player['player_id']}")
-            thread_safe_print(f"3rd CTA Timer: {player['timer']}")
-            thread_safe_print("-" * 40)
-        thread_safe_print(
-            f"\n⚠️ {len(urgent_players)} player(s) have 3rd CTA available within 1 hour!"
-        )
+            thread_safe_print(f"Player ID: {player['player_id']} | 3rd CTA Timer: {player['timer']}")
     else:
-        thread_safe_print("No players have 3rd CTA available within 1 hour")
-    thread_safe_print("=" * 60)
+        thread_safe_print("No players have 3rd CTA within 1 hour.")
+
+    thread_safe_print("-" * 70)
+
+    # ---- Write to Log File ----
+    summary_text = (
+        "\n============================\n"
+        "MERGED HUB REWARDS SUMMARY\n"
+        "============================\n"
+        f"Total Players Processed: {total_players}\n"
+        f"Successful Rewards: {success_count}\n"
+        f"Failed Rewards: {failed_count}\n"
+        f"Total Rewards Claimed: {total_rewards}\n"
+        f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)\n"
+        f"Average Time per Player: {avg_time_per_id:.1f}s\n"
+    )
+
+    if urgent_players:
+        summary_text += "\nPlayers with 3rd CTA < 1hr:\n"
+        for player in urgent_players:
+            summary_text += f"- {player['player_id']}: {player['timer']}\n"
+
+    with open("workflow_summary.log", "w", encoding="utf-8") as f:
+        f.write(summary_text)
+
+    print(summary_text)
 
 
 if __name__ == "__main__":
