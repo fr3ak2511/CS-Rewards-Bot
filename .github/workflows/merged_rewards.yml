@@ -2,8 +2,7 @@ name: Hub Merged Rewards
 
 on:
   schedule:
-    # Runs every hour
-    - cron: '0 * * * *'
+    - cron: '0 * * * *'   # every hour at minute 0 (UTC)
   workflow_dispatch:
 
 jobs:
@@ -26,17 +25,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Merged Rewards Script
-        run: |
-          python g_hub_merged_rewards_updated.py > run_output.log 2>&1
-
-      - name: Send Email Summary
         env:
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          SMTP_TO: ${{ secrets.SMTP_TO }}
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_PORT:   ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM:     ${{ secrets.SMTP_FROM }}
+          SMTP_TO:       ${{ secrets.SMTP_TO }}
         run: |
-          echo "Sending email summary..."
-          python send_email_with_log.py "Hub Merged Rewards Summary" run_output.log
+          python g_hub_merged_rewards_updated.py
