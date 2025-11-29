@@ -2,7 +2,6 @@ import csv
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,8 +23,8 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    service = Service(r"C:\Users\DELL\Desktop\chromedriver.exe")
-    driver = webdriver.Chrome(service=service, options=options)
+    # Use preinstalled Chrome/Chromedriver on GitHub runner
+    driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(25)
     return driver
 
@@ -41,19 +40,18 @@ def automate_player(player_id, thread_id):
     }
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
-        # login
         login_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Login') or contains(text(),'Log in')]")
         if not login_btns:
             thread_safe_print(f"[{player_id}] No login button")
             return result
+
         login_btns[0].click()
-        inp = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
+        inp = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
         inp.send_keys(player_id)
         inp.send_keys(Keys.ENTER)
         time.sleep(2)
         result["login_successful"] = True
 
-        # claim rewards
         claim_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Claim')]")
         claimed = 0
         for btn in claim_btns:
@@ -81,13 +79,15 @@ def process_batch(players, batch_num):
     return results
 
 def main():
+    csv_path = os.path.join(os.path.dirname(__file__), "players.csv")
     players = []
-    with open(r"C:\Users\DELL\Desktop\players.csv", newline="") as f:
+    with open(csv_path, newline="") as f:
         reader = csv.reader(f)
         for row in reader:
             pid = row[0].strip()
             if pid:
                 players.append(pid)
+
     thread_safe_print(f"Loaded {len(players)} players")
 
     start = time.time()
