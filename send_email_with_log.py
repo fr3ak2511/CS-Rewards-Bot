@@ -1,57 +1,39 @@
 import smtplib
-import os
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
+import subprocess
+import os
 
-def send_email_with_log():
-    smtp_server = os.getenv("SMTP_SERVER")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_username = os.getenv("SMTP_USERNAME")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    sender = os.getenv("SMTP_FROM")
-    recipient = os.getenv("SMTP_TO")
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM = os.getenv("SMTP_FROM")
+SMTP_TO = os.getenv("SMTP_TO") or SMTP_FROM
 
-    subject = "Hub Rewards Execution Log"
+def run_script_and_capture_output(script_path):
+    process = subprocess.Popen(
+        ["python", script_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    output, _ = process.communicate()
+    return output
 
-    # --- Load the latest workflow log or summary file if exists ---
-    log_file_path = "workflow_summary.log"  # You can change this to match your log filename
-
-    # Case 1: log file exists → attach it and read for email body
-    if os.path.exists(log_file_path):
-        with open(log_file_path, "r", encoding="utf-8") as f:
-            log_content = f.read()
-        body_text = f"Attached is the log file from the latest GitHub Action run.\n\n---\n{log_content[-3000:]}"  # last 3k chars
-        attach_log = True
-    else:
-        # Fallback if no file found
-        body_text = "GitHub Action completed successfully, but no log file was found."
-        attach_log = False
-
-    # --- Compose Email ---
-    msg = MIMEMultipart()
-    msg["From"] = sender
-    msg["To"] = recipient
+def send_email(subject, body):
+    if not SMTP_SERVER:
+        print("SMTP not configured; printing log below instead.")
+        print(body)
+        return
+    msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
-
-    msg.attach(MIMEText(body_text, "plain"))
-
-    # --- Attach Log File (if present) ---
-    if attach_log:
-        with open(log_file_path, "rb") as f:
-            attachment = MIMEApplication(f.read(), Name=os.path.basename(log_file_path))
-        attachment["Content-Disposition"] = f'attachment; filename="{os.path.basename(log_file_path)}"'
-        msg.attach(attachment)
-
-    # --- Send Email via Gmail ---
-    try:
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.starttls()
-            server.login(smtp_username, smtp_password)
-            server.sendmail(sender, recipient, msg.as_string())
-        print("Email sent successfully with log attachment.")
-    except Exception as e:
-        print(f"Error sending email: {e}")
+    msg["From"] = SMTP_FROM
+    msg["To"] = SMTP_TO
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
 
 if __name__ == "__main__":
-    send_email_with_log()
+    script_output = run_script_and_capture_output("g_hub_merged_rewards_updated.py")
+    send_email("Hub Merged Rewards Summary", script_output)
