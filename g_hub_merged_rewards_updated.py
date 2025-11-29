@@ -1,109 +1,140 @@
-import time
 import csv
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 import threading
-import random
 import os
 
 print_lock = threading.Lock()
 
-def thread_safe_print(*args, **kwargs):
+def thread_safe_print(msg):
     with print_lock:
-        print(*args, **kwargs)
+        print(msg)
 
-def read_players_from_csv(file_path="players.csv"):
-    players = []
-    if not os.path.exists(file_path):
-        thread_safe_print(f"⚠️ File not found: {file_path}")
-        return players
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                players.append(line)
-    # remove duplicates, preserve order
-    seen = set()
-    players = [p for p in players if not (p in seen or seen.add(p))]
-    return players
+def create_driver():
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    service = Service(r"C:\Users\DELL\Desktop\chromedriver.exe")
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(25)
+    return driver
 
-def process_all_hubs(players):
+def automate_player(player_id, thread_id):
+    from selenium.webdriver.common.keys import Keys
+    driver = create_driver()
+    wait = WebDriverWait(driver, 12)
+    result = {
+        "player_id": player_id,
+        "login_successful": False,
+        "daily_claims": 0,
+        "store_claims": 0,
+        "store_timer": None,
+        "status": "error",
+    }
+    try:
+        driver.get("https://hub.vertigogames.co/daily-rewards")
+        # login
+        login_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Login') or contains(text(),'Log in')]")
+        if not login_btns:
+            thread_safe_print(f"[{player_id}] No login button")
+            return result
+        login_btns[0].click()
+        inp = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
+        inp.send_keys(player_id)
+        inp.send_keys(Keys.ENTER)
+        time.sleep(2)
+        result["login_successful"] = True
+
+        # daily rewards
+        claim_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Claim')]")
+        claimed = 0
+        for btn in claim_btns:
+            try:
+                if btn.is_displayed() and btn.is_enabled():
+                    btn.click()
+                    claimed += 1
+                    time.sleep(1)
+            except Exception:
+                continue
+        result["daily_claims"] = claimed
+
+        # store rewards
+        driver.get("https://hub.vertigogames.co/store")
+        time.sleep(2)
+        store_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Claim')]")
+        s_claimed = 0
+        for btn in store_btns:
+            try:
+                if btn.is_displayed() and btn.is_enabled():
+                    btn.click()
+                    s_claimed += 1
+                    time.sleep(1)
+            except Exception:
+                continue
+        result["store_claims"] = s_claimed
+
+        result["status"] = "success" if (claimed + s_claimed) > 0 else "no_claims"
+    except Exception as e:
+        thread_safe_print(f"[{player_id}] Error: {e}")
+    finally:
+        driver.quit()
+    return result
+
+def process_batch(players, batch_num):
     results = []
-    for player in players:
-        time.sleep(random.uniform(0.05, 0.1))
-        result = {
-            "player_id": player,
-            "status": random.choice(["Success", "Fail", "Success"]),
-            "rewards_claimed": random.randint(0, 2),
-            "store_timer": random.choice([None, "00:45", "01:15", None]),
-        }
-        results.append(result)
+    with ThreadPoolExecutor(max_workers=len(players)) as exe:
+        future_to_id = {exe.submit(automate_player, pid, batch_num): pid for pid in players}
+        for fut in as_completed(future_to_id):
+            results.append(fut.result())
     return results
 
 def main():
-    start_time = time.time()
+    players = []
+    with open(r"C:\Users\DELL\Desktop\players.csv", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            pid = row[0].strip()
+            if pid:
+                players.append(pid)
+    thread_safe_print(f"Loaded {len(players)} players")
 
-    # --- Load Players ---
-    players = read_players_from_csv("players.csv")
-    scheduled_player_count = len(players)
-    if scheduled_player_count == 0:
-        thread_safe_print("⚠️ No players found in players.csv")
-        return
+    start = time.time()
+    batch_size = 2
+    all_results = []
+    for i in range(0, len(players), batch_size):
+        batch = players[i:i+batch_size]
+        all_results.extend(process_batch(batch, i//batch_size + 1))
+        time.sleep(0.5)
 
-    all_results = process_all_hubs(players)
-    total_time = time.time() - start_time
+    total_time = time.time() - start
+    successes = sum(1 for r in all_results if r["login_successful"])
+    total_daily = sum(r["daily_claims"] for r in all_results)
+    total_store = sum(r["store_claims"] for r in all_results)
 
-    total_players = scheduled_player_count
-    total_rewards = sum(r.get("rewards_claimed", 0) for r in all_results)
-    success_count = sum(1 for r in all_results if r.get("status") == "Success")
-    failed_count = total_players - success_count
-    avg_time_per_id = total_time / total_players if total_players > 0 else 0
-
-    urgent_players = [
-        {"player_id": r["player_id"], "timer": r["store_timer"]}
-        for r in all_results
-        if r.get("store_timer") and r["store_timer"] <= "01:00"
-    ]
-
-    # --- Summary ---
-    thread_safe_print("\n" + "-" * 70)
-    thread_safe_print("MERGED HUB REWARDS - FINAL SUMMARY")
-    thread_safe_print("-" * 70)
-    thread_safe_print(f"Total Players Processed: {total_players}")
-    thread_safe_print(f"Successful Rewards: {success_count}")
-    thread_safe_print(f"Failed Rewards: {failed_count}")
-    thread_safe_print(f"Total Rewards Claimed: {total_rewards}")
-    thread_safe_print(f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)")
-    thread_safe_print(f"Average Time per Player: {avg_time_per_id:.1f}s")
-
-    if urgent_players:
-        thread_safe_print(f"\n⚠️  {len(urgent_players)} player(s) have 3rd CTA available within 1 hour:")
-        for player in urgent_players:
-            thread_safe_print(f"Player ID: {player['player_id']} | 3rd CTA Timer: {player['timer']}")
-    else:
-        thread_safe_print("No players have 3rd CTA within 1 hour.")
-
-    thread_safe_print("-" * 70)
-
-    summary_text = (
-        "\n============================\n"
-        "MERGED HUB REWARDS SUMMARY\n"
-        "============================\n"
-        f"Total Players Processed: {total_players}\n"
-        f"Successful Rewards: {success_count}\n"
-        f"Failed Rewards: {failed_count}\n"
-        f"Total Rewards Claimed: {total_rewards}\n"
-        f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)\n"
-        f"Average Time per Player: {avg_time_per_id:.1f}s\n"
+    summary = (
+        f"\n{'='*60}\nMERGED REWARDS SUMMARY\n{'='*60}\n"
+        f"Total Players: {len(players)}\n"
+        f"Successful Logins: {successes}\n"
+        f"Daily Rewards Claimed: {total_daily}\n"
+        f"Store Rewards Claimed: {total_store}\n"
+        f"Total Rewards: {total_daily + total_store}\n"
+        f"Execution Time: {total_time:.1f}s ({total_time/60:.1f} min)\n"
+        f"{'='*60}\n"
     )
-
-    if urgent_players:
-        summary_text += "\nPlayers with 3rd CTA < 1hr:\n"
-        for player in urgent_players:
-            summary_text += f"- {player['player_id']}: {player['timer']}\n"
+    thread_safe_print(summary)
 
     with open("workflow_summary.log", "w", encoding="utf-8") as f:
-        f.write(summary_text)
-
-    print(summary_text)
+        f.write(summary)
 
 if __name__ == "__main__":
     main()
