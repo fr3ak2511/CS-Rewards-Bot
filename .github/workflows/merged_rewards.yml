@@ -2,12 +2,14 @@ name: Hub Merged Rewards
 
 on:
   schedule:
-    - cron: "0 * * * *"   # runs every hour
+    # Runs every hour
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
   run-merged-script:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     steps:
       - name: Checkout code
@@ -21,34 +23,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install selenium
+          pip install -r requirements.txt
 
       - name: Run Merged Rewards Script
-        id: runscript
         run: |
-          python g_hub_merged_rewards_updated.py > merged_output.log
-          echo "summary<<EOF" >> $GITHUB_OUTPUT
-          cat workflow_summary.log >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          python g_hub_merged_rewards_updated.py > run_output.log 2>&1
 
-      - name: Send Email with Summary in Body
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "Hub Merged Rewards Summary"
-          to: ${{ secrets.SMTP_TO }}
-          from: ${{ secrets.SMTP_FROM }}
-          body: |
-            Hello,
-
-            Here is the latest automated Hub Merged Rewards execution summary:
-
-            ---
-            ${{ steps.runscript.outputs.summary }}
-            ---
-
-            Regards,
-            GitHub Automation Bot
+      - name: Send Email Summary
+        env:
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO: ${{ secrets.SMTP_TO }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          echo "Sending email summary..."
+          python send_email_with_log.py "Hub Merged Rewards Summary" run_output.log
