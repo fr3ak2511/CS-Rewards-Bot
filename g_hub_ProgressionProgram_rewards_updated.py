@@ -1,105 +1,119 @@
-import time
 import csv
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 import threading
-import random
 import os
 
 print_lock = threading.Lock()
 
-def thread_safe_print(*args, **kwargs):
+def thread_safe_print(msg):
     with print_lock:
-        print(*args, **kwargs)
+        print(msg)
 
-def read_players_from_csv(file_path="players.csv"):
-    players = []
-    if not os.path.exists(file_path):
-        thread_safe_print(f"⚠️ File not found: {file_path}")
-        return players
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                players.append(line)
-    # remove duplicates, preserve order
-    seen = set()
-    players = [p for p in players if not (p in seen or seen.add(p))]
-    return players
+def create_driver():
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    service = Service(r"C:\Users\DELL\Desktop\chromedriver.exe")
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(25)
+    return driver
 
-def process_batch(batch, batch_num):
+def automate_player(player_id, thread_id):
+    from selenium.webdriver.common.keys import Keys
+    driver = create_driver()
+    wait = WebDriverWait(driver, 12)
+    result = {
+        "player_id": player_id,
+        "login_successful": False,
+        "monthly_rewards": 0,
+        "status": "error",
+    }
+    try:
+        driver.get("https://hub.vertigogames.co/progression-program")
+        # login
+        login_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Login') or contains(text(),'Log in')]")
+        if not login_btns:
+            thread_safe_print(f"[{player_id}] No login button")
+            return result
+        login_btns[0].click()
+        inp = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
+        inp.send_keys(player_id)
+        inp.send_keys(Keys.ENTER)
+        time.sleep(2)
+        result["login_successful"] = True
+
+        # claim rewards
+        claim_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Claim')]")
+        claimed = 0
+        for btn in claim_btns:
+            try:
+                if btn.is_displayed() and btn.is_enabled():
+                    btn.click()
+                    claimed += 1
+                    time.sleep(1)
+            except Exception:
+                continue
+        result["monthly_rewards"] = claimed
+        result["status"] = "success" if claimed > 0 else "no_claims"
+    except Exception as e:
+        thread_safe_print(f"[{player_id}] Error: {e}")
+    finally:
+        driver.quit()
+    return result
+
+def process_batch(players, batch_num):
     results = []
-    for player in batch:
-        time.sleep(random.uniform(0.05, 0.1))  # simulate processing time
-        result = {
-            "player_id": player,
-            "login_successful": random.choice([True, True, False]),
-            "monthly_rewards": random.randint(0, 3),
-        }
-        results.append(result)
-    thread_safe_print(f"✅ Batch {batch_num} processed ({len(batch)} players)")
+    with ThreadPoolExecutor(max_workers=len(players)) as exe:
+        future_to_id = {exe.submit(automate_player, pid, batch_num): pid for pid in players}
+        for fut in as_completed(future_to_id):
+            results.append(fut.result())
     return results
 
 def main():
-    start_time = time.time()
+    players = []
+    with open(r"C:\Users\DELL\Desktop\players.csv", newline="") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            pid = row[0].strip()
+            if pid:
+                players.append(pid)
+    thread_safe_print(f"Loaded {len(players)} players")
 
-    # --- Load Players ---
-    players = read_players_from_csv("players.csv")
-    scheduled_player_count = len(players)
-    if scheduled_player_count == 0:
-        thread_safe_print("⚠️ No players found in players.csv")
-        return
-
-    batch_size = 5
-    batches = [players[i:i + batch_size] for i in range(0, len(players), batch_size)]
-
+    start = time.time()
+    batch_size = 2
     all_results = []
-    by_player = {}
+    for i in range(0, len(players), batch_size):
+        batch = players[i:i+batch_size]
+        all_results.extend(process_batch(batch, i//batch_size + 1))
+        time.sleep(0.5)
 
-    for batch_num, batch in enumerate(batches, 1):
-        batch_results = process_batch(batch, batch_num)
-        for r in batch_results:
-            pid = r.get("player_id")
-            if not pid:
-                continue
-            prev = by_player.get(pid)
-            if prev is None or (r.get("login_successful") and not prev.get("login_successful")):
-                by_player[pid] = r
-        if batch_num < len(batches):
-            time.sleep(0.5)
+    total_time = time.time() - start
+    successes = sum(1 for r in all_results if r["login_successful"])
+    total_rewards = sum(r["monthly_rewards"] for r in all_results)
 
-    all_results = [by_player[pid] for pid in players if pid in by_player]
-    total_time = time.time() - start_time
-
-    total_players = scheduled_player_count
-    successful_logins = sum(1 for r in all_results if r.get("login_successful"))
-    total_monthly = sum(r.get("monthly_rewards", 0) for r in all_results)
-    avg_time_per_id = total_time / total_players if total_players > 0 else 0
-
-    # --- Summary ---
-    thread_safe_print("\n" + "-" * 70)
-    thread_safe_print("PROGRESSION PROGRAM - FINAL SUMMARY")
-    thread_safe_print("-" * 70)
-    thread_safe_print(f"Total Players: {total_players}")
-    thread_safe_print(f"Successful Logins: {successful_logins}")
-    thread_safe_print(f"Total Monthly Rewards Claimed: {total_monthly}")
-    thread_safe_print(f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)")
-    thread_safe_print(f"Avg Time per ID: {avg_time_per_id:.1f}s")
-    thread_safe_print("-" * 70)
-
-    summary_text = (
-        "\n============================\n"
-        "PROGRESSION PROGRAM SUMMARY\n"
-        "============================\n"
-        f"Total Players: {total_players}\n"
-        f"Successful Logins: {successful_logins}\n"
-        f"Total Monthly Rewards Claimed: {total_monthly}\n"
-        f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} minutes)\n"
-        f"Avg Time per ID: {avg_time_per_id:.1f}s\n"
+    summary = (
+        f"\n{'='*60}\nPROGRESSION PROGRAM SUMMARY\n{'='*60}\n"
+        f"Total Players: {len(players)}\n"
+        f"Successful Logins: {successes}\n"
+        f"Total Rewards Claimed: {total_rewards}\n"
+        f"Execution Time: {total_time:.1f}s ({total_time/60:.1f} min)\n"
+        f"{'='*60}\n"
     )
+    thread_safe_print(summary)
 
     with open("workflow_summary.log", "w", encoding="utf-8") as f:
-        f.write(summary_text)
-
-    print(summary_text)
+        f.write(summary)
 
 if __name__ == "__main__":
     main()
