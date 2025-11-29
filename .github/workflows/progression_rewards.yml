@@ -2,7 +2,7 @@ name: Hub Progression Rewards
 
 on:
   schedule:
-    - cron: "0 10,11,17,18 * * *"  # runs at 10AM, 11AM, 5PM, 6PM UTC
+    - cron: "0 10,11,17,18 * * *"  # 10AM, 11AM, 5PM, 6PM UTC
   workflow_dispatch:
 
 jobs:
@@ -21,26 +21,34 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
           pip install selenium
 
       - name: Run Progression Rewards Script
+        id: runscript
         run: |
-          python g_hub_ProgressionProgram_rewards_updated.py
+          python g_hub_ProgressionProgram_rewards_updated.py > progression_output.log
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat workflow_summary.log >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Send Email with Log
+      - name: Send Email with Summary in Body
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "Hub Progression Rewards Execution Log"
+          subject: "Hub Progression Rewards Summary"
           to: ${{ secrets.SMTP_TO }}
           from: ${{ secrets.SMTP_FROM }}
           body: |
-            Attached is the log file from the latest GitHub Action run.
+            Hello,
+
+            Here is the latest automated Hub Progression Rewards execution summary:
 
             ---
-            ${{ steps.summary.outputs.summary }}
-          attachments: workflow_summary.log
+            ${{ steps.runscript.outputs.summary }}
+            ---
+
+            Regards,
+            GitHub Automation Bot
