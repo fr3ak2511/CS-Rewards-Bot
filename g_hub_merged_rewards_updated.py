@@ -71,8 +71,9 @@ def create_driver():
     for k, v in caps.items():
         options.set_capability(k, v)
 
-    service = Service(r"C:\Users\DELL\Desktop\chromedriver.exe")
-    driver = webdriver.Chrome(service=service, options=options)
+    from webdriver_manager.chrome import ChromeDriverManager
+service = Service(ChromeDriverManager().install())
+driver = webdriver.Chrome(service=service, options=options)
 
     driver.set_page_load_timeout(20)
     driver.set_script_timeout(20)
@@ -1232,7 +1233,7 @@ def process_batch(player_batch, batch_number, is_retry=False):
 
 def main():
     players = []
-    with open(r"C:\Users\DELL\Desktop\players.csv", newline="") as csvfile:
+    with open("players.csv", newline="") as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             pid = row[0].strip()
@@ -1397,3 +1398,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
