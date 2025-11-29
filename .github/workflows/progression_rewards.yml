@@ -2,10 +2,7 @@ name: Hub Progression Rewards
 
 on:
   schedule:
-    - cron: "30 14 * * *"  # 8:00 PM IST
-    - cron: "0 15 * * *"   # 8:30 PM IST
-    - cron: "30 15 * * *"  # 9:00 PM IST
-    - cron: "0 16 * * *"   # 9:30 PM IST
+    - cron: "0 10,11,17,18 * * *"   # 10AM, 11AM, 5PM, 6PM UTC
   workflow_dispatch:
 
 jobs:
@@ -37,3 +34,4 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           SMTP_FROM: ${{ secrets.SMTP_FROM }}
           SMTP_TO: ${{ secrets.SMTP_TO }}
+
