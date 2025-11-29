@@ -1,54 +1,39 @@
 name: Hub Progression Rewards
 
 on:
-  workflow_dispatch:
   schedule:
-    # Runs daily at 8:00 PM, 8:30 PM, 9:00 PM, and 9:30 PM IST (UTC +5:30)
-    - cron: '30 14 * * *'   # 8:00 PM IST
-    - cron: '0 15 * * *'    # 8:30 PM IST
-    - cron: '30 15 * * *'   # 9:00 PM IST
-    - cron: '0 16 * * *'    # 9:30 PM IST
+    - cron: '30 14 * * *'   # 08:00 PM IST
+    - cron: '0  15 * * *'   # 08:30 PM IST
+    - cron: '30 15 * * *'   # 09:00 PM IST
+    - cron: '0  16 * * *'   # 09:30 PM IST
+  workflow_dispatch:
 
 jobs:
   run-progression-script:
-    name: Run Progression Program Script
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
 
     steps:
-      # 1. Checkout latest code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Run the Progression script and store console output
-      - name: Execute Hub Progression Rewards Script
-        run: |
-          echo "Starting Hub Progression Program run..."
-          python g_hub_ProgressionProgram_rewards_updated.py > run_output.log 2>&1
-          echo "Execution complete."
-
-      # 5. Send Email Summary with log as email body
-      - name: Send Email Summary
+      - name: Run Progression Script
         env:
-          SMTP_FROM: ${{ secrets.SMTP_FROM }}
-          SMTP_TO: ${{ secrets.SMTP_TO }}
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_PORT:   ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM:     ${{ secrets.SMTP_FROM }}
+          SMTP_TO:       ${{ secrets.SMTP_TO }}
         run: |
-          echo "Sending run summary via email..."
-          python send_email_with_log.py "Hub Progression Rewards Summary" run_output.log
-          echo "Email sent successfully."
+          python g_hub_ProgressionProgram_rewards_updated.py
