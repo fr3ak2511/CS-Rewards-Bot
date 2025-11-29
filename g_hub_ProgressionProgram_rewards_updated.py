@@ -1,307 +1,236 @@
-# g_hub_ProgressionProgram_rewards_updated.py
-# Runs on GitHub Actions (Linux). No hardcoded Windows paths.
-# Prints a ready-to-email plain-text summary.
-
 import os
 import csv
 import time
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from typing import List
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from webdriver_manager.chrome import ChromeDriverManager
+import smtplib
+from email.mime.text import MIMEText
 
-# Use webdriver-manager so the runner always has a compatible ChromeDriver
-try:
-    from webdriver_manager.chrome import ChromeDriverManager
-    _USE_WDM = True
-except Exception:
-    _USE_WDM = False  # Fallback to system chromedriver if preinstalled
 
-# ----------------- thread-safe logging -----------------
-print_lock = threading.Lock()
-def log(msg: str):
-    with print_lock:
-        print(msg)
+# ----------------------------
+# Email helpers (uses GitHub Secrets via env)
+# ----------------------------
+SMTP_SERVER   = os.getenv("SMTP_SERVER", os.getenv("SMTP_HOST", "smtp.gmail.com"))
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", os.getenv("SMTP_USER"))
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+SMTP_FROM     = os.getenv("SMTP_FROM", SMTP_USERNAME or "no-reply@example.com")
+SMTP_TO       = os.getenv("SMTP_TO", SMTP_FROM)
 
-# ----------------- browser factory -----------------
-def create_driver():
-    opts = Options()
-    # deterministic headless
-    opts.add_argument("--headless=new")
-    opts.add_argument("--window-size=1920,1080")
-    # stability/perf
-    opts.add_argument("--incognito")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_argument("--disable-features=VizDisplayCompositor")
-    opts.add_argument("--disable-popup-blocking")
-    opts.add_argument("--disable-notifications")
-    opts.add_argument("--disable-renderer-backgrounding")
-    opts.add_argument("--disable-backgrounding-occluded-windows")
-    opts.add_argument("--disable-background-timer-throttling")
-    # reduce page weight
-    opts.add_experimental_option("prefs", {
-        "profile.default_content_setting_values": {
-            "images": 2,
-            "notifications": 2,
-            "popups": 2
-        }
-    })
-    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-    opts.add_experimental_option("useAutomationExtension", False)
+def send_email(subject: str, body: str) -> None:
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = SMTP_TO
 
-    caps = DesiredCapabilities.CHROME.copy()
-    caps["pageLoadStrategy"] = "eager"
-    for k, v in caps.items():
-        opts.set_capability(k, v)
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        if SMTP_USERNAME and SMTP_PASSWORD:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
 
-    if _USE_WDM:
-        service = Service(ChromeDriverManager().install())
-    else:
-        service = Service()  # rely on runner's chromedriver in PATH
 
-    driver = webdriver.Chrome(service=service, options=opts)
-    driver.set_page_load_timeout(25)
-    driver.set_script_timeout(25)
-    return driver
+# ----------------------------
+# Selenium helpers
+# ----------------------------
+HUB_BASE = "https://hub.vertigogames.co"
 
-# ----------------- helpers -----------------
-def accept_cookies(driver, wait, timeout=2):
+def build_driver() -> webdriver.Chrome:
+    chrome_opts = Options()
+    chrome_opts.add_argument("--headless=new")
+    chrome_opts.add_argument("--no-sandbox")
+    chrome_opts.add_argument("--disable-dev-shm-usage")
+    chrome_opts.add_argument("--window-size=1280,900")
+    chrome_opts.add_argument("--disable-gpu")
+    chrome_opts.add_argument("--disable-notifications")
+    chrome_opts.add_argument("--lang=en-US")
+    service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=chrome_opts)
+
+def safe_click(driver, by, value, timeout=4) -> bool:
     try:
-        btn = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH,
-                "//button[normalize-space()='Accept All' or contains(.,'Accept') or contains(.,'Allow') or contains(.,'Consent')]"))
-        )
-        btn.click()
-        time.sleep(0.2)
+        el = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((by, value)))
+        driver.execute_script("arguments[0].click();", el)
+        return True
     except Exception:
-        pass
+        return False
 
-def wait_for_login_complete(driver, max_wait=15):
-    t0 = time.time()
-    while time.time() - t0 < max_wait:
-        try:
-            url = driver.current_url.lower()
-            if "user" in url or "dashboard" in url or "progression-program" in url:
-                return True
-            if driver.find_elements(By.XPATH, "//button[contains(.,'Logout') or contains(.,'Profile')]"):
-                return True
-        except Exception:
-            pass
-        time.sleep(0.25)
-    return True  # do not block run
-
-def close_initial_popup(driver):
-    # Close button
-    for xp in [
-        "//button[normalize-space()='Close']",
-        "//*[name()='svg']/parent::button[contains(@class,'close')]",
-        "//button[contains(@aria-label,'Close')]",
-    ]:
-        try:
-            el = driver.find_element(By.XPATH, xp)
-            if el.is_displayed():
-                el.click()
-                time.sleep(0.4)
-                return
-        except Exception:
-            pass
-    # Safe click once if needed
-    try:
-        size = driver.get_window_size()
-        x = int(size["width"] * 0.9)
-        y = int(size["height"] * 0.5)
-        ActionChains(driver).move_by_offset(x - size["width"]//2, y - size["height"]//2).click().perform()
-        ActionChains(driver).move_by_offset(-(x - size["width"]//2), -(y - size["height"]//2)).perform()
-        time.sleep(0.4)
-    except Exception:
-        pass
-
-def claim_buttons(driver):
-    """
-    Find and click one visible 'Claim' button at a time; refresh list each loop.
-    Returns number of claims.
-    """
-    total = 0
-    for attempt in range(1, 9):
-        # JS query limited to content area (x > 400), exclude 'Delivered'
-        try:
-            elems = driver.execute_script("""
-const out=[];
-document.querySelectorAll('button').forEach(b=>{
-  const t=(b.innerText||'').trim();
-  if(t==='Claim'){
-    const r=b.getBoundingClientRect(); 
-    if(r.left>400){
-      const p=b.closest('div'); 
-      const txt=p ? p.innerText : '';
-      if(!/Delivered/i.test(txt)) out.push(b);
-    }
-  }
-});
-return out;
-""")
-        except Exception:
-            elems = []
-
-        if not elems:
+def accept_cookies_and_popups(driver) -> None:
+    candidates = [
+        (By.XPATH, "//button[contains(.,'Accept') or contains(.,'I Agree') or contains(.,'Got it')]"),
+        (By.XPATH, "//button[contains(.,'OK')]"),
+        (By.XPATH, "//div[contains(@class,'close') or contains(@aria-label,'close')]"),
+        (By.XPATH, "//span[text()='×' or text()='✕']/ancestor::button"),
+    ]
+    end = time.time() + 8
+    while time.time() < end:
+        clicked_any = False
+        for by, xp in candidates:
+            if safe_click(driver, by, xp, timeout=1):
+                clicked_any = True
+                time.sleep(0.3)
+        if not clicked_any:
             break
 
-        btn = elems[0]
-        try:
-            driver.execute_script("arguments[0].scrollIntoView({behavior:'instant',block:'center'});", btn)
-            time.sleep(0.2)
-            driver.execute_script("arguments[0].click();", btn)
-            total += 1
-            time.sleep(1.0)
-            # close ‘Close’ dialog if it appears
-            try:
-                c = driver.find_element(By.XPATH, "//button[normalize-space()='Close']")
-                if c.is_displayed():
-                    c.click()
-                    time.sleep(0.4)
-            except Exception:
-                pass
-        except Exception:
-            continue
-    return total
+def login_with_player(driver, player_id: str) -> bool:
+    driver.get(HUB_BASE)
+    accept_cookies_and_popups(driver)
 
-# ----------------- per-player automation -----------------
-def automate_player(player_id, idx):
-    log(f"\n[#{idx}] Player: {player_id}")
-    d = create_driver()
-    w = WebDriverWait(d, 12)
-    login_ok = False
-    claimed = 0
     try:
-        d.get("https://hub.vertigogames.co/progression-program")
-        time.sleep(0.4)
-        accept_cookies(d, w)
-        # open login
-        clicked = False
-        for sel in [
-            "//button[contains(.,'Login') or contains(.,'Log in') or contains(.,'Sign in')]",
-            "//a[contains(.,'Login') or contains(.,'Log in') or contains(.,'Sign in')]",
-            "//button[contains(translate(.,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'login')]",
-        ]:
+        # Try to feed player id if a field is shown
+        guesses = [
+            "//input[@type='text' and (contains(@placeholder,'Player') or contains(@placeholder,'UID') or contains(@name,'player') or contains(@name,'uid'))]",
+            "//input[contains(@id,'player') or contains(@id,'uid')]",
+        ]
+        typed = False
+        for xp in guesses:
             try:
-                for el in d.find_elements(By.XPATH, sel):
-                    if el.is_displayed() and el.is_enabled():
-                        el.click(); clicked=True; break
-            except Exception:
-                pass
-            if clicked: break
-        if not clicked:
-            return {"player_id": player_id, "monthly_rewards": 0, "login_successful": False, "status": "login_button_not_found"}
-
-        # input id
-        box = None
-        for sel in [
-            "//*[@id='user-id-input']",
-            "//input[contains(@placeholder,'ID') or contains(@placeholder,'User') or contains(@name,'user') or contains(@placeholder,'id')]",
-            "//div[contains(@class,'modal') or contains(@class,'dialog')]//input[@type='text']",
-            "//input[@type='text']"
-        ]:
-            try:
-                box = WebDriverWait(d, 3).until(EC.visibility_of_element_located((By.XPATH, sel)))
+                inp = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xp)))
+                inp.clear()
+                inp.send_keys(player_id)
+                typed = True
                 break
             except Exception:
                 pass
-        if not box:
-            return {"player_id": player_id, "monthly_rewards": 0, "login_successful": False, "status": "input_field_not_found"}
-        box.clear(); box.send_keys(player_id); time.sleep(0.1)
 
-        # submit
-        submitted = False
-        for sel in [
-            "//button[contains(.,'Login') or contains(.,'Log in') or contains(.,'Sign in')]",
-            "//button[@type='submit']",
-            "//div[contains(@class,'modal') or contains(@class,'dialog')]//button[not(contains(.,'Cancel')) and not(contains(.,'Close'))]"
-        ]:
+        if typed:
+            safe_click(driver, By.XPATH, "//button[contains(.,'Login') or contains(.,'Sign in') or contains(.,'Continue')]", timeout=3)
+
+        WebDriverWait(driver, 8).until(
+            EC.presence_of_element_located((By.XPATH, "//nav|//aside|//a[contains(@href,'/progression')]"))
+        )
+        accept_cookies_and_popups(driver)
+        return True
+    except Exception:
+        accept_cookies_and_popups(driver)
+        return True
+
+def read_players_csv(repo_root: str) -> List[str]:
+    csv_path = os.path.join(repo_root, "players.csv")
+    ids = []
+    with open(csv_path, "r", newline="") as f:
+        for row in f:
+            row = row.strip()
+            if row:
+                ids.append(row)
+    return ids
+
+def navigate_progression(driver) -> None:
+    # Direct route or menu
+    if not safe_click(driver, By.XPATH, "//a[contains(@href,'/progression') or contains(@href,'/progression-program')]", timeout=4):
+        driver.get(f"{HUB_BASE}/progression-program")
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(.,'Progression')]/ancestor::*[self::main or self::div]"))
+        )
+    except Exception:
+        pass
+    accept_cookies_and_popups(driver)
+
+def claim_all_progression(driver, max_rounds=12) -> int:
+    """
+    Click all visible 'Claim' buttons in Progression (dynamic count).
+    Stops when none left or max_rounds reached.
+    """
+    total = 0
+    rounds = 0
+    while rounds < max_rounds:
+        rounds += 1
+        accept_cookies_and_popups(driver)
+        buttons = driver.find_elements(By.XPATH, "//button[not(@disabled) and contains(.,'Claim')]")
+        clicked_this_round = 0
+        for b in buttons:
             try:
-                b = d.find_element(By.XPATH, sel)
-                if b.is_displayed():
-                    b.click(); submitted=True; break
+                if b.is_displayed() and b.is_enabled():
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", b)
+                    time.sleep(0.2)
+                    driver.execute_script("arguments[0].click();", b)
+                    time.sleep(1.0)
+                    accept_cookies_and_popups(driver)
+                    total += 1
+                    clicked_this_round += 1
+                    time.sleep(0.4)
             except Exception:
-                pass
-        if not submitted:
-            try: box.send_keys(Keys.ENTER); submitted=True
-            except Exception: pass
-        if not submitted:
-            return {"player_id": player_id, "monthly_rewards": 0, "login_successful": False, "status": "login_cta_not_found"}
+                continue
+        if clicked_this_round == 0:
+            break
+    return total
 
-        wait_for_login_complete(d, 15)
-        time.sleep(1.0)
-        login_ok = True
-        close_initial_popup(d)
-        # ensure cards
-        try:
-            d.execute_script("window.scrollTo(0,0)")
-        except Exception:
-            pass
-        claimed = claim_buttons(d)
-
-        return {"player_id": player_id, "monthly_rewards": claimed, "login_successful": login_ok, "status": ("success" if claimed>0 else "no_claims")}
-    except Exception as e:
-        log(f"[#{idx}] ERROR: {e}")
-        return {"player_id": player_id, "monthly_rewards": 0, "login_successful": login_ok, "status": "error"}
-    finally:
-        try: d.quit()
-        except Exception: pass
-
-# ----------------- orchestrator -----------------
-def read_players():
-    repo_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(repo_dir, "players.csv")
-    players = []
-    with open(csv_path, newline="") as f:
-        for row in csv.reader(f):
-            pid = (row[0] if row else "").strip()
-            if pid:
-                players.append(pid)
-    return players
 
 def main():
-    players = read_players()
-    log(f"Loaded {len(players)} player IDs")
-    BATCH = 2
-    batches = [players[i:i+BATCH] for i in range(0, len(players), BATCH)]
+    repo_root = os.getcwd()
+    players = read_players_csv(repo_root)
 
-    all_res, t0 = [], time.time()
-    for bnum, batch in enumerate(batches, 1):
-        with ThreadPoolExecutor(max_workers=len(batch)) as ex:
-            futs = {ex.submit(automate_player, pid, f"{bnum}-{i+1}"): pid for i, pid in enumerate(batch)}
-            for fut in as_completed(futs):
-                all_res.append(fut.result())
-        if bnum < len(batches): time.sleep(0.7)
+    total_players = len(players)
+    success_logins = 0
+    total_claimed = 0
 
-    total_time = time.time() - t0
-    total_players = len(all_res)
-    successful_logins = sum(1 for r in all_res if r["login_successful"])
-    total_monthly = sum(r["monthly_rewards"] for r in all_res)
-    avg_time_per_id = (total_time/total_players) if total_players else 0.0
+    per_id_lines = []
+    t0 = time.time()
 
-    # --------- email-ready summary ----------
-    print("\n" + "="*60)
-    print("PROGRESSION PROGRAM SUMMARY")
-    print("="*60)
-    print(f"Total Players: {total_players}")
-    print(f"Successful Logins: {successful_logins}")
-    print(f"Monthly Rewards Claimed: {total_monthly}")
-    print(f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} min)")
-    print(f"Avg Time per ID: {avg_time_per_id:.1f}s")
-    print("="*60)
+    driver = build_driver()
+    try:
+        for pid in players:
+            t_id = time.time()
+            login_ok = False
+            claimed = 0
+            try:
+                login_ok = login_with_player(driver, pid)
+                if login_ok:
+                    success_logins += 1
+                    navigate_progression(driver)
+                    claimed = claim_all_progression(driver, max_rounds=12)
+                    total_claimed += claimed
+            except Exception:
+                pass
+
+            per_id_lines.append(
+                f"ID: {pid} | Login: {'Yes' if login_ok else 'No'} | Rewards Claimed: {claimed} | Time: {time.time()-t_id:.1f}s"
+            )
+
+            try:
+                driver.delete_all_cookies()
+            except Exception:
+                pass
+
+        total_time = time.time() - t0
+        avg_time = total_time / total_players if total_players else 0.0
+
+        # FINAL SUMMARY (Progression)
+        summary = []
+        summary.append("=" * 60)
+        summary.append("PROGRESSION PROGRAM SUMMARY")
+        summary.append("=" * 60)
+        summary.append(f"Total Players: {total_players}")
+        summary.append(f"Successful Logins: {success_logins}")
+        summary.append(f"Monthly Rewards Claimed: {total_claimed}")
+        summary.append(f"Total Time Taken: {total_time:.1f}s ({total_time/60.0:.1f} min)")
+        summary.append(f"Avg Time per ID: {avg_time:.1f}s")
+        summary.append("-")
+        summary.append("Per-ID details:")
+        summary.extend(per_id_lines)
+        summary.append("=" * 60)
+
+        body = "Hello,\n\nHere is the latest automated Hub Progression Rewards execution summary.\n\n"
+        body += "\n".join(summary)
+        body += "\n\nRegards,\nGitHub Automation Bot\n"
+
+        send_email("Hub Progression Rewards Summary", body)
+
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
     main()
