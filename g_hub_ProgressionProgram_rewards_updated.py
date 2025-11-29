@@ -1,14 +1,14 @@
 import csv
 import time
+import os
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-import threading
-import os
+from selenium.webdriver.common.keys import Keys
 
 print_lock = threading.Lock()
 
@@ -23,47 +23,71 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # Use preinstalled Chrome/Chromedriver on GitHub runner
+    # Chromedriver comes preinstalled on GitHub runners
     driver = webdriver.Chrome(options=options)
     driver.set_page_load_timeout(25)
     return driver
 
 def automate_player(player_id, thread_id):
-    from selenium.webdriver.common.keys import Keys
     driver = create_driver()
-    wait = WebDriverWait(driver, 12)
+    wait = WebDriverWait(driver, 20)
     result = {
         "player_id": player_id,
         "login_successful": False,
         "monthly_rewards": 0,
         "status": "error",
     }
+
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
-        login_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Login') or contains(text(),'Log in')]")
-        if not login_btns:
-            thread_safe_print(f"[{player_id}] No login button")
+        thread_safe_print(f"[{player_id}] Page loaded, searching login...")
+
+        # Flexible login button locator
+        login_btn = None
+        for xp in [
+            "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'login')]",
+            "//a[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'login')]",
+        ]:
+            try:
+                login_btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
+                break
+            except Exception:
+                continue
+
+        if not login_btn:
+            thread_safe_print(f"[{player_id}] No login button found.")
             return result
 
-        login_btns[0].click()
-        inp = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
+        driver.execute_script("arguments[0].click();", login_btn)
+        thread_safe_print(f"[{player_id}] Login button clicked.")
+
+        inp = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text' or @name='username']")))
+        inp.clear()
         inp.send_keys(player_id)
         inp.send_keys(Keys.ENTER)
-        time.sleep(2)
-        result["login_successful"] = True
+        thread_safe_print(f"[{player_id}] Login submitted.")
+        time.sleep(3)
 
-        claim_btns = driver.find_elements(By.XPATH, "//button[contains(text(),'Claim')]")
+        # Check post-login state
+        if "progression" in driver.current_url.lower():
+            result["login_successful"] = True
+            thread_safe_print(f"[{player_id}] Login success.")
+
+        # Claim available rewards
         claimed = 0
+        claim_btns = driver.find_elements(By.XPATH, "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'claim')]")
         for btn in claim_btns:
             try:
-                if btn.is_displayed() and btn.is_enabled():
-                    btn.click()
-                    claimed += 1
-                    time.sleep(1)
+                driver.execute_script("arguments[0].click();", btn)
+                claimed += 1
+                time.sleep(1)
             except Exception:
                 continue
         result["monthly_rewards"] = claimed
         result["status"] = "success" if claimed > 0 else "no_claims"
+
+        thread_safe_print(f"[{player_id}] Monthly rewards claimed: {claimed}")
+
     except Exception as e:
         thread_safe_print(f"[{player_id}] Error: {e}")
     finally:
@@ -72,8 +96,8 @@ def automate_player(player_id, thread_id):
 
 def process_batch(players, batch_num):
     results = []
-    with ThreadPoolExecutor(max_workers=len(players)) as exe:
-        future_to_id = {exe.submit(automate_player, pid, batch_num): pid for pid in players}
+    with ThreadPoolExecutor(max_workers=min(3, len(players))) as executor:
+        future_to_id = {executor.submit(automate_player, pid, batch_num): pid for pid in players}
         for fut in as_completed(future_to_id):
             results.append(fut.result())
     return results
@@ -88,30 +112,34 @@ def main():
             if pid:
                 players.append(pid)
 
-    thread_safe_print(f"Loaded {len(players)} players")
+    thread_safe_print(f"Loaded {len(players)} players.")
+    start_time = time.time()
 
-    start = time.time()
-    batch_size = 2
     all_results = []
+    batch_size = 2
     for i in range(0, len(players), batch_size):
-        batch = players[i:i+batch_size]
+        batch = players[i:i + batch_size]
+        thread_safe_print(f"Processing batch {i//batch_size + 1}")
         all_results.extend(process_batch(batch, i//batch_size + 1))
         time.sleep(0.5)
 
-    total_time = time.time() - start
-    successes = sum(1 for r in all_results if r["login_successful"])
-    total_rewards = sum(r["monthly_rewards"] for r in all_results)
+    total_time = time.time() - start_time
+    total_players = len(players)
+    successful_logins = sum(1 for r in all_results if r["login_successful"])
+    total_monthly = sum(r["monthly_rewards"] for r in all_results)
+    avg_time_per_id = total_time / total_players if total_players > 0 else 0
 
     summary = (
-        f"\n{'='*60}\nPROGRESSION PROGRAM SUMMARY\n{'='*60}\n"
-        f"Total Players: {len(players)}\n"
-        f"Successful Logins: {successes}\n"
-        f"Total Rewards Claimed: {total_rewards}\n"
-        f"Execution Time: {total_time:.1f}s ({total_time/60:.1f} min)\n"
-        f"{'='*60}\n"
+        f"\n{'='*70}\nPROGRESSION PROGRAM SUMMARY\n{'='*70}\n"
+        f"Total Players: {total_players}\n"
+        f"Successful Logins: {successful_logins}\n"
+        f"Monthly Rewards Claimed: {total_monthly}\n"
+        f"Total Time Taken: {total_time:.1f}s ({total_time/60:.1f} min)\n"
+        f"Avg Time per ID: {avg_time_per_id:.1f}s\n"
+        f"{'='*70}\n"
     )
-    thread_safe_print(summary)
 
+    thread_safe_print(summary)
     with open("workflow_summary.log", "w", encoding="utf-8") as f:
         f.write(summary)
 
