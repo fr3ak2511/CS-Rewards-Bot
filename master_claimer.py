@@ -106,52 +106,61 @@ def create_driver():
     driver.set_page_load_timeout(60)
     return driver
 
-# --- HELPERS ---
-def close_popups_safe(driver):
+# --- HELPER: CASE-INSENSITIVE XPATH ---
+def get_ci_xpath(tag, text):
     """
-    Returns TRUE if a popup was found and closed.
-    Returns FALSE if no popup was found.
+    Returns an XPath that matches text case-insensitively.
+    Example: //button[contains(translate(text(), 'ABC...', 'abc...'), 'claim')]
     """
-    popup_found = False
-    try:
-        # Check for modals first
-        modals = driver.find_elements(By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup') or contains(@class, 'dialog')]")
-        visible_modals = [m for m in modals if m.is_displayed()]
-        
-        if visible_modals:
-            popup_found = True
-            # Try JS Close
-            driver.execute_script("""
-                document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
-                    let text = btn.innerText.toLowerCase();
-                    if(text.includes('close') || text === '×' || text === 'x' || text.includes('continue')) {
-                        if(btn.offsetParent !== null) btn.click();
-                    }
-                });
-            """)
-            
-            # Try Button Click
-            close_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Close') or contains(text(), 'Continue') or text()='×']")
-            for btn in close_btns:
+    return f"//{tag}[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{text.lower()}')]"
+
+# --- POPUP HANDLER ---
+def handle_post_claim_popup(driver):
+    popup_closed = False
+    
+    # 1. Look for confirmation buttons (Case Insensitive)
+    confirm_selectors = [
+        get_ci_xpath("button", "continue"),
+        get_ci_xpath("button", "close"),
+        "//button[text()='×']",
+        "//button[text()='X']"
+    ]
+    
+    for sel in confirm_selectors:
+        try:
+            btns = driver.find_elements(By.XPATH, sel)
+            for btn in btns:
                 if btn.is_displayed():
                     driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(0.2)
+                    time.sleep(0.5)
+                    popup_closed = True
+        except: pass
+    
+    if popup_closed:
+        return True
 
-        # Always do Safe Area Clicks as backup
-        actions = ActionChains(driver)
-        safe_areas = [(30, 30), (1870, 30), (30, 1030)]
-        for x, y in safe_areas:
-            try:
-                actions.move_by_offset(x - 960, y - 540).click().perform()
-                actions.move_by_offset(-(x - 960), -(y - 540)).perform()
-            except: pass
-            
+    # 2. Fallback: Safe Area Click
+    try:
+        modals = driver.find_elements(By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup')]")
+        visible_modals = [m for m in modals if m.is_displayed()]
+        if visible_modals:
+            actions = ActionChains(driver)
+            actions.move_by_offset(30, 30).click().perform()
+            actions.move_by_offset(-30, -30).perform()
+            time.sleep(0.5)
+            return True
     except: pass
-    return popup_found
+    
+    return False
+
+def close_overlays(driver):
+    handle_post_claim_popup(driver)
 
 def accept_cookies(driver, wait):
     try:
-        btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'Allow')]")))
+        # Case insensitive accept
+        xpath = get_ci_xpath("button", "accept") + " | " + get_ci_xpath("button", "allow")
+        btn = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
         btn.click()
     except: pass
 
@@ -160,25 +169,19 @@ def login(driver, wait, player_id):
     driver.get("https://hub.vertigogames.co/daily-rewards")
     time.sleep(3)
     accept_cookies(driver, wait)
-    close_popups_safe(driver)
+    close_overlays(driver)
 
-    login_selectors = [
-        "//button[contains(text(),'Login') or contains(text(),'Sign in')]",
-        "//a[contains(text(),'Login') or contains(text(),'Sign in')]",
-        "//*[contains(text(), 'Login')]"
-    ]
+    login_xpath = get_ci_xpath("button", "login") + " | " + get_ci_xpath("a", "login") + " | " + get_ci_xpath("button", "sign in")
     
     clicked_login = False
-    for selector in login_selectors:
-        try:
-            btns = driver.find_elements(By.XPATH, selector)
-            for btn in btns:
-                if btn.is_displayed():
-                    btn.click()
-                    clicked_login = True
-                    break
-            if clicked_login: break
-        except: continue
+    try:
+        btns = driver.find_elements(By.XPATH, login_xpath)
+        for btn in btns:
+            if btn.is_displayed():
+                btn.click()
+                clicked_login = True
+                break
+    except: pass
     
     try:
         inp = wait.until(EC.visibility_of_element_located((By.XPATH, "//input[@type='text' or contains(@placeholder, 'ID')]")))
@@ -186,19 +189,17 @@ def login(driver, wait, player_id):
         inp.send_keys(player_id)
         time.sleep(0.5)
         
-        submit_selectors = ["//button[@type='submit']", "//button[contains(text(), 'Login')]", "//button[contains(text(), 'LOGIN')]"]
+        # Submit (Case Insensitive)
+        submit_xpath = get_ci_xpath("button", "login") + " | //button[@type='submit']"
+        submit_btns = driver.find_elements(By.XPATH, submit_xpath)
+        
         submitted = False
-        for sel in submit_selectors:
-            try:
-                btns = driver.find_elements(By.XPATH, sel)
-                for btn in btns:
-                    if btn.is_displayed():
-                        btn.click()
-                        submitted = True
-                        break
-                if submitted: break
-            except: continue
-            
+        for btn in submit_btns:
+            if btn.is_displayed():
+                btn.click()
+                submitted = True
+                break
+        
         if not submitted:
             inp.send_keys(Keys.ENTER)
             
@@ -214,14 +215,18 @@ def perform_claim_loop(driver, player_id, section_name):
     max_rounds = 6
     
     for round_num in range(max_rounds):
-        close_popups_safe(driver)
+        close_overlays(driver)
         time.sleep(1.5)
         
-        # Find all Claim buttons
-        buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim') and not(contains(text(), 'Buy'))]")
+        # CASE INSENSITIVE CLAIM BUTTON SELECTOR
+        # Exclude "Buy" buttons (case insensitive exclusion)
+        claim_xpath = f"//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'claim') and not(contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'buy'))]"
+        
+        buttons = driver.find_elements(By.XPATH, claim_xpath)
         visible_buttons = [b for b in buttons if b.is_displayed()]
         
         if not visible_buttons:
+            safe_print(f"[{player_id}] No {section_name} buttons found.")
             break 
             
         btn = visible_buttons[0]
@@ -229,35 +234,26 @@ def perform_claim_loop(driver, player_id, section_name):
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
-            # Click
             driver.execute_script("arguments[0].click();", btn)
-            safe_print(f"[{player_id}] Attempting {section_name} claim...")
+            safe_print(f"[{player_id}] Clicked {section_name} button...")
             
-            # WAIT & VERIFY POPUP
-            time.sleep(2)
-            popup_detected = close_popups_safe(driver)
+            # Wait for Popup
+            time.sleep(3) 
             
-            # Verification Strategy:
-            # 1. Did a popup appear? (Best indicator of success)
-            # 2. Did the button disappear? (Backup check)
+            # Verify
+            success = handle_post_claim_popup(driver)
             
-            success = False
-            if popup_detected:
-                success = True
-            else:
-                # Double check if button is still there
+            if not success:
                 try:
-                    if not btn.is_displayed(): 
-                        success = True
-                except:
-                    success = True # Element went stale = success
+                    if not btn.is_displayed(): success = True
+                except: success = True
             
             if success:
                 claimed += 1
                 safe_print(f"[{player_id}] {section_name} Reward {claimed} CONFIRMED")
             else:
                 safe_print(f"[{player_id}] Click failed - No confirmation popup found")
-                # Take screenshot for debugging
+                # Debug screenshot
                 if round_num == 0:
                     driver.save_screenshot(f"fail_claim_{section_name}_{player_id}.png")
             
@@ -272,12 +268,14 @@ def claim_daily(driver, player_id):
 def claim_store(driver, player_id):
     driver.get("https://hub.vertigogames.co/store")
     time.sleep(3)
-    close_popups_safe(driver)
+    close_overlays(driver)
     
     try:
         driver.execute_script("window.scrollTo(0, 300);")
         time.sleep(1)
-        tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
+        # Case Insensitive "Daily Rewards" Tab
+        tab_xpath = "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'daily rewards')]"
+        tab = driver.find_element(By.XPATH, tab_xpath)
         driver.execute_script("arguments[0].click();", tab)
         time.sleep(1.5)
     except:
@@ -290,7 +288,7 @@ def claim_progression(driver, player_id):
     claimed = 0
     driver.get("https://hub.vertigogames.co/progression-program")
     time.sleep(3)
-    close_popups_safe(driver)
+    close_overlays(driver)
     
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
@@ -300,15 +298,14 @@ def claim_progression(driver, player_id):
                 time.sleep(0.5)
     except: pass
 
-    # Use JS Filter Loop for Progression
     for round_num in range(6):
         time.sleep(1)
-        # Modified JS to return the element it clicks so we can check it
+        # JS Filter (Case Insensitive 'Claim')
         js_find_and_click = """
         let buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
-            let text = btn.innerText.trim();
-            if (text === 'Claim') {
+            let text = btn.innerText.trim().toLowerCase();
+            if (text.includes('claim')) {
                 let rect = btn.getBoundingClientRect();
                 if (rect.left > 300) { 
                     if (!btn.parentElement.innerText.includes('Delivered')) {
@@ -323,19 +320,14 @@ def claim_progression(driver, player_id):
         try:
             clicked = driver.execute_script(js_find_and_click)
             if clicked:
-                safe_print(f"[{player_id}] Attempting Progression claim...")
-                time.sleep(2)
-                
-                # Check for popup verification
-                if close_popups_safe(driver):
+                safe_print(f"[{player_id}] Progression Clicked...")
+                time.sleep(3)
+                if handle_post_claim_popup(driver):
                     claimed += 1
                     safe_print(f"[{player_id}] Progression Reward {claimed} CONFIRMED")
-                else:
-                    safe_print(f"[{player_id}] Progression click sent but no popup detected")
             else:
                 break
         except: break
-        
     return claimed
 
 # --- PROCESS ---
