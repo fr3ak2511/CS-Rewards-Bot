@@ -2,8 +2,8 @@ name: Hourly Rewards Claimer
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs every hour at minute 0
-  workflow_dispatch:      # Allows manual trigger button
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-claimer:
@@ -29,33 +29,34 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-          # Create CSV Header
+          # 1. Create CSV Header for the report
           echo "Player ID,Daily,Store,Progression,Status" > results_summary.csv
           
-          # Read players from CSV and loop
+          # 2. Loop through players.csv using Shell
           while IFS=, read -r player_id || [ -n "$player_id" ]; do
             # Clean the ID (remove whitespace/newlines)
             player_id=$(echo "$player_id" | tr -d '\r' | xargs)
             
+            # Skip empty lines
             if [[ -z "$player_id" ]]; then continue; fi
             
             echo "----------------------------------------"
             echo "Processing: $player_id"
             
-            # Run python script for THIS player only
-            # The "$player_id" argument here fixes your error
+            # 3. Run Python script for THIS player only (Fixes Argument Error)
+            # "2>&1" captures output so we can read the CSV result
             output=$(python master_claimer.py "$player_id" 2>&1)
             echo "$output"
             
-            # Parse result
+            # 4. Extract the result for the email report
             result_line=$(echo "$output" | grep "RESULT_CSV:" | cut -d':' -f2)
             if [[ ! -z "$result_line" ]]; then
                echo "$result_line" >> results_summary.csv
             else
-               echo "$player_id,0,0,0,Crash" >> results_summary.csv
+               echo "$player_id,0,0,0,Crash/Error" >> results_summary.csv
             fi
             
-            # Force Kill Chrome to free all memory
+            # 5. NUCLEAR CLEANUP (Fixes Chrome Crash)
             pkill -f chrome || true
             pkill -f chromedriver || true
             sleep 5
