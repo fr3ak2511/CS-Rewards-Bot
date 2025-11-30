@@ -29,11 +29,11 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
 
-      # NEW STEP: Upload Screenshots if script creates them
-      - name: Upload Error Screenshots
-        if: always() # Run even if script fails
+      # UPDATED: Upload ALL PNGs, whether debug or error
+      - name: Upload Debug Screenshots
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: error-screenshots
+          name: debug-screenshots
           path: "*.png"
           retention-days: 1
