@@ -22,6 +22,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 BATCH_SIZE = 2
 HEADLESS = True 
 
+# --- GLOBAL DRIVER PATH (Fixes Race Condition) ---
+try:
+    DRIVER_PATH = ChromeDriverManager().install()
+except:
+    # Fallback if manager fails
+    DRIVER_PATH = "/usr/bin/chromedriver" 
+
 # Thread-safe printing
 print_lock = threading.Lock()
 def safe_print(msg):
@@ -94,18 +101,17 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
-    # Mask automation signals
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    service = Service(ChromeDriverManager().install())
+    # Use the globally installed driver path
+    service = Service(DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(45)
     return driver
 
 # --- HELPER ACTIONS ---
 def safe_click(driver, element):
-    """Robust clicker using 3 methods"""
     try:
         element.click()
         return True
@@ -121,72 +127,65 @@ def safe_click(driver, element):
                 return False
 
 def close_overlays(driver):
-    """Closes cookies and popups"""
-    # 1. Accept Cookies (Multiple text variations)
+    # Accept Cookies
     try:
-        cookie_xpath = "//*[contains(translate(text(), 'AC', 'ac'), 'accept') or contains(text(), 'Allow')]"
-        buttons = driver.find_elements(By.XPATH, cookie_xpath)
-        for btn in buttons:
-            if btn.is_displayed():
-                safe_click(driver, btn)
-                time.sleep(0.5)
+        # Look for "Accept All" button specifically
+        cookie_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Accept All') or contains(text(), 'Allow')]")
+        if cookie_btn.is_displayed():
+            safe_click(driver, cookie_btn)
     except: pass
 
-    # 2. Close Popups
+    # Close Popups
     try:
-        close_xpath = "//*[contains(@class, 'close') or text()='×' or text()='Close']"
-        buttons = driver.find_elements(By.XPATH, close_xpath)
-        for btn in buttons:
-            if btn.is_displayed():
-                driver.execute_script("arguments[0].click();", btn)
+        driver.execute_script("""
+            var popups = document.querySelectorAll('.modal, .popup, button[class*="close"]');
+            for(var i=0; i<popups.length; i++){
+                if(popups[i].innerText.includes('×') || popups[i].innerText.includes('Close')) {
+                    popups[i].click();
+                }
+            }
+        """)
     except: pass
 
-def login_procedure(driver, wait, player_id, thread_name):
-    """Dedicated login function with universal selector"""
-    # 1. Look for ANY element with Login text (Button, Link, Span)
-    # This XPath looks for "Login", "Log in", "Sign in" case-insensitive
-    login_xpath = "//*[contains(translate(text(), 'L', 'l'), 'login') or contains(translate(text(), 'S', 's'), 'sign in')]"
+def smart_login(driver, wait, player_id):
+    """
+    Strategy:
+    1. Check if Input field is ALREADY visible (common for this site).
+    2. If not, click 'Login' header button to show it.
+    3. Enter ID and click 'LOGIN' submit button.
+    """
     
-    found_btn = False
-    elements = driver.find_elements(By.XPATH, login_xpath)
+    # Step 1: Search for Input Field directly
+    input_selector = (By.XPATH, "//input[@placeholder='Enter your user ID' or @type='text']")
     
-    for btn in elements:
-        if btn.is_displayed():
-            # Filter out small hidden elements
-            if btn.size['height'] > 0 and btn.size['width'] > 0:
-                safe_click(driver, btn)
-                found_btn = True
-                break
-    
-    if not found_btn:
-        # Fallback: Try finding by href
+    try:
+        # Wait briefly to see if input is already there
+        inp = WebDriverWait(driver, 5).until(EC.visibility_of_element_located(input_selector))
+    except:
+        # Step 2: Not found? Click the Login header button
         try:
-            link = driver.find_element(By.CSS_SELECTOR, "a[href*='login'], a[href*='signin']")
-            safe_click(driver, link)
-            found_btn = True
-        except:
-            pass
+            login_header_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Login') or contains(text(), 'Sign in')]")
+            safe_click(driver, login_header_btn)
+            # Now wait for input again
+            inp = wait.until(EC.visibility_of_element_located(input_selector))
+        except Exception as e:
+            raise Exception("Could not find Input field or Login button")
 
-    if not found_btn:
-        raise Exception("Login button not found")
-
-    # 2. Enter ID
+    # Step 3: Enter ID
     try:
-        inp = wait.until(EC.visibility_of_element_located((By.XPATH, "//input")))
         inp.clear()
         inp.send_keys(player_id)
         time.sleep(0.5)
         
-        # Click ANY submit button or the Login button again
-        submit_btns = driver.find_elements(By.XPATH, "//button[@type='submit'] | //button[contains(text(), 'Login')]")
-        if submit_btns:
-            safe_click(driver, submit_btns[0])
-        else:
-            inp.send_keys(Keys.ENTER)
-            
+        # Step 4: Click the Submit Button
+        # The screenshot shows the button says "LOGIN" in caps
+        submit_btn = driver.find_element(By.XPATH, "//button[normalize-space()='LOGIN' or normalize-space()='Login']")
+        safe_click(driver, submit_btn)
+        
+        # Wait for success (URL change or 'Daily Rewards' text)
         wait.until(EC.url_contains("daily-rewards"))
     except Exception as e:
-        raise Exception(f"Input/Submit failed: {str(e)}")
+        raise Exception(f"Failed to enter ID or Submit: {str(e)}")
 
 # --- CORE LOGIC ---
 def process_player(player_id, thread_name):
@@ -204,7 +203,7 @@ def process_player(player_id, thread_name):
         close_overlays(driver)
         
         try:
-            login_procedure(driver, wait, player_id, thread_name)
+            smart_login(driver, wait, player_id)
         except Exception as e:
             safe_print(f"[{thread_name}] Login failed. Saving screenshot.")
             driver.save_screenshot(f"error_{player_id}.png")
@@ -215,14 +214,12 @@ def process_player(player_id, thread_name):
 
         # --- DAILY ---
         safe_print(f"[{thread_name}] Daily Rewards...")
-        # Search for buttons with "Claim" text
         daily_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]")
         for btn in daily_btns:
-            # Check if it's not a "Buy" button
             if btn.is_displayed() and "buy" not in btn.text.lower():
-                if safe_click(driver, btn):
-                    stats['daily'] += 1
-                    time.sleep(1)
+                safe_click(driver, btn)
+                stats['daily'] += 1
+                time.sleep(1)
         
         # --- STORE ---
         safe_print(f"[{thread_name}] Store...")
@@ -230,8 +227,11 @@ def process_player(player_id, thread_name):
         time.sleep(3)
         close_overlays(driver)
         
-        # Find Daily Rewards tab in store
         try:
+            # Scroll down to ensure Daily Rewards section is loaded
+            driver.execute_script("window.scrollTo(0, 500);")
+            time.sleep(1)
+            # Try to click the Tab if it exists
             daily_tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
             safe_click(driver, daily_tab)
             time.sleep(1)
@@ -240,9 +240,9 @@ def process_player(player_id, thread_name):
         store_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]")
         for btn in store_btns:
             if btn.is_displayed() and "buy" not in btn.text.lower():
-                if safe_click(driver, btn):
-                    stats['store'] += 1
-                    time.sleep(1)
+                safe_click(driver, btn)
+                stats['store'] += 1
+                time.sleep(1)
 
         # --- PROGRESSION ---
         safe_print(f"[{thread_name}] Progression...")
@@ -250,7 +250,7 @@ def process_player(player_id, thread_name):
         time.sleep(3)
         close_overlays(driver)
 
-        # JS claimer for progression (handles carousel/hidden items)
+        # JS claimer
         js_script = """
         var buttons = document.querySelectorAll('button');
         var clicked = 0;
@@ -265,8 +265,7 @@ def process_player(player_id, thread_name):
         try:
             claims = driver.execute_script(js_script)
             stats['progression'] = claims
-        except:
-            pass
+        except: pass
 
         stats['status'] = "Success"
         safe_print(f"[{thread_name}] Finished {player_id}")
@@ -285,9 +284,9 @@ def main():
         with open('players.csv', 'r') as f:
             lines = f.readlines()
             for line in lines:
-                # FIX: Strict cleaning to prevent Tuple errors
+                # FIX: Remove commas and whitespace
                 clean_line = line.strip().replace(',', '')
-                if len(clean_line) > 5: # Assuming IDs are longer than 5 chars
+                if len(clean_line) > 5: 
                     players.append(clean_line)
     except FileNotFoundError:
         safe_print("❌ players.csv not found!")
