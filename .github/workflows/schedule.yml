@@ -2,8 +2,8 @@ name: Hourly Rewards Claimer
 
 on:
   schedule:
-    - cron: '0 * * * *'
-  workflow_dispatch:
+    - cron: '0 * * * *'  # Runs every hour at minute 0
+  workflow_dispatch:      # Allows manual trigger button
 
 jobs:
   run-claimer:
@@ -29,11 +29,13 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
 
-      # UPDATED: Upload ALL PNGs, whether debug or error
-      - name: Upload Debug Screenshots
-        if: always()
+      # UPDATED STEP: Captures screenshots AND HTML files for debugging
+      - name: Upload Debug Artifacts
+        if: always() # Runs even if the script crashes
         uses: actions/upload-artifact@v4
         with:
-          name: debug-screenshots
-          path: "*.png"
+          name: debug-data
+          path: |
+            *.png
+            *.html
           retention-days: 1
