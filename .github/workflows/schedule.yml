@@ -8,7 +8,7 @@ on:
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 60 # Extended timeout to handle all players one by one
+    timeout-minutes: 60
     
     steps:
       - name: Checkout Code
@@ -29,38 +29,33 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-          # 1. Create results file header
+          # Create CSV Header
           echo "Player ID,Daily,Store,Progression,Status" > results_summary.csv
           
-          # 2. Read players from CSV and loop
-          # 'tr -d' cleans Windows line endings (\r)
+          # Read players from CSV and loop
           while IFS=, read -r player_id || [ -n "$player_id" ]; do
-            # Clean the ID (remove whitespace)
+            # Clean the ID (remove whitespace/newlines)
             player_id=$(echo "$player_id" | tr -d '\r' | xargs)
             
-            # Skip empty lines
             if [[ -z "$player_id" ]]; then continue; fi
             
             echo "----------------------------------------"
             echo "Processing: $player_id"
             
-            # 3. Run python script for THIS player only
-            # '2>&1' redirects errors to standard output so we can see logs
-            # '|| true' prevents the whole workflow from stopping if one ID crashes
+            # Run python script for THIS player only
+            # The "$player_id" argument here fixes your error
             output=$(python master_claimer.py "$player_id" 2>&1)
             echo "$output"
             
-            # 4. Parse result from python output
+            # Parse result
             result_line=$(echo "$output" | grep "RESULT_CSV:" | cut -d':' -f2)
-            
             if [[ ! -z "$result_line" ]]; then
                echo "$result_line" >> results_summary.csv
             else
-               # Fallback if script crashed silently or didn't output CSV format
-               echo "$player_id,0,0,0,Error/Crash" >> results_summary.csv
+               echo "$player_id,0,0,0,Crash" >> results_summary.csv
             fi
             
-            # 5. NUCLEAR CLEANUP: Force Kill Chrome to free memory for next run
+            # Force Kill Chrome to free all memory
             pkill -f chrome || true
             pkill -f chromedriver || true
             sleep 5
@@ -74,7 +69,6 @@ jobs:
             SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
             RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
-            # Simple inline python script to email the results collected above
             python -c "
 import smtplib, os
 from email.mime.text import MIMEText
@@ -114,7 +108,6 @@ if sender and recipient and password:
         print(f'Email failed: {e}')
 "
 
-      # 6. Upload Artifacts (Screenshots) if anything went wrong
       - name: Upload Debug Artifacts
         if: always()
         uses: actions/upload-artifact@v4
