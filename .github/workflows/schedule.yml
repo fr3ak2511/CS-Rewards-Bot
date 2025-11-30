@@ -8,8 +8,7 @@ on:
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    # Timeout ensures the runner doesn't get stuck forever if Chrome hangs
-    timeout-minutes: 60
+    timeout-minutes: 60 # Extended timeout to handle all players one by one
     
     steps:
       - name: Checkout Code
@@ -24,15 +23,98 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Run Master Claimer
+      - name: Run Isolated Claims
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
-        run: python master_claimer.py
+        run: |
+          # 1. Create results file header
+          echo "Player ID,Daily,Store,Progression,Status" > results_summary.csv
+          
+          # 2. Read players from CSV and loop
+          # 'tr -d' cleans Windows line endings (\r)
+          while IFS=, read -r player_id || [ -n "$player_id" ]; do
+            # Clean the ID (remove whitespace)
+            player_id=$(echo "$player_id" | tr -d '\r' | xargs)
+            
+            # Skip empty lines
+            if [[ -z "$player_id" ]]; then continue; fi
+            
+            echo "----------------------------------------"
+            echo "Processing: $player_id"
+            
+            # 3. Run python script for THIS player only
+            # '2>&1' redirects errors to standard output so we can see logs
+            # '|| true' prevents the whole workflow from stopping if one ID crashes
+            output=$(python master_claimer.py "$player_id" 2>&1)
+            echo "$output"
+            
+            # 4. Parse result from python output
+            result_line=$(echo "$output" | grep "RESULT_CSV:" | cut -d':' -f2)
+            
+            if [[ ! -z "$result_line" ]]; then
+               echo "$result_line" >> results_summary.csv
+            else
+               # Fallback if script crashed silently or didn't output CSV format
+               echo "$player_id,0,0,0,Error/Crash" >> results_summary.csv
+            fi
+            
+            # 5. NUCLEAR CLEANUP: Force Kill Chrome to free memory for next run
+            pkill -f chrome || true
+            pkill -f chromedriver || true
+            sleep 5
+            
+          done < players.csv
+          
+      - name: Send Email Report
+        if: always()
+        env:
+            GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+            SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+            RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        run: |
+            # Simple inline python script to email the results collected above
+            python -c "
+import smtplib, os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-      # Uploads screenshots and HTML source dumps for debugging
-      # "if: always()" ensures this runs even if the Python script crashes/fails
+sender = os.environ.get('SENDER_EMAIL')
+recipient = os.environ.get('RECIPIENT_EMAIL')
+password = os.environ.get('GMAIL_APP_PASSWORD')
+
+if sender and recipient and password:
+    try:
+        with open('results_summary.csv', 'r') as f:
+            data = f.read()
+        
+        rows = data.strip().split('\n')
+        html = '<h2>Hub Rewards Summary</h2><table border=1 cellpadding=5><tr><th>ID</th><th>Daily</th><th>Store</th><th>Prog</th><th>Status</th></tr>'
+        
+        for row in rows[1:]:
+            if not row.strip(): continue
+            cols = row.split(',')
+            if len(cols) >= 5:
+                html += f'<tr><td>{cols[0]}</td><td>{cols[1]}</td><td>{cols[2]}</td><td>{cols[3]}</td><td>{cols[4]}</td></tr>'
+        html += '</table>'
+
+        msg = MIMEMultipart()
+        msg['Subject'] = 'Hub Rewards Summary'
+        msg['From'] = sender
+        msg['To'] = recipient
+        msg.attach(MIMEText(html, 'html'))
+        
+        s = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        s.login(sender, password)
+        s.sendmail(sender, recipient, msg.as_string())
+        s.quit()
+        print('Email sent')
+    except Exception as e:
+        print(f'Email failed: {e}')
+"
+
+      # 6. Upload Artifacts (Screenshots) if anything went wrong
       - name: Upload Debug Artifacts
         if: always()
         uses: actions/upload-artifact@v4
