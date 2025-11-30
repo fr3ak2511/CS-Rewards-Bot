@@ -136,8 +136,8 @@ def create_driver():
     driver = webdriver.Chrome(service=service, options=options)
     
     # Shorter timeouts (from working script)
-    driver.set_page_load_timeout(30)
-    driver.set_script_timeout(30)
+    driver.set_page_load_timeout(20)
+    driver.set_script_timeout(20)
     
     # Anti-detection
     try:
@@ -149,6 +149,7 @@ def create_driver():
     return driver
 
 # --- HELPERS ---
+
 def close_popups_safe(driver):
     """Enhanced popup closing (from working script)"""
     try:
@@ -157,6 +158,7 @@ def close_popups_safe(driver):
             close_btn = driver.find_element(By.XPATH, "//button[normalize-space(text())='Close']")
             if close_btn.is_displayed():
                 close_btn.click()
+                safe_print("Closed popup with Close button")
                 time.sleep(0.5)
                 return
         except: pass
@@ -167,6 +169,7 @@ def close_popups_safe(driver):
             for x_btn in x_buttons:
                 if x_btn.is_displayed():
                     x_btn.click()
+                    safe_print("Closed popup with X button")
                     time.sleep(0.5)
                     return
         except: pass
@@ -176,20 +179,28 @@ def close_popups_safe(driver):
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()
             time.sleep(0.3)
         except: pass
-        
+            
     except Exception as e:
         pass
+
+def ensure_page(driver, url_keyword):
+    """Verify we're on the correct page"""
+    current_url = driver.current_url.lower()
+    if url_keyword not in current_url:
+        safe_print(f"WARNING: Not on {url_keyword} page, current: {current_url}")
+        return False
+    return True
 
 # --- LOGIN ---
 def login(driver, wait, player_id):
     try:
         safe_print(f"[{player_id}] Loading page...")
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(2)
+        time.sleep(1)
         
         # Accept cookies
         try:
-            cookie_btn = WebDriverWait(driver, 3).until(
+            cookie_btn = WebDriverWait(driver, 2).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]"))
             )
             cookie_btn.click()
@@ -219,15 +230,10 @@ def login(driver, wait, player_id):
             except: continue
         
         if not login_clicked:
-            # Try JS click if normal failed
-            try:
-                 js_click = "document.querySelector('button:contains(\"Login\")').click()"
-                 driver.execute_script(js_click)
-            except:
-                 safe_print(f"[{player_id}] Login button not found")
-                 raise Exception("Login button not found")
+            safe_print(f"[{player_id}] Login button not found")
+            raise Exception("Login button not found")
         
-        time.sleep(1)
+        time.sleep(0.5)
         
         # Find input field
         input_selectors = [
@@ -239,7 +245,7 @@ def login(driver, wait, player_id):
         input_box = None
         for selector in input_selectors:
             try:
-                input_box = WebDriverWait(driver, 5).until(
+                input_box = WebDriverWait(driver, 3).until(
                     EC.visibility_of_element_located((By.XPATH, selector))
                 )
                 break
@@ -251,6 +257,7 @@ def login(driver, wait, player_id):
         input_box.clear()
         input_box.send_keys(player_id)
         time.sleep(0.2)
+        safe_print(f"[{player_id}] Entered ID")
         
         # Submit
         try:
@@ -263,7 +270,7 @@ def login(driver, wait, player_id):
         
         # Wait for login complete
         start_time = time.time()
-        while time.time() - start_time < 15:
+        while time.time() - start_time < 10:
             try:
                 current_url = driver.current_url.lower()
                 if "daily-rewards" in current_url or "user" in current_url:
@@ -275,34 +282,35 @@ def login(driver, wait, player_id):
         
         safe_print(f"[{player_id}] Login timeout")
         return False
-        
+            
     except Exception as e:
         safe_print(f"[{player_id}] Login error: {str(e)[:50]}")
         raise e
 
 # --- CLAIMING (FROM WORKING SCRIPT) ---
+
 def get_claim_buttons(driver, player_id):
     """Find claim buttons using working script method"""
     claim_buttons = []
     try:
-        # Case insensitive XPath for all buttons containing 'Claim'
-        xpath = "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'claim')]"
-        all_buttons = driver.find_elements(By.XPATH, xpath)
-        
-        safe_print(f"[{player_id}] Found {len(all_buttons)} potential buttons")
+        all_buttons = driver.find_elements(By.TAG_NAME, "button")
+        safe_print(f"[{player_id}] Found {len(all_buttons)} total buttons")
         
         for btn in all_buttons:
             try:
-                if btn.is_displayed() and btn.is_enabled():
-                    btn_text = btn.text.lower()
-                    # Filter out buy buttons
-                    if any(word in btn_text for word in ["buy", "purchase", "payment", "pay", "$"]):
-                        continue
-                    claim_buttons.append(btn)
+                btn_text = btn.text.strip()
+                if btn_text and "claim" in btn_text.lower():
+                    if btn.is_displayed() and btn.is_enabled():
+                        # Filter out buy buttons
+                        if any(word in btn_text.lower() for word in ["buy", "purchase", "payment", "pay", "$"]):
+                            continue
+                        claim_buttons.append(btn)
+                        safe_print(f"[{player_id}] Found claimable: '{btn_text}'")
             except: continue
     except Exception as e:
         safe_print(f"[{player_id}] Error finding buttons: {str(e)[:50]}")
-        return claim_buttons
+    
+    return claim_buttons
 
 def claim_rewards_page(driver, player_id, section_name):
     """Generic claim function for any page"""
@@ -310,12 +318,15 @@ def claim_rewards_page(driver, player_id, section_name):
     max_attempts = 5
     
     for attempt in range(max_attempts):
+        safe_print(f"[{player_id}] {section_name} attempt {attempt + 1}")
+        
         close_popups_safe(driver)
-        time.sleep(1)
+        time.sleep(0.5)
         
         claim_buttons = get_claim_buttons(driver, player_id)
         
         if not claim_buttons:
+            safe_print(f"[{player_id}] No buttons found in {section_name}")
             break
         
         # Click first available button
@@ -338,28 +349,28 @@ def claim_rewards_page(driver, player_id, section_name):
             if clicked:
                 claimed += 1
                 safe_print(f"[{player_id}] {section_name} reward {claimed} CLAIMED!")
-                time.sleep(2.5) # Wait for popup
-                close_popups_safe(driver) # Close popup
+                time.sleep(1.5)
+                close_popups_safe(driver)
             else:
                 safe_print(f"[{player_id}] Click failed")
-            
+                
         except Exception as e:
             safe_print(f"[{player_id}] Exception: {str(e)[:50]}")
             continue
-            
+    
     return claimed
 
 def claim_daily(driver, player_id):
     """Daily Rewards page"""
     driver.get("https://hub.vertigogames.co/daily-rewards")
-    time.sleep(2)
+    time.sleep(1)
     close_popups_safe(driver)
     return claim_rewards_page(driver, player_id, "Daily")
 
 def claim_store(driver, player_id):
     """Store Daily Rewards section"""
     driver.get("https://hub.vertigogames.co/store")
-    time.sleep(2)
+    time.sleep(1)
     close_popups_safe(driver)
     
     # Click Daily Rewards tab (from working script)
@@ -375,6 +386,7 @@ def claim_store(driver, player_id):
                 tab = driver.find_element(By.XPATH, selector)
                 if tab.is_displayed():
                     driver.execute_script("arguments[0].click();", tab)
+                    safe_print(f"[{player_id}] Clicked Daily Rewards tab")
                     time.sleep(1)
                     break
             except: continue
@@ -385,7 +397,7 @@ def claim_store(driver, player_id):
 def claim_progression(driver, player_id):
     """Progression Program (using JS from working script)"""
     driver.get("https://hub.vertigogames.co/progression-program")
-    time.sleep(2)
+    time.sleep(1.5)
     close_popups_safe(driver)
     
     claimed = 0
@@ -415,6 +427,7 @@ def claim_progression(driver, player_id):
     for attempt in range(max_attempts):
         try:
             claimable_elements = driver.execute_script(get_buttons_script)
+            safe_print(f"[{player_id}] Progression attempt {attempt + 1}: Found {len(claimable_elements)} buttons")
             
             if not claimable_elements:
                 break
@@ -427,13 +440,13 @@ def claim_progression(driver, player_id):
             
             claimed += 1
             safe_print(f"[{player_id}] Progression reward {claimed} CLAIMED!")
-            time.sleep(2.5)
+            time.sleep(1.5)
             close_popups_safe(driver)
             
         except Exception as e:
             safe_print(f"[{player_id}] Progression error: {str(e)[:50]}")
             break
-            
+    
     return claimed
 
 # --- PROCESS ---
@@ -444,7 +457,7 @@ def process_player(player_id, thread_name):
     try:
         safe_print(f"[{thread_name}] Starting {player_id}")
         driver = create_driver()
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 15)
         
         if not login(driver, wait, player_id):
             stats['status'] = "Login Failed"
