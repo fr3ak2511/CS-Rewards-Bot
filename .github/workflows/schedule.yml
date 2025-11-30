@@ -30,8 +30,9 @@ jobs:
         run: python master_claimer.py
 
       # UPDATED STEP: Captures screenshots AND HTML files for debugging
+      # Runs 'always()' so you get data even if the script crashes or finishes "successfully" with 0 claims
       - name: Upload Debug Artifacts
-        if: always() # Runs even if the script crashes
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: debug-data
