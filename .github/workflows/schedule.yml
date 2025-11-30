@@ -8,6 +8,8 @@ on:
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
+    # Timeout to prevent hanging jobs consuming all your minutes if Chrome freezes
+    timeout-minutes: 30
     
     steps:
       - name: Checkout Code
@@ -29,8 +31,8 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
 
-      # UPDATED STEP: Captures screenshots AND HTML files for debugging
-      # Runs 'always()' so you get data even if the script crashes or finishes "successfully" with 0 claims
+      # Uploads screenshots and HTML source dumps for debugging
+      # "if: always()" ensures this runs even if the Python script crashes/fails
       - name: Upload Debug Artifacts
         if: always()
         uses: actions/upload-artifact@v4
