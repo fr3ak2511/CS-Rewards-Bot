@@ -5,6 +5,7 @@ import os
 import smtplib
 import sys
 import gc
+import subprocess
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -90,14 +91,22 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER (V30 STABLE CONFIG) ---
+# --- CLEANUP UTILS ---
+def force_kill_chrome():
+    """Nuclear option to kill stuck chrome processes"""
+    try:
+        if os.name == 'posix': # Linux/Mac
+            subprocess.run(['pkill', '-f', 'chrome'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['pkill', '-f', 'chromedriver'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except: pass
+
+# --- DRIVER (RESTORED V24 STABILITY) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
+        options.add_argument("--window-size=1920,1080")
     
-    # Standard Stability Flags (Proven Stable in V30)
-    options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
@@ -105,12 +114,12 @@ def create_driver():
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-blink-features=AutomationControlled")
     
+    # Stability flags (RESTORED FROM V24)
     options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--single-process") 
-    
+    options.add_argument("--single-process")  # CRITICAL!
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    options.page_load_strategy = 'normal'
+    options.page_load_strategy = 'eager' # Instead of DesiredCapabilities
     
     service = Service(DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
@@ -123,7 +132,7 @@ def create_driver():
         """
     })
     
-    driver.set_page_load_timeout(120)
+    driver.set_page_load_timeout(60)
     driver.implicitly_wait(5)
     return driver
 
@@ -148,140 +157,103 @@ def accept_cookies(driver, wait):
         btn.click()
     except: pass
 
-# --- LOGIN (AGGRESSIVE DEBUG VERSION) ---
-def login(driver, wait, player_id):
+# --- LOGIN (VERIFIED V24) ---
+def verify_login_success(driver):
+    """Checks if we are ACTUALLY logged in by looking for Logout button or Profile."""
     try:
-        safe_print(f"[{player_id}] Loading page...")
-        driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(3)
-        
-        accept_cookies(driver, wait)
-        close_popups_safe(driver)
-        time.sleep(3)
-
-        safe_print(f"[{player_id}] Searching for login button...")
-        
-        # 1. DEBUG: Print ALL buttons
-        try:
-            all_btns = driver.find_elements(By.TAG_NAME, "button")
-            safe_print(f"[{player_id}] Total buttons found: {len(all_btns)}")
-            for i, b in enumerate(all_btns[:5]):
-                safe_print(f"[{player_id}] Button {i}: '{b.text}' Visible: {b.is_displayed()}")
-        except: pass
-
-        # 2. Find Login
-        login_selectors = [
-            "//button[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
-            "//a[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
-            "//button[contains(@class, 'login')]",
-            "//a[contains(@href, 'login')]",
-            "//button[@type='button']"
+        indicators = [
+            "//button[contains(text(), 'Logout')]",
+            "//a[contains(text(), 'Logout')]",
+            "//div[contains(@class, 'user-profile')]",
+            "//div[contains(@class, 'avatar')]"
         ]
-        
-        login_clicked = False
-        for selector in login_selectors:
-            try:
-                elements = driver.find_elements(By.XPATH, selector)
-                for btn in elements:
-                    if btn.is_displayed():
-                        safe_print(f"[{player_id}] Trying to click: '{btn.text}'")
-                        try:
-                            btn.click()
-                            login_clicked = True
-                            safe_print(f"[{player_id}] Clicked login!")
-                            break
-                        except:
-                            driver.execute_script("arguments[0].click();", btn)
-                            login_clicked = True
-                            safe_print(f"[{player_id}] Clicked login (JS)")
-                            break
-                if login_clicked: break
-            except: continue
-            
-        if not login_clicked:
-            # Last Resort: Click ANY visible button with 'login' in text
-            safe_print(f"[{player_id}] Last resort search...")
-            driver.execute_script("""
-                var buttons = document.querySelectorAll('button, a');
-                for (var i=0; i<buttons.length; i++) {
-                    if (buttons[i].innerText.toLowerCase().includes('login')) {
-                        buttons[i].click();
-                        break;
-                    }
-                }
-            """)
-            time.sleep(3)
-
-        time.sleep(3) # Wait for modal
-        safe_print(f"[{player_id}] Searching for input...")
-        
-        # 3. Input
-        inp = None
-        input_selectors = [
-            "//input[contains(@placeholder, 'ID')]",
-            "//input[@type='text']",
-            "//input[contains(@class, 'input')]",
-            "//input[contains(@name, 'id')]",
-        ]
-        
-        for _ in range(3):
-            for sel in input_selectors:
-                try:
-                    inputs = driver.find_elements(By.XPATH, sel)
-                    visible = [i for i in inputs if i.is_displayed()]
-                    if visible:
-                        inp = visible[0]
-                        break
-                except: continue
-            if inp: break
-            time.sleep(1)
-            
-        if not inp:
-            driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
-            raise Exception("Input not found")
-
-        inp.clear()
-        inp.send_keys(player_id)
-        time.sleep(0.5)
-        safe_print(f"[{player_id}] Entered ID")
-        
-        # 4. Submit
-        try:
-            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
-            driver.execute_script("arguments[0].click();", submit_btn)
-        except:
-            inp.send_keys(Keys.ENTER)
-        
-        # 5. Verify (Modal closed)
-        time.sleep(3)
-        start_time = time.time()
-        while time.time() - start_time < 10:
-            try:
-                if not inp.is_displayed():
-                    safe_print(f"[{player_id}] Login successful!")
-                    return True
-            except:
-                safe_print(f"[{player_id}] Login successful!")
-                return True # Element gone
-            time.sleep(0.5)
-            
-        safe_print(f"[{player_id}] Login verification failed")
+        for selector in indicators:
+            if driver.find_elements(By.XPATH, selector):
+                return True
         return False
-            
-    except Exception as e:
-        safe_print(f"[{player_id}] Login error: {str(e)[:80]}")
-        raise e
+    except:
+        return False
 
-# --- CLAIMING ---
+def login(driver, wait, player_id):
+    driver.get("https://hub.vertigogames.co/daily-rewards")
+    time.sleep(3)
+    accept_cookies(driver, wait)
+    close_popups_safe(driver)
+    
+    # Check if already logged in?
+    if verify_login_success(driver):
+        safe_print(f"[{player_id}] Already logged in")
+        return True
+
+    # 1. Click Login
+    login_clicked = False
+    login_selectors = ["//button[contains(text(),'Login')]", "//a[contains(text(),'Login')]"]
+    
+    for selector in login_selectors:
+        try:
+            btns = driver.find_elements(By.XPATH, selector)
+            for btn in btns:
+                if btn.is_displayed():
+                    btn.click()
+                    login_clicked = True
+                    time.sleep(2)
+                    break
+            if login_clicked: break
+        except: continue
+    
+    # 2. Input
+    inp = None
+    try:
+        inp = WebDriverWait(driver, 5).until(
+            EC.visibility_of_element_located((By.XPATH, "//input[@type='text' or contains(@placeholder, 'ID')]"))
+        )
+    except:
+        # Fallback: Try JS click on login again
+        if not login_clicked:
+            safe_print(f"[{player_id}] Login button not clicked, retrying JS...")
+            driver.execute_script("document.querySelector('button.login').click()")
+            time.sleep(2)
+            try:
+                inp = driver.find_element(By.XPATH, "//input[@type='text']")
+            except: pass
+
+    if not inp:
+        driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
+        raise Exception("Input not found")
+
+    inp.clear()
+    inp.send_keys(player_id)
+    time.sleep(0.5)
+    
+    # 3. Submit
+    try:
+        submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
+        submit_btn.click()
+    except:
+        inp.send_keys(Keys.ENTER)
+    
+    time.sleep(5) # Wait for redirect/reload
+    
+    # 4. VERIFY
+    if not verify_login_success(driver):
+        driver.save_screenshot(f"login_fail_verify_{player_id}.png")
+        raise Exception("Login verification failed (Still Guest?)")
+        
+    return True
+
+# --- CLAIMING (V24 Logic) ---
+
 def get_valid_claim_buttons(driver, player_id):
+    """Finds buttons that are REAL claims, not 'Login to claim'"""
     valid_buttons = []
     try:
         xpath = "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'claim')]"
         buttons = driver.find_elements(By.XPATH, xpath)
+        
         for btn in buttons:
             if btn.is_displayed() and btn.is_enabled():
                 text = btn.text.lower()
-                if "login" in text or "buy" in text: continue
+                if "login" in text or "buy" in text or "purchase" in text: continue
                 valid_buttons.append(btn)
     except: pass
     return valid_buttons
@@ -289,38 +261,42 @@ def get_valid_claim_buttons(driver, player_id):
 def perform_claim_loop(driver, player_id, section_name):
     claimed = 0
     max_rounds = 6
+    
     for round_num in range(max_rounds):
         close_popups_safe(driver)
-        time.sleep(2)
+        time.sleep(1.5)
+        
         buttons = get_valid_claim_buttons(driver, player_id)
-        if not buttons: break
+        
+        if not buttons:
+            break
             
         btn = buttons[0]
         try:
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
-            # Double Tap
+            # Click Strategy
             try: btn.click()
             except: driver.execute_script("arguments[0].click();", btn)
-            
+                
             safe_print(f"[{player_id}] Clicked {section_name}...")
             time.sleep(3)
             
             # Verify
-            is_success = False
-            if close_popups_safe(driver): is_success = True
-            try:
-                if not btn.is_displayed() or "claimed" in btn.text.lower(): is_success = True
-            except: is_success = True
+            if close_popups_safe(driver): # Just running it helps clear
+                pass 
             
-            if is_success:
-                claimed += 1
-                safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
-            else:
-                safe_print(f"[{player_id}] Click failed - Button still there")
+            try:
+                if not btn.is_displayed() or "claimed" in btn.text.lower():
+                    claimed += 1
+                    safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
+            except:
+                claimed += 1 # Element became stale = success
+                safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED (Stale)")
 
         except Exception: continue
+            
     return claimed
 
 def claim_daily(driver, player_id):
@@ -330,6 +306,7 @@ def claim_store(driver, player_id):
     driver.get("https://hub.vertigogames.co/store")
     time.sleep(3)
     close_popups_safe(driver)
+    
     try:
         driver.execute_script("window.scrollTo(0, 300);")
         time.sleep(1)
@@ -337,6 +314,7 @@ def claim_store(driver, player_id):
         tab.click()
         time.sleep(1.5)
     except: pass
+
     return perform_claim_loop(driver, player_id, "Store")
 
 def claim_progression(driver, player_id):
@@ -344,6 +322,7 @@ def claim_progression(driver, player_id):
     driver.get("https://hub.vertigogames.co/progression-program")
     time.sleep(3)
     close_popups_safe(driver)
+    
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
         for arrow in arrows:
@@ -358,7 +337,7 @@ def claim_progression(driver, player_id):
         let buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
             let text = btn.innerText.trim();
-            if (text.toLowerCase() === 'claim') { 
+            if (text === 'Claim') { // EXACT MATCH
                 let rect = btn.getBoundingClientRect();
                 if (rect.left > 300) { 
                     if (!btn.parentElement.innerText.includes('Delivered')) {
@@ -377,7 +356,8 @@ def claim_progression(driver, player_id):
                 time.sleep(3)
                 close_popups_safe(driver)
                 claimed += 1
-            else: break
+            else:
+                break
         except: break
     return claimed
 
@@ -385,36 +365,49 @@ def claim_progression(driver, player_id):
 def process_player(player_id, thread_name):
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
+    
     try:
         safe_print(f"[{thread_name}] Starting {player_id}")
+        # FORCE CLEAN START
+        force_kill_chrome()
+        
         driver = create_driver()
         wait = WebDriverWait(driver, 60)
         
-        if not login(driver, wait, player_id):
-            stats['status'] = "Login Timeout"
-        else:
-            time.sleep(2)
-            safe_print(f"[{thread_name}] Checking Daily...")
-            stats['daily'] = claim_daily(driver, player_id)
-            safe_print(f"[{thread_name}] Checking Store...")
-            stats['store'] = claim_store(driver, player_id)
-            safe_print(f"[{thread_name}] Checking Progression...")
-            stats['progression'] = claim_progression(driver, player_id)
-            stats['status'] = "Success"
-        
+        try:
+            if login(driver, wait, player_id):
+                time.sleep(2)
+                safe_print(f"[{thread_name}] Checking Daily...")
+                stats['daily'] = claim_daily(driver, player_id)
+                
+                safe_print(f"[{thread_name}] Checking Store...")
+                stats['store'] = claim_store(driver, player_id)
+                
+                safe_print(f"[{thread_name}] Checking Progression...")
+                stats['progression'] = claim_progression(driver, player_id)
+                
+                stats['status'] = "Success"
+                
+        except Exception as e:
+            safe_print(f"[{player_id}] Login Failed: {e}")
+            stats['status'] = "Login Failed"
+
         safe_print(f"[{thread_name}] Finished {player_id}")
 
     except WebDriverException as e:
         safe_print(f"[{thread_name}] Chrome Crash: {str(e)[:50]}")
         stats['status'] = "Chrome Crash"
     except Exception as e:
-        safe_print(f"[{thread_name}] Error: {str(e)}")
+        safe_print(f"[{thread_name}] Error on {player_id}: {str(e)}")
         stats['status'] = f"Error: {str(e)[:30]}"
     finally:
         if driver: 
             try: driver.quit()
             except: pass
+        # FORCE CLEANUP
         gc.collect()
+        force_kill_chrome()
+        
     return stats
 
 def main():
@@ -432,13 +425,14 @@ def main():
 
     safe_print(f"Loaded {len(players)} players.")
     results = []
+    
     for i in range(0, len(players), BATCH_SIZE):
         batch = players[i:i + BATCH_SIZE]
         with ThreadPoolExecutor(max_workers=BATCH_SIZE) as executor:
             futures = {executor.submit(process_player, pid, f"Thread-{i+idx}"): pid for idx, pid in enumerate(batch)}
             for future in as_completed(futures):
                 results.append(future.result())
-        time.sleep(3)
+        time.sleep(2)
 
     send_summary_email(results)
 
