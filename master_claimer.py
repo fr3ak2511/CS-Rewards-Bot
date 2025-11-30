@@ -90,12 +90,13 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER ---
+# --- DRIVER (V30 STABLE CONFIG) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
     
+    # Standard Stability Flags (Proven Stable in V30)
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -103,8 +104,10 @@ def create_driver():
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-blink-features=AutomationControlled")
+    
     options.add_argument("--disable-software-rasterizer")
     options.add_argument("--single-process") 
+    
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     options.page_load_strategy = 'normal'
@@ -145,100 +148,129 @@ def accept_cookies(driver, wait):
         btn.click()
     except: pass
 
-# --- LOGIN (V24 "Physical Click" Logic) ---
-def verify_login_success(driver):
-    try:
-        # Check 1: Logout Button
-        if driver.find_elements(By.XPATH, "//button[contains(text(), 'Logout')]"):
-            return True
-        # Check 2: Claim Buttons Visible (Implies Login)
-        if driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]"):
-            return True
-        return False
-    except: return False
-
+# --- LOGIN (AGGRESSIVE DEBUG VERSION) ---
 def login(driver, wait, player_id):
-    driver.get("https://hub.vertigogames.co/daily-rewards")
-    time.sleep(5) # Patience
-    accept_cookies(driver, wait)
-    close_popups_safe(driver)
-
-    # 1. Click Login
-    login_clicked = False
-    login_selectors = ["//button[contains(text(),'Login')]", "//a[contains(text(),'Login')]"]
-    
-    for selector in login_selectors:
-        try:
-            btns = driver.find_elements(By.XPATH, selector)
-            for btn in btns:
-                if btn.is_displayed():
-                    # Try Physical Click First (V24 Style)
-                    try: btn.click()
-                    except: driver.execute_script("arguments[0].click();", btn)
-                    
-                    login_clicked = True
-                    time.sleep(5) # Wait for modal
-                    break
-            if login_clicked: break
-        except: continue
-    
-    # 2. Input (Robust)
-    inp = None
-    input_selectors = ["//input[@type='text']", "//input[contains(@placeholder, 'ID')]"]
-    for _ in range(3):
-        for sel in input_selectors:
-            inputs = driver.find_elements(By.XPATH, sel)
-            visible = [i for i in inputs if i.is_displayed()]
-            if visible:
-                inp = visible[0]
-                break
-        if inp: break
-        
-        # Retry Click
-        if not inp:
-             driver.execute_script("document.querySelector('button.login')?.click()")
-        time.sleep(2)
-
-    if not inp:
-        driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
-        raise Exception("Input not found")
-
-    inp.clear()
-    inp.send_keys(player_id)
-    time.sleep(1)
-    
-    # 3. Submit (RESTORED V24 LOGIC)
-    submitted = False
     try:
-        submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
-        # Use ActionChains for a "real" click
-        ActionChains(driver).move_to_element(submit_btn).click().perform()
-        submitted = True
-        safe_print(f"[{player_id}] Clicked Submit (ActionChains)")
-    except:
+        safe_print(f"[{player_id}] Loading page...")
+        driver.get("https://hub.vertigogames.co/daily-rewards")
+        time.sleep(3)
+        
+        accept_cookies(driver, wait)
+        close_popups_safe(driver)
+        time.sleep(3)
+
+        safe_print(f"[{player_id}] Searching for login button...")
+        
+        # 1. DEBUG: Print ALL buttons
         try:
-            submit_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'LOGIN')]")
-            submit_btn.click()
-            submitted = True
-            safe_print(f"[{player_id}] Clicked Submit (Standard)")
+            all_btns = driver.find_elements(By.TAG_NAME, "button")
+            safe_print(f"[{player_id}] Total buttons found: {len(all_btns)}")
+            for i, b in enumerate(all_btns[:5]):
+                safe_print(f"[{player_id}] Button {i}: '{b.text}' Visible: {b.is_displayed()}")
         except: pass
-        
-    if not submitted:
-        inp.send_keys(Keys.ENTER)
-        safe_print(f"[{player_id}] Pressed Enter")
-    
-    time.sleep(5)
-    
-    if verify_login_success(driver):
-        return True
-        
-    # Final check - sometimes URL doesn't change but modal closes
-    try:
-        if not inp.is_displayed(): return True
-    except: return True
 
-    driver.save_screenshot(f"login_fail_verify_{player_id}.png")
-    raise Exception("Login verification failed")
+        # 2. Find Login
+        login_selectors = [
+            "//button[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
+            "//a[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
+            "//button[contains(@class, 'login')]",
+            "//a[contains(@href, 'login')]",
+            "//button[@type='button']"
+        ]
+        
+        login_clicked = False
+        for selector in login_selectors:
+            try:
+                elements = driver.find_elements(By.XPATH, selector)
+                for btn in elements:
+                    if btn.is_displayed():
+                        safe_print(f"[{player_id}] Trying to click: '{btn.text}'")
+                        try:
+                            btn.click()
+                            login_clicked = True
+                            safe_print(f"[{player_id}] Clicked login!")
+                            break
+                        except:
+                            driver.execute_script("arguments[0].click();", btn)
+                            login_clicked = True
+                            safe_print(f"[{player_id}] Clicked login (JS)")
+                            break
+                if login_clicked: break
+            except: continue
+            
+        if not login_clicked:
+            # Last Resort: Click ANY visible button with 'login' in text
+            safe_print(f"[{player_id}] Last resort search...")
+            driver.execute_script("""
+                var buttons = document.querySelectorAll('button, a');
+                for (var i=0; i<buttons.length; i++) {
+                    if (buttons[i].innerText.toLowerCase().includes('login')) {
+                        buttons[i].click();
+                        break;
+                    }
+                }
+            """)
+            time.sleep(3)
+
+        time.sleep(3) # Wait for modal
+        safe_print(f"[{player_id}] Searching for input...")
+        
+        # 3. Input
+        inp = None
+        input_selectors = [
+            "//input[contains(@placeholder, 'ID')]",
+            "//input[@type='text']",
+            "//input[contains(@class, 'input')]",
+            "//input[contains(@name, 'id')]",
+        ]
+        
+        for _ in range(3):
+            for sel in input_selectors:
+                try:
+                    inputs = driver.find_elements(By.XPATH, sel)
+                    visible = [i for i in inputs if i.is_displayed()]
+                    if visible:
+                        inp = visible[0]
+                        break
+                except: continue
+            if inp: break
+            time.sleep(1)
+            
+        if not inp:
+            driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
+            raise Exception("Input not found")
+
+        inp.clear()
+        inp.send_keys(player_id)
+        time.sleep(0.5)
+        safe_print(f"[{player_id}] Entered ID")
+        
+        # 4. Submit
+        try:
+            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
+            driver.execute_script("arguments[0].click();", submit_btn)
+        except:
+            inp.send_keys(Keys.ENTER)
+        
+        # 5. Verify (Modal closed)
+        time.sleep(3)
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            try:
+                if not inp.is_displayed():
+                    safe_print(f"[{player_id}] Login successful!")
+                    return True
+            except:
+                safe_print(f"[{player_id}] Login successful!")
+                return True # Element gone
+            time.sleep(0.5)
+            
+        safe_print(f"[{player_id}] Login verification failed")
+        return False
+            
+    except Exception as e:
+        safe_print(f"[{player_id}] Login error: {str(e)[:80]}")
+        raise e
 
 # --- CLAIMING ---
 def get_valid_claim_buttons(driver, player_id):
@@ -268,14 +300,12 @@ def perform_claim_loop(driver, player_id, section_name):
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
-            # Physical Click (V24 Style)
-            try: 
-                ActionChains(driver).move_to_element(btn).click().perform()
-            except: 
-                driver.execute_script("arguments[0].click();", btn)
-                
+            # Double Tap
+            try: btn.click()
+            except: driver.execute_script("arguments[0].click();", btn)
+            
             safe_print(f"[{player_id}] Clicked {section_name}...")
-            time.sleep(4)
+            time.sleep(3)
             
             # Verify
             is_success = False
@@ -331,10 +361,10 @@ def claim_progression(driver, player_id):
             if (text.toLowerCase() === 'claim') { 
                 let rect = btn.getBoundingClientRect();
                 if (rect.left > 300) { 
-                     if (!btn.parentElement.innerText.includes('Delivered')) {
+                    if (!btn.parentElement.innerText.includes('Delivered')) {
                         btn.click();
                         return true; 
-                     }
+                    }
                 }
             }
         }
@@ -344,7 +374,7 @@ def claim_progression(driver, player_id):
             clicked = driver.execute_script(js_find_and_click)
             if clicked:
                 safe_print(f"[{player_id}] Progression Clicked...")
-                time.sleep(4)
+                time.sleep(3)
                 close_popups_safe(driver)
                 claimed += 1
             else: break
@@ -358,7 +388,7 @@ def process_player(player_id, thread_name):
     try:
         safe_print(f"[{thread_name}] Starting {player_id}")
         driver = create_driver()
-        wait = WebDriverWait(driver, 45)
+        wait = WebDriverWait(driver, 60)
         
         if not login(driver, wait, player_id):
             stats['status'] = "Login Timeout"
@@ -384,9 +414,7 @@ def process_player(player_id, thread_name):
         if driver: 
             try: driver.quit()
             except: pass
-    
-    # Explicit cleanup
-    gc.collect()
+        gc.collect()
     return stats
 
 def main():
