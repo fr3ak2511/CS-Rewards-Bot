@@ -1,29 +1,33 @@
 name: Hub Merged Rewards
+
 on:
   schedule:
-    - cron: "0 * * * *"
-  workflow_dispatch:
+    - cron: "0 * * * *"        # Every hour, on the hour (UTC)
+  workflow_dispatch:           # Allow manual trigger
 
 jobs:
-  run-merged-script:
+  run-rewards:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    
+    timeout-minutes: 15
+
     steps:
-      - name: Checkout repo
+      - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
-      - name: Run merged rewards
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+        shell: bash
+
+      - name: Run Merged Rewards Script (Daily + Store)
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -31,13 +35,19 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           SMTP_FROM: ${{ secrets.SMTP_FROM }}
           SMTP_TO: ${{ secrets.SMTP_TO }}
+          HEADLESS: ${{ secrets.HEADLESS }}          # "false" for visual modal rendering
+          BROWSER_UA: ${{ secrets.BROWSER_UA }}      # Desktop UA string
         run: |
+          echo "Starting Xvfb..."
+          Xvfb :99 -ac &
+          export DISPLAY=:99
+          echo "Running merged rewards automation..."
           python send_email_with_log.py
-          
-      - name: Upload screenshots artifact
+        shell: bash
+
+      - name: Upload screenshots (if any)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-screenshots
+          name: merged-screenshots
           path: screenshots/
-          retention-days: 3
