@@ -5,6 +5,7 @@ import os
 import smtplib
 import sys
 import gc
+import subprocess
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -90,7 +91,15 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER (V22 STABILITY CONFIG) ---
+# --- CLEANUP UTILS ---
+def force_kill_chrome():
+    try:
+        if os.name == 'posix': 
+            subprocess.run(['pkill', '-f', 'chrome'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['pkill', '-f', 'chromedriver'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except: pass
+
+# --- DRIVER (CORRECTED STRATEGY) ---
 def create_driver():
     options = Options()
     if HEADLESS:
@@ -105,41 +114,36 @@ def create_driver():
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-blink-features=AutomationControlled")
     
-    # V22 Magic Flags
+    # V24 STABILITY FLAGS (Verified)
     options.add_argument("--single-process")
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-infobars")
     
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # CRITICAL: 'none' prevents the 60s timeout crash
-    options.page_load_strategy = 'none'
+    # CRITICAL FIX: 'eager' waits for DOM (V24 logic), 'none' was skipping load (V22 logic)
+    options.page_load_strategy = 'eager'
     
     service = Service(DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     
-    # Anti-detection
-    try:
-        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-        })
-    except: pass
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            })
+        """
+    })
     
-    # Long timeouts
-    driver.set_page_load_timeout(180)
+    # Reasonable timeouts for 'eager'
+    driver.set_page_load_timeout(60)
     driver.implicitly_wait(5)
     return driver
 
 # --- HELPERS ---
 def wait_for_page_ready(driver):
-    """Manual wait needed because strategy='none'"""
-    try:
-        time.sleep(2)
-        WebDriverWait(driver, 30).until(
-            lambda d: d.execute_script("return document.readyState") == "complete"
-        )
-        time.sleep(3) # Extra buffer
-    except: pass
+    # With 'eager', we just need a small buffer for React/JS
+    time.sleep(5)
 
 def close_popups_safe(driver):
     try:
@@ -171,7 +175,8 @@ def verify_login_success(driver):
 
 def login(driver, wait, player_id):
     driver.get("https://hub.vertigogames.co/daily-rewards")
-    wait_for_page_ready(driver) # Vital for 'none' strategy
+    # Eager returns early, so we sleep to let JS init
+    time.sleep(5)
     
     accept_cookies(driver, wait)
     close_popups_safe(driver)
@@ -179,6 +184,7 @@ def login(driver, wait, player_id):
     if verify_login_success(driver):
         return True
 
+    # 1. Click Login
     login_clicked = False
     login_selectors = ["//button[contains(text(),'Login')]", "//a[contains(text(),'Login')]"]
     
@@ -195,6 +201,7 @@ def login(driver, wait, player_id):
             if login_clicked: break
         except: continue
     
+    # 2. Input
     inp = None
     input_selectors = ["//input[@type='text']", "//input[contains(@placeholder, 'ID')]"]
     for _ in range(5):
@@ -211,13 +218,14 @@ def login(driver, wait, player_id):
         time.sleep(1)
 
     if not inp:
-        driver.save_screenshot(f"login_fail_{player_id}.png")
+        driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
         raise Exception("Input not found")
 
     inp.clear()
     inp.send_keys(player_id)
     time.sleep(0.5)
     
+    # 3. Submit
     try:
         submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
         driver.execute_script("arguments[0].click();", submit_btn)
@@ -238,13 +246,11 @@ def login(driver, wait, player_id):
 def get_valid_claim_buttons(driver, player_id):
     valid_buttons = []
     try:
-        # Case-insensitive 'claim'
         xpath = "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'claim')]"
         buttons = driver.find_elements(By.XPATH, xpath)
         for btn in buttons:
             if btn.is_displayed() and btn.is_enabled():
                 text = btn.text.lower()
-                # STRICT FILTER
                 if "login" in text or "buy" in text: continue
                 valid_buttons.append(btn)
     except: pass
@@ -264,8 +270,7 @@ def perform_claim_loop(driver, player_id, section_name):
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
-            # Double Tap (V34 Logic)
-            try: ActionChains(driver).move_to_element(btn).click().perform()
+            try: btn.click()
             except: driver.execute_script("arguments[0].click();", btn)
             
             safe_print(f"[{player_id}] Clicked {section_name}...")
@@ -293,7 +298,6 @@ def claim_daily(driver, player_id):
 def claim_store(driver, player_id):
     driver.get("https://hub.vertigogames.co/store")
     wait_for_page_ready(driver)
-    time.sleep(3)
     close_popups_safe(driver)
     try:
         driver.execute_script("window.scrollTo(0, 300);")
@@ -308,7 +312,6 @@ def claim_progression(driver, player_id):
     claimed = 0
     driver.get("https://hub.vertigogames.co/progression-program")
     wait_for_page_ready(driver)
-    time.sleep(3)
     close_popups_safe(driver)
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
@@ -327,10 +330,10 @@ def claim_progression(driver, player_id):
             if (text.toLowerCase() === 'claim') { 
                 let rect = btn.getBoundingClientRect();
                 if (rect.left > 300) { 
-                    if (!btn.parentElement.innerText.includes('Delivered')) {
+                     if (!btn.parentElement.innerText.includes('Delivered')) {
                         btn.click();
                         return true; 
-                    }
+                     }
                 }
             }
         }
@@ -353,8 +356,10 @@ def process_player(player_id, thread_name):
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     try:
         safe_print(f"[{thread_name}] Starting {player_id}")
+        force_kill_chrome()
+        
         driver = create_driver()
-        wait = WebDriverWait(driver, 45)
+        wait = WebDriverWait(driver, 60)
         
         if not login(driver, wait, player_id):
             stats['status'] = "Login Timeout"
@@ -381,6 +386,7 @@ def process_player(player_id, thread_name):
             try: driver.quit()
             except: pass
         gc.collect()
+        force_kill_chrome()
     return stats
 
 def main():
