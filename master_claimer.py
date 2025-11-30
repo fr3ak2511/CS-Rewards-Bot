@@ -33,13 +33,13 @@ def safe_print(msg):
 # --- EMAIL FUNCTIONS ---
 def send_summary_email(summary_data):
     """Sends the consolidated log via email using GitHub Secrets."""
+    # UPDATED: Uses SENDER_EMAIL as the username (matches your existing secrets)
     sender_email = os.environ.get("SENDER_EMAIL")
     recipient_email = os.environ.get("RECIPIENT_EMAIL")
-    gmail_user = os.environ.get("GMAIL_USER")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
 
-    if not all([sender_email, recipient_email, gmail_user, gmail_password]):
-        safe_print("⚠️ Email secrets missing. Skipping email report.")
+    if not all([sender_email, recipient_email, gmail_password]):
+        safe_print("⚠️ Email secrets missing (SENDER_EMAIL, RECIPIENT_EMAIL, or GMAIL_APP_PASSWORD). Skipping email report.")
         return
 
     subject = f"Hub Rewards Summary - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -80,7 +80,8 @@ def send_summary_email(summary_data):
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(gmail_user, gmail_password)
+        # UPDATED: Login with sender_email
+        server.login(sender_email, gmail_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
         safe_print("✅ Summary email sent successfully.")
