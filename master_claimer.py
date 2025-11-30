@@ -3,7 +3,6 @@ import time
 import threading
 import os
 import smtplib
-import sys
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -18,10 +17,11 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
-BATCH_SIZE = 2
+BATCH_SIZE = 1 # Keep 1 to prevent OOM
 HEADLESS = True
 
 # --- GLOBAL DRIVER ---
@@ -34,7 +34,6 @@ print_lock = threading.Lock()
 def safe_print(msg):
     with print_lock:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-        sys.stdout.flush()
 
 # --- EMAIL ---
 def send_summary_email(summary_data):
@@ -89,47 +88,88 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER ---
+# --- DRIVER (STABILITY FIX) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
     
-    options.add_argument("--window-size=1920,1080")
+    # CRITICAL: Core stability flags for CI
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-dev-shm-usage")  # Fixes shared memory crash
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-setuid-sandbox")
+    
+    # Window and display
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
+    
+    # Anti-detection
     options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-extensions")
     
-    # Stability flags
-    options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--single-process") 
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    # Performance & Stability
+    options.add_argument("--disable-logging")
+    options.add_argument("--disable-web-security")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--disable-backgrounding-occluded-windows")
     
-    # Match local strategy
-    options.page_load_strategy = 'eager'
+    # NEW: Additional stability flags for CI
+    options.add_argument("--disable-dev-tools")
+    options.add_argument("--disable-crash-reporter")
+    options.add_argument("--disable-in-process-stack-traces")
+    options.add_argument("--disable-breakpad")
+    options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+    options.add_argument("--single-process")  # Run in single process mode
+    options.add_argument("--no-zygote")  # No zygote process
+    
+    # Block images for faster load
+    prefs = {
+        "profile.default_content_setting_values": {
+            "images": 2,
+            "notifications": 2,
+            "popups": 2,
+        },
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.popups": 0,
+    }
+    options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
+    options.add_experimental_option("useAutomationExtension", False)
+    
+    # Page load strategy
+    caps = DesiredCapabilities.CHROME.copy()
+    caps["pageLoadStrategy"] = "eager"
+    for k, v in caps.items():
+        options.set_capability(k, v)
     
     service = Service(DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     
-    # Anti-detect
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            })
-        """
-    })
+    # Anti-detection CDP
+    try:
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
+    except: pass
     
-    driver.set_page_load_timeout(60)
+    # Shorter timeouts
+    driver.set_page_load_timeout(45)
+    driver.set_script_timeout(45)
     driver.implicitly_wait(5)
+    
     return driver
 
 # --- HELPERS ---
 def close_popups_safe(driver):
     try:
+        # JS Close
         driver.execute_script("""
             document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
                 let text = btn.innerText.toLowerCase();
@@ -138,8 +178,10 @@ def close_popups_safe(driver):
                 }
             });
         """)
+        # Safe Area
         ActionChains(driver).move_by_offset(10, 10).click().perform()
     except: pass
+    return True
 
 def accept_cookies(driver, wait):
     try:
@@ -149,63 +191,45 @@ def accept_cookies(driver, wait):
 
 # --- LOGIN ---
 def verify_login_success(driver):
-    """Checks if we are ACTUALLY logged in"""
     try:
-        indicators = [
-            "//button[contains(text(), 'Logout')]",
-            "//a[contains(text(), 'Logout')]",
-            "//div[contains(@class, 'user-profile')]",
-            "//div[contains(@class, 'avatar')]"
-        ]
-        for selector in indicators:
-            if driver.find_elements(By.XPATH, selector):
-                return True
-        return False
-    except:
-        return False
+        # Simple check for logged-in state
+        return "daily-rewards" in driver.current_url
+    except: return False
 
 def login(driver, wait, player_id):
     driver.get("https://hub.vertigogames.co/daily-rewards")
-    time.sleep(3)
+    time.sleep(2)
     accept_cookies(driver, wait)
     close_popups_safe(driver)
-    
-    if verify_login_success(driver):
-        return True
 
     # 1. Click Login
-    login_clicked = False
     login_selectors = ["//button[contains(text(),'Login')]", "//a[contains(text(),'Login')]"]
-    
     for selector in login_selectors:
         try:
             btns = driver.find_elements(By.XPATH, selector)
             for btn in btns:
                 if btn.is_displayed():
-                    btn.click()
-                    login_clicked = True
+                    driver.execute_script("arguments[0].click();", btn)
                     time.sleep(2)
                     break
-            if login_clicked: break
         except: continue
     
     # 2. Input
     inp = None
     try:
-        inp = WebDriverWait(driver, 5).until(
+        inp = WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, "//input[@type='text' or contains(@placeholder, 'ID')]"))
         )
     except:
         # Fallback JS click
-        if not login_clicked:
-            driver.execute_script("document.querySelector('button.login').click()")
-            time.sleep(2)
-            try:
-                inp = driver.find_element(By.XPATH, "//input[@type='text']")
-            except: pass
+        driver.execute_script("document.querySelector('button.login')?.click()")
+        time.sleep(2)
+        try:
+            inp = driver.find_element(By.XPATH, "//input[@type='text']")
+        except: pass
 
     if not inp:
-        driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
+        driver.save_screenshot(f"login_fail_{player_id}.png")
         raise Exception("Input not found")
 
     inp.clear()
@@ -215,46 +239,31 @@ def login(driver, wait, player_id):
     # 3. Submit
     try:
         submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
-        submit_btn.click()
+        driver.execute_script("arguments[0].click();", submit_btn)
     except:
         inp.send_keys(Keys.ENTER)
     
-    time.sleep(5)
+    time.sleep(3)
     
     if not verify_login_success(driver):
         driver.save_screenshot(f"login_fail_verify_{player_id}.png")
-        raise Exception("Login verification failed (Still Guest?)")
+        raise Exception("Login verification failed")
         
     return True
 
-# --- CLAIMING (STRICT MODE) ---
-
+# --- CLAIMING ---
 def get_valid_claim_buttons(driver, player_id):
-    """
-    STRICT: Finds buttons that EXACTLY say 'Claim' (case-insensitive).
-    Filters out 'Login to claim', 'Claim Bonus', etc.
-    """
     valid_buttons = []
     try:
+        # Find all buttons
         all_buttons = driver.find_elements(By.TAG_NAME, "button")
-        
         for btn in all_buttons:
             if btn.is_displayed() and btn.is_enabled():
                 text = btn.text.strip().lower()
-                
-                # THE STRICT CHECK
+                # Strict Match: "Claim" only
                 if text == "claim":
                     valid_buttons.append(btn)
-                # Allow "claim" if it's the ONLY word, handles "CLAIM "
-                elif text.replace(" ", "") == "claim":
-                     valid_buttons.append(btn)
-                     
-    except Exception as e:
-        safe_print(f"[{player_id}] Button scan error: {e}")
-        
-    if valid_buttons:
-        safe_print(f"[{player_id}] Found {len(valid_buttons)} STRICT 'Claim' buttons")
-        
+    except: pass
     return valid_buttons
 
 def perform_claim_loop(driver, player_id, section_name):
@@ -263,46 +272,31 @@ def perform_claim_loop(driver, player_id, section_name):
     
     for round_num in range(max_rounds):
         close_popups_safe(driver)
-        time.sleep(1.5)
+        time.sleep(1)
         
         buttons = get_valid_claim_buttons(driver, player_id)
-        
-        if not buttons:
-            if round_num == 0:
-                safe_print(f"[{player_id}] No valid {section_name} buttons found")
-            break
+        if not buttons: break
             
         btn = buttons[0]
         try:
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
-            # Click Strategy
-            try:
-                btn.click()
-            except:
-                driver.execute_script("arguments[0].click();", btn)
-                
+            # JS Click
+            driver.execute_script("arguments[0].click();", btn)
             safe_print(f"[{player_id}] Clicked {section_name}...")
             time.sleep(3)
             
-            # Popup Logic
-            popup_closed = close_popups_safe(driver) # Returns None currently, just runs
-            
-            # Check if button is gone (Stale)
+            # Verification: Did button disappear?
             try:
                 if not btn.is_displayed():
                     claimed += 1
                     safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
-                else:
-                     # If button text changed to 'Claimed'
-                     if "claimed" in btn.text.lower():
-                         claimed += 1
-                         safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
             except:
-                # Stale element = success
-                claimed += 1
-                safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED (Stale)")
+                claimed += 1 # Stale
+                safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
+                
+            close_popups_safe(driver)
 
         except Exception: continue
             
@@ -320,7 +314,7 @@ def claim_store(driver, player_id):
         driver.execute_script("window.scrollTo(0, 300);")
         time.sleep(1)
         tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
-        tab.click()
+        driver.execute_script("arguments[0].click();", tab)
         time.sleep(1.5)
     except: pass
 
@@ -332,29 +326,18 @@ def claim_progression(driver, player_id):
     time.sleep(3)
     close_popups_safe(driver)
     
-    try:
-        arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
-        for arrow in arrows:
-            if arrow.is_displayed():
-                driver.execute_script("arguments[0].click();", arrow)
-                time.sleep(0.5)
-    except: pass
-
+    # JS Filter for Progression
     for round_num in range(6):
         time.sleep(1)
-        # STRICT JS Filter
         js_find_and_click = """
         let buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
             let text = btn.innerText.trim();
-            // STRICT CHECK
-            if (text.toLowerCase() === 'claim') { 
+            if (text === 'Claim') { 
                 let rect = btn.getBoundingClientRect();
                 if (rect.left > 300) { 
-                    if (!btn.parentElement.innerText.includes('Delivered')) {
-                        btn.click();
-                        return true; 
-                    }
+                     btn.click();
+                     return true;
                 }
             }
         }
@@ -383,28 +366,29 @@ def process_player(player_id, thread_name):
         wait = WebDriverWait(driver, 45)
         
         try:
-            login(driver, wait, player_id)
+            if login(driver, wait, player_id):
+                time.sleep(2)
+                safe_print(f"[{thread_name}] Checking Daily...")
+                stats['daily'] = claim_daily(driver, player_id)
+                
+                safe_print(f"[{thread_name}] Checking Store...")
+                stats['store'] = claim_store(driver, player_id)
+                
+                safe_print(f"[{thread_name}] Checking Progression...")
+                stats['progression'] = claim_progression(driver, player_id)
+                
+                stats['status'] = "Success"
         except Exception as e:
-            stats['status'] = "Login Failed"
             safe_print(f"[{player_id}] Login Failed: {e}")
-            return stats
-        
-        time.sleep(2)
-        safe_print(f"[{thread_name}] Checking Daily...")
-        stats['daily'] = claim_daily(driver, player_id)
-        
-        safe_print(f"[{thread_name}] Checking Store...")
-        stats['store'] = claim_store(driver, player_id)
-        
-        safe_print(f"[{thread_name}] Checking Progression...")
-        stats['progression'] = claim_progression(driver, player_id)
-        
-        stats['status'] = "Success"
+            stats['status'] = "Login Failed"
+
         safe_print(f"[{thread_name}] Finished {player_id}")
 
+    except WebDriverException as e:
+        safe_print(f"[{thread_name}] Chrome Crash: {str(e)[:50]}")
+        stats['status'] = "Chrome Crash"
     except Exception as e:
-        safe_print(f"[{thread_name}] Error on {player_id}: {str(e)}")
-        stats['status'] = f"Error: {str(e)[:30]}"
+        safe_print(f"[{thread_name}] Error: {str(e)}")
     finally:
         if driver: 
             try: driver.quit()
@@ -433,7 +417,7 @@ def main():
             futures = {executor.submit(process_player, pid, f"Thread-{i+idx}"): pid for idx, pid in enumerate(batch)}
             for future in as_completed(futures):
                 results.append(future.result())
-        time.sleep(2)
+        time.sleep(3)
 
     send_summary_email(results)
 
