@@ -8,8 +8,8 @@ on:
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    # Timeout to prevent hanging jobs consuming all your minutes if Chrome freezes
-    timeout-minutes: 30
+    # Timeout ensures the runner doesn't get stuck forever if Chrome hangs
+    timeout-minutes: 60
     
     steps:
       - name: Checkout Code
