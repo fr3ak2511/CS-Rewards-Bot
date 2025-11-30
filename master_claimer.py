@@ -13,7 +13,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -34,12 +33,6 @@ def send_summary_email(summary_data):
     sender_email = os.environ.get("SENDER_EMAIL")
     recipient_email = os.environ.get("RECIPIENT_EMAIL")
     gmail_password = os.environ.get("GMAIL_APP_PASSWORD")
-
-    # Debug print to check if secrets are loaded (masked)
-    if not sender_email:
-        safe_print("⚠️ SENDER_EMAIL is missing/empty.")
-    if not gmail_password:
-        safe_print("⚠️ GMAIL_APP_PASSWORD is missing/empty.")
 
     if not all([sender_email, recipient_email, gmail_password]):
         safe_print("⚠️ Secrets missing. Email will NOT be sent.")
@@ -101,29 +94,18 @@ def create_driver():
     options.add_argument("--disable-gpu")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
+    # Mask automation signals
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(45) # Increased timeout
+    driver.set_page_load_timeout(45)
     return driver
 
-# --- HELPERS ---
-def close_popups(driver):
-    try:
-        # Aggressive popup closer
-        driver.execute_script("""
-            var popups = document.querySelectorAll('.modal, .popup, button[class*="close"]');
-            popups.forEach(p => {
-                if(p.offsetParent !== null) p.remove();
-            });
-        """)
-        ActionChains(driver).move_by_offset(10, 10).click().perform()
-        ActionChains(driver).move_by_offset(-10, -10).perform()
-    except:
-        pass
-
+# --- HELPER ACTIONS ---
 def safe_click(driver, element):
+    """Robust clicker using 3 methods"""
     try:
         element.click()
         return True
@@ -132,15 +114,79 @@ def safe_click(driver, element):
             driver.execute_script("arguments[0].click();", element)
             return True
         except:
-            return False
+            try:
+                ActionChains(driver).move_to_element(element).click().perform()
+                return True
+            except:
+                return False
 
-def accept_cookies(driver):
+def close_overlays(driver):
+    """Closes cookies and popups"""
+    # 1. Accept Cookies (Multiple text variations)
     try:
-        btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable(
-            (By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'Allow')]")))
-        safe_click(driver, btn)
-    except:
-        pass
+        cookie_xpath = "//*[contains(translate(text(), 'AC', 'ac'), 'accept') or contains(text(), 'Allow')]"
+        buttons = driver.find_elements(By.XPATH, cookie_xpath)
+        for btn in buttons:
+            if btn.is_displayed():
+                safe_click(driver, btn)
+                time.sleep(0.5)
+    except: pass
+
+    # 2. Close Popups
+    try:
+        close_xpath = "//*[contains(@class, 'close') or text()='×' or text()='Close']"
+        buttons = driver.find_elements(By.XPATH, close_xpath)
+        for btn in buttons:
+            if btn.is_displayed():
+                driver.execute_script("arguments[0].click();", btn)
+    except: pass
+
+def login_procedure(driver, wait, player_id, thread_name):
+    """Dedicated login function with universal selector"""
+    # 1. Look for ANY element with Login text (Button, Link, Span)
+    # This XPath looks for "Login", "Log in", "Sign in" case-insensitive
+    login_xpath = "//*[contains(translate(text(), 'L', 'l'), 'login') or contains(translate(text(), 'S', 's'), 'sign in')]"
+    
+    found_btn = False
+    elements = driver.find_elements(By.XPATH, login_xpath)
+    
+    for btn in elements:
+        if btn.is_displayed():
+            # Filter out small hidden elements
+            if btn.size['height'] > 0 and btn.size['width'] > 0:
+                safe_click(driver, btn)
+                found_btn = True
+                break
+    
+    if not found_btn:
+        # Fallback: Try finding by href
+        try:
+            link = driver.find_element(By.CSS_SELECTOR, "a[href*='login'], a[href*='signin']")
+            safe_click(driver, link)
+            found_btn = True
+        except:
+            pass
+
+    if not found_btn:
+        raise Exception("Login button not found")
+
+    # 2. Enter ID
+    try:
+        inp = wait.until(EC.visibility_of_element_located((By.XPATH, "//input")))
+        inp.clear()
+        inp.send_keys(player_id)
+        time.sleep(0.5)
+        
+        # Click ANY submit button or the Login button again
+        submit_btns = driver.find_elements(By.XPATH, "//button[@type='submit'] | //button[contains(text(), 'Login')]")
+        if submit_btns:
+            safe_click(driver, submit_btns[0])
+        else:
+            inp.send_keys(Keys.ENTER)
+            
+        wait.until(EC.url_contains("daily-rewards"))
+    except Exception as e:
+        raise Exception(f"Input/Submit failed: {str(e)}")
 
 # --- CORE LOGIC ---
 def process_player(player_id, thread_name):
@@ -150,88 +196,77 @@ def process_player(player_id, thread_name):
     try:
         safe_print(f"[{thread_name}] Starting {player_id}")
         driver = create_driver()
-        wait = WebDriverWait(driver, 20) # Increased wait
+        wait = WebDriverWait(driver, 20)
         
-        # 1. LOGIN
+        # --- LOGIN ---
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(3) # Wait for page load
-        accept_cookies(driver)
+        time.sleep(3)
+        close_overlays(driver)
         
-        # DEBUG: Take screenshot if login fails
         try:
-            # Look for ANY login button
-            login_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Login') or contains(text(), 'Sign in')]")))
-            safe_click(driver, login_btn)
-        except Exception:
-            # Save screenshot for debugging
-            safe_print(f"[{thread_name}] 📸 Login button not found. Saving screenshot...")
+            login_procedure(driver, wait, player_id, thread_name)
+        except Exception as e:
+            safe_print(f"[{thread_name}] Login failed. Saving screenshot.")
             driver.save_screenshot(f"error_{player_id}.png")
-            raise Exception("Login button not found - See screenshot")
+            raise e
 
-        # Enter ID
-        try:
-            inp = wait.until(EC.visibility_of_element_located((By.XPATH, "//input[@type='text']")))
-            inp.clear()
-            inp.send_keys(player_id)
-            time.sleep(0.5)
-            
-            submit_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Login') or @type='submit']")
-            safe_click(driver, submit_btn)
-            
-            wait.until(EC.url_contains("daily-rewards"))
-            time.sleep(2)
-        except Exception:
-             driver.save_screenshot(f"error_input_{player_id}.png")
-             raise Exception("Input/Submit failed")
+        time.sleep(2)
+        close_overlays(driver)
 
-        close_popups(driver)
-        
-        # 2. DAILY
+        # --- DAILY ---
         safe_print(f"[{thread_name}] Daily Rewards...")
-        daily_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim') and not(contains(text(), 'Buy'))]")
+        # Search for buttons with "Claim" text
+        daily_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]")
         for btn in daily_btns:
-            if btn.is_displayed() and safe_click(driver, btn):
-                stats['daily'] += 1
-                time.sleep(1)
+            # Check if it's not a "Buy" button
+            if btn.is_displayed() and "buy" not in btn.text.lower():
+                if safe_click(driver, btn):
+                    stats['daily'] += 1
+                    time.sleep(1)
         
-        # 3. STORE
+        # --- STORE ---
         safe_print(f"[{thread_name}] Store...")
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(3)
-        close_popups(driver)
+        close_overlays(driver)
         
-        store_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim') and not(contains(text(), 'Buy'))]")
-        for btn in store_btns:
-            if btn.is_displayed() and safe_click(driver, btn):
-                stats['store'] += 1
-                time.sleep(1)
+        # Find Daily Rewards tab in store
+        try:
+            daily_tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
+            safe_click(driver, daily_tab)
+            time.sleep(1)
+        except: pass
 
-        # 4. PROGRESSION
+        store_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]")
+        for btn in store_btns:
+            if btn.is_displayed() and "buy" not in btn.text.lower():
+                if safe_click(driver, btn):
+                    stats['store'] += 1
+                    time.sleep(1)
+
+        # --- PROGRESSION ---
         safe_print(f"[{thread_name}] Progression...")
         driver.get("https://hub.vertigogames.co/progression-program")
         time.sleep(3)
-        close_popups(driver)
-        
-        # Force scroll
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-        time.sleep(1)
+        close_overlays(driver)
 
+        # JS claimer for progression (handles carousel/hidden items)
         js_script = """
-        return Array.from(document.querySelectorAll('button'))
-            .filter(b => b.innerText.trim() === 'Claim');
+        var buttons = document.querySelectorAll('button');
+        var clicked = 0;
+        buttons.forEach(btn => {
+            if(btn.innerText.includes('Claim') && !btn.innerText.includes('Delivered')) {
+                btn.click();
+                clicked++;
+            }
+        });
+        return clicked;
         """
-        prog_btns = driver.execute_script(js_script)
-        
-        for i in range(len(prog_btns)):
-            current_btns = driver.execute_script(js_script)
-            if i < len(current_btns):
-                btn = current_btns[i]
-                driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
-                time.sleep(0.5)
-                driver.execute_script("arguments[0].click();", btn)
-                stats['progression'] += 1
-                time.sleep(1)
-                close_popups(driver)
+        try:
+            claims = driver.execute_script(js_script)
+            stats['progression'] = claims
+        except:
+            pass
 
         stats['status'] = "Success"
         safe_print(f"[{thread_name}] Finished {player_id}")
@@ -248,11 +283,12 @@ def main():
     players = []
     try:
         with open('players.csv', 'r') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                # FIX: Robust check for empty lines/rows
-                if row and len(row) > 0 and row[0].strip():
-                    players.append(row[0].strip())
+            lines = f.readlines()
+            for line in lines:
+                # FIX: Strict cleaning to prevent Tuple errors
+                clean_line = line.strip().replace(',', '')
+                if len(clean_line) > 5: # Assuming IDs are longer than 5 chars
+                    players.append(clean_line)
     except FileNotFoundError:
         safe_print("❌ players.csv not found!")
         return
