@@ -109,6 +109,7 @@ def create_driver():
 # --- HELPERS ---
 def close_popups_safe(driver):
     try:
+        # Aggressive JS closer
         driver.execute_script("""
             document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
                 let text = btn.innerText.toLowerCase();
@@ -117,17 +118,7 @@ def close_popups_safe(driver):
                 }
             });
         """)
-        popup_selectors = [
-            "//button[contains(@class, 'close')]",
-            "//*[name()='svg' and contains(@class, 'close')]/parent::button",
-            "//button[normalize-space()='×']"
-        ]
-        for sel in popup_selectors:
-            btns = driver.find_elements(By.XPATH, sel)
-            for btn in btns:
-                if btn.is_displayed():
-                    driver.execute_script("arguments[0].click();", btn)
-        
+        # Safe Area Clicks
         actions = ActionChains(driver)
         safe_areas = [(30, 30), (1870, 30), (30, 1030)]
         for x, y in safe_areas:
@@ -197,69 +188,77 @@ def login(driver, wait, player_id):
 
 # --- CLAIMING ---
 
-def claim_daily(driver, player_id):
+def perform_claim_loop(driver, player_id, section_name):
+    """
+    Generic loop that:
+    1. Finds first available claim button.
+    2. Clicks it.
+    3. Waits for confirmation modal.
+    4. Closes modal.
+    5. Repeats until no buttons left.
+    """
     claimed = 0
-    max_rounds = 5
+    max_rounds = 6
+    
     for round_num in range(max_rounds):
         close_popups_safe(driver)
-        time.sleep(1)
+        time.sleep(1.5)
+        
+        # Find all Claim buttons
         buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim') and not(contains(text(), 'Buy'))]")
         visible_buttons = [b for b in buttons if b.is_displayed()]
-        if not visible_buttons: break
         
+        if not visible_buttons:
+            break # Exit if no buttons
+            
+        # Click the FIRST one found
         btn = visible_buttons[0]
         try:
+            # Scroll to it
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
+            
+            # Click
             driver.execute_script("arguments[0].click();", btn)
             claimed += 1
-            safe_print(f"[{player_id}] Daily Reward {claimed} claimed")
+            safe_print(f"[{player_id}] {section_name} Reward {claimed} clicked")
+            
+            # Wait for Confirmation Popup (Crucial Step)
             time.sleep(2.5)
+            
+            # Take screenshot if it's the first claim to verify popup
+            if claimed == 1:
+                driver.save_screenshot(f"verify_claim_{section_name}_{player_id}.png")
+            
+            # Close the confirmation popup
             close_popups_safe(driver)
-        except: continue
+            
+        except Exception as e:
+            safe_print(f"[{player_id}] Error clicking {section_name}: {e}")
+            continue
+            
     return claimed
 
+def claim_daily(driver, player_id):
+    return perform_claim_loop(driver, player_id, "Daily")
+
 def claim_store(driver, player_id):
-    claimed = 0
     driver.get("https://hub.vertigogames.co/store")
     time.sleep(3)
     close_popups_safe(driver)
     
-    # IMPROVED NAVIGATION: Scroll + Click Tab
+    # Navigation logic
     try:
-        driver.execute_script("window.scrollTo(0, 300);") # Scroll slightly
+        driver.execute_script("window.scrollTo(0, 300);")
         time.sleep(1)
         tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
         driver.execute_script("arguments[0].click();", tab)
         time.sleep(1.5)
     except:
-        # Fallback: Scroll further down if tab not found
         driver.execute_script("window.scrollTo(0, 600);")
         time.sleep(1)
 
-    max_rounds = 5
-    for round_num in range(max_rounds):
-        close_popups_safe(driver)
-        time.sleep(1)
-        
-        # Only target Store Daily Rewards (exclude purchases)
-        buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim') and not(contains(text(), 'Buy'))]")
-        visible_buttons = [b for b in buttons if b.is_displayed()]
-        
-        if not visible_buttons: break
-            
-        btn = visible_buttons[0]
-        try:
-            driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", btn)
-            claimed += 1
-            safe_print(f"[{player_id}] Store Reward {claimed} claimed")
-            time.sleep(2.5)
-            close_popups_safe(driver)
-        except: continue
-        
-    return claimed
+    return perform_claim_loop(driver, player_id, "Store")
 
 def claim_progression(driver, player_id):
     claimed = 0
@@ -267,6 +266,7 @@ def claim_progression(driver, player_id):
     time.sleep(3)
     close_popups_safe(driver)
     
+    # Scroll Carousel
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
         for arrow in arrows:
@@ -275,6 +275,7 @@ def claim_progression(driver, player_id):
                 time.sleep(0.5)
     except: pass
 
+    # Use JS Filter Loop for Progression (as per manual script)
     for round_num in range(6):
         time.sleep(1)
         js_find_and_click = """
@@ -297,12 +298,13 @@ def claim_progression(driver, player_id):
             clicked = driver.execute_script(js_find_and_click)
             if clicked:
                 claimed += 1
-                safe_print(f"[{player_id}] Progression Reward {claimed} claimed")
-                time.sleep(2.5)
+                safe_print(f"[{player_id}] Progression Reward {claimed} clicked")
+                time.sleep(3) # Wait longer for animation
                 close_popups_safe(driver)
             else:
                 break
         except: break
+        
     return claimed
 
 # --- PROCESS ---
