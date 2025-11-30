@@ -3,6 +3,7 @@ import time
 import threading
 import os
 import smtplib
+import sys
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -32,6 +33,7 @@ print_lock = threading.Lock()
 def safe_print(msg):
     with print_lock:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+        sys.stdout.flush()
 
 # --- EMAIL ---
 def send_summary_email(summary_data):
@@ -86,12 +88,13 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER ---
+# --- DRIVER (Updated per Solution 2) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
     
+    # Enhanced options for GitHub Actions
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -99,6 +102,14 @@ def create_driver():
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # CRITICAL: Force software rendering
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-infobars")
+    
+    # Increase page load stability
+    options.page_load_strategy = 'normal'
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     service = Service(DRIVER_PATH)
@@ -113,20 +124,15 @@ def create_driver():
         """
     })
     
-    driver.set_page_load_timeout(60)
+    driver.set_page_load_timeout(120)
+    driver.implicitly_wait(10)
     return driver
 
 # --- HELPERS ---
-
 def zap_overlays(driver):
-    """Deletes sticky headers/footers to prevent clicks being blocked"""
     try:
         driver.execute_script("""
-            var selectors = [
-                'header', 'footer', '#onetrust-banner-sdk', 
-                '.cookie-banner', '.modal-backdrop', 
-                '[class*="overlay"]', '[class*="header"]', '[class*="footer"]'
-            ];
+            var selectors = ['header', 'footer', '#onetrust-banner-sdk', '.cookie-banner', '.modal-backdrop'];
             selectors.forEach(sel => {
                 document.querySelectorAll(sel).forEach(el => el.remove());
             });
@@ -134,140 +140,113 @@ def zap_overlays(driver):
     except: pass
 
 def close_popups_safe(driver):
-    """
-    Robust popup closer:
-    1. Sends ESC key.
-    2. Clicks specific 'Dead Zones' (Safe Areas).
-    3. Clicks 'Close' buttons via JS.
-    Repeats 3 times to handle stacked popups.
-    """
-    for _ in range(3): # Loop to handle multiple popups
-        try:
-            # 1. ESC Key
-            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-            time.sleep(0.5)
+    try:
+        driver.execute_script("""
+            document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
+                let text = btn.innerText.toLowerCase();
+                if(text.includes('close') || text === '×' || text === 'x' || text.includes('continue')) {
+                    if(btn.offsetParent !== null) btn.click();
+                }
+            });
+        """)
+        ActionChains(driver).move_by_offset(10, 10).click().perform()
+    except: pass
 
-            # 2. Safe Area Clicks (The "Backdrop" Strategy)
-            # We use JS to click coordinates directly to be absolute
-            width = 1920
-            height = 1080
-            safe_coords = [
-                (10, 10),               # Top Left
-                (width - 50, 10),       # Top Right
-                (10, height - 50),      # Bottom Left
-                (width - 50, height - 50), # Bottom Right
-                (width // 2, 10)        # Top Center
-            ]
-            
-            for x, y in safe_coords:
-                try:
-                    driver.execute_script(f"document.elementFromPoint({x}, {y}).click();")
-                except: pass
-                time.sleep(0.1)
+def accept_cookies(driver):
+    try:
+        xpath = "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'accept')]"
+        btn = driver.find_element(By.XPATH, xpath)
+        driver.execute_script("arguments[0].click();", btn)
+    except: pass
 
-            # 3. JS Close Button Click
-            driver.execute_script("""
-                document.querySelectorAll('button, div[role="button"]').forEach(btn => {
-                    let text = btn.innerText.toLowerCase();
-                    if(text.includes('close') || text === '×' || text === 'x' || text.includes('continue') || text.includes('ok')) {
-                        if(btn.offsetParent !== null) btn.click();
-                    }
-                });
-            """)
-            time.sleep(0.5)
-        except: pass
-
-# --- LOGIN ---
+# --- LOGIN (Solution 3: Increased Waits) ---
 def login(driver, wait, player_id):
     driver.get("https://hub.vertigogames.co/daily-rewards")
-    time.sleep(5)
-    zap_overlays(driver) 
-
-    # 1. Click Login
-    login_selectors = [
-        "//button[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
-        "//a[contains(translate(text(), 'LOGIN', 'login'), 'login')]",
-        "//button[contains(@class, 'login')]"
-    ]
+    time.sleep(8) # Increased
+    accept_cookies(driver)
     
-    for selector in login_selectors:
-        try:
-            elements = driver.find_elements(By.XPATH, selector)
-            for btn in elements:
-                if btn.is_displayed():
-                    driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(2)
-                    break
-        except: continue
+    # Snapshot Login Page
+    driver.save_screenshot(f"login_page_{player_id}.png")
     
-    # 2. Input
+    # Click Login
+    login_xpath = "//button[contains(translate(text(), 'LOGIN', 'login'), 'login')]"
     try:
-        inp = None
-        input_selectors = ["//input[@type='text']", "//input[contains(@placeholder, 'ID')]"]
-        for _ in range(5):
-            for sel in input_selectors:
-                inputs = driver.find_elements(By.XPATH, sel)
-                visible = [i for i in inputs if i.is_displayed()]
-                if visible:
-                    inp = visible[0]
-                    break
-            if inp: break
-            time.sleep(1)
-            
-        if not inp: raise Exception("Input not found")
-
+        btn = driver.find_element(By.XPATH, login_xpath)
+        driver.execute_script("arguments[0].click();", btn)
+        time.sleep(3)
+    except: pass
+    
+    # Input
+    try:
+        inp_xpath = "//input[@type='text' or contains(@placeholder, 'ID')]"
+        inp = wait.until(EC.visibility_of_element_located((By.XPATH, inp_xpath)))
         inp.clear()
         inp.send_keys(player_id)
-        time.sleep(0.5)
+        time.sleep(1)
         
-        # 3. Submit
-        try:
-            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit'] | //button[contains(text(), 'LOGIN')]")
-            driver.execute_script("arguments[0].click();", submit_btn)
-        except:
-            inp.send_keys(Keys.ENTER)
-            
+        # Submit
+        inp.send_keys(Keys.ENTER)
         wait.until(EC.url_contains("daily-rewards"))
+        time.sleep(5) # Allow full load after redirect
     except Exception as e:
         driver.save_screenshot(f"login_fail_{player_id}.png")
         raise e
 
-# --- CLAIMING ---
+# --- CLAIMING (Solution 1: Robust Loop) ---
 
 def perform_claim_loop(driver, player_id, section_name):
     claimed = 0
     max_rounds = 6
     
+    # DEBUG: Save initial state
+    driver.save_screenshot(f"{section_name}_start_{player_id}.png")
+    try:
+        with open(f"{section_name}_source_{player_id}.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+    except: pass
+
     for round_num in range(max_rounds):
-        # Clean up before every attempt
         zap_overlays(driver)
         close_popups_safe(driver)
-        time.sleep(1)
         
+        # CRITICAL: Wait for page load
+        try:
+            WebDriverWait(driver, 20).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            time.sleep(3)
+        except:
+            safe_print(f"[{player_id}] Page load timeout in {section_name}")
+
+        # Case-insensitive selector
         claim_xpath = "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'claim') and not(contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'buy'))]"
+        
+        # Debugging Counts
+        all_buttons = driver.find_elements(By.TAG_NAME, "button")
+        safe_print(f"[{player_id}] {section_name} - Found {len(all_buttons)} total buttons")
         
         buttons = driver.find_elements(By.XPATH, claim_xpath)
         visible_buttons = [b for b in buttons if b.is_displayed()]
+        safe_print(f"[{player_id}] {section_name} - Found {len(visible_buttons)} CLAIM buttons")
         
-        if not visible_buttons: break
+        if not visible_buttons:
+            if round_num == 0:
+                driver.save_screenshot(f"{section_name}_no_buttons_{player_id}.png")
+            break
             
         btn = visible_buttons[0]
         try:
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
-            time.sleep(0.5)
+            time.sleep(1)
             
             # Click
             driver.execute_script("arguments[0].click();", btn)
             safe_print(f"[{player_id}] Clicked {section_name}...")
             
-            # Wait for popup to appear
-            time.sleep(3) 
+            time.sleep(4)
+            driver.save_screenshot(f"{section_name}_after_click_{claimed+1}_{player_id}.png")
             
-            # VERIFICATION:
-            # 1. Did a popup appear? If so, we are successful.
-            # 2. Is the button gone? If so, we are successful.
-            
-            # Check visible popups BEFORE closing them
+            # Verification
             modals = driver.find_elements(By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup')]")
             visible_modals = [m for m in modals if m.is_displayed()]
             
@@ -280,13 +259,13 @@ def perform_claim_loop(driver, player_id, section_name):
                 claimed += 1
                 safe_print(f"[{player_id}] {section_name} Reward {claimed} VERIFIED")
             else:
-                safe_print(f"[{player_id}] Click failed - No popup and button still there")
-                if round_num == 0: driver.save_screenshot(f"fail_{section_name}_{player_id}.png")
+                safe_print(f"[{player_id}] Click failed - No popup")
             
-            # Always run the "Safe Area" closer to dismiss whatever appeared
             close_popups_safe(driver)
-                
-        except Exception: continue
+            
+        except Exception as e:
+            safe_print(f"[{player_id}] Exception: {e}")
+            continue
             
     return claimed
 
@@ -295,7 +274,7 @@ def claim_daily(driver, player_id):
 
 def claim_store(driver, player_id):
     driver.get("https://hub.vertigogames.co/store")
-    time.sleep(3)
+    time.sleep(5)
     zap_overlays(driver)
     
     try:
@@ -303,18 +282,22 @@ def claim_store(driver, player_id):
         time.sleep(1)
         tab = driver.find_element(By.XPATH, "//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'daily rewards')]")
         driver.execute_script("arguments[0].click();", tab)
-        time.sleep(1.5)
-    except:
-        driver.execute_script("window.scrollTo(0, 600);")
-        time.sleep(1)
+        time.sleep(2)
+    except: pass
 
     return perform_claim_loop(driver, player_id, "Store")
 
 def claim_progression(driver, player_id):
     claimed = 0
     driver.get("https://hub.vertigogames.co/progression-program")
-    time.sleep(3)
+    time.sleep(5)
     zap_overlays(driver)
+    
+    # Save source for debugging progression specifically
+    try:
+        with open(f"progression_source_{player_id}.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+    except: pass
     
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
@@ -325,7 +308,7 @@ def claim_progression(driver, player_id):
     except: pass
 
     for round_num in range(6):
-        time.sleep(1)
+        time.sleep(2)
         js_find_and_click = """
         let buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
@@ -346,9 +329,11 @@ def claim_progression(driver, player_id):
             clicked = driver.execute_script(js_find_and_click)
             if clicked:
                 safe_print(f"[{player_id}] Progression Clicked...")
-                time.sleep(3)
+                time.sleep(4)
                 
-                # Verify by checking if we need to close a popup
+                # Snapshot after click
+                driver.save_screenshot(f"progression_click_{claimed+1}_{player_id}.png")
+                
                 modals = driver.find_elements(By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup')]")
                 if [m for m in modals if m.is_displayed()]:
                     claimed += 1
@@ -371,7 +356,7 @@ def process_player(player_id, thread_name):
         wait = WebDriverWait(driver, 60)
         
         login(driver, wait, player_id)
-        time.sleep(2)
+        time.sleep(3)
         
         safe_print(f"[{thread_name}] Checking Daily...")
         stats['daily'] = claim_daily(driver, player_id)
