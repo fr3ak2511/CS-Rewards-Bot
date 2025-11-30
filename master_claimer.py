@@ -18,7 +18,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 HEADLESS = True
 
 def safe_print(msg):
-    # Print to stdout so the shell script captures it
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
     sys.stdout.flush()
 
@@ -39,7 +38,7 @@ def create_driver():
     options.add_argument("--disable-blink-features=AutomationControlled")
     
     # THE MAGIC FLAGS (V24 Configuration)
-    # Note: We use --single-process but NOT --no-zygote based on your crash logs
+    # Note: We use --single-process but NOT --no-zygote
     options.add_argument("--single-process") 
     
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -113,7 +112,7 @@ def login(driver, wait, player_id):
             btns = driver.find_elements(By.XPATH, selector)
             for btn in btns:
                 if btn.is_displayed():
-                    # Use ActionChains for a "real" click (Fixes 'Input Not Found')
+                    # Use ActionChains for a "real" click
                     ActionChains(driver).move_to_element(btn).click().perform()
                     safe_print("Clicked Login (Physical)")
                     login_clicked = True
