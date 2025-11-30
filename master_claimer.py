@@ -108,17 +108,36 @@ def create_driver():
 
 # --- HELPERS ---
 def close_popups_safe(driver):
+    """
+    Returns TRUE if a popup was found and closed.
+    Returns FALSE if no popup was found.
+    """
+    popup_found = False
     try:
-        # Aggressive JS closer
-        driver.execute_script("""
-            document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
-                let text = btn.innerText.toLowerCase();
-                if(text.includes('close') || text === '×' || text === 'x' || text.includes('continue')) {
-                    if(btn.offsetParent !== null) btn.click();
-                }
-            });
-        """)
-        # Safe Area Clicks
+        # Check for modals first
+        modals = driver.find_elements(By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup') or contains(@class, 'dialog')]")
+        visible_modals = [m for m in modals if m.is_displayed()]
+        
+        if visible_modals:
+            popup_found = True
+            # Try JS Close
+            driver.execute_script("""
+                document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
+                    let text = btn.innerText.toLowerCase();
+                    if(text.includes('close') || text === '×' || text === 'x' || text.includes('continue')) {
+                        if(btn.offsetParent !== null) btn.click();
+                    }
+                });
+            """)
+            
+            # Try Button Click
+            close_btns = driver.find_elements(By.XPATH, "//button[contains(text(), 'Close') or contains(text(), 'Continue') or text()='×']")
+            for btn in close_btns:
+                if btn.is_displayed():
+                    driver.execute_script("arguments[0].click();", btn)
+                    time.sleep(0.2)
+
+        # Always do Safe Area Clicks as backup
         actions = ActionChains(driver)
         safe_areas = [(30, 30), (1870, 30), (30, 1030)]
         for x, y in safe_areas:
@@ -126,7 +145,9 @@ def close_popups_safe(driver):
                 actions.move_by_offset(x - 960, y - 540).click().perform()
                 actions.move_by_offset(-(x - 960), -(y - 540)).perform()
             except: pass
+            
     except: pass
+    return popup_found
 
 def accept_cookies(driver, wait):
     try:
@@ -189,14 +210,6 @@ def login(driver, wait, player_id):
 # --- CLAIMING ---
 
 def perform_claim_loop(driver, player_id, section_name):
-    """
-    Generic loop that:
-    1. Finds first available claim button.
-    2. Clicks it.
-    3. Waits for confirmation modal.
-    4. Closes modal.
-    5. Repeats until no buttons left.
-    """
     claimed = 0
     max_rounds = 6
     
@@ -209,32 +222,46 @@ def perform_claim_loop(driver, player_id, section_name):
         visible_buttons = [b for b in buttons if b.is_displayed()]
         
         if not visible_buttons:
-            break # Exit if no buttons
+            break 
             
-        # Click the FIRST one found
         btn = visible_buttons[0]
         try:
-            # Scroll to it
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
             
             # Click
             driver.execute_script("arguments[0].click();", btn)
-            claimed += 1
-            safe_print(f"[{player_id}] {section_name} Reward {claimed} clicked")
+            safe_print(f"[{player_id}] Attempting {section_name} claim...")
             
-            # Wait for Confirmation Popup (Crucial Step)
-            time.sleep(2.5)
+            # WAIT & VERIFY POPUP
+            time.sleep(2)
+            popup_detected = close_popups_safe(driver)
             
-            # Take screenshot if it's the first claim to verify popup
-            if claimed == 1:
-                driver.save_screenshot(f"verify_claim_{section_name}_{player_id}.png")
+            # Verification Strategy:
+            # 1. Did a popup appear? (Best indicator of success)
+            # 2. Did the button disappear? (Backup check)
             
-            # Close the confirmation popup
-            close_popups_safe(driver)
+            success = False
+            if popup_detected:
+                success = True
+            else:
+                # Double check if button is still there
+                try:
+                    if not btn.is_displayed(): 
+                        success = True
+                except:
+                    success = True # Element went stale = success
+            
+            if success:
+                claimed += 1
+                safe_print(f"[{player_id}] {section_name} Reward {claimed} CONFIRMED")
+            else:
+                safe_print(f"[{player_id}] Click failed - No confirmation popup found")
+                # Take screenshot for debugging
+                if round_num == 0:
+                    driver.save_screenshot(f"fail_claim_{section_name}_{player_id}.png")
             
         except Exception as e:
-            safe_print(f"[{player_id}] Error clicking {section_name}: {e}")
             continue
             
     return claimed
@@ -247,7 +274,6 @@ def claim_store(driver, player_id):
     time.sleep(3)
     close_popups_safe(driver)
     
-    # Navigation logic
     try:
         driver.execute_script("window.scrollTo(0, 300);")
         time.sleep(1)
@@ -266,7 +292,6 @@ def claim_progression(driver, player_id):
     time.sleep(3)
     close_popups_safe(driver)
     
-    # Scroll Carousel
     try:
         arrows = driver.find_elements(By.XPATH, "//*[contains(@class, 'next') or contains(@class, 'right')]")
         for arrow in arrows:
@@ -275,9 +300,10 @@ def claim_progression(driver, player_id):
                 time.sleep(0.5)
     except: pass
 
-    # Use JS Filter Loop for Progression (as per manual script)
+    # Use JS Filter Loop for Progression
     for round_num in range(6):
         time.sleep(1)
+        # Modified JS to return the element it clicks so we can check it
         js_find_and_click = """
         let buttons = document.querySelectorAll('button');
         for (let btn of buttons) {
@@ -297,10 +323,15 @@ def claim_progression(driver, player_id):
         try:
             clicked = driver.execute_script(js_find_and_click)
             if clicked:
-                claimed += 1
-                safe_print(f"[{player_id}] Progression Reward {claimed} clicked")
-                time.sleep(3) # Wait longer for animation
-                close_popups_safe(driver)
+                safe_print(f"[{player_id}] Attempting Progression claim...")
+                time.sleep(2)
+                
+                # Check for popup verification
+                if close_popups_safe(driver):
+                    claimed += 1
+                    safe_print(f"[{player_id}] Progression Reward {claimed} CONFIRMED")
+                else:
+                    safe_print(f"[{player_id}] Progression click sent but no popup detected")
             else:
                 break
         except: break
