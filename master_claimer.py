@@ -18,10 +18,11 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
-BATCH_SIZE = 1
+BATCH_SIZE = 1 
 HEADLESS = True
 
 # --- GLOBAL DRIVER ---
@@ -89,43 +90,85 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Failed to send email: {str(e)}")
 
-# --- DRIVER ---
+# --- DRIVER (STABILITY VERSION) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
     
-    options.add_argument("--window-size=1920,1080")
+    # CRITICAL: Core stability flags for CI (MUST KEEP THESE!)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-setuid-sandbox")
+    
+    # Window and display
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-software-rasterizer")
-    options.add_argument("--single-process") 
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    options.page_load_strategy = 'normal'
+    # Anti-detection
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-extensions")
+    
+    # Performance & stability (CRITICAL FOR CI)
+    options.add_argument("--disable-logging")
+    options.add_argument("--disable-web-security")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--disable-backgrounding-occluded-windows")
+    options.add_argument("--disable-dev-tools")
+    options.add_argument("--disable-crash-reporter")
+    options.add_argument("--disable-in-process-stack-traces")
+    options.add_argument("--disable-breakpad")
+    options.add_argument("--disable-features=IsolateOrigins,site-per-process")
+    options.add_argument("--single-process")  # CRITICAL!
+    options.add_argument("--no-zygote")  # CRITICAL!
+    
+    # Block images for faster load
+    prefs = {
+        "profile.default_content_setting_values": {
+            "images": 2,
+            "notifications": 2,
+            "popups": 2,
+        },
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.popups": 0,
+    }
+    options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
+    options.add_experimental_option("useAutomationExtension", False)
+    
+    # Page load strategy
+    caps = DesiredCapabilities.CHROME.copy()
+    caps["pageLoadStrategy"] = "eager"
+    for k, v in caps.items():
+        options.set_capability(k, v)
     
     service = Service(DRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
     
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            })
-        """
-    })
+    # Timeouts
+    driver.set_page_load_timeout(60)
+    driver.set_script_timeout(30)
     
-    driver.set_page_load_timeout(180)
-    driver.implicitly_wait(5)
+    # Anti-detection
+    try:
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        })
+    except: pass
+    
     return driver
 
 # --- HELPERS ---
 def close_popups_safe(driver):
     try:
+        # JS Close
         driver.execute_script("""
             document.querySelectorAll('.modal, .popup, .dialog, button').forEach(btn => {
                 let text = btn.innerText.toLowerCase();
@@ -134,6 +177,7 @@ def close_popups_safe(driver):
                 }
             });
         """)
+        # Safe Area
         ActionChains(driver).move_by_offset(10, 10).click().perform()
     except: pass
     return True
@@ -142,138 +186,83 @@ def accept_cookies(driver, wait):
     try:
         btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]")))
         btn.click()
-        safe_print("Accepted cookies")
     except: pass
 
-# --- LOGIN (MODAL AWARE) ---
+# --- LOGIN ---
 def login(driver, wait, player_id):
-    try:
-        safe_print(f"[{player_id}] Loading page...")
-        driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(3)
-        
-        accept_cookies(driver, wait)
-        close_popups_safe(driver)
+    driver.get("https://hub.vertigogames.co/daily-rewards")
+    time.sleep(3)
+    
+    accept_cookies(driver, wait)
+    close_popups_safe(driver)
 
-        # 1. Find and Click Login Button
-        login_selectors = [
-            "//button[contains(text(),'Login')]",
-            "//button[contains(text(),'Log in')]",
-            "//a[contains(text(),'Login')]",
-            "//button[contains(@class, 'login')]"
-        ]
-        
-        login_clicked = False
-        safe_print(f"[{player_id}] Searching for login button...")
-        
-        for selector in login_selectors:
-            try:
-                elements = driver.find_elements(By.XPATH, selector)
-                for element in elements:
-                    if element.is_displayed():
-                        try:
-                            element.click()
-                            login_clicked = True
-                            safe_print(f"[{player_id}] Clicked login!")
-                            break
-                        except:
-                            driver.execute_script("arguments[0].click();", element)
-                            login_clicked = True
-                            safe_print(f"[{player_id}] Clicked login (JS)")
-                            break
-                if login_clicked: break
-            except: continue
-            
-        if not login_clicked:
-            safe_print(f"[{player_id}] Login button not found")
-            raise Exception("Login button not found")
-            
-        time.sleep(3) # Wait for modal
-        safe_print(f"[{player_id}] Waiting for input field...")
-        
-        # 2. Find Input
-        input_selectors = [
-            "//input[contains(@placeholder, 'ID')]",
-            "//input[@type='text']",
-            "//input[contains(@class, 'input')]",
-            "//input[contains(@name, 'id')]",
-        ]
-        
-        input_box = None
-        for selector in input_selectors:
-            try:
-                input_box = WebDriverWait(driver, 5).until(
-                    EC.visibility_of_element_located((By.XPATH, selector))
-                )
-                safe_print(f"[{player_id}] Found input field")
-                break
-            except: continue
-            
-        if not input_box:
-            # Check if already logged in (e.g. cookie persisted)
-            if driver.find_elements(By.XPATH, "//button[contains(text(), 'Logout')]"):
-                safe_print(f"[{player_id}] Already logged in!")
-                return True
-                
-            driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
-            raise Exception("Input not found")
-
-        input_box.clear()
-        input_box.send_keys(player_id)
-        time.sleep(0.5)
-        safe_print(f"[{player_id}] Entered ID")
-        
-        # 3. Submit
+    # 1. Click Login
+    login_clicked = False
+    login_selectors = ["//button[contains(text(),'Login')]", "//a[contains(text(),'Login')]"]
+    
+    for selector in login_selectors:
         try:
-            submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
-            submit_btn.click()
-            safe_print(f"[{player_id}] Clicked submit")
+            btns = driver.find_elements(By.XPATH, selector)
+            for btn in btns:
+                if btn.is_displayed():
+                    driver.execute_script("arguments[0].click();", btn)
+                    login_clicked = True
+                    time.sleep(3)
+                    break
+            if login_clicked: break
+        except: continue
+    
+    if not login_clicked:
+        raise Exception("Login button not found")
+
+    # 2. Input
+    inp = None
+    input_selectors = ["//input[@type='text']", "//input[contains(@placeholder, 'ID')]"]
+    for _ in range(5):
+        for sel in input_selectors:
+            inputs = driver.find_elements(By.XPATH, sel)
+            visible = [i for i in inputs if i.is_displayed()]
+            if visible:
+                inp = visible[0]
+                break
+        if inp: break
+        time.sleep(1)
+        
+    if not inp: 
+        driver.save_screenshot(f"login_fail_no_input_{player_id}.png")
+        raise Exception("Input not found")
+
+    inp.clear()
+    inp.send_keys(player_id)
+    time.sleep(0.5)
+    
+    # 3. Submit
+    try:
+        submit_btn = driver.find_element(By.XPATH, "//button[@type='submit']")
+        driver.execute_script("arguments[0].click();", submit_btn)
+    except:
+        inp.send_keys(Keys.ENTER)
+    
+    # 4. Modal Verification
+    time.sleep(2)
+    start = time.time()
+    while time.time() - start < 10:
+        try:
+            # Check if input disappeared (Modal closed)
+            if not inp.is_displayed():
+                return True
         except:
-            input_box.send_keys(Keys.ENTER)
-            safe_print(f"[{player_id}] Pressed Enter")
-            
-        # 4. VERIFY LOGIN (New Logic)
-        time.sleep(2)
-        safe_print(f"[{player_id}] Verifying login...")
+            return True # Element removed from DOM
+        time.sleep(0.5)
+    
+    # Backup check: Did claim buttons appear?
+    if driver.find_elements(By.XPATH, "//button[contains(text(), 'Claim')]"):
+        return True
         
-        start_time = time.time()
-        logged_in = False
-        
-        while time.time() - start_time < 10:
-            try:
-                # Check 1: Did input box disappear?
-                try:
-                    # If element is stale or invisible, that's good
-                    if not input_box.is_displayed():
-                         logged_in = True
-                         break
-                except:
-                    # Element removed from DOM = Success
-                    logged_in = True 
-                    break
-                
-                # Check 2: Did Logout button appear?
-                if driver.find_elements(By.XPATH, "//button[contains(text(), 'Logout')]"):
-                    logged_in = True
-                    break
-                    
-                time.sleep(0.5)
-            except: time.sleep(0.5)
-            
-        if logged_in:
-            safe_print(f"[{player_id}] Login successful!")
-            return True
-        else:
-            driver.save_screenshot(f"login_timeout_{player_id}.png")
-            safe_print(f"[{player_id}] Login verification failed (Modal didn't close?)")
-            return False
-            
-    except Exception as e:
-        safe_print(f"[{player_id}] Login error: {str(e)[:80]}")
-        raise e
+    driver.save_screenshot(f"login_fail_verify_{player_id}.png")
+    raise Exception("Login verification failed")
 
 # --- CLAIMING ---
-
 def get_valid_claim_buttons(driver, player_id):
     valid_buttons = []
     try:
@@ -300,6 +289,8 @@ def perform_claim_loop(driver, player_id, section_name):
         try:
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", btn)
             time.sleep(0.5)
+            
+            # Double Tap
             try: btn.click()
             except: driver.execute_script("arguments[0].click();", btn)
             
@@ -309,7 +300,6 @@ def perform_claim_loop(driver, player_id, section_name):
             # Verify
             is_success = False
             if close_popups_safe(driver): is_success = True
-            
             try:
                 if not btn.is_displayed() or "claimed" in btn.text.lower(): is_success = True
             except: is_success = True
