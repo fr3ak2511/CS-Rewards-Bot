@@ -248,7 +248,7 @@ def login_to_hub(driver, player_id):
 
 def close_store_popup_after_claim(driver):
     """
-    Multi-method popup closing strategy from manual script
+    Multi-method popup closing strategy
     Method 1: Continue button
     Method 2: Close/X button
     Method 3: Safe-area clicks (multiple locations)
@@ -433,7 +433,7 @@ def close_store_popup_after_claim(driver):
         log(f"Exception in close_store_popup_after_claim: {e}")
         return False
 
-def ensure_on_store_page(driver):
+def ensure_store_page(driver):
     """Check if on Store page, navigate back if not"""
     try:
         current_url = driver.current_url
@@ -444,7 +444,7 @@ def ensure_on_store_page(driver):
         
         log(f"⚠️  Not on Store page (URL: {current_url}), navigating back...")
         driver.get("https://hub.vertigogames.co/store")
-        time.sleep(2)
+        time.sleep(0.7)
         
         if "/store" in driver.current_url.lower():
             log("✓ Navigated back to Store page")
@@ -457,12 +457,10 @@ def ensure_on_store_page(driver):
         log(f"❌ Error checking page: {e}")
         return False
 
-def click_daily_rewards_tab_store(driver):
+def click_daily_rewards_tab(driver):
     """
     Click Daily Rewards TAB (top navigation, NOT sidebar)
-    Avoids clicking sidebar menu item
     """
-    # Selectors targeting TOP TAB only (not sidebar)
     tab_selectors = [
         "//div[contains(@class, 'tab')]//span[contains(text(), 'Daily Rewards')]",
         "//button[contains(@class, 'tab')][contains(text(), 'Daily Rewards')]",
@@ -512,26 +510,21 @@ def click_daily_rewards_tab_store(driver):
     
     return False
 
-def scroll_to_daily_rewards_section(driver):
-    """Scroll to Daily Rewards section content"""
-    try:
-        result = driver.execute_script("""
-            let allElements = document.querySelectorAll('*');
-            for (let el of allElements) {
-                if (el.innerText && el.innerText.includes('Daily Rewards')) {
-                    el.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'});
-                    return true;
-                }
-            }
-            return false;
-        """)
-        if result:
-            log("✓ Scrolled to Daily Rewards section")
-            time.sleep(0.8)
-            return True
-    except:
-        pass
-    return False
+def navigate_to_daily_rewards_section_store(driver):
+    """Navigate to Daily Rewards section in Store"""
+    log("Navigating to Daily Rewards section in Store...")
+    ensure_store_page(driver)
+    close_store_popup_after_claim(driver)
+    time.sleep(0.3)
+    
+    tab_clicked = click_daily_rewards_tab(driver)
+    if tab_clicked:
+        log("Successfully navigated to Daily Rewards section via tab")
+        time.sleep(0.7)
+        return True
+    else:
+        log("⚠️  Tab click failed")
+        return False
 
 def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page"""
@@ -579,12 +572,16 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim store daily rewards with proper popup handling and navigation recovery"""
+    """
+    Claim Store Daily Rewards
+    MUST find the Daily Rewards section with FREE claim buttons
+    """
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
     
     try:
+        # Navigate to store
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(2)
         
@@ -593,44 +590,44 @@ def claim_store_rewards(driver, player_id):
             close_store_popup_after_claim(driver)
         
         # Ensure on Store page
-        if not ensure_on_store_page(driver):
+        if not ensure_store_page(driver):
             log("❌ Cannot access Store page")
             return 0
         
-        # Click Daily Rewards TAB (top navigation)
-        if not click_daily_rewards_tab_store(driver):
-            log("⚠️  Could not find Daily Rewards tab")
+        # Navigate to Daily Rewards section
+        if not navigate_to_daily_rewards_section_store(driver):
+            log("⚠️  Could not navigate to Daily Rewards section")
         
-        time.sleep(1)
-        scroll_to_daily_rewards_section(driver)
+        time.sleep(0.5)
+        driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
         # Claim loop
         for attempt in range(max_claims):
             log(f"Store attempt {attempt + 1}/{max_claims}")
             
-            # CRITICAL: Ensure still on Store page and Daily Rewards tab
-            if not ensure_on_store_page(driver):
+            # CRITICAL: Ensure still on Store page
+            if not ensure_store_page(driver):
                 log("⚠️  Lost Store page, recovery failed")
                 break
             
             # Close any popups
             close_store_popup_after_claim(driver)
             
-            # Re-click Daily Rewards tab
-            click_daily_rewards_tab_store(driver)
+            # Re-navigate to Daily Rewards section
+            navigate_to_daily_rewards_section_store(driver)
             time.sleep(0.5)
             
-            # Scroll to section
-            scroll_to_daily_rewards_section(driver)
-            
-            # Find and click claim button
+            # Find and click claim button ONLY in Daily Rewards section
             result = driver.execute_script("""
+                // Find Daily Rewards section by heading
                 let dailySection = null;
-                let allDivs = document.querySelectorAll('div, section, article');
+                let allSections = document.querySelectorAll('div, section, article');
                 
-                for (let div of allDivs) {
-                    if (div.innerText && div.innerText.includes('Daily Rewards')) {
-                        dailySection = div;
+                for (let section of allSections) {
+                    let text = section.innerText || '';
+                    // Look for section with "Daily Rewards" heading AND "Store Bonus" text
+                    if (text.includes('Daily Rewards') && text.includes('Store Bonus')) {
+                        dailySection = section;
                         break;
                     }
                 }
@@ -639,10 +636,19 @@ def claim_store_rewards(driver, player_id):
                     return false;
                 }
                 
+                // Find Claim buttons WITHIN this section
                 let buttons = dailySection.querySelectorAll('button');
                 for (let btn of buttons) {
-                    let text = btn.innerText.trim().toLowerCase();
-                    if (text === 'claim' && btn.offsetParent !== null) {
+                    let btnText = btn.innerText.trim().toLowerCase();
+                    
+                    // MUST be exactly "Claim"
+                    if (btnText === 'claim' && btn.offsetParent !== null) {
+                        // Avoid purchase buttons
+                        let parentText = btn.parentElement.innerText || '';
+                        if (parentText.includes('₹') || parentText.includes('Buy') || parentText.includes('Purchase')) {
+                            continue;
+                        }
+                        
                         btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                         setTimeout(function() {
                             btn.click();
@@ -658,16 +664,13 @@ def claim_store_rewards(driver, player_id):
                 claimed += 1
                 time.sleep(2)
                 
-                # Close confirmation popup with multi-method strategy
+                # Close confirmation popup
                 close_store_popup_after_claim(driver)
                 time.sleep(0.5)
                 
-                # Verify still on Store page and Daily Rewards tab after popup close
-                ensure_on_store_page(driver)
-                click_daily_rewards_tab_store(driver)
-                time.sleep(0.5)
-                
-                scroll_to_daily_rewards_section(driver)
+                # Verify still on Store page
+                ensure_store_page(driver)
+                time.sleep(0.3)
             else:
                 log(f"ℹ️  No more store rewards (attempt {attempt + 1})")
                 break
