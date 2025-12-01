@@ -22,10 +22,9 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def create_driver():
-    """GitHub Actions-compatible driver with your exact flags"""
+    """GitHub Actions-compatible driver"""
     options = Options()
     
-    # Your exact configuration
     if HEADLESS:
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
@@ -48,7 +47,6 @@ def create_driver():
     options.add_argument("--disable-renderer-backgrounding")
     options.add_argument("--disable-backgrounding-occluded-windows")
     
-    # Your exact prefs
     prefs = {
         "profile.default_content_setting_values": {
             "images": 2,
@@ -62,7 +60,6 @@ def create_driver():
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
     
-    # Dynamic driver path for GitHub Actions
     try:
         driver_path = ChromeDriverManager().install()
     except:
@@ -76,7 +73,7 @@ def create_driver():
     return driver
 
 def accept_cookies(driver):
-    """Your exact cookie acceptance logic"""
+    """Accept cookie banner"""
     try:
         btn = WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((
@@ -92,7 +89,7 @@ def accept_cookies(driver):
         log("ℹ️  No cookie banner")
 
 def login_to_hub(driver, player_id):
-    """Your exact multi-selector login logic"""
+    """Login using multi-selector strategy"""
     log(f"🔐 Logging in: {player_id}")
     
     try:
@@ -102,7 +99,7 @@ def login_to_hub(driver, player_id):
         
         accept_cookies(driver)
         
-        # Your exact login button detection
+        # Login button detection
         login_selectors = [
             "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
             "//a[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
@@ -140,7 +137,7 @@ def login_to_hub(driver, player_id):
         time.sleep(0.5)
         driver.save_screenshot(f"02_login_clicked_{player_id}.png")
         
-        # Your exact input field detection
+        # Input field detection
         input_selectors = [
             "#user-id-input",
             "//input[contains(@placeholder, 'ID') or contains(@placeholder, 'User') or contains(@name, 'user') or contains(@placeholder, 'id')]",
@@ -177,7 +174,7 @@ def login_to_hub(driver, player_id):
         
         driver.save_screenshot(f"03_input_entered_{player_id}.png")
         
-        # Your exact login CTA detection
+        # Login CTA detection
         login_cta_selectors = [
             "//button[contains(text(), 'Login') or contains(text(), 'Log in') or contains(text(), 'Sign in')]",
             "//button[@type='submit']",
@@ -248,14 +245,48 @@ def login_to_hub(driver, player_id):
             pass
         return False
 
+def close_popup(driver):
+    """Close any popup/modal"""
+    try:
+        close_btn = driver.find_element(By.XPATH, "//button[normalize-space(text())='Close']")
+        if close_btn.is_displayed():
+            close_btn.click()
+            log("✓ Closed popup")
+            time.sleep(0.5)
+            return
+    except:
+        pass
+    
+    try:
+        continue_btn = driver.find_element(By.XPATH, "//button[contains(text(), 'Continue')]")
+        if continue_btn.is_displayed():
+            continue_btn.click()
+            log("✓ Clicked Continue")
+            time.sleep(0.5)
+            return
+    except:
+        pass
+    
+    try:
+        x_buttons = driver.find_elements(By.XPATH, "//*[name()='svg']/parent::button")
+        for x_btn in x_buttons:
+            if x_btn.is_displayed():
+                x_btn.click()
+                log("✓ Closed popup with X")
+                time.sleep(0.5)
+                return
+    except:
+        pass
+
 def claim_daily_rewards(driver, player_id):
-    """Simplified daily rewards claiming"""
+    """Claim daily rewards page"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(1)
+        close_popup(driver)
         
         for attempt in range(10):
             result = driver.execute_script("""
@@ -276,7 +307,8 @@ def claim_daily_rewards(driver, player_id):
             if result:
                 log(f"✅ Daily #{claimed + 1}")
                 claimed += 1
-                time.sleep(2)
+                time.sleep(1.5)
+                close_popup(driver)
             else:
                 log("ℹ️  No more daily rewards")
                 break
@@ -288,36 +320,78 @@ def claim_daily_rewards(driver, player_id):
     
     return claimed
 
+def click_daily_rewards_tab_store(driver):
+    """Click the Daily Rewards tab in Store"""
+    try:
+        # Use JavaScript to find and click the Daily Rewards tab
+        result = driver.execute_script("""
+            let allElements = document.querySelectorAll('*');
+            for (let el of allElements) {
+                if (el.innerText && el.innerText.includes('Daily Rewards')) {
+                    // Check if it's a clickable tab (not just text)
+                    if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'tab' || 
+                        el.onclick || el.parentElement.onclick) {
+                        el.click();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        """)
+        if result:
+            log("✓ Clicked Daily Rewards tab")
+            time.sleep(1)
+            return True
+    except:
+        pass
+    return False
+
 def claim_store_rewards(driver, player_id):
-    """Simplified store rewards claiming"""
+    """Claim store daily rewards - LOCKED TO DAILY REWARDS SECTION ONLY"""
     log("🏪 Claiming Store...")
     claimed = 0
+    max_claims = 3  # Hard limit
     
     try:
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(1)
+        close_popup(driver)
         
-        # Try to click Daily Rewards tab
-        try:
-            driver.execute_script("""
-                let all = document.querySelectorAll('*');
-                for (let el of all) {
-                    if (el.innerText && el.innerText.includes('Daily Reward')) {
-                        el.click();
+        # Click Daily Rewards tab
+        if not click_daily_rewards_tab_store(driver):
+            log("⚠️  Could not find Daily Rewards tab")
+        
+        time.sleep(1)
+        
+        # Claim up to 3 rewards from Daily Rewards section ONLY
+        for attempt in range(max_claims):
+            # Ensure we're still on the Daily Rewards tab
+            click_daily_rewards_tab_store(driver)
+            time.sleep(0.5)
+            
+            # Find claim button WITHIN Daily Rewards section
+            result = driver.execute_script("""
+                // Find the Daily Rewards container first
+                let dailySection = null;
+                let allDivs = document.querySelectorAll('div');
+                
+                for (let div of allDivs) {
+                    if (div.innerText && div.innerText.includes('Daily Rewards')) {
+                        dailySection = div;
                         break;
                     }
                 }
-            """)
-            time.sleep(1)
-        except:
-            pass
-        
-        for attempt in range(5):
-            result = driver.execute_script("""
-                let buttons = document.querySelectorAll('button');
+                
+                if (!dailySection) {
+                    return false;
+                }
+                
+                // Find claim button ONLY within this section
+                let buttons = dailySection.querySelectorAll('button');
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
                     if (text === 'claim' && btn.offsetParent !== null) {
+                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                         btn.click();
                         return true;
                     }
@@ -329,21 +403,13 @@ def claim_store_rewards(driver, player_id):
                 log(f"✅ Store #{claimed + 1}")
                 claimed += 1
                 time.sleep(2)
+                close_popup(driver)
                 
-                # Close popups
-                driver.execute_script("""
-                    setTimeout(() => {
-                        document.querySelectorAll('button').forEach(btn => {
-                            if (btn.innerText.toLowerCase().includes('continue') || 
-                                btn.innerText.toLowerCase().includes('close')) {
-                                btn.click();
-                            }
-                        });
-                    }, 500);
-                """)
-                time.sleep(1)
+                # Re-focus on Daily Rewards tab after popup
+                click_daily_rewards_tab_store(driver)
+                time.sleep(0.5)
             else:
-                log("ℹ️  No more store rewards")
+                log(f"ℹ️  No more store rewards (attempt {attempt + 1})")
                 break
         
         driver.save_screenshot(f"store_final_{player_id}.png")
