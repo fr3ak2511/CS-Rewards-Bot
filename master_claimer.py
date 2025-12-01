@@ -631,6 +631,7 @@ def claim_store_rewards(driver, player_id):
 def claim_progression_program_rewards(driver, player_id):
     """
     Claim Progression Program rewards with horizontal scrolling
+    FIXED: Removed X > 400px filter, better button detection
     """
     log("🎯 Claiming Progression Program...")
     claimed = 0
@@ -648,82 +649,62 @@ def claim_progression_program_rewards(driver, player_id):
         driver.save_screenshot(f"progression_01_ready_{player_id}.png")
         
         # Claim loop with scrolling
-        max_attempts = 8  # Try multiple times with scrolling
+        max_attempts = 10  # Increased attempts
         
         for attempt in range(max_attempts):
             log(f"\n--- Progression Claim Attempt {attempt + 1}/{max_attempts} ---")
             
-            # Scroll right to reveal hidden cards (if needed)
-            if attempt > 0:
-                log("Scrolling horizontally to reveal more cards...")
-                scroll_result = driver.execute_script("""
-                    // Find and click scroll buttons
-                    let scrollSelectors = [
-                        "//button[contains(@class, 'right')]",
-                        "//button[contains(@class, 'next')]",
-                        "//*[name()='svg' and contains(@class, 'right')]/parent::button",
-                        "//div[contains(@class, 'arrow-right')]",
-                        "//button[contains(@aria-label, 'Next')]"
-                    ];
-                    
-                    let allButtons = document.querySelectorAll('button');
-                    for (let btn of allButtons) {
-                        let className = btn.className || '';
-                        let ariaLabel = btn.getAttribute('aria-label') || '';
-                        
-                        if (className.includes('right') || className.includes('next') || 
-                            ariaLabel.toLowerCase().includes('next')) {
-                            if (btn.offsetParent !== null && !btn.disabled) {
-                                btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                setTimeout(function() {
-                                    btn.click();
-                                }, 300);
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                """)
-                
-                if scroll_result:
-                    log("✓ Scrolled right")
-                    time.sleep(1)
-                else:
-                    log("ℹ️  No scroll button found")
-            
-            # Find and click Claim button (in content area, X > 400px to skip sidebar)
+            # CRITICAL FIX: Find and click Claim button (NO X position filter)
             result = driver.execute_script("""
+                // Find ALL buttons with "Claim" text
                 let allButtons = document.querySelectorAll('button');
                 let claimButtons = [];
                 
-                allButtons.forEach(function(btn) {
-                    let text = btn.innerText.trim();
-                    if (text === 'Claim') {
-                        let rect = btn.getBoundingClientRect();
-                        let x = rect.left;
+                for (let btn of allButtons) {
+                    let btnText = btn.innerText.trim();
+                    
+                    // Must be exactly "Claim"
+                    if (btnText === 'Claim' && btn.offsetParent !== null && !btn.disabled) {
+                        // Get parent to check if it's in main content (not sidebar)
+                        let parent = btn.closest('div');
+                        let parentText = parent ? parent.innerText : '';
                         
-                        // Only buttons in content area (right of sidebar)
-                        if (x > 400) {
-                            let parent = btn.closest('div');
-                            let parentText = parent ? parent.innerText : '';
-                            
-                            // Exclude already delivered cards
-                            if (!parentText.includes('Delivered')) {
-                                claimButtons.push(btn);
-                            }
+                        // Skip sidebar buttons (they have menu-related text)
+                        if (parentText.includes('Progression Program') && parentText.length < 50) {
+                            // This is sidebar menu item
+                            continue;
                         }
+                        
+                        // Skip already claimed/delivered
+                        if (parentText.includes('Delivered') || parentText.includes('Claimed')) {
+                            continue;
+                        }
+                        
+                        // Check if button is green (available to claim)
+                        let btnStyle = window.getComputedStyle(btn);
+                        let bgColor = btnStyle.backgroundColor;
+                        
+                        // Green buttons have rgb values with high green component
+                        // Skip gray/disabled buttons
+                        if (bgColor.includes('128, 128, 128') || bgColor.includes('64, 64, 64')) {
+                            continue;
+                        }
+                        
+                        claimButtons.push(btn);
                     }
-                });
+                }
                 
-                console.log('Found ' + claimButtons.length + ' claimable buttons');
+                console.log('Found ' + claimButtons.length + ' claimable Progression buttons');
                 
                 if (claimButtons.length > 0) {
                     let btn = claimButtons[0];
+                    
+                    // Scroll into view
                     btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                     
                     setTimeout(function() {
                         btn.click();
-                        console.log('✅ Clicked Claim button');
+                        console.log('✅ Clicked Progression Claim button');
                     }, 500);
                     
                     return true;
@@ -750,13 +731,42 @@ def claim_progression_program_rewards(driver, player_id):
                 
                 time.sleep(0.3)
             else:
+                # Try scrolling to reveal more cards
+                if attempt < 5:
+                    log("Scrolling horizontally to reveal more cards...")
+                    scroll_result = driver.execute_script("""
+                        // Find scroll/next buttons
+                        let allButtons = document.querySelectorAll('button');
+                        
+                        for (let btn of allButtons) {
+                            let className = btn.className || '';
+                            let ariaLabel = btn.getAttribute('aria-label') || '';
+                            
+                            if (className.includes('right') || className.includes('next') || 
+                                ariaLabel.toLowerCase().includes('next')) {
+                                if (btn.offsetParent !== null && !btn.disabled) {
+                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    
+                                    setTimeout(function() {
+                                        btn.click();
+                                    }, 300);
+                                    
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    """)
+                    
+                    if scroll_result:
+                        log("✓ Scrolled right")
+                        time.sleep(1.5)
+                        continue
+                    else:
+                        log("ℹ️  No scroll button found")
+                
                 log(f"ℹ️  No more claim buttons (attempt {attempt + 1})")
-                # Try scrolling more before giving up
-                if attempt < 3:
-                    time.sleep(1)
-                    continue
-                else:
-                    break
+                break
         
         log(f"\n{'='*60}")
         log(f"Progression Claims Complete: {claimed}")
@@ -774,7 +784,7 @@ def claim_progression_program_rewards(driver, player_id):
     return claimed
 
 def process_player(player_id):
-    """Process single player - ALL reward pages"""
+    """Process single player - ALL reward pages IN CORRECT ORDER"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     
@@ -790,7 +800,7 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
-        # Claim all reward types
+        # ✅ CORRECT ORDER: Daily → Store (earn grenades) → Progression (use grenades)
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
         stats['progression'] = claim_progression_program_rewards(driver, player_id)
@@ -857,7 +867,7 @@ def send_email_summary(results):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.0")
+    log("CS HUB AUTO-CLAIMER v2.1")
     log("="*60)
     
     try:
