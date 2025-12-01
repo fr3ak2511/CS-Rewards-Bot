@@ -2,7 +2,6 @@ import csv
 import time
 import os
 import smtplib
-import sys
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -16,7 +15,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Configuration
 HEADLESS = True
 PLAYER_ID_FILE = "players.csv"
 
@@ -24,16 +22,44 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def create_driver():
+    """Create Chrome driver with GitHub Actions stability fixes"""
     options = Options()
+    
     if HEADLESS:
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
     
+    # Critical stability flags for GitHub Actions
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-extensions")
     options.add_argument("--disable-notifications")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--single-process")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-backgrounding-occluded-windows")
+    options.add_argument("--disable-breakpad")
+    options.add_argument("--disable-component-extensions-with-background-pages")
+    options.add_argument("--disable-features=TranslateUI,BlinkGenPropertyTrees")
+    options.add_argument("--disable-ipc-flooding-protection")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--enable-features=NetworkService,NetworkServiceInProcess")
+    options.add_argument("--force-color-profile=srgb")
+    options.add_argument("--hide-scrollbars")
+    options.add_argument("--metrics-recording-only")
+    options.add_argument("--mute-audio")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    prefs = {
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.managed_default_content_settings.images": 1
+    }
+    options.add_experimental_option("prefs", prefs)
+    options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
+    options.add_experimental_option("useAutomationExtension", False)
     
     try:
         driver_path = ChromeDriverManager().install()
@@ -41,28 +67,35 @@ def create_driver():
         driver_path = "/usr/bin/chromedriver"
     
     service = Service(driver_path)
+    service.log_path = "/dev/null"
+    
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(60)
+    driver.set_page_load_timeout(90)
+    driver.set_script_timeout(30)
+    
     return driver
 
 def login_to_hub(driver, player_id):
-    """Login using the same method as working script"""
-    log(f"🔐 Logging in with ID: {player_id}")
-    
-    driver.get("https://hub.vertigogames.co/daily-rewards")
-    wait = WebDriverWait(driver, 30)
+    """Login using TOP-RIGHT Login button, not banner button"""
+    log(f"🔐 Logging in: {player_id}")
     
     try:
-        # Wait for page load
-        time.sleep(5)
+        driver.get("https://hub.vertigogames.co/daily-rewards")
+        log("📄 Page loaded")
+        time.sleep(8)
         
-        # Try to accept cookies
+        driver.save_screenshot(f"page_loaded_{player_id}.png")
+        
+        # Accept cookies
         try:
-            accept_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]")))
-            accept_btn.click()
-            time.sleep(1)
+            cookie_btn = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]"))
+            )
+            cookie_btn.click()
+            log("✅ Accepted cookies")
+            time.sleep(2)
         except:
-            pass
+            log("ℹ️  No cookie banner")
         
         # Check if already logged in
         try:
@@ -72,51 +105,123 @@ def login_to_hub(driver, player_id):
         except:
             pass
         
-        # Find and click login button
-        login_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Login')]")))
-        login_btn.click()
-        log("✅ Clicked Login button")
-        time.sleep(3)
+        # Click TOP-RIGHT Login button using JavaScript
+        # This finds the button in the header/navigation, not the banner
+        try:
+            log("🔍 Looking for top-right Login button...")
+            
+            # Use JavaScript to find and click the CORRECT login button
+            # The top-right login button is usually in a nav/header element
+            clicked = driver.execute_script("""
+                // Method 1: Find login button in header/nav area (top of page)
+                let buttons = document.querySelectorAll('button');
+                for (let btn of buttons) {
+                    if (btn.innerText.trim() === 'Login') {
+                        let rect = btn.getBoundingClientRect();
+                        // Top-right button should be in the top 100px and right side
+                        if (rect.top < 100 && rect.right > window.innerWidth / 2) {
+                            btn.click();
+                            return 'top-right';
+                        }
+                    }
+                }
+                
+                // Method 2: Find the LAST login button (usually the header one)
+                let loginButtons = Array.from(buttons).filter(b => b.innerText.trim() === 'Login');
+                if (loginButtons.length > 1) {
+                    // If multiple login buttons, the last one is usually the header
+                    loginButtons[loginButtons.length - 1].click();
+                    return 'last-button';
+                }
+                
+                // Method 3: Find login button NOT inside a banner/promo div
+                for (let btn of buttons) {
+                    if (btn.innerText.trim() === 'Login') {
+                        let parent = btn.closest('div');
+                        // Skip if parent contains "claim" or "reward" text (banner buttons)
+                        if (parent && !parent.innerText.toLowerCase().includes('claim')) {
+                            btn.click();
+                            return 'non-banner';
+                        }
+                    }
+                }
+                
+                return null;
+            """)
+            
+            if clicked:
+                log(f"✅ Clicked Login button (method: {clicked})")
+                time.sleep(5)
+            else:
+                log("❌ Could not find top-right Login button")
+                driver.save_screenshot(f"login_button_not_found_{player_id}.png")
+                return False
+                
+        except Exception as e:
+            log(f"❌ Failed to click Login button: {e}")
+            driver.save_screenshot(f"login_button_fail_{player_id}.png")
+            return False
         
-        # Enter player ID
-        input_field = wait.until(EC.visibility_of_element_located((By.XPATH, "//input[@type='text']")))
-        input_field.clear()
-        input_field.send_keys(player_id)
-        log(f"⌨️  Entered player ID")
-        time.sleep(1)
-        
-        # Submit
-        input_field.send_keys(Keys.ENTER)
-        log("⏎ Submitted login")
-        time.sleep(5)
+        # Find input field
+        try:
+            input_field = WebDriverWait(driver, 15).until(
+                EC.visibility_of_element_located((By.XPATH, "//input[@type='text']"))
+            )
+            log("✅ Found input field")
+            time.sleep(2)
+            
+            input_field.click()
+            time.sleep(0.5)
+            input_field.clear()
+            time.sleep(0.5)
+            input_field.send_keys(player_id)
+            log(f"⌨️  Entered: {player_id}")
+            time.sleep(2)
+            
+            driver.save_screenshot(f"id_entered_{player_id}.png")
+            
+            input_field.send_keys(Keys.ENTER)
+            log("⏎ Submitted")
+            time.sleep(8)
+            
+        except Exception as e:
+            log(f"❌ Input field error: {e}")
+            driver.save_screenshot(f"input_fail_{player_id}.png")
+            return False
         
         # Verify login
         try:
-            wait.until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Logout')]")))
-            log("✅ Login successful!")
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Logout')]"))
+            )
+            log("✅ Login verified!")
             driver.save_screenshot(f"login_success_{player_id}.png")
             return True
         except:
             log("❌ Login verification failed")
-            driver.save_screenshot(f"login_failed_{player_id}.png")
+            driver.save_screenshot(f"login_verify_fail_{player_id}.png")
+            with open(f"page_source_{player_id}.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
             return False
             
     except Exception as e:
-        log(f"❌ Login error: {e}")
-        driver.save_screenshot(f"login_error_{player_id}.png")
+        log(f"❌ Login exception: {e}")
+        try:
+            driver.save_screenshot(f"login_error_{player_id}.png")
+        except:
+            pass
         return False
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards using JavaScript like working script"""
+    """Claim daily rewards using JavaScript"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(5)
+        time.sleep(6)
         
         for attempt in range(5):
-            # Use JavaScript to find and click claim buttons (same as working script)
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
@@ -129,17 +234,17 @@ def claim_daily_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Claimed daily reward {claimed + 1}")
+                log(f"✅ Daily reward {claimed + 1}")
                 claimed += 1
-                time.sleep(3)
+                time.sleep(4)
             else:
-                log(f"ℹ️  No more daily rewards to claim (attempt {attempt + 1})")
+                log(f"ℹ️  No more daily rewards (try {attempt + 1})")
                 break
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
         
     except Exception as e:
-        log(f"❌ Daily rewards error: {e}")
+        log(f"❌ Daily error: {e}")
     
     return claimed
 
@@ -150,13 +255,19 @@ def claim_store_rewards(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/store")
-        time.sleep(5)
+        time.sleep(6)
         
-        # Click Daily Rewards tab
         try:
-            tab = driver.find_element(By.XPATH, "//*[contains(text(), 'Daily Rewards')]")
-            tab.click()
-            time.sleep(2)
+            driver.execute_script("""
+                let tabs = document.querySelectorAll('*');
+                for (let el of tabs) {
+                    if (el.innerText.includes('Daily Rewards')) {
+                        el.click();
+                        break;
+                    }
+                }
+            """)
+            time.sleep(3)
         except:
             pass
         
@@ -173,40 +284,37 @@ def claim_store_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Claimed store reward {claimed + 1}")
+                log(f"✅ Store reward {claimed + 1}")
                 claimed += 1
-                time.sleep(3)
+                time.sleep(4)
             else:
-                log(f"ℹ️  No more store rewards to claim")
+                log("ℹ️  No more store rewards")
                 break
         
         driver.save_screenshot(f"store_final_{player_id}.png")
         
     except Exception as e:
-        log(f"❌ Store rewards error: {e}")
+        log(f"❌ Store error: {e}")
     
     return claimed
 
 def claim_progression_rewards(driver, player_id):
-    """Claim progression rewards using same logic as working script"""
+    """Claim progression rewards"""
     log("📊 Claiming Progression Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
-        time.sleep(5)
+        time.sleep(6)
         
         for attempt in range(6):
-            # Same JavaScript as working progression script
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
                     if (text === 'claim') {
-                        // Check if button is on the right side (not in left nav)
                         let rect = btn.getBoundingClientRect();
                         if (rect.left > 300) {
-                            // Check it's not already delivered
                             let parent = btn.closest('div');
                             if (parent && !parent.innerText.includes('Delivered')) {
                                 btn.click();
@@ -219,35 +327,34 @@ def claim_progression_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Claimed progression reward {claimed + 1}")
+                log(f"✅ Progression reward {claimed + 1}")
                 claimed += 1
-                time.sleep(4)
+                time.sleep(5)
                 
-                # Close any success popups
-                try:
-                    driver.execute_script("""
+                driver.execute_script("""
+                    setTimeout(() => {
                         document.querySelectorAll('button').forEach(btn => {
                             if (btn.innerText.toLowerCase().includes('continue') || 
                                 btn.innerText.toLowerCase().includes('close')) {
                                 btn.click();
                             }
                         });
-                    """)
-                except:
-                    pass
+                    }, 1000);
+                """)
+                time.sleep(2)
             else:
-                log(f"ℹ️  No more progression rewards to claim")
+                log("ℹ️  No more progression rewards")
                 break
         
         driver.save_screenshot(f"progression_final_{player_id}.png")
         
     except Exception as e:
-        log(f"❌ Progression rewards error: {e}")
+        log(f"❌ Progression error: {e}")
     
     return claimed
 
 def process_player(player_id):
-    """Process a single player"""
+    """Process single player"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     
@@ -257,12 +364,12 @@ def process_player(player_id):
         log(f"{'='*60}")
         
         driver = create_driver()
+        log("✅ Driver created")
         
         if not login_to_hub(driver, player_id):
             stats['status'] = "Login Failed"
             return stats
         
-        # Claim rewards
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
         stats['progression'] = claim_progression_rewards(driver, player_id)
@@ -270,13 +377,13 @@ def process_player(player_id):
         total = stats['daily'] + stats['store'] + stats['progression']
         if total > 0:
             stats['status'] = "Success"
-            log(f"🎉 Total claimed: {total} rewards")
+            log(f"🎉 Total: {total} rewards")
         else:
             stats['status'] = "No Rewards"
-            log(f"⚠️  No rewards claimed (might be already claimed today)")
+            log("⚠️  No rewards claimed")
         
     except Exception as e:
-        log(f"❌ Error processing {player_id}: {e}")
+        log(f"❌ Error: {e}")
         stats['status'] = f"Error: {str(e)[:30]}"
     finally:
         if driver:
@@ -288,7 +395,7 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results):
-    """Send email with results"""
+    """Send email summary"""
     sender = os.environ.get("SENDER_EMAIL")
     recipient = os.environ.get("RECIPIENT_EMAIL")
     password = os.environ.get("GMAIL_APP_PASSWORD")
@@ -299,8 +406,7 @@ def send_email_summary(results):
     
     subject = f"Hub Rewards Summary - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     html = f"""
-<html>
-<body>
+<html><body>
 <h2>Hub Rewards Summary</h2>
 <p><strong>Run Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 <table border="1" cellpadding="5">
@@ -323,7 +429,7 @@ def send_email_summary(results):
         server.login(sender, password)
         server.sendmail(sender, recipient, msg.as_string())
         server.quit()
-        log("✅ Email sent successfully")
+        log("✅ Email sent")
     except Exception as e:
         log(f"❌ Email failed: {e}")
 
@@ -332,7 +438,6 @@ def main():
     log("CS HUB REWARDS CLAIMER")
     log("="*60)
     
-    # Read player IDs
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
             player_ids = [row[0].strip() for row in csv.reader(f) if row and row[0].strip()]
@@ -342,19 +447,17 @@ def main():
     
     log(f"📋 Loaded {len(player_ids)} player(s)")
     
-    # Process each player
     results = []
     for player_id in player_ids:
         result = process_player(player_id)
         results.append(result)
-        time.sleep(5)  # Wait between players
+        time.sleep(5)
     
-    # Send summary
     log("\n" + "="*60)
     log("SUMMARY")
     log("="*60)
     for r in results:
-        log(f"{r['player_id']}: Daily={r['daily']}, Store={r['store']}, Prog={r['progression']}, Status={r['status']}")
+        log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']}, Status={r['status']}")
     
     send_email_summary(results)
     log("\n🏁 Complete!")
