@@ -92,7 +92,6 @@ def login_to_hub(driver, player_id):
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(0.4)
-        # Screenshot disabled: driver.save_screenshot(f"01_page_loaded_{player_id}.png")
         
         accept_cookies(driver)
         
@@ -128,11 +127,9 @@ def login_to_hub(driver, player_id):
         
         if not login_clicked:
             log("❌ No login button found")
-            # Screenshot disabled: driver.save_screenshot(f"02_login_not_found_{player_id}.png")
             return False
         
         time.sleep(0.5)
-        # Screenshot disabled: driver.save_screenshot(f"02_login_clicked_{player_id}.png")
         
         # Input field detection
         input_selectors = [
@@ -166,10 +163,7 @@ def login_to_hub(driver, player_id):
         
         if not input_found:
             log("❌ No input field found")
-            # Screenshot disabled: driver.save_screenshot(f"03_input_not_found_{player_id}.png")
             return False
-        
-        # Screenshot disabled: driver.save_screenshot(f"03_input_entered_{player_id}.png")
         
         # Login CTA detection
         login_cta_selectors = [
@@ -198,11 +192,9 @@ def login_to_hub(driver, player_id):
                 log("⏎ Enter key pressed")
             except:
                 log("❌ Login CTA not found")
-                # Screenshot disabled: driver.save_screenshot(f"04_cta_not_found_{player_id}.png")
                 return False
         
         time.sleep(1)
-        # Screenshot disabled: driver.save_screenshot(f"04_submitted_{player_id}.png")
         
         # Wait for login completion
         log("⏳ Waiting for login...")
@@ -213,7 +205,6 @@ def login_to_hub(driver, player_id):
                 current_url = driver.current_url
                 if "user" in current_url.lower() or "dashboard" in current_url.lower() or "daily-rewards" in current_url.lower():
                     log("✅ Login verified (URL)")
-                    # Screenshot disabled: driver.save_screenshot(f"05_login_success_{player_id}.png")
                     return True
                 
                 user_elements = driver.find_elements(
@@ -222,7 +213,6 @@ def login_to_hub(driver, player_id):
                 )
                 if user_elements:
                     log("✅ Login verified (Logout button)")
-                    # Screenshot disabled: driver.save_screenshot(f"05_login_success_{player_id}.png")
                     return True
                 
                 time.sleep(0.3)
@@ -230,16 +220,10 @@ def login_to_hub(driver, player_id):
                 time.sleep(0.3)
         
         log("❌ Login verification timeout")
-        # Screenshot disabled: driver.save_screenshot(f"05_login_timeout_{player_id}.png")
         return False
     
     except Exception as e:
         log(f"❌ Login exception: {e}")
-        try:
-            # Screenshot disabled: driver.save_screenshot(f"99_exception_{player_id}.png")
-            pass
-        except:
-            pass
         return False
 
 def close_popup(driver):
@@ -402,13 +386,11 @@ def click_daily_rewards_tab(driver):
                             continue;
                         }
                     }
-                    // Skip sidebar
                     let parent = elem.parentElement;
                     let parentClass = parent ? (parent.className || '') : '';
                     if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
                         continue;
                     }
-                    // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
                     setTimeout(() => { elem.click(); }, 800);
                     return true;
@@ -478,8 +460,6 @@ def claim_daily_rewards(driver, player_id):
             else:
                 log("ℹ️ No more daily rewards")
                 break
-        
-        # Screenshot disabled: driver.save_screenshot(f"daily_final_{player_id}.png")
     
     except Exception as e:
         log(f"❌ Daily error: {e}")
@@ -508,9 +488,6 @@ def claim_store_rewards(driver, player_id):
             time.sleep(0.5)
             return 0
         
-        # Screenshot disabled: driver.save_screenshot(f"store_01_ready_{player_id}.png")
-        
-        # Claim loop
         for attempt in range(max_claims):
             log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
             
@@ -521,9 +498,7 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # FIXED: Improved timer detection - skip any card with "Next in" or timer pattern
             result = driver.execute_script("""
-                // Find Store Bonus cards
                 let allDivs = document.querySelectorAll('div');
                 let storeBonusCards = [];
                 
@@ -546,38 +521,28 @@ def claim_store_rewards(driver, player_id):
                     }
                 }
                 
-                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
-                
-                // Find buttons with "Claim" text (SKIP cards with timer)
                 for (let card of storeBonusCards) {
                     let cardText = card.innerText || '';
                     
-                    // FIXED: Skip cards with timer - multiple patterns
                     if (cardText.includes('Next in') || 
                         /\\d+h\\s*\\d+m/.test(cardText) ||
                         /\\d+h/.test(cardText) ||
                         /\\d+m/.test(cardText)) {
-                        console.log('⏭️ Skipping card with timer');
                         continue;
                     }
                     
-                    // Find button
                     let buttons = card.querySelectorAll('button');
                     for (let btn of buttons) {
                         let btnText = btn.innerText.trim().toLowerCase();
                         
                         if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            setTimeout(function() { 
-                                btn.click(); 
-                                console.log('✅ Clicked GREEN Claim button');
-                            }, 500);
+                            setTimeout(function() { btn.click(); }, 500);
                             return true;
                         }
                     }
                 }
                 
-                console.log('No more available claim buttons found');
                 return false;
             """)
             
@@ -602,16 +567,9 @@ def claim_store_rewards(driver, player_id):
         log(f"\n{'='*60}")
         log(f"Store Claims Complete: {claimed}/{max_claims}")
         log(f"{'='*60}")
-        
-        # Screenshot disabled: driver.save_screenshot(f"store_final_{player_id}.png")
     
     except Exception as e:
         log(f"❌ Store error: {e}")
-        try:
-            # Screenshot disabled: driver.save_screenshot(f"store_error_{player_id}.png")
-            pass
-        except:
-            pass
     
     return claimed
 
@@ -628,7 +586,6 @@ def claim_progression_program_rewards(driver, player_id):
             close_popup(driver)
         
         time.sleep(0.5)
-        # Screenshot disabled: driver.save_screenshot(f"progression_01_ready_{player_id}.png")
         
         max_attempts = 10
         for attempt in range(max_attempts):
@@ -645,17 +602,14 @@ def claim_progression_program_rewards(driver, player_id):
                         let parent = btn.closest('div');
                         let parentText = parent ? parent.innerText : '';
                         
-                        // Skip sidebar buttons
                         if (parentText.includes('Progression Program') && parentText.length < 50) {
                             continue;
                         }
                         
-                        // Skip already claimed/delivered
                         if (parentText.includes('Delivered') || parentText.includes('Claimed')) {
                             continue;
                         }
                         
-                        // Check if button is green (available to claim)
                         let btnStyle = window.getComputedStyle(btn);
                         let bgColor = btnStyle.backgroundColor;
                         
@@ -667,15 +621,10 @@ def claim_progression_program_rewards(driver, player_id):
                     }
                 }
                 
-                console.log('Found ' + claimButtons.length + ' claimable Progression buttons');
-                
                 if (claimButtons.length > 0) {
                     let btn = claimButtons[0];
                     btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                    setTimeout(function() { 
-                        btn.click(); 
-                        console.log('✅ Clicked Progression Claim button');
-                    }, 500);
+                    setTimeout(function() { btn.click(); }, 500);
                     return true;
                 }
                 
@@ -731,21 +680,14 @@ def claim_progression_program_rewards(driver, player_id):
         log(f"\n{'='*60}")
         log(f"Progression Claims Complete: {claimed}")
         log(f"{'='*60}")
-        
-        # Screenshot disabled: driver.save_screenshot(f"progression_final_{player_id}.png")
     
     except Exception as e:
         log(f"❌ Progression error: {e}")
-        try:
-            # Screenshot disabled: driver.save_screenshot(f"progression_error_{player_id}.png")
-            pass
-        except:
-            pass
     
     return claimed
 
 def process_player(player_id):
-    """Process single player - ALL reward pages IN CORRECT ORDER"""
+    """Process single player"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     
@@ -761,7 +703,6 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
-        # CORRECT ORDER: Daily → Store (earn grenades) → Progression (use grenades)
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
         stats['progression'] = claim_progression_program_rewards(driver, player_id)
@@ -831,7 +772,7 @@ def send_email_summary(results):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2 - Daily Tracking")
+    log("CS HUB AUTO-CLAIMER v2.2 - FIXED")
     log("="*60)
     
     try:
