@@ -12,35 +12,57 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
-HEADLESS = True
 PLAYER_ID_FILE = "players.csv"
+HEADLESS = True
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def create_driver():
-    """Stable Chrome for GitHub Actions"""
+    """GitHub Actions-compatible driver with your exact flags"""
     options = Options()
     
+    # Your exact configuration
     if HEADLESS:
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
     
-    # Minimal stable flags
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-notifications")
+    options.add_argument("--incognito")
+    options.add_argument("--start-maximized")
     options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+    options.add_argument("--disable-infobars")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-logging")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-web-security")
+    options.add_argument("--disable-popup-blocking")
+    options.add_argument("--disable-notifications")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-renderer-backgrounding")
+    options.add_argument("--disable-backgrounding-occluded-windows")
     
-    prefs = {"profile.default_content_setting_values.notifications": 2}
+    # Your exact prefs
+    prefs = {
+        "profile.default_content_setting_values": {
+            "images": 2,
+            "notifications": 2,
+            "popups": 2,
+        },
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.popups": 0,
+    }
     options.add_experimental_option("prefs", prefs)
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
     
+    # Dynamic driver path for GitHub Actions
     try:
         driver_path = ChromeDriverManager().install()
     except:
@@ -48,146 +70,176 @@ def create_driver():
     
     service = Service(driver_path)
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(60)
+    driver.set_page_load_timeout(30)
+    driver.set_script_timeout(30)
     
     return driver
 
+def accept_cookies(driver):
+    """Your exact cookie acceptance logic"""
+    try:
+        btn = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((
+                By.XPATH,
+                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or "
+                "contains(text(), 'Allow') or contains(text(), 'Consent')]"
+            ))
+        )
+        btn.click()
+        time.sleep(0.3)
+        log("✅ Cookies accepted")
+    except TimeoutException:
+        log("ℹ️  No cookie banner")
+
 def login_to_hub(driver, player_id):
-    """Login using TOP-RIGHT button"""
+    """Your exact multi-selector login logic"""
     log(f"🔐 Logging in: {player_id}")
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        log("📄 Page loaded")
-        time.sleep(8)
-        
+        time.sleep(0.4)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
         
-        # Accept cookies
-        try:
-            cookie_btn = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Accept')]"))
-            )
-            driver.execute_script("arguments[0].click();", cookie_btn)
-            log("✅ Accepted cookies")
-            time.sleep(2)
-        except:
-            log("ℹ️  No cookie banner")
+        accept_cookies(driver)
         
-        # Check if already logged in
-        try:
-            driver.find_element(By.XPATH, "//button[contains(text(), 'Logout')]")
-            log("✅ Already logged in")
-            return True
-        except:
-            pass
+        # Your exact login button detection
+        login_selectors = [
+            "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
+            "//a[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
+            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'login')]",
+            "//button[contains(text(), 'claim')]",
+            "//div[contains(text(), 'Daily Rewards') or contains(text(), 'daily')]//button",
+            "//button[contains(@class, 'btn') or contains(@class, 'button')]",
+            "//*[contains(text(), 'Login') or contains(text(), 'login')][@onclick or @href or self::button or self::a]",
+        ]
         
-        # Click TOP-RIGHT Login button
-        try:
-            log("🔍 Finding top-right Login button...")
-            
-            clicked = driver.execute_script("""
-                let buttons = document.querySelectorAll('button');
-                for (let btn of buttons) {
-                    if (btn.innerText.trim() === 'Login') {
-                        let rect = btn.getBoundingClientRect();
-                        if (rect.top < 100 && rect.right > window.innerWidth / 2) {
-                            btn.click();
-                            return 'top-right';
-                        }
-                    }
-                }
-                
-                let loginButtons = Array.from(buttons).filter(b => b.innerText.trim() === 'Login');
-                if (loginButtons.length > 1) {
-                    loginButtons[loginButtons.length - 1].click();
-                    return 'last-button';
-                }
-                
-                for (let btn of buttons) {
-                    if (btn.innerText.trim() === 'Login') {
-                        let parent = btn.closest('div');
-                        if (parent && !parent.innerText.toLowerCase().includes('claim')) {
-                            btn.click();
-                            return 'non-banner';
-                        }
-                    }
-                }
-                
-                return null;
-            """)
-            
-            if clicked:
-                log(f"✅ Clicked Login ({clicked})")
-                time.sleep(6)
-                driver.save_screenshot(f"02_login_clicked_{player_id}.png")
-            else:
-                log("❌ Login button not found")
-                driver.save_screenshot(f"02_login_not_found_{player_id}.png")
+        login_clicked = False
+        for i, selector in enumerate(login_selectors):
+            try:
+                elements = driver.find_elements(By.XPATH, selector)
+                if elements:
+                    for element in elements:
+                        try:
+                            if element.is_displayed() and element.is_enabled():
+                                element.click()
+                                login_clicked = True
+                                log(f"✅ Login button clicked (selector {i+1})")
+                                break
+                        except:
+                            continue
+                if login_clicked:
+                    break
+            except:
+                continue
+        
+        if not login_clicked:
+            log("❌ No login button found")
+            driver.save_screenshot(f"02_login_not_found_{player_id}.png")
+            return False
+        
+        time.sleep(0.5)
+        driver.save_screenshot(f"02_login_clicked_{player_id}.png")
+        
+        # Your exact input field detection
+        input_selectors = [
+            "#user-id-input",
+            "//input[contains(@placeholder, 'ID') or contains(@placeholder, 'User') or contains(@name, 'user') or contains(@placeholder, 'id')]",
+            "//input[@type='text']",
+            "//input[contains(@class, 'input')]",
+            "//div[contains(@class, 'modal') or contains(@class, 'dialog')]//input[@type='text']",
+        ]
+        
+        input_found = False
+        input_box = None
+        for selector in input_selectors:
+            try:
+                if selector.startswith("#"):
+                    input_box = WebDriverWait(driver, 3).until(
+                        EC.visibility_of_element_located((By.ID, selector[1:]))
+                    )
+                else:
+                    input_box = WebDriverWait(driver, 3).until(
+                        EC.visibility_of_element_located((By.XPATH, selector))
+                    )
+                log("✅ Input field found")
+                input_box.clear()
+                input_box.send_keys(player_id)
+                time.sleep(0.1)
+                input_found = True
+                break
+            except:
+                continue
+        
+        if not input_found:
+            log("❌ No input field found")
+            driver.save_screenshot(f"03_input_not_found_{player_id}.png")
+            return False
+        
+        driver.save_screenshot(f"03_input_entered_{player_id}.png")
+        
+        # Your exact login CTA detection
+        login_cta_selectors = [
+            "//button[contains(text(), 'Login') or contains(text(), 'Log in') or contains(text(), 'Sign in')]",
+            "//button[@type='submit']",
+            "//div[contains(@class, 'modal') or contains(@class, 'dialog')]//button[not(contains(text(), 'Cancel')) and not(contains(text(), 'Close'))]",
+            "//button[contains(@class, 'primary') or contains(@class, 'submit')]",
+        ]
+        
+        login_cta_clicked = False
+        for selector in login_cta_selectors:
+            try:
+                btn = WebDriverWait(driver, 2).until(
+                    EC.element_to_be_clickable((By.XPATH, selector))
+                )
+                btn.click()
+                login_cta_clicked = True
+                log("✅ Login CTA clicked")
+                break
+            except:
+                continue
+        
+        if not login_cta_clicked:
+            try:
+                input_box.send_keys(Keys.ENTER)
+                log("⏎ Enter key pressed")
+            except:
+                log("❌ Login CTA not found")
+                driver.save_screenshot(f"04_cta_not_found_{player_id}.png")
                 return False
-                
-        except Exception as e:
-            log(f"❌ Login button error: {e}")
-            driver.save_screenshot(f"02_login_error_{player_id}.png")
-            return False
         
-        # Find and fill input field using JavaScript
-        try:
-            log("⌨️  Entering player ID...")
-            
-            # Use JavaScript to find and fill input
-            success = driver.execute_script("""
-                let inputs = document.querySelectorAll('input[type="text"]');
-                if (inputs.length > 0) {
-                    inputs[0].value = arguments[0];
-                    inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-                    inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
-                    return true;
-                }
-                return false;
-            """, player_id)
-            
-            if success:
-                log(f"✅ Entered: {player_id}")
-                time.sleep(2)
-                driver.save_screenshot(f"03_id_entered_{player_id}.png")
-                
-                # Submit using JavaScript
-                driver.execute_script("""
-                    let loginButtons = document.querySelectorAll('button');
-                    for (let btn of loginButtons) {
-                        if (btn.innerText.toLowerCase().includes('login') && btn.offsetParent !== null) {
-                            btn.click();
-                            break;
-                        }
-                    }
-                """)
-                log("⏎ Submitted")
-                time.sleep(8)
-                
-            else:
-                log("❌ Input field not found")
-                driver.save_screenshot(f"03_input_not_found_{player_id}.png")
-                return False
-            
-        except Exception as e:
-            log(f"❌ Input error: {e}")
-            driver.save_screenshot(f"03_input_error_{player_id}.png")
-            return False
+        time.sleep(1)
+        driver.save_screenshot(f"04_submitted_{player_id}.png")
         
-        # Verify login
-        try:
-            WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Logout')]"))
-            )
-            log("✅ Login verified!")
-            driver.save_screenshot(f"04_login_success_{player_id}.png")
-            return True
-        except:
-            log("❌ Login verification failed")
-            driver.save_screenshot(f"04_verification_fail_{player_id}.png")
-            return False
-            
+        # Wait for login completion
+        log("⏳ Waiting for login...")
+        start_time = time.time()
+        max_wait = 12
+        
+        while time.time() - start_time < max_wait:
+            try:
+                current_url = driver.current_url
+                if "user" in current_url.lower() or "dashboard" in current_url.lower() or "daily-rewards" in current_url.lower():
+                    log("✅ Login verified (URL)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
+                    return True
+                
+                user_elements = driver.find_elements(
+                    By.XPATH,
+                    "//button[contains(text(),'Logout') or contains(text(),'Profile') or contains(@class,'user')]"
+                )
+                if user_elements:
+                    log("✅ Login verified (Logout button)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
+                    return True
+                
+                time.sleep(0.3)
+            except:
+                time.sleep(0.3)
+        
+        log("❌ Login verification timeout")
+        driver.save_screenshot(f"05_login_timeout_{player_id}.png")
+        return False
+        
     except Exception as e:
         log(f"❌ Login exception: {e}")
         try:
@@ -197,21 +249,25 @@ def login_to_hub(driver, player_id):
         return False
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards"""
+    """Simplified daily rewards claiming"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(6)
+        time.sleep(1)
         
-        for attempt in range(5):
+        for attempt in range(10):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
-                    if (btn.innerText.trim().toLowerCase() === 'claim' && btn.offsetParent !== null) {
-                        btn.click();
-                        return true;
+                    let text = btn.innerText.trim().toLowerCase();
+                    if (text === 'claim' && btn.offsetParent !== null) {
+                        if (!btn.innerText.toLowerCase().includes('buy') && 
+                            !btn.innerText.toLowerCase().includes('purchase')) {
+                            btn.click();
+                            return true;
+                        }
                     }
                 }
                 return false;
@@ -220,9 +276,9 @@ def claim_daily_rewards(driver, player_id):
             if result:
                 log(f"✅ Daily #{claimed + 1}")
                 claimed += 1
-                time.sleep(4)
+                time.sleep(2)
             else:
-                log(f"ℹ️  No more daily rewards")
+                log("ℹ️  No more daily rewards")
                 break
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
@@ -233,33 +289,35 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim store rewards"""
+    """Simplified store rewards claiming"""
     log("🏪 Claiming Store...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/store")
-        time.sleep(6)
+        time.sleep(1)
         
+        # Try to click Daily Rewards tab
         try:
             driver.execute_script("""
                 let all = document.querySelectorAll('*');
                 for (let el of all) {
-                    if (el.innerText.includes('Daily Rewards')) {
+                    if (el.innerText && el.innerText.includes('Daily Reward')) {
                         el.click();
                         break;
                     }
                 }
             """)
-            time.sleep(3)
+            time.sleep(1)
         except:
             pass
         
-        for attempt in range(3):
+        for attempt in range(5):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
-                    if (btn.innerText.trim().toLowerCase() === 'claim' && btn.offsetParent !== null) {
+                    let text = btn.innerText.trim().toLowerCase();
+                    if (text === 'claim' && btn.offsetParent !== null) {
                         btn.click();
                         return true;
                     }
@@ -270,7 +328,20 @@ def claim_store_rewards(driver, player_id):
             if result:
                 log(f"✅ Store #{claimed + 1}")
                 claimed += 1
-                time.sleep(4)
+                time.sleep(2)
+                
+                # Close popups
+                driver.execute_script("""
+                    setTimeout(() => {
+                        document.querySelectorAll('button').forEach(btn => {
+                            if (btn.innerText.toLowerCase().includes('continue') || 
+                                btn.innerText.toLowerCase().includes('close')) {
+                                btn.click();
+                            }
+                        });
+                    }, 500);
+                """)
+                time.sleep(1)
             else:
                 log("ℹ️  No more store rewards")
                 break
@@ -282,64 +353,10 @@ def claim_store_rewards(driver, player_id):
     
     return claimed
 
-def claim_progression_rewards(driver, player_id):
-    """Claim progression"""
-    log("📊 Claiming Progression...")
-    claimed = 0
-    
-    try:
-        driver.get("https://hub.vertigogames.co/progression-program")
-        time.sleep(6)
-        
-        for attempt in range(6):
-            result = driver.execute_script("""
-                let buttons = document.querySelectorAll('button');
-                for (let btn of buttons) {
-                    let text = btn.innerText.trim().toLowerCase();
-                    if (text === 'claim') {
-                        let rect = btn.getBoundingClientRect();
-                        if (rect.left > 300) {
-                            let parent = btn.closest('div');
-                            if (parent && !parent.innerText.includes('Delivered')) {
-                                btn.click();
-                                return true;
-                            }
-                        }
-                    }
-                }
-                return false;
-            """)
-            
-            if result:
-                log(f"✅ Progression #{claimed + 1}")
-                claimed += 1
-                time.sleep(5)
-                
-                driver.execute_script("""
-                    setTimeout(() => {
-                        document.querySelectorAll('button').forEach(btn => {
-                            if (btn.innerText.toLowerCase().includes('continue') || 
-                                btn.innerText.toLowerCase().includes('close')) {
-                                btn.click();
-                            }
-                        });
-                    }, 1000);
-                """)
-                time.sleep(2)
-            else:
-                log("ℹ️  No more progression")
-                break
-        
-        driver.save_screenshot(f"prog_final_{player_id}.png")
-        
-    except Exception as e:
-        log(f"❌ Progression error: {e}")
-    
-    return claimed
-
 def process_player(player_id):
+    """Process single player"""
     driver = None
-    stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
+    stats = {"player_id": player_id, "daily": 0, "store": 0, "status": "Failed"}
     
     try:
         log(f"\n{'='*60}")
@@ -355,9 +372,8 @@ def process_player(player_id):
         
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
-        stats['progression'] = claim_progression_rewards(driver, player_id)
         
-        total = stats['daily'] + stats['store'] + stats['progression']
+        total = stats['daily'] + stats['store']
         if total > 0:
             stats['status'] = "Success"
             log(f"🎉 Total: {total}")
@@ -367,7 +383,7 @@ def process_player(player_id):
         
     except Exception as e:
         log(f"❌ Error: {e}")
-        stats['status'] = f"Error"
+        stats['status'] = "Error"
     finally:
         if driver:
             try:
@@ -378,6 +394,7 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results):
+    """Send email with results"""
     sender = os.environ.get("SENDER_EMAIL")
     recipient = os.environ.get("RECIPIENT_EMAIL")
     password = os.environ.get("GMAIL_APP_PASSWORD")
@@ -392,11 +409,11 @@ def send_email_summary(results):
 <h2>Hub Rewards Summary</h2>
 <p><strong>Run:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 <table border="1" cellpadding="5">
-<tr><th>ID</th><th>Daily</th><th>Store</th><th>Prog</th><th>Status</th></tr>
+<tr><th>ID</th><th>Daily</th><th>Store</th><th>Status</th></tr>
 """
     
     for r in results:
-        html += f"<tr><td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['progression']}</td><td>{r['status']}</td></tr>"
+        html += f"<tr><td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['status']}</td></tr>"
     
     html += "</table></body></html>"
     
@@ -433,13 +450,13 @@ def main():
     for player_id in player_ids:
         result = process_player(player_id)
         results.append(result)
-        time.sleep(5)
+        time.sleep(3)
     
     log("\n" + "="*60)
     log("SUMMARY")
     log("="*60)
     for r in results:
-        log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']} → {r['status']}")
+        log(f"{r['player_id']}: D={r['daily']}, S={r['store']} → {r['status']}")
     
     send_email_summary(results)
     log("\n🏁 Done!")
