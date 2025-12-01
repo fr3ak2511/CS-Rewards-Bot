@@ -82,22 +82,35 @@ def send_summary_email(summary_data):
     except Exception as e:
         safe_print(f"❌ Email failed: {e}")
 
-# --- DRIVER ---
+# --- DRIVER (FIXED FLAGS FOR GITHUB ACTIONS) ---
 def create_driver():
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
     
-    # CRITICAL STABILITY FLAGS
+    # CRITICAL STABILITY FLAGS FOR GITHUB ACTIONS
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
-    options.add_argument("--single-process")
     options.add_argument("--disable-software-rasterizer")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--disable-blink-features=AutomationControlled")
+    
+    # REMOVED --single-process (causes crashes on Ubuntu 24.04)
+    # Added memory optimization flags instead
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-sync")
+    options.add_argument("--metrics-recording-only")
+    options.add_argument("--mute-audio")
+    options.add_argument("--no-first-run")
+    options.add_argument("--safebrowsing-disable-auto-update")
+    options.add_argument("--disable-web-security")
+    
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     options.page_load_strategy = 'eager'
     
@@ -402,13 +415,13 @@ def process_single_player(player_id):
         
         # Force cleanup
         try:
-            subprocess.run(["pkill", "-f", "chrome"], check=False)
-            subprocess.run(["pkill", "-f", "chromedriver"], check=False)
+            subprocess.run(["pkill", "-9", "-f", "chrome"], check=False, capture_output=True)
+            subprocess.run(["pkill", "-9", "-f", "chromedriver"], check=False, capture_output=True)
         except:
             pass
         
         gc.collect()
-        time.sleep(2)
+        time.sleep(3)
     
     return stats
 
@@ -448,7 +461,7 @@ def main():
                 all_results.append(result)
         
         safe_print(f"✅ Batch {i//BATCH_SIZE + 1} complete")
-        time.sleep(3)
+        time.sleep(5)
     
     safe_print("\n" + "="*60)
     safe_print("ALL PROCESSING COMPLETE")
