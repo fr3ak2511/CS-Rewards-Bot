@@ -249,14 +249,10 @@ def login_to_hub(driver, player_id):
 def close_store_popup_after_claim(driver):
     """
     Multi-method popup closing strategy
-    Method 1: Continue button
-    Method 2: Close/X button
-    Method 3: Safe-area clicks
-    Method 4: ESC key
     """
     try:
-        log("Checking for popup after Store claim...")
-        time.sleep(0.5)
+        log("Checking for popup...")
+        time.sleep(0.8)  # Increased wait for popup to fully appear
         
         popup_selectors = [
             "//div[contains(@class, 'modal') and not(contains(@style, 'display: none'))]",
@@ -272,17 +268,16 @@ def close_store_popup_after_claim(driver):
                 visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
                 if visible_popups:
                     popup_found = True
-                    log(f"Popup detected with selector: {selector}")
+                    log(f"✓ Popup detected")
                     break
             except:
                 continue
         
         if not popup_found:
-            log("No popup detected after claim")
+            log("No popup detected")
             return True
         
         # METHOD 1: Continue button
-        log("Method 1: Attempting to click Continue button...")
         continue_selectors = [
             "//button[normalize-space()='Continue']",
             "//button[contains(text(), 'Continue')]",
@@ -296,13 +291,13 @@ def close_store_popup_after_claim(driver):
                 if continue_btn.is_displayed() and continue_btn.is_enabled():
                     try:
                         continue_btn.click()
-                        log("Continue button clicked successfully")
-                        time.sleep(0.5)
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
-                        log("Continue button clicked via JavaScript")
-                        time.sleep(0.5)
                     
+                    log("✓ Continue clicked")
+                    time.sleep(0.8)
+                    
+                    # Verify popup closed
                     popup_still_visible = False
                     for ps in popup_selectors:
                         try:
@@ -314,23 +309,19 @@ def close_store_popup_after_claim(driver):
                             continue
                     
                     if not popup_still_visible:
-                        log("Popup closed successfully via Continue button")
+                        log("✅ Popup closed via Continue")
                         return True
-                    else:
-                        log("Popup still visible after Continue button")
-                        break
+                    break
             except:
                 continue
         
         # METHOD 2: Close button
-        log("Method 2: Attempting to click close/cross button...")
         close_selectors = [
             "//button[contains(@class, 'close')]",
             "//button[contains(@aria-label, 'Close')]",
             "//*[contains(@class, 'close') and (self::button or self::span or self::div[@role='button'])]",
             "//button[text()='×' or text()='X' or text()='✕']",
             "//*[@data-testid='close-button']",
-            "//button[contains(@class, 'modal')]//span[contains(@class, 'close')]",
             "//*[contains(@class, 'icon-close')]",
         ]
         
@@ -340,12 +331,11 @@ def close_store_popup_after_claim(driver):
                 if close_btn.is_displayed():
                     try:
                         close_btn.click()
-                        log("Close button clicked successfully")
-                        time.sleep(0.5)
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
-                        log("Close button clicked via JavaScript")
-                        time.sleep(0.5)
+                    
+                    log("✓ Close clicked")
+                    time.sleep(0.8)
                     
                     popup_still_visible = False
                     for ps in popup_selectors:
@@ -358,118 +348,65 @@ def close_store_popup_after_claim(driver):
                             continue
                     
                     if not popup_still_visible:
-                        log("Popup closed successfully via close button")
+                        log("✅ Popup closed via Close button")
                         return True
-                    else:
-                        log("Popup still visible after close button")
-                        break
+                    break
             except:
                 continue
         
-        # METHOD 3: Safe-area clicks
-        log("Method 3: Attempting safe-click to dismiss popup...")
-        window_size = driver.get_window_size()
-        width = window_size["width"]
-        height = window_size["height"]
-        
-        safe_click_areas = [
-            (30, 30),
-            (width - 50, 30),
-            (30, height - 50),
-            (width - 50, height - 50),
-            (width // 4, 30),
-            (3 * width // 4, 30),
-        ]
-        
-        for i, (x, y) in enumerate(safe_click_areas):
-            try:
-                actions = ActionChains(driver)
-                x_offset = x - (width // 2)
-                y_offset = y - (height // 2)
-                
-                actions.move_by_offset(x_offset, y_offset).click().perform()
-                actions.move_by_offset(-x_offset, -y_offset).perform()
-                
-                log(f"Safe-clicked area {i+1} at coordinates ({x}, {y})")
-                time.sleep(0.5)
-                
-                popup_still_visible = False
-                for ps in popup_selectors:
-                    try:
-                        popup_elements = driver.find_elements(By.XPATH, ps)
-                        if any(elem.is_displayed() for elem in popup_elements):
-                            popup_still_visible = True
-                            break
-                    except:
-                        continue
-                
-                if not popup_still_visible:
-                    log(f"Popup closed successfully via safe-click at area {i+1}")
-                    return True
-            except Exception as e:
-                log(f"Safe-click area {i+1} failed: {e}")
-                continue
-        
-        # METHOD 4: ESC key
-        log("Final attempt: Pressing ESC key...")
+        # METHOD 3: ESC key
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
-            log("ESC key pressed")
+            log("✓ ESC pressed")
             return True
         except:
             pass
         
-        log("WARNING: Could not close popup with any method")
+        log("⚠️  Popup may still be visible")
         return False
         
     except Exception as e:
-        log(f"Exception in close_store_popup_after_claim: {e}")
+        log(f"❌ Popup close error: {e}")
         return False
 
 def ensure_store_page(driver):
-    """Check if on Store page, navigate back if not"""
+    """Check if on Store page"""
     try:
         current_url = driver.current_url
         
         if "/store" in current_url.lower():
-            log("✓ Confirmed on Store page")
+            log("✓ On Store page")
             return True
         
-        log(f"⚠️  Not on Store page (URL: {current_url}), navigating back...")
+        log(f"⚠️  Not on Store, navigating...")
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(0.7)
         
         if "/store" in driver.current_url.lower():
-            log("✓ Navigated back to Store page")
+            log("✓ Back on Store")
             return True
         else:
-            log("❌ Failed to navigate back to Store page")
+            log("❌ Failed to reach Store")
             return False
             
     except Exception as e:
-        log(f"❌ Error checking page: {e}")
+        log(f"❌ Error: {e}")
         return False
 
 def click_daily_rewards_tab(driver):
-    """
-    Click Daily Rewards TAB (top navigation, NOT sidebar)
-    Handles horizontal scrolling for tabs that are off-screen (extreme right)
-    """
-    log("Attempting to click Daily Rewards tab...")
+    """Click Daily Rewards TAB with horizontal scroll"""
+    log("Clicking Daily Rewards tab...")
     
     try:
-        # Method 1: JavaScript approach - finds tab by text, scrolls into view horizontally, and clicks
+        # JavaScript approach - finds tab, scrolls horizontally, clicks
         result = driver.execute_script("""
-            // Find all elements that might be tabs
             let allElements = document.querySelectorAll('*');
             
             for (let elem of allElements) {
                 if (elem.innerText && elem.innerText.includes('Daily Rewards')) {
-                    // Check if it's a tab (has 'tab' or 'Tab' in class)
                     let className = elem.className || '';
                     if (!className.toLowerCase().includes('tab')) {
-                        // Check parent
                         let parent = elem.parentElement;
                         let parentClass = parent ? (parent.className || '') : '';
                         if (!parentClass.toLowerCase().includes('tab')) {
@@ -477,17 +414,17 @@ def click_daily_rewards_tab(driver):
                         }
                     }
                     
-                    // Make sure it's not sidebar
+                    // Skip sidebar
                     let parent = elem.parentElement;
                     let parentClass = parent ? (parent.className || '') : '';
                     if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
                         continue;
                     }
                     
-                    // Scroll tab into view (HORIZONTAL scroll to make extreme right visible)
+                    // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
                     
-                    // Wait for scroll animation, then click
+                    // Wait then click
                     setTimeout(() => {
                         elem.click();
                     }, 800);
@@ -499,76 +436,28 @@ def click_daily_rewards_tab(driver):
         """)
         
         if result:
-            log("✓ Successfully clicked Daily Rewards tab (JS method with horizontal scroll)")
-            time.sleep(1.0)  # Wait for tab content to load
+            log("✅ Daily Rewards tab clicked")
+            time.sleep(1.0)
             return True
     except Exception as e:
-        log(f"JavaScript tab click failed: {e}")
+        log(f"❌ Tab click failed: {e}")
     
-    # Method 2: XPath with explicit scroll and click
-    log("Trying XPath method with scroll...")
-    tab_selectors = [
-        "//*[contains(text(), 'Daily Rewards') and (contains(@class, 'tab') or contains(@class, 'Tab'))]",
-        "//div[contains(@class, 'tab')]//span[contains(text(), 'Daily Rewards')]",
-        "//button[contains(@class, 'tab')][contains(text(), 'Daily Rewards')]",
-        "//a[contains(@class, 'tab')][contains(text(), 'Daily Rewards')]",
-    ]
-    
-    for i, selector in enumerate(tab_selectors):
-        try:
-            tab_elements = driver.find_elements(By.XPATH, selector)
-            log(f"Found {len(tab_elements)} elements with selector {i+1}")
-            
-            for tab in tab_elements:
-                try:
-                    # Check if parent is sidebar (skip if true)
-                    try:
-                        parent = tab.find_element(By.XPATH, "..")
-                        parent_classes = parent.get_attribute("class") or ""
-                        if any(word in parent_classes.lower() for word in ["sidebar", "menu", "nav", "side"]):
-                            log(f"Skipping sidebar element")
-                            continue
-                    except:
-                        pass
-                    
-                    # Scroll into view (HORIZONTAL scroll for extreme right tab)
-                    driver.execute_script(
-                        "arguments[0].scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});",
-                        tab
-                    )
-                    time.sleep(0.8)
-                    
-                    # Try click
-                    try:
-                        driver.execute_script("arguments[0].click();", tab)
-                        log("✓ Successfully clicked Daily Rewards tab (JS click)")
-                        time.sleep(0.7)
-                        return True
-                    except Exception as click_err:
-                        log(f"Click failed: {click_err}")
-                        continue
-                except:
-                    continue
-        except:
-            continue
-    
-    log("❌ Failed to click Daily Rewards tab")
     return False
 
 def navigate_to_daily_rewards_section_store(driver):
     """Navigate to Daily Rewards section in Store"""
-    log("Navigating to Daily Rewards section in Store...")
+    log("Navigating to Daily Rewards section...")
     ensure_store_page(driver)
     close_store_popup_after_claim(driver)
     time.sleep(0.3)
     
     tab_clicked = click_daily_rewards_tab(driver)
     if tab_clicked:
-        log("Successfully navigated to Daily Rewards section via tab")
+        log("✅ In Daily Rewards section")
         time.sleep(0.7)
         return True
     else:
-        log("⚠️  Tab click failed")
+        log("⚠️  Tab navigation failed")
         return False
 
 def claim_daily_rewards(driver, player_id):
@@ -616,7 +505,9 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards"""
+    """
+    Claim Store Daily Rewards with proper loop handling
+    """
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -625,79 +516,116 @@ def claim_store_rewards(driver, player_id):
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(2)
         
+        # Close initial popups
         for _ in range(2):
             close_store_popup_after_claim(driver)
         
         if not ensure_store_page(driver):
-            log("❌ Cannot access Store page")
+            log("❌ Cannot access Store")
             return 0
         
+        # Navigate to Daily Rewards section
         if not navigate_to_daily_rewards_section_store(driver):
-            log("⚠️  Could not navigate to Daily Rewards section")
+            log("⚠️  Navigation failed")
         
         time.sleep(0.5)
         driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
+        # Claim loop
         for attempt in range(max_claims):
-            log(f"Store attempt {attempt + 1}/{max_claims}")
+            log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
             
-            if not ensure_store_page(driver):
-                log("⚠️  Lost Store page")
-                break
+            # CRITICAL: Re-focus on Daily Rewards section
+            if attempt > 0:
+                log("Re-navigating to Daily Rewards section...")
+                if not navigate_to_daily_rewards_section_store(driver):
+                    log("⚠️  Re-navigation failed")
+                    break
+                time.sleep(0.5)
             
-            close_store_popup_after_claim(driver)
-            navigate_to_daily_rewards_section_store(driver)
-            time.sleep(0.5)
-            
+            # Try to find and click claim button
             result = driver.execute_script("""
-                // Find Daily Rewards section
+                // Step 1: Find Daily Rewards section
                 let dailySection = null;
+                let allText = document.body.innerText;
+                
+                // Look for section with both "Daily Rewards" and "Store Bonus"
                 let allSections = document.querySelectorAll('div, section, article');
                 
                 for (let section of allSections) {
-                    let text = section.innerText || '';
-                    if (text.includes('Daily Rewards') && text.includes('Store Bonus')) {
+                    let sectionText = section.innerText || '';
+                    if (sectionText.includes('Daily Rewards') && 
+                        (sectionText.includes('Store Bonus') || sectionText.includes('Gold (Daily)') || sectionText.includes('Cash (Daily)'))) {
                         dailySection = section;
                         break;
                     }
                 }
                 
                 if (!dailySection) {
+                    console.log('Daily Rewards section not found');
                     return false;
                 }
                 
-                // Find Claim buttons WITHIN this section
+                console.log('Daily Rewards section found');
+                
+                // Step 2: Find Claim buttons WITHIN this section
                 let buttons = dailySection.querySelectorAll('button');
+                console.log('Found ' + buttons.length + ' buttons in section');
+                
                 for (let btn of buttons) {
                     let btnText = btn.innerText.trim().toLowerCase();
                     
+                    // Must be exactly "Claim" or "claim"
                     if (btnText === 'claim' && btn.offsetParent !== null) {
-                        let parentText = btn.parentElement.innerText || '';
-                        if (parentText.includes('₹') || parentText.includes('Buy') || parentText.includes('Purchase')) {
+                        // Check if it's a purchase button (has price)
+                        let parentText = btn.parentElement ? btn.parentElement.innerText : '';
+                        if (parentText.includes('₹') || parentText.includes('Buy') || 
+                            parentText.includes('Purchase') || parentText.includes('$')) {
+                            console.log('Skipping purchase button');
                             continue;
                         }
                         
+                        // Scroll into view and click
                         btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        
                         setTimeout(function() {
                             btn.click();
-                        }, 300);
+                            console.log('Claim button clicked');
+                        }, 500);
+                        
                         return true;
                     }
                 }
+                
+                console.log('No claimable button found');
                 return false;
             """)
             
             if result:
-                log(f"✅ Store #{claimed + 1}")
+                log(f"✅ Store Claim #{claimed + 1} SUCCESS")
                 claimed += 1
-                time.sleep(2)
+                
+                # Wait for claim animation
+                time.sleep(1.5)
+                
+                # Handle confirmation popup
+                log("Handling post-claim popup...")
                 close_store_popup_after_claim(driver)
                 time.sleep(0.5)
-                ensure_store_page(driver)
+                
+                # Verify still on Store page
+                if not ensure_store_page(driver):
+                    log("⚠️  Lost Store page after claim")
+                    break
+                
                 time.sleep(0.3)
             else:
-                log(f"ℹ️  No more store rewards")
+                log(f"ℹ️  No claim button found (attempt {attempt + 1})")
                 break
+        
+        log(f"\n{'='*60}")
+        log(f"Store Claims Complete: {claimed}/{max_claims}")
+        log(f"{'='*60}")
         
         driver.save_screenshot(f"store_final_{player_id}.png")
         
