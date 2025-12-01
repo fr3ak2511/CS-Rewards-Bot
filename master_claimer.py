@@ -247,12 +247,10 @@ def login_to_hub(driver, player_id):
         return False
 
 def close_store_popup_after_claim(driver):
-    """
-    Multi-method popup closing strategy
-    """
+    """Multi-method popup closing strategy"""
     try:
         log("Checking for popup...")
-        time.sleep(0.8)  # Increased wait for popup to fully appear
+        time.sleep(0.8)
         
         popup_selectors = [
             "//div[contains(@class, 'modal') and not(contains(@style, 'display: none'))]",
@@ -297,7 +295,6 @@ def close_store_popup_after_claim(driver):
                     log("✓ Continue clicked")
                     time.sleep(0.8)
                     
-                    # Verify popup closed
                     popup_still_visible = False
                     for ps in popup_selectors:
                         try:
@@ -399,7 +396,6 @@ def click_daily_rewards_tab(driver):
     log("Clicking Daily Rewards tab...")
     
     try:
-        # JavaScript approach - finds tab, scrolls horizontally, clicks
         result = driver.execute_script("""
             let allElements = document.querySelectorAll('*');
             
@@ -424,7 +420,6 @@ def click_daily_rewards_tab(driver):
                     // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
                     
-                    // Wait then click
                     setTimeout(() => {
                         elem.click();
                     }, 800);
@@ -506,7 +501,7 @@ def claim_daily_rewards(driver, player_id):
 
 def claim_store_rewards(driver, player_id):
     """
-    Claim Store Daily Rewards with proper loop handling
+    Claim Store Daily Rewards - ONLY green available buttons (NO timers)
     """
     log("🏪 Claiming Store...")
     claimed = 0
@@ -516,7 +511,6 @@ def claim_store_rewards(driver, player_id):
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(2)
         
-        # Close initial popups
         for _ in range(2):
             close_store_popup_after_claim(driver)
         
@@ -524,7 +518,6 @@ def claim_store_rewards(driver, player_id):
             log("❌ Cannot access Store")
             return 0
         
-        # Navigate to Daily Rewards section
         if not navigate_to_daily_rewards_section_store(driver):
             log("⚠️  Navigation failed")
         
@@ -535,7 +528,6 @@ def claim_store_rewards(driver, player_id):
         for attempt in range(max_claims):
             log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
             
-            # CRITICAL: Re-focus on Daily Rewards section
             if attempt > 0:
                 log("Re-navigating to Daily Rewards section...")
                 if not navigate_to_daily_rewards_section_store(driver):
@@ -543,84 +535,83 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # Try to find and click claim button
+            # CRITICAL: Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
             result = driver.execute_script("""
-                // Step 1: Find Daily Rewards section
-                let dailySection = null;
-                let allText = document.body.innerText;
+                // Step 1: Find Store Bonus cards
+                let allDivs = document.querySelectorAll('div');
+                let storeBonusCards = [];
                 
-                // Look for section with both "Daily Rewards" and "Store Bonus"
-                let allSections = document.querySelectorAll('div, section, article');
-                
-                for (let section of allSections) {
-                    let sectionText = section.innerText || '';
-                    if (sectionText.includes('Daily Rewards') && 
-                        (sectionText.includes('Store Bonus') || sectionText.includes('Gold (Daily)') || sectionText.includes('Cash (Daily)'))) {
-                        dailySection = section;
-                        break;
-                    }
-                }
-                
-                if (!dailySection) {
-                    console.log('Daily Rewards section not found');
-                    return false;
-                }
-                
-                console.log('Daily Rewards section found');
-                
-                // Step 2: Find Claim buttons WITHIN this section
-                let buttons = dailySection.querySelectorAll('button');
-                console.log('Found ' + buttons.length + ' buttons in section');
-                
-                for (let btn of buttons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    
-                    // Must be exactly "Claim" or "claim"
-                    if (btnText === 'claim' && btn.offsetParent !== null) {
-                        // Check if it's a purchase button (has price)
-                        let parentText = btn.parentElement ? btn.parentElement.innerText : '';
-                        if (parentText.includes('₹') || parentText.includes('Buy') || 
-                            parentText.includes('Purchase') || parentText.includes('$')) {
-                            console.log('Skipping purchase button');
-                            continue;
+                for (let div of allDivs) {
+                    let text = div.innerText || '';
+                    if (text.includes('Store Bonus') && text.includes('+1')) {
+                        let parent = div.parentElement;
+                        let attempts = 0;
+                        while (parent && attempts < 5) {
+                            let parentText = parent.innerText || '';
+                            if (parentText.includes('Gold (Daily)') || 
+                                parentText.includes('Cash (Daily)') || 
+                                parentText.includes('Luckyloon (Daily)')) {
+                                storeBonusCards.push(parent);
+                                break;
+                            }
+                            parent = parent.parentElement;
+                            attempts++;
                         }
-                        
-                        // Scroll into view and click
-                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                        
-                        setTimeout(function() {
-                            btn.click();
-                            console.log('Claim button clicked');
-                        }, 500);
-                        
-                        return true;
                     }
                 }
                 
-                console.log('No claimable button found');
+                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
+                
+                // Step 2: Find buttons that say "Claim" (NO timer)
+                for (let card of storeBonusCards) {
+                    let cardText = card.innerText || '';
+                    
+                    // CRITICAL: SKIP cards with timer text
+                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                        console.log('⏭️  Skipping card with timer');
+                        continue;
+                    }
+                    
+                    // Find button in this card
+                    let buttons = card.querySelectorAll('button');
+                    
+                    for (let btn of buttons) {
+                        let btnText = btn.innerText.trim().toLowerCase();
+                        
+                        // Must be EXACTLY "Claim" (green button)
+                        if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
+                            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                            
+                            setTimeout(function() {
+                                btn.click();
+                                console.log('✅ Clicked GREEN Claim button');
+                            }, 500);
+                            
+                            return true;
+                        }
+                    }
+                }
+                
+                console.log('No more available claim buttons found');
                 return false;
             """)
             
             if result:
                 log(f"✅ Store Claim #{claimed + 1} SUCCESS")
                 claimed += 1
-                
-                # Wait for claim animation
                 time.sleep(1.5)
                 
-                # Handle confirmation popup
                 log("Handling post-claim popup...")
                 close_store_popup_after_claim(driver)
                 time.sleep(0.5)
                 
-                # Verify still on Store page
                 if not ensure_store_page(driver):
-                    log("⚠️  Lost Store page after claim")
+                    log("⚠️  Lost Store page")
                     break
                 
                 time.sleep(0.3)
             else:
-                log(f"ℹ️  No claim button found (attempt {attempt + 1})")
+                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
                 break
         
         log(f"\n{'='*60}")
