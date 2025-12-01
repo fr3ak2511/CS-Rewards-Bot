@@ -246,7 +246,7 @@ def login_to_hub(driver, player_id):
             pass
         return False
 
-def close_store_popup_after_claim(driver):
+def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
         log("Checking for popup...")
@@ -314,12 +314,14 @@ def close_store_popup_after_claim(driver):
         
         # METHOD 2: Close button
         close_selectors = [
+            "//button[normalize-space()='Close']",
             "//button[contains(@class, 'close')]",
             "//button[contains(@aria-label, 'Close')]",
             "//*[contains(@class, 'close') and (self::button or self::span or self::div[@role='button'])]",
             "//button[text()='×' or text()='X' or text()='✕']",
             "//*[@data-testid='close-button']",
             "//*[contains(@class, 'icon-close')]",
+            "//*[name()='svg']/parent::button",
         ]
         
         for selector in close_selectors:
@@ -443,7 +445,7 @@ def navigate_to_daily_rewards_section_store(driver):
     """Navigate to Daily Rewards section in Store"""
     log("Navigating to Daily Rewards section...")
     ensure_store_page(driver)
-    close_store_popup_after_claim(driver)
+    close_popup(driver)
     time.sleep(0.3)
     
     tab_clicked = click_daily_rewards_tab(driver)
@@ -465,7 +467,7 @@ def claim_daily_rewards(driver, player_id):
         time.sleep(1.5)
         
         for _ in range(2):
-            close_store_popup_after_claim(driver)
+            close_popup(driver)
         
         for attempt in range(10):
             result = driver.execute_script("""
@@ -487,7 +489,7 @@ def claim_daily_rewards(driver, player_id):
                 log(f"✅ Daily #{claimed + 1}")
                 claimed += 1
                 time.sleep(1.5)
-                close_store_popup_after_claim(driver)
+                close_popup(driver)
             else:
                 log("ℹ️  No more daily rewards")
                 break
@@ -500,9 +502,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """
-    Claim Store Daily Rewards - ONLY green available buttons (NO timers)
-    """
+    """Claim Store Daily Rewards - ONLY green available buttons"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -512,7 +512,7 @@ def claim_store_rewards(driver, player_id):
         time.sleep(2)
         
         for _ in range(2):
-            close_store_popup_after_claim(driver)
+            close_popup(driver)
         
         if not ensure_store_page(driver):
             log("❌ Cannot access Store")
@@ -535,9 +535,9 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # CRITICAL: Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
+            # Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
             result = driver.execute_script("""
-                // Step 1: Find Store Bonus cards
+                // Find Store Bonus cards
                 let allDivs = document.querySelectorAll('div');
                 let storeBonusCards = [];
                 
@@ -562,23 +562,22 @@ def claim_store_rewards(driver, player_id):
                 
                 console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
                 
-                // Step 2: Find buttons that say "Claim" (NO timer)
+                // Find buttons with "Claim" text (NO timer)
                 for (let card of storeBonusCards) {
                     let cardText = card.innerText || '';
                     
-                    // CRITICAL: SKIP cards with timer text
+                    // SKIP cards with timer
                     if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
                         console.log('⏭️  Skipping card with timer');
                         continue;
                     }
                     
-                    // Find button in this card
+                    // Find button
                     let buttons = card.querySelectorAll('button');
                     
                     for (let btn of buttons) {
                         let btnText = btn.innerText.trim().toLowerCase();
                         
-                        // Must be EXACTLY "Claim" (green button)
                         if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                             
@@ -602,7 +601,7 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(1.5)
                 
                 log("Handling post-claim popup...")
-                close_store_popup_after_claim(driver)
+                close_popup(driver)
                 time.sleep(0.5)
                 
                 if not ensure_store_page(driver):
@@ -629,10 +628,155 @@ def claim_store_rewards(driver, player_id):
     
     return claimed
 
+def claim_progression_program_rewards(driver, player_id):
+    """
+    Claim Progression Program rewards with horizontal scrolling
+    """
+    log("🎯 Claiming Progression Program...")
+    claimed = 0
+    
+    try:
+        # Navigate to Progression Program page
+        driver.get("https://hub.vertigogames.co/progression-program")
+        time.sleep(2)
+        
+        # Close initial popups
+        for _ in range(2):
+            close_popup(driver)
+        
+        time.sleep(0.5)
+        driver.save_screenshot(f"progression_01_ready_{player_id}.png")
+        
+        # Claim loop with scrolling
+        max_attempts = 8  # Try multiple times with scrolling
+        
+        for attempt in range(max_attempts):
+            log(f"\n--- Progression Claim Attempt {attempt + 1}/{max_attempts} ---")
+            
+            # Scroll right to reveal hidden cards (if needed)
+            if attempt > 0:
+                log("Scrolling horizontally to reveal more cards...")
+                scroll_result = driver.execute_script("""
+                    // Find and click scroll buttons
+                    let scrollSelectors = [
+                        "//button[contains(@class, 'right')]",
+                        "//button[contains(@class, 'next')]",
+                        "//*[name()='svg' and contains(@class, 'right')]/parent::button",
+                        "//div[contains(@class, 'arrow-right')]",
+                        "//button[contains(@aria-label, 'Next')]"
+                    ];
+                    
+                    let allButtons = document.querySelectorAll('button');
+                    for (let btn of allButtons) {
+                        let className = btn.className || '';
+                        let ariaLabel = btn.getAttribute('aria-label') || '';
+                        
+                        if (className.includes('right') || className.includes('next') || 
+                            ariaLabel.toLowerCase().includes('next')) {
+                            if (btn.offsetParent !== null && !btn.disabled) {
+                                btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                setTimeout(function() {
+                                    btn.click();
+                                }, 300);
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                """)
+                
+                if scroll_result:
+                    log("✓ Scrolled right")
+                    time.sleep(1)
+                else:
+                    log("ℹ️  No scroll button found")
+            
+            # Find and click Claim button (in content area, X > 400px to skip sidebar)
+            result = driver.execute_script("""
+                let allButtons = document.querySelectorAll('button');
+                let claimButtons = [];
+                
+                allButtons.forEach(function(btn) {
+                    let text = btn.innerText.trim();
+                    if (text === 'Claim') {
+                        let rect = btn.getBoundingClientRect();
+                        let x = rect.left;
+                        
+                        // Only buttons in content area (right of sidebar)
+                        if (x > 400) {
+                            let parent = btn.closest('div');
+                            let parentText = parent ? parent.innerText : '';
+                            
+                            // Exclude already delivered cards
+                            if (!parentText.includes('Delivered')) {
+                                claimButtons.push(btn);
+                            }
+                        }
+                    }
+                });
+                
+                console.log('Found ' + claimButtons.length + ' claimable buttons');
+                
+                if (claimButtons.length > 0) {
+                    let btn = claimButtons[0];
+                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    
+                    setTimeout(function() {
+                        btn.click();
+                        console.log('✅ Clicked Claim button');
+                    }, 500);
+                    
+                    return true;
+                }
+                
+                return false;
+            """)
+            
+            if result:
+                log(f"✅ Progression Claim #{claimed + 1} SUCCESS")
+                claimed += 1
+                time.sleep(1.5)
+                
+                # Handle confirmation popup
+                log("Handling post-claim popup...")
+                close_popup(driver)
+                time.sleep(0.5)
+                
+                # Verify still on Progression Program page
+                if "/progression-program" not in driver.current_url.lower():
+                    log("⚠️  Lost Progression Program page, re-navigating...")
+                    driver.get("https://hub.vertigogames.co/progression-program")
+                    time.sleep(1)
+                
+                time.sleep(0.3)
+            else:
+                log(f"ℹ️  No more claim buttons (attempt {attempt + 1})")
+                # Try scrolling more before giving up
+                if attempt < 3:
+                    time.sleep(1)
+                    continue
+                else:
+                    break
+        
+        log(f"\n{'='*60}")
+        log(f"Progression Claims Complete: {claimed}")
+        log(f"{'='*60}")
+        
+        driver.save_screenshot(f"progression_final_{player_id}.png")
+        
+    except Exception as e:
+        log(f"❌ Progression error: {e}")
+        try:
+            driver.save_screenshot(f"progression_error_{player_id}.png")
+        except:
+            pass
+    
+    return claimed
+
 def process_player(player_id):
-    """Process single player"""
+    """Process single player - ALL reward pages"""
     driver = None
-    stats = {"player_id": player_id, "daily": 0, "store": 0, "status": "Failed"}
+    stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     
     try:
         log(f"\n{'='*60}")
@@ -646,13 +790,15 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
+        # Claim all reward types
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
+        stats['progression'] = claim_progression_program_rewards(driver, player_id)
         
-        total = stats['daily'] + stats['store']
+        total = stats['daily'] + stats['store'] + stats['progression']
         if total > 0:
             stats['status'] = "Success"
-            log(f"🎉 Total: {total}")
+            log(f"🎉 Total: {total} (D:{stats['daily']} S:{stats['store']} P:{stats['progression']})")
         else:
             stats['status'] = "No Rewards"
             log("⚠️  None claimed")
@@ -685,11 +831,12 @@ def send_email_summary(results):
 <h2>Hub Rewards Summary</h2>
 <p><strong>Run:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
 <table border="1" cellpadding="5">
-<tr><th>ID</th><th>Daily</th><th>Store</th><th>Status</th></tr>
+<tr><th>ID</th><th>Daily</th><th>Store</th><th>Progression</th><th>Total</th><th>Status</th></tr>
 """
     
     for r in results:
-        html += f"<tr><td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['status']}</td></tr>"
+        total = r['daily'] + r['store'] + r['progression']
+        html += f"<tr><td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['progression']}</td><td>{total}</td><td>{r['status']}</td></tr>"
     
     html += "</table></body></html>"
     
@@ -710,7 +857,7 @@ def send_email_summary(results):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER")
+    log("CS HUB AUTO-CLAIMER v2.0")
     log("="*60)
     
     try:
@@ -729,10 +876,11 @@ def main():
         time.sleep(3)
     
     log("\n" + "="*60)
-    log("SUMMARY")
+    log("FINAL SUMMARY")
     log("="*60)
     for r in results:
-        log(f"{r['player_id']}: D={r['daily']}, S={r['store']} → {r['status']}")
+        total = r['daily'] + r['store'] + r['progression']
+        log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']}, Total={total} → {r['status']}")
     
     send_email_summary(results)
     log("\n🏁 Done!")
