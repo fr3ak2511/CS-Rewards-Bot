@@ -2,11 +2,10 @@ name: Hourly Rewards Claimer
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs every hour at minute 0
+    - cron: '0 * * * *'  # Keep as-is (no timing change needed)
   
-  workflow_dispatch:  # Allows manual trigger button
+  workflow_dispatch:
 
-# Prevent multiple workflows from running simultaneously
 concurrency:
   group: rewards-claimer
   cancel-in-progress: true
@@ -35,20 +34,18 @@ jobs:
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
       
-      # Upload screenshots/logs ONLY if workflow fails (reduces artifact storage)
-      - name: Upload Debug Artifacts (Only on Failure)
-        if: failure()
+      - name: Upload Debug Artifacts
+        if: failure()  # Changed from 'always()' to 'failure()'
         uses: actions/upload-artifact@v4
         with:
           name: debug-data-${{ github.run_id }}
           path: |
             *.png
             *.html
-            *.log
           retention-days: 1
           if-no-files-found: ignore
       
-      # Optional: Upload store_claims_log.csv to persist across runs
+      # NEW: This is the critical addition for v2.3
       - name: Commit Store Claims Log
         if: success()
         run: |
