@@ -2,7 +2,7 @@ import csv
 import time
 import os
 import smtplib
-from datetime import datetime, timedelta
+from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from selenium import webdriver
@@ -20,88 +20,15 @@ PLAYER_ID_FILE = "players.csv"
 STORE_LOG_FILE = "store_claims_log.csv"
 HEADLESS = True
 
-# Daily tracking constants
-DAILY_RESET_HOUR_IST = 5
-DAILY_RESET_MINUTE_IST = 30
-EXPECTED_STORE_PER_PLAYER = 3
-
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
-
-# IST timezone helper functions
-def get_ist_time():
-    """Get current time in IST (UTC+5:30)"""
-    utc_now = datetime.utcnow()
-    ist_offset = timedelta(hours=5, minutes=30)
-    return utc_now + ist_offset
-
-def get_current_daily_window_start():
-    """Get the start of current daily window (5:30 AM IST)"""
-    ist_now = get_ist_time()
-    if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
-        window_start = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0) - timedelta(days=1)
-    else:
-        window_start = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0)
-    return window_start
-
-def get_next_daily_reset():
-    """Get next daily reset time (5:30 AM IST)"""
-    ist_now = get_ist_time()
-    if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
-        next_reset = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0)
-    else:
-        next_reset = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0) + timedelta(days=1)
-    return next_reset
-
-def format_time_until_reset(next_reset):
-    """Format time remaining until next reset"""
-    ist_now = get_ist_time()
-    delta = next_reset - ist_now
-    hours, remainder = divmod(delta.seconds, 3600)
-    minutes, _ = divmod(remainder, 60)
-    return f"{hours}h {minutes}m"
-
-# NEW: Store Claims Log Functions (v2.3)
-def read_store_log():
-    """Return {player_id: last_claim_datetime} dict from CSV log"""
-    logdata = {}
-    try:
-        with open(STORE_LOG_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                try:
-                    logdata[row['player_id']] = datetime.fromisoformat(row['last_claim_timestamp'])
-                except:
-                    pass  # Skip malformed entries
-    except FileNotFoundError:
-        pass  # First run, no log yet
-    return logdata
-
-def get_last_store_claim_time(player_id):
-    """Get last Store claim timestamp for a player"""
-    logdata = read_store_log()
-    return logdata.get(player_id)
-
-def update_store_claim_time(player_id, timestamp):
-    """Update log after successful Store claim"""
-    logdata = read_store_log()
-    logdata[player_id] = timestamp
-    
-    try:
-        with open(STORE_LOG_FILE, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['player_id', 'last_claim_timestamp'])
-            for pid, ts in logdata.items():
-                writer.writerow([pid, ts.isoformat()])
-        log(f"✅ Updated store log for {player_id}")
-    except Exception as e:
-        log(f"⚠️ Failed to update store log: {e}")
 
 def create_driver():
     """GitHub Actions-compatible driver"""
     options = Options()
     if HEADLESS:
         options.add_argument("--headless=new")
+    
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--incognito")
     options.add_argument("--start-maximized")
@@ -168,6 +95,7 @@ def login_to_hub(driver, player_id):
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(0.4)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
+        
         accept_cookies(driver)
         
         # Login button detection
@@ -229,6 +157,7 @@ def login_to_hub(driver, player_id):
                     input_box = WebDriverWait(driver, 3).until(
                         EC.visibility_of_element_located((By.XPATH, selector))
                     )
+                
                 log("✅ Input field found")
                 input_box.clear()
                 input_box.send_keys(player_id)
@@ -282,6 +211,7 @@ def login_to_hub(driver, player_id):
         log("⏳ Waiting for login...")
         start_time = time.time()
         max_wait = 12
+        
         while time.time() - start_time < max_wait:
             try:
                 current_url = driver.current_url
@@ -360,6 +290,7 @@ def close_popup(driver):
                         continue_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
+                    
                     log("✓ Continue clicked")
                     time.sleep(0.8)
                     
@@ -400,6 +331,7 @@ def close_popup(driver):
                         close_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
+                    
                     log("✓ Close clicked")
                     time.sleep(0.8)
                     
@@ -507,11 +439,13 @@ def click_daily_rewards_tab(driver):
 def navigate_to_daily_rewards_section_store(driver):
     """Navigate to Daily Rewards section in Store"""
     log("Navigating to Daily Rewards section...")
+    
     ensure_store_page(driver)
     close_popup(driver)
     time.sleep(0.3)
     
     tab_clicked = click_daily_rewards_tab(driver)
+    
     if tab_clicked:
         log("✅ In Daily Rewards section")
         time.sleep(0.7)
@@ -520,10 +454,130 @@ def navigate_to_daily_rewards_section_store(driver):
         log("⚠️ Tab navigation failed")
         return False
 
+def get_last_store_claim_time(player_id):
+    """Get last claim timestamp from CSV log"""
+    try:
+        if not os.path.exists(STORE_LOG_FILE):
+            return None
+        
+        with open(STORE_LOG_FILE, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row['player_id'] == player_id:
+                    return datetime.fromisoformat(row['last_claim_timestamp'])
+        return None
+    except Exception as e:
+        log(f"⚠️ Error reading store log: {e}")
+        return None
+
+def log_store_claim(player_id):
+    """Log successful store claim with timestamp"""
+    try:
+        file_exists = os.path.exists(STORE_LOG_FILE)
+        
+        # Read existing data
+        existing_data = {}
+        if file_exists:
+            with open(STORE_LOG_FILE, 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_data[row['player_id']] = row['last_claim_timestamp']
+        
+        # Update timestamp for this player
+        existing_data[player_id] = datetime.now().isoformat()
+        
+        # Write updated data
+        with open(STORE_LOG_FILE, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['player_id', 'last_claim_timestamp'])
+            writer.writeheader()
+            for pid, timestamp in existing_data.items():
+                writer.writerow({'player_id': pid, 'last_claim_timestamp': timestamp})
+        
+        log(f"📝 Updated store log: {player_id}")
+    except Exception as e:
+        log(f"⚠️ Error writing store log: {e}")
+
+def check_store_availability(driver, player_id):
+    """
+    CRITICAL FIX: Check if Store rewards are actually available before attempting claims
+    Returns: (is_available: bool, hours_since_last_claim: float)
+    """
+    try:
+        # Check last claim time from log
+        last_claim = get_last_store_claim_time(player_id)
+        if last_claim:
+            hours_since = (datetime.now() - last_claim).total_seconds() / 3600
+            log(f"ℹ️ Last store claim: {hours_since:.1f}h ago")
+        else:
+            hours_since = 100.0  # No record = assume available
+            log(f"ℹ️ No store claim history")
+        
+        # Check for green "Claim" buttons on page
+        available_count = driver.execute_script("""
+            let allDivs = document.querySelectorAll('div');
+            let storeBonusCards = [];
+            
+            for (let div of allDivs) {
+                let text = div.innerText || '';
+                if (text.includes('Store Bonus') && text.includes('+1')) {
+                    let parent = div.parentElement;
+                    let attempts = 0;
+                    while (parent && attempts < 5) {
+                        let parentText = parent.innerText || '';
+                        if (parentText.includes('Gold (Daily)') || 
+                            parentText.includes('Cash (Daily)') || 
+                            parentText.includes('Luckyloon (Daily)')) {
+                            storeBonusCards.push(parent);
+                            break;
+                        }
+                        parent = parent.parentElement;
+                        attempts++;
+                    }
+                }
+            }
+            
+            // Count cards WITH green "Claim" button (NO timer)
+            let availableCount = 0;
+            for (let card of storeBonusCards) {
+                let cardText = card.innerText || '';
+                
+                // SKIP cards with timer
+                if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                    continue;
+                }
+                
+                // Check for green "Claim" button
+                let buttons = card.querySelectorAll('button');
+                for (let btn of buttons) {
+                    let btnText = btn.innerText.trim().toLowerCase();
+                    if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
+                        availableCount++;
+                        break;
+                    }
+                }
+            }
+            
+            return availableCount;
+        """)
+        
+        is_available = available_count > 0
+        
+        if is_available:
+            log(f"✅ Store available: {available_count} rewards (last claim: {hours_since:.1f}h ago)")
+        else:
+            log(f"⏳ Store unavailable: 0 rewards (last claim: {hours_since:.1f}h ago)")
+        
+        return is_available, hours_since
+        
+    except Exception as e:
+        log(f"❌ Store check error: {e}")
+        return False, 0.0
+
 def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
+    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(1.5)
@@ -537,7 +591,8 @@ def claim_daily_rewards(driver, player_id):
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
                     if (text === 'claim' && btn.offsetParent !== null) {
-                        if (!btn.innerText.toLowerCase().includes('buy') && !btn.innerText.toLowerCase().includes('purchase')) {
+                        if (!btn.innerText.toLowerCase().includes('buy') && 
+                            !btn.innerText.toLowerCase().includes('purchase')) {
                             btn.click();
                             return true;
                         }
@@ -563,27 +618,13 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards with Hybrid Timestamp + Visual Verification (v2.3)"""
+    """
+    Claim Store Daily Rewards - WITH VERIFICATION
+    CRITICAL FIX: Check availability BEFORE claiming
+    """
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
-    
-    # Check timestamp log for cooldown
-    last_claim_time = get_last_store_claim_time(player_id)
-    hours_since_last = None
-    
-    if last_claim_time:
-        hours_since_last = (get_ist_time() - last_claim_time).total_seconds() / 3600
-    else:
-        hours_since_last = 100  # Treat as never claimed
-    
-    # Skip if on cooldown (<23h since last verified claim)
-    if hours_since_last < 23:
-        remaining = 24 - hours_since_last
-        log(f"⏭️ Store on cooldown: {remaining:.1f}h remaining")
-        return 0
-    
-    log(f"✅ Store available (last claim: {hours_since_last:.1f}h ago)")
     
     try:
         driver.get("https://hub.vertigogames.co/store")
@@ -598,11 +639,19 @@ def claim_store_rewards(driver, player_id):
         
         if not navigate_to_daily_rewards_section_store(driver):
             log("⚠️ Navigation failed")
-            time.sleep(0.5)
         
+        time.sleep(0.5)
         driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
-        # Claim loop with verification
+        # CRITICAL FIX: Check availability BEFORE claiming
+        is_available, hours_since = check_store_availability(driver, player_id)
+        
+        if not is_available:
+            log(f"⏭️ Skipping store (no rewards available, last claim: {hours_since:.1f}h ago)")
+            driver.save_screenshot(f"store_final_{player_id}.png")
+            return 0
+        
+        # Claim loop
         for attempt in range(max_claims):
             log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
             
@@ -626,7 +675,9 @@ def claim_store_rewards(driver, player_id):
                         let attempts = 0;
                         while (parent && attempts < 5) {
                             let parentText = parent.innerText || '';
-                            if (parentText.includes('Gold (Daily)') || parentText.includes('Cash (Daily)') || parentText.includes('Luckyloon (Daily)')) {
+                            if (parentText.includes('Gold (Daily)') || 
+                                parentText.includes('Cash (Daily)') || 
+                                parentText.includes('Luckyloon (Daily)')) {
                                 storeBonusCards.push(parent);
                                 break;
                             }
@@ -668,28 +719,10 @@ def claim_store_rewards(driver, player_id):
             """)
             
             if result:
-                time.sleep(2)  # Wait for page to update
+                log(f"✅ Store Claim #{claimed + 1} SUCCESS")
+                claimed += 1
+                time.sleep(1.5)
                 
-                # VERIFY: Check if timer appeared after click (visual verification)
-                timer_appeared = driver.execute_script("""
-                    let allDivs = document.querySelectorAll('div');
-                    for (let div of allDivs) {
-                        let text = div.innerText || '';
-                        if ((text.includes('Store Bonus') && text.includes('Next in')) || text.match(/\\d+h\\s+\\d+m/)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                """)
-                
-                if timer_appeared:
-                    log(f"❌ Store Claim #{claimed + 1} FAILED (reward on cooldown, timer appeared)")
-                    break  # Stop trying, reward was on cooldown
-                else:
-                    log(f"✅ Store Claim #{claimed + 1} VERIFIED")
-                    claimed += 1
-                
-                time.sleep(1.2)
                 log("Handling post-claim popup...")
                 close_popup(driver)
                 time.sleep(0.5)
@@ -703,16 +736,15 @@ def claim_store_rewards(driver, player_id):
                 log(f"ℹ️ No more available claims (attempt {attempt + 1})")
                 break
         
+        # Log successful claim ONLY if we actually claimed something
+        if claimed > 0:
+            log_store_claim(player_id)
+        
         log(f"\n{'='*60}")
         log(f"Store Claims Complete: {claimed}/{max_claims}")
         log(f"{'='*60}")
         
         driver.save_screenshot(f"store_final_{player_id}.png")
-        
-        # Update timestamp ONLY if claims were verified successful
-        if claimed > 0:
-            update_store_claim_time(player_id, get_ist_time())
-            log(f"📝 Recorded {claimed} verified Store claims")
         
     except Exception as e:
         log(f"❌ Store error: {e}")
@@ -724,52 +756,84 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - FIXED VERSION"""
+    """
+    Claim Progression Program rewards with horizontal scrolling
+    FIXED: Removed X > 400px filter, better button detection
+    """
     log("🎯 Claiming Progression Program...")
     claimed = 0
+    
     try:
+        # Navigate to Progression Program page
         driver.get("https://hub.vertigogames.co/progression-program")
         time.sleep(2)
         
+        # Close initial popups
         for _ in range(2):
             close_popup(driver)
         
         time.sleep(0.5)
         driver.save_screenshot(f"progression_01_ready_{player_id}.png")
         
+        # Claim loop with scrolling
         max_attempts = 8
+        
         for attempt in range(max_attempts):
             log(f"\n--- Progression Claim Attempt {attempt + 1}/{max_attempts} ---")
             
+            # Find and click Claim button (NO X position filter)
             result = driver.execute_script("""
+                // Find ALL buttons with "Claim" text
                 let allButtons = document.querySelectorAll('button');
                 let claimButtons = [];
                 
                 for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    if (btnText === 'claim') {
-                        if (btn.offsetParent !== null && !btn.disabled) {
-                            let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
-                            if (!parentText.includes('Delivered')) {
-                                claimButtons.push(btn);
-                            }
+                    let btnText = btn.innerText.trim();
+                    
+                    // Must be exactly "Claim"
+                    if (btnText === 'Claim' && btn.offsetParent !== null && !btn.disabled) {
+                        // Get parent to check if it's in main content (not sidebar)
+                        let parent = btn.closest('div');
+                        let parentText = parent ? parent.innerText : '';
+                        
+                        // Skip sidebar buttons (they have menu-related text)
+                        if (parentText.includes('Progression Program') && parentText.length < 50) {
+                            // This is sidebar menu item
+                            continue;
                         }
+                        
+                        // Skip already claimed/delivered
+                        if (parentText.includes('Delivered') || parentText.includes('Claimed')) {
+                            continue;
+                        }
+                        
+                        // Check if button is green (available to claim)
+                        let btnStyle = window.getComputedStyle(btn);
+                        let bgColor = btnStyle.backgroundColor;
+                        
+                        // Green buttons have rgb values with high green component
+                        // Skip gray/disabled buttons
+                        if (bgColor.includes('128, 128, 128') || bgColor.includes('64, 64, 64')) {
+                            continue;
+                        }
+                        
+                        claimButtons.push(btn);
                     }
                 }
                 
-                console.log('Found ' + claimButtons.length + ' claim buttons');
+                console.log('Found ' + claimButtons.length + ' claimable Progression buttons');
                 
                 if (claimButtons.length > 0) {
                     let btn = claimButtons[0];
-                    btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+                    // Scroll into view
+                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                     setTimeout(function() {
                         btn.click();
                         console.log('✅ Clicked Progression Claim button');
-                    }, 600);
+                    }, 500);
                     return true;
                 }
                 
-                console.log('No more claim buttons found');
                 return false;
             """)
             
@@ -777,32 +841,52 @@ def claim_progression_program_rewards(driver, player_id):
                 log(f"✅ Progression Claim #{claimed + 1} SUCCESS")
                 claimed += 1
                 time.sleep(1.5)
+                
+                # Handle confirmation popup
                 log("Handling post-claim popup...")
                 close_popup(driver)
                 time.sleep(0.5)
+                
+                # Verify still on Progression Program page
+                if "/progression-program" not in driver.current_url.lower():
+                    log("⚠️ Lost Progression Program page, re-navigating...")
+                    driver.get("https://hub.vertigogames.co/progression-program")
+                    time.sleep(1)
+                
+                time.sleep(0.3)
             else:
+                # No more claims found, try scrolling
                 log(f"ℹ️ No more claim buttons (attempt {attempt + 1})")
                 
-                if attempt < max_attempts - 1:
+                if attempt < 7:  # Try scrolling for first 7 attempts
                     log("Scrolling horizontally...")
-                    try:
-                        driver.execute_script("""
-                            let containers = document.querySelectorAll('div');
-                            for (let container of containers) {
-                                if (container.scrollWidth > container.clientWidth) {
-                                    container.scrollLeft += 400;
-                                    console.log('Scrolled right');
-                                    break;
+                    scroll_result = driver.execute_script("""
+                        // Find scroll container or next button
+                        let allButtons = document.querySelectorAll('button');
+                        for (let btn of allButtons) {
+                            let className = btn.className || '';
+                            let ariaLabel = btn.getAttribute('aria-label') || '';
+                            
+                            if (className.includes('right') || className.includes('next') || 
+                                ariaLabel.toLowerCase().includes('next')) {
+                                if (btn.offsetParent !== null && !btn.disabled) {
+                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    setTimeout(function() {
+                                        btn.click();
+                                    }, 300);
+                                    return true;
                                 }
                             }
-                        """)
+                        }
+                        return false;
+                    """)
+                    
+                    if scroll_result:
                         log("✓ Scrolled right")
                         time.sleep(1)
-                    except:
-                        log("⚠️ Scroll failed")
-                        break
-                else:
-                    break
+                        continue
+                
+                break
         
         log(f"\n{'='*60}")
         log(f"Progression Claims Complete: {claimed}")
@@ -836,13 +920,12 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
-        # CORRECT ORDER: Daily → Store (earn grenades) → Progression (use grenades)
+        # ✅ CORRECT ORDER: Daily → Store (earn grenades) → Progression (use grenades)
         stats['daily'] = claim_daily_rewards(driver, player_id)
         stats['store'] = claim_store_rewards(driver, player_id)
         stats['progression'] = claim_progression_program_rewards(driver, player_id)
         
         total = stats['daily'] + stats['store'] + stats['progression']
-        
         if total > 0:
             stats['status'] = "Success"
             log(f"🎉 Total: {total} (D:{stats['daily']} S:{stats['store']} P:{stats['progression']})")
@@ -862,128 +945,65 @@ def process_player(player_id):
     
     return stats
 
-def send_email_summary(results, num_players):
-    """Send email with daily tracking stats"""
+def send_email_summary(results):
+    """Send email with results"""
+    sender = os.environ.get("SENDER_EMAIL")
+    recipient = os.environ.get("RECIPIENT_EMAIL")
+    password = os.environ.get("GMAIL_APP_PASSWORD")
+    
+    if not all([sender, recipient, password]):
+        log("⚠️ Email not configured")
+        return
+    
+    subject = f"CS Hub Rewards - {datetime.now().strftime('%d-%b %I:%M %p')} IST"
+    
+    # Build HTML table
+    rows = []
+    for r in results:
+        total = r['daily'] + r['store'] + r['progression']
+        rows.append(f"""
+        <tr>
+            <td>{r['player_id']}</td>
+            <td>{r['daily']}</td>
+            <td>{r['store']}</td>
+            <td>{r['progression']}</td>
+            <td><b>{total}</b></td>
+            <td>{r['status']}</td>
+        </tr>
+        """)
+    
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif;">
+        <h2>🎮 CS Hub Rewards Claimer Report</h2>
+        <p><b>Run:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} IST</p>
+        
+        <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse;">
+            <thead style="background-color: #4CAF50; color: white;">
+                <tr>
+                    <th>Player ID</th>
+                    <th>Daily</th>
+                    <th>Store</th>
+                    <th>Progression</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {"".join(rows)}
+            </tbody>
+        </table>
+        
+        <p style="color: #666; font-size: 12px; margin-top: 20px;">
+            <i>Note: Store rewards refresh every 24 hours per player.</i>
+        </p>
+    </body>
+    </html>
+    """
+    
     try:
-        sender = os.environ.get("SENDER_EMAIL")
-        recipient = os.environ.get("RECIPIENT_EMAIL")
-        password = os.environ.get("GMAIL_APP_PASSWORD")
-        
-        if not all([sender, recipient, password]):
-            log("⚠️ Email env vars missing")
-            return
-        
-        # Calculate totals
-        total_d = sum(r['daily'] for r in results)
-        total_s = sum(r['store'] for r in results)
-        total_p = sum(r['progression'] for r in results)
-        total_all = total_d + total_s + total_p
-        success_count = sum(1 for r in results if r['status'] == 'Success')
-        
-        # Daily tracking calculations
-        expected_store_total = num_players * EXPECTED_STORE_PER_PLAYER
-        store_progress_pct = int((total_s / expected_store_total) * 100) if expected_store_total > 0 else 0
-        
-        # Time calculations
-        ist_now = get_ist_time()
-        window_start = get_current_daily_window_start()
-        next_reset = get_next_daily_reset()
-        time_until_reset = format_time_until_reset(next_reset)
-        hours_since_reset = int((ist_now - window_start).total_seconds() // 3600)
-        
-        # Build enhanced HTML email
-        html = f"""<html>
-<body style="font-family: Arial, sans-serif; padding: 20px;">
-<h2>🎮 CS Hub Rewards Claimer Report</h2>
-
-<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin: 20px 0;">
-<tr style="background-color: #f0f0f0;">
-<th>Current Time:</th>
-<td>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</td>
-</tr>
-<tr>
-<th>Window Started:</th>
-<td>{window_start.strftime('%Y-%m-%d %I:%M %p IST')} ({hours_since_reset}h ago)</td>
-</tr>
-<tr>
-<th>Next Reset:</th>
-<td>{next_reset.strftime('%Y-%m-%d %I:%M %p IST')} (in {time_until_reset})</td>
-</tr>
-</table>
-
-<h3>📊 Summary</h3>
-<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin: 20px 0;">
-<tr style="background-color: #f0f0f0;">
-<th>Category</th>
-<th>Result</th>
-</tr>
-<tr>
-<td>💰 Total Daily:</td>
-<td>{total_d} (varies per player)</td>
-</tr>
-<tr style="{'background-color: #d4edda;' if total_s == expected_store_total else ''}">
-<td>🏪 Total Store:</td>
-<td>{total_s} / {expected_store_total} ({store_progress_pct}%) {'✅ COMPLETE' if total_s == expected_store_total else f'⚠️ {expected_store_total - total_s} remaining'}</td>
-</tr>
-<tr>
-<td>🎯 Total Progression:</td>
-<td>{total_p} (grenade-dependent)</td>
-</tr>
-<tr style="background-color: #fff3cd;">
-<td><strong>🎁 TOTAL ALL:</strong></td>
-<td><strong>{total_all} claims</strong></td>
-</tr>
-</table>
-
-<h3>📋 Player Details</h3>
-<table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin: 20px 0; width: 100%;">
-<tr style="background-color: #007bff; color: white;">
-<th>ID</th>
-<th>Daily</th>
-<th>Store</th>
-<th>Progression</th>
-<th>Total</th>
-<th>Status</th>
-</tr>
-"""
-        
-        for r in results:
-            total_player = r['daily'] + r['store'] + r['progression']
-            row_color = '#d4edda' if r['status'] == 'Success' else ('#f8d7da' if r['status'] == 'Login Failed' else '#fff3cd')
-            html += f"""<tr style="background-color: {row_color};">
-<td>{r['player_id']}</td>
-<td>{r['daily']}</td>
-<td>{r['store']}{' ✅' if r['store'] == EXPECTED_STORE_PER_PLAYER else ''}</td>
-<td>{r['progression']}</td>
-<td><strong>{total_player}</strong></td>
-<td>{r['status']}</td>
-</tr>
-"""
-        
-        html += f"""<tr style="background-color: #e9ecef; font-weight: bold;">
-<td>TOTAL</td>
-<td>{total_d}</td>
-<td>{total_s}</td>
-<td>{total_p}</td>
-<td>{total_all}</td>
-<td>{success_count}/{len(results)}</td>
-</tr>
-</table>
-
-<p><strong>💡 Note:</strong></p>
-<ul>
-<li>Store rewards refresh every 24 hours per player</li>
-<li>Daily rewards vary by player progress</li>
-<li>Progression rewards depend on grenade availability</li>
-</ul>
-
-<hr>
-<p style="color: #666; font-size: 12px;">🤖 Automated run at {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</p>
-</body>
-</html>"""
-        
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
+        msg['Subject'] = subject
         msg['From'] = sender
         msg['To'] = recipient
         
@@ -994,68 +1014,51 @@ def send_email_summary(results, num_players):
             server.send_message(msg)
         
         log("✅ Email sent")
-        
     except Exception as e:
-        log(f"❌ Email error: {e}")
+        log(f"❌ Email failed: {e}")
 
 def main():
-    """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.3 (Hybrid Verification)")
+    log("🎮 CS HUB AUTO-CLAIMER v2.4 (Store Verification Fix)")
     log("="*60)
+    log(f"\n🕐 IST: {datetime.now().strftime('%Y-%m-%d %I:%M %p')}")
     
-    # Show IST tracking info
-    ist_now = get_ist_time()
-    window_start = get_current_daily_window_start()
-    next_reset = get_next_daily_reset()
-    
-    log(f"🕐 IST: {ist_now.strftime('%Y-%m-%d %I:%M %p')}")
-    log(f"⏰ Next Reset: {format_time_until_reset(next_reset)}")
+    # Calculate next reset
+    now = datetime.now()
+    next_reset = now.replace(hour=5, minute=30, second=0, microsecond=0)
+    if now >= next_reset:
+        from datetime import timedelta
+        next_reset += timedelta(days=1)
+    time_until = next_reset - now
+    hours, remainder = divmod(time_until.seconds, 3600)
+    minutes = remainder // 60
+    log(f"⏰ Next Reset: {hours}h {minutes}m")
     log("")
     
-    # Read players
-    players = []
-    try:
-        with open(PLAYER_ID_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            players = [row['player_id'].strip() for row in reader if row['player_id'].strip()]
-    except Exception as e:
-        log(f"❌ Cannot read {PLAYER_ID_FILE}: {e}")
+    if not os.path.exists(PLAYER_ID_FILE):
+        log(f"❌ {PLAYER_ID_FILE} not found")
         return
     
-    num_players = len(players)
-    log(f"📋 {num_players} player(s)")
+    players = []
+    with open(PLAYER_ID_FILE, 'r') as f:
+        reader = csv.DictReader(f)
+        players = [row['id'] for row in reader if row['id'].strip()]
+    
+    log(f"📋 {len(players)} players")
+    log("="*60)
     log("")
     
     results = []
-    
-    # Process each player
     for player_id in players:
-        stats = process_player(player_id)
-        results.append(stats)
-        time.sleep(3)
+        result = process_player(player_id)
+        results.append(result)
+        time.sleep(2)
     
-    # Final summary
-    log("")
+    send_email_summary(results)
+    
+    log("\n" + "="*60)
+    log("✅ COMPLETE")
     log("="*60)
-    log("FINAL SUMMARY")
-    log("="*60)
-    
-    total_d = sum(r['daily'] for r in results)
-    total_s = sum(r['store'] for r in results)
-    total_p = sum(r['progression'] for r in results)
-    
-    log(f"Daily: {total_d}, Store: {total_s}/{num_players * EXPECTED_STORE_PER_PLAYER}, Progression: {total_p}")
-    
-    for r in results:
-        total = r['daily'] + r['store'] + r['progression']
-        log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']}, Total={total} → {r['status']}")
-    
-    # Send email with num_players parameter
-    send_email_summary(results, num_players)
-    
-    log("")
-    log("🏁 Done!")
 
 if __name__ == "__main__":
     main()
