@@ -3,8 +3,10 @@ name: Hourly Rewards Claimer
 on:
   schedule:
     - cron: '0 * * * *'  # Runs every hour at minute 0
+  
   workflow_dispatch:  # Allows manual trigger button
 
+# Prevent multiple workflows from running simultaneously
 concurrency:
   group: rewards-claimer
   cancel-in-progress: true
@@ -13,32 +15,45 @@ jobs:
   run-claimer:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
-
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
+      
       - name: Install Dependencies
         run: pip install -r requirements.txt
-
+      
       - name: Run Master Claimer
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
-
-      - name: Upload Debug Artifacts
-        if: always()
+      
+      # Upload screenshots/logs ONLY if workflow fails (reduces artifact storage)
+      - name: Upload Debug Artifacts (Only on Failure)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-data
+          name: debug-data-${{ github.run_id }}
           path: |
             *.png
             *.html
+            *.log
           retention-days: 1
+          if-no-files-found: ignore
+      
+      # Optional: Upload store_claims_log.csv to persist across runs
+      - name: Commit Store Claims Log
+        if: success()
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add store_claims_log.csv || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update store claims log [skip ci]"
+          git push || true
