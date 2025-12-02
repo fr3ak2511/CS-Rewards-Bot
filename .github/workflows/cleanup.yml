@@ -1,13 +1,21 @@
 name: Delete Old Workflow Runs
+
 on:
-  workflow_dispatch:  # Manual trigger from Actions tab
+  schedule:
+    # Runs every 3 days at 12:00 AM IST (6:30 PM UTC previous day)
+    # IST = UTC+5:30, so 12:00 AM IST = 6:30 PM UTC (previous day)
+    - cron: '30 18 */3 * *'
+  
+  workflow_dispatch: # Manual trigger from Actions tab
 
 jobs:
   delete-runs:
     runs-on: ubuntu-latest
+    
     permissions:
       actions: write
       contents: read
+    
     steps:
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
