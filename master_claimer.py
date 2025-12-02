@@ -63,11 +63,9 @@ def format_time_until_reset(next_reset):
 def create_driver():
     """GitHub Actions-compatible driver"""
     options = Options()
-    
     if HEADLESS:
         options.add_argument("--headless=new")
-        options.add_argument("--window-size=1920,1080")
-    
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--incognito")
     options.add_argument("--start-maximized")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -108,7 +106,6 @@ def create_driver():
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(30)
     driver.set_script_timeout(30)
-    
     return driver
 
 def accept_cookies(driver):
@@ -125,12 +122,11 @@ def accept_cookies(driver):
         time.sleep(0.3)
         log("✅ Cookies accepted")
     except TimeoutException:
-        log("ℹ️  No cookie banner")
+        log("ℹ️ No cookie banner")
 
 def login_to_hub(driver, player_id):
     """Login using multi-selector strategy"""
     log(f"🔐 Logging in: {player_id}")
-    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(0.4)
@@ -163,8 +159,8 @@ def login_to_hub(driver, player_id):
                                 break
                         except:
                             continue
-                if login_clicked:
-                    break
+                    if login_clicked:
+                        break
             except:
                 continue
         
@@ -250,7 +246,6 @@ def login_to_hub(driver, player_id):
         log("⏳ Waiting for login...")
         start_time = time.time()
         max_wait = 12
-        
         while time.time() - start_time < max_wait:
             try:
                 current_url = driver.current_url
@@ -275,7 +270,7 @@ def login_to_hub(driver, player_id):
         log("❌ Login verification timeout")
         driver.save_screenshot(f"05_login_timeout_{player_id}.png")
         return False
-        
+    
     except Exception as e:
         log(f"❌ Login exception: {e}")
         try:
@@ -329,7 +324,6 @@ def close_popup(driver):
                         continue_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
-                    
                     log("✓ Continue clicked")
                     time.sleep(0.8)
                     
@@ -370,7 +364,6 @@ def close_popup(driver):
                         close_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
-                    
                     log("✓ Close clicked")
                     time.sleep(0.8)
                     
@@ -400,9 +393,9 @@ def close_popup(driver):
         except:
             pass
         
-        log("⚠️  Popup may still be visible")
+        log("⚠️ Popup may still be visible")
         return False
-        
+    
     except Exception as e:
         log(f"❌ Popup close error: {e}")
         return False
@@ -411,12 +404,11 @@ def ensure_store_page(driver):
     """Check if on Store page"""
     try:
         current_url = driver.current_url
-        
         if "/store" in current_url.lower():
             log("✓ On Store page")
             return True
         
-        log(f"⚠️  Not on Store, navigating...")
+        log(f"⚠️ Not on Store, navigating...")
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(0.7)
         
@@ -426,7 +418,7 @@ def ensure_store_page(driver):
         else:
             log("❌ Failed to reach Store")
             return False
-            
+    
     except Exception as e:
         log(f"❌ Error: {e}")
         return False
@@ -434,11 +426,9 @@ def ensure_store_page(driver):
 def click_daily_rewards_tab(driver):
     """Click Daily Rewards TAB with horizontal scroll"""
     log("Clicking Daily Rewards tab...")
-    
     try:
         result = driver.execute_script("""
             let allElements = document.querySelectorAll('*');
-            
             for (let elem of allElements) {
                 if (elem.innerText && elem.innerText.includes('Daily Rewards')) {
                     let className = elem.className || '';
@@ -449,21 +439,13 @@ def click_daily_rewards_tab(driver):
                             continue;
                         }
                     }
-                    
-                    // Skip sidebar
                     let parent = elem.parentElement;
                     let parentClass = parent ? (parent.className || '') : '';
                     if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
                         continue;
                     }
-                    
-                    // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
-                    
-                    setTimeout(() => {
-                        elem.click();
-                    }, 800);
-                    
+                    setTimeout(() => { elem.click(); }, 800);
                     return true;
                 }
             }
@@ -474,6 +456,7 @@ def click_daily_rewards_tab(driver):
             log("✅ Daily Rewards tab clicked")
             time.sleep(1.0)
             return True
+    
     except Exception as e:
         log(f"❌ Tab click failed: {e}")
     
@@ -492,14 +475,13 @@ def navigate_to_daily_rewards_section_store(driver):
         time.sleep(0.7)
         return True
     else:
-        log("⚠️  Tab navigation failed")
+        log("⚠️ Tab navigation failed")
         return False
 
 def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
-    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         time.sleep(1.5)
@@ -529,18 +511,18 @@ def claim_daily_rewards(driver, player_id):
                 time.sleep(1.5)
                 close_popup(driver)
             else:
-                log("ℹ️  No more daily rewards")
+                log("ℹ️ No more daily rewards")
                 break
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
-        
+    
     except Exception as e:
         log(f"❌ Daily error: {e}")
     
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - ONLY green available buttons"""
+    """Claim Store Daily Rewards - ENHANCED TIMER DETECTION"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -557,25 +539,24 @@ def claim_store_rewards(driver, player_id):
             return 0
         
         if not navigate_to_daily_rewards_section_store(driver):
-            log("⚠️  Navigation failed")
+            log("⚠️ Navigation failed")
+            time.sleep(0.5)
+            return 0
         
-        time.sleep(0.5)
         driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
-        # Claim loop
         for attempt in range(max_claims):
             log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
             
             if attempt > 0:
                 log("Re-navigating to Daily Rewards section...")
                 if not navigate_to_daily_rewards_section_store(driver):
-                    log("⚠️  Re-navigation failed")
+                    log("⚠️ Re-navigation failed")
                     break
                 time.sleep(0.5)
             
-            # Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
+            # ENHANCED: More aggressive timer detection
             result = driver.execute_script("""
-                // Find Store Bonus cards
                 let allDivs = document.querySelectorAll('div');
                 let storeBonusCards = [];
                 
@@ -600,36 +581,59 @@ def claim_store_rewards(driver, player_id):
                 
                 console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
                 
-                // Find buttons with "Claim" text (NO timer)
                 for (let card of storeBonusCards) {
                     let cardText = card.innerText || '';
                     
-                    // SKIP cards with timer
-                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                        console.log('⏭️  Skipping card with timer');
+                    // ENHANCED: Multiple timer pattern checks
+                    let hasTimer = false;
+                    
+                    // Pattern 1: "Next in"
+                    if (cardText.includes('Next in')) {
+                        console.log('⏭️ Skipping - has "Next in"');
+                        hasTimer = true;
+                    }
+                    
+                    // Pattern 2: Time format "19h 31m" or "19h" or "31m"
+                    if (/\\d+h\\s*\\d*m?/.test(cardText) || /\\d+m/.test(cardText)) {
+                        console.log('⏭️ Skipping - has time pattern');
+                        hasTimer = true;
+                    }
+                    
+                    // Pattern 3: Word "hour" or "minute"
+                    if (cardText.toLowerCase().includes('hour') || cardText.toLowerCase().includes('minute')) {
+                        console.log('⏭️ Skipping - has hour/minute text');
+                        hasTimer = true;
+                    }
+                    
+                    // Pattern 4: Check if button is disabled
+                    let buttons = card.querySelectorAll('button');
+                    for (let btn of buttons) {
+                        let btnText = btn.innerText.trim().toLowerCase();
+                        if (btnText === 'claim') {
+                            if (btn.disabled || btn.hasAttribute('disabled')) {
+                                console.log('⏭️ Skipping - button disabled');
+                                hasTimer = true;
+                            }
+                        }
+                    }
+                    
+                    if (hasTimer) {
                         continue;
                     }
                     
-                    // Find button
-                    let buttons = card.querySelectorAll('button');
-                    
+                    // No timer detected - try to claim
                     for (let btn of buttons) {
                         let btnText = btn.innerText.trim().toLowerCase();
-                        
                         if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            
-                            setTimeout(function() {
-                                btn.click();
-                                console.log('✅ Clicked GREEN Claim button');
-                            }, 500);
-                            
+                            setTimeout(function() { btn.click(); }, 500);
+                            console.log('✅ Clicked Store Claim button');
                             return true;
                         }
                     }
                 }
                 
-                console.log('No more available claim buttons found');
+                console.log('No more claimable Store rewards found');
                 return false;
             """)
             
@@ -643,20 +647,19 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(0.5)
                 
                 if not ensure_store_page(driver):
-                    log("⚠️  Lost Store page")
+                    log("⚠️ Lost Store page")
                     break
                 
                 time.sleep(0.3)
             else:
-                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
+                log(f"ℹ️ No more available claims (attempt {attempt + 1})")
                 break
         
         log(f"\n{'='*60}")
         log(f"Store Claims Complete: {claimed}/{max_claims}")
         log(f"{'='*60}")
-        
         driver.save_screenshot(f"store_final_{player_id}.png")
-        
+    
     except Exception as e:
         log(f"❌ Store error: {e}")
         try:
@@ -667,7 +670,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - FIXED VERSION"""
+    """Claim Progression Program rewards"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     
@@ -691,11 +694,9 @@ def claim_progression_program_rewards(driver, player_id):
                 
                 for (let btn of allButtons) {
                     let btnText = btn.innerText.trim().toLowerCase();
-                    
                     if (btnText === 'claim') {
                         if (btn.offsetParent !== null && !btn.disabled) {
                             let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
-                            
                             if (!parentText.includes('Delivered')) {
                                 claimButtons.push(btn);
                             }
@@ -708,16 +709,10 @@ def claim_progression_program_rewards(driver, player_id):
                 if (claimButtons.length > 0) {
                     let btn = claimButtons[0];
                     btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                    
-                    setTimeout(function() {
-                        btn.click();
-                        console.log('✅ Clicked Progression Claim button');
-                    }, 600);
-                    
+                    setTimeout(function() { btn.click(); }, 600);
                     return true;
                 }
                 
-                console.log('No more claim buttons found');
                 return false;
             """)
             
@@ -730,8 +725,7 @@ def claim_progression_program_rewards(driver, player_id):
                 close_popup(driver)
                 time.sleep(0.5)
             else:
-                log(f"ℹ️  No more claim buttons (attempt {attempt + 1})")
-                
+                log(f"ℹ️ No more claim buttons (attempt {attempt + 1})")
                 if attempt < max_attempts - 1:
                     log("Scrolling horizontally...")
                     try:
@@ -740,7 +734,6 @@ def claim_progression_program_rewards(driver, player_id):
                             for (let container of containers) {
                                 if (container.scrollWidth > container.clientWidth) {
                                     container.scrollLeft += 400;
-                                    console.log('Scrolled right');
                                     break;
                                 }
                             }
@@ -748,7 +741,7 @@ def claim_progression_program_rewards(driver, player_id):
                         log("✓ Scrolled right")
                         time.sleep(1)
                     except:
-                        log("⚠️  Scroll failed")
+                        log("⚠️ Scroll failed")
                         break
                 else:
                     break
@@ -756,9 +749,8 @@ def claim_progression_program_rewards(driver, player_id):
         log(f"\n{'='*60}")
         log(f"Progression Claims Complete: {claimed}")
         log(f"{'='*60}")
-        
         driver.save_screenshot(f"progression_final_{player_id}.png")
-        
+    
     except Exception as e:
         log(f"❌ Progression error: {e}")
         try:
@@ -791,17 +783,17 @@ def process_player(player_id):
         stats['progression'] = claim_progression_program_rewards(driver, player_id)
         
         total = stats['daily'] + stats['store'] + stats['progression']
-        
         if total > 0:
             stats['status'] = "Success"
             log(f"🎉 Total: {total} (D:{stats['daily']} S:{stats['store']} P:{stats['progression']})")
         else:
             stats['status'] = "No Rewards"
-            log("⚠️  None claimed")
-        
+            log("⚠️ None claimed")
+    
     except Exception as e:
         log(f"❌ Error: {e}")
         stats['status'] = "Error"
+    
     finally:
         if driver:
             try:
@@ -812,14 +804,14 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results, num_players):
-    """Send email with daily tracking stats"""
+    """Send email with daily tracking stats - SENT FOR EVERY RUN"""
     try:
         sender = os.environ.get("SENDER_EMAIL")
         recipient = os.environ.get("RECIPIENT_EMAIL")
         password = os.environ.get("GMAIL_APP_PASSWORD")
         
         if not all([sender, recipient, password]):
-            log("⚠️  Email env vars missing")
+            log("⚠️ Email env vars missing")
             return
         
         # Calculate totals
@@ -843,109 +835,111 @@ def send_email_summary(results, num_players):
         
         # Build enhanced HTML email
         html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif;">
-        <h2>🎮 Hub Rewards Summary</h2>
-        
-        <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📊 Daily Window Tracking (5:30 AM IST Reset)</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 5px;"><strong>Current Time:</strong></td>
-                    <td>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>Window Started:</strong></td>
-                    <td>{window_start.strftime('%Y-%m-%d %I:%M %p IST')} ({hours_since_reset}h ago)</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>Next Reset:</strong></td>
-                    <td>{next_reset.strftime('%Y-%m-%d %I:%M %p IST')} (in {time_until_reset})</td>
-                </tr>
-            </table>
-        </div>
-        
-        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📈 Today's Cumulative Stats (Since 5:30 AM)</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 5px;"><strong>💰 Total Daily:</strong></td>
-                    <td><strong>{total_d}</strong> (varies per player)</td>
-                </tr>
-                <tr style="background-color: {'#d4edda' if total_s == expected_store_total else '#fff3cd'};">
-                    <td style="padding: 5px;"><strong>🏪 Total Store:</strong></td>
-                    <td><strong>{total_s} / {expected_store_total}</strong> ({store_progress_pct}%) {'✅ COMPLETE' if total_s == expected_store_total else f'⚠️ {expected_store_total - total_s} remaining'}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>🎯 Total Progression:</strong></td>
-                    <td><strong>{total_p}</strong> (grenade-dependent)</td>
-                </tr>
-                <tr style="background-color: #e7f3ff;">
-                    <td style="padding: 5px;"><strong>🎁 TOTAL ALL:</strong></td>
-                    <td><strong style="font-size: 1.2em;">{total_all}</strong> claims</td>
-                </tr>
-            </table>
-        </div>
-        
-        <h3>👥 Per-Player Breakdown (This Run)</h3>
-        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-        <tr style="background-color: #f0f0f0;">
-            <th>ID</th><th>Daily</th><th>Store</th><th>Progression</th><th>Total</th><th>Status</th>
-        </tr>
-        """
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
+.container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }}
+.header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }}
+.header h1 {{ margin: 0; font-size: 28px; font-weight: 600; }}
+.header p {{ margin: 10px 0 0; opacity: 0.9; font-size: 14px; }}
+.content {{ padding: 30px; }}
+table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+th {{ background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6; }}
+td {{ padding: 12px; border-bottom: 1px solid #dee2e6; }}
+.success {{ background: #d4edda; color: #155724; }}
+.warning {{ background: #fff3cd; color: #856404; }}
+.total-row {{ background: #e9ecef; font-weight: 600; }}
+.note {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #667eea; }}
+.note h3 {{ margin: 0 0 10px; color: #667eea; font-size: 16px; }}
+.note ul {{ margin: 5px 0; padding-left: 20px; }}
+.note li {{ margin: 5px 0; color: #495057; }}
+.emoji {{ font-size: 18px; }}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🎮 Hub Rewards Summary</h1>
+<p>Run: {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</p>
+</div>
+<div class="content">
+
+<table>
+<tr><th>⏰ Timing Info</th><th>Details</th></tr>
+<tr><td><strong>Current Time:</strong></td><td>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</td></tr>
+<tr><td><strong>Window Started:</strong></td><td>{window_start.strftime('%Y-%m-%d %I:%M %p IST')} ({hours_since_reset}h ago)</td></tr>
+<tr><td><strong>Next Reset:</strong></td><td>{next_reset.strftime('%Y-%m-%d %I:%M %p IST')} (in {time_until_reset})</td></tr>
+</table>
+
+<table>
+<tr><th>📊 Summary</th><th>Claims</th></tr>
+<tr><td class="emoji">💰 <strong>Total Daily:</strong></td><td>{total_d} (varies per player)</td></tr>
+<tr><td class="emoji">🏪 <strong>Total Store:</strong></td><td>{total_s} / {expected_store_total} ({store_progress_pct}%) {'✅ COMPLETE' if total_s == expected_store_total else f'⚠️ {expected_store_total - total_s} remaining'}</td></tr>
+<tr><td class="emoji">🎯 <strong>Total Progression:</strong></td><td>{total_p} (grenade-dependent)</td></tr>
+<tr class="total-row"><td class="emoji">🎁 <strong>TOTAL ALL:</strong></td><td>{total_all} claims</td></tr>
+</table>
+
+<h3 style="margin-top: 30px; color: #495057;">📋 Per-Player Breakdown (This Run)</h3>
+<table>
+<tr>
+<th>ID</th>
+<th>Daily</th>
+<th>Store</th>
+<th>Progression</th>
+<th>Total</th>
+<th>Status</th>
+</tr>
+"""
         
         for r in results:
             total_player = r['daily'] + r['store'] + r['progression']
+            status_class = 'success' if r['status'] == 'Success' else 'warning'
+            store_check = ' ✅' if r['store'] == EXPECTED_STORE_PER_PLAYER else ''
             
-            if r['status'] == 'Success':
-                status_color = "#90EE90"
-            elif r['status'] == 'No Rewards':
-                status_color = "#FFE4B5"
-            else:
-                status_color = "#FFB6C1"
-            
-            row_html = f"""<tr>
-                <td>{r['player_id']}</td>
-                <td>{r['daily']}</td>
-                <td>{r['store']}{' ✅' if r['store'] == EXPECTED_STORE_PER_PLAYER else ''}</td>
-                <td>{r['progression']}</td>
-                <td><strong>{total_player}</strong></td>
-                <td style="background-color: {status_color};">{r['status']}</td>
-            </tr>"""
-            html += row_html
+            html += f"""
+<tr class="{status_class if r['status'] == 'Success' else ''}">
+<td>{r['player_id']}</td>
+<td>{r['daily']}</td>
+<td>{r['store']}{store_check}</td>
+<td>{r['progression']}</td>
+<td><strong>{total_player}</strong></td>
+<td>{r['status']}</td>
+</tr>
+"""
         
         html += f"""
-        <tr style="background-color: #e0e0e0; font-weight: bold;">
-            <td>TOTAL</td>
-            <td>{total_d}</td>
-            <td>{total_s}</td>
-            <td>{total_p}</td>
-            <td>{total_all}</td>
-            <td>{success_count}/{len(results)}</td>
-        </tr>
-        </table>
-        
-        <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;">
-            <p style="margin: 5px 0;"><strong>💡 Note:</strong></p>
-            <ul style="margin: 5px 0;">
-                <li><strong>Store Rewards:</strong> Exactly 3 per player per day (resets at 5:30 AM IST)</li>
-                <li><strong>Daily Rewards:</strong> Variable (~1 per hour, player-dependent)</li>
-                <li><strong>Progression:</strong> Unlimited (requires Grenades from Store claims)</li>
-            </ul>
-        </div>
-        
-        <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
-            🤖 Automated run at {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}
-        </p>
-        </body>
-        </html>
-        """
+<tr class="total-row">
+<td><strong>TOTAL</strong></td>
+<td><strong>{total_d}</strong></td>
+<td><strong>{total_s}</strong></td>
+<td><strong>{total_p}</strong></td>
+<td><strong>{total_all}</strong></td>
+<td><strong>{success_count}/{len(results)}</strong></td>
+</tr>
+</table>
+
+<div class="note">
+<h3>💡 Note:</h3>
+<ul>
+<li><strong>Store Rewards:</strong> Exactly 3 per player per day (resets 24h after claim)</li>
+<li><strong>Daily Rewards:</strong> Variable (~1 per hour, player-dependent)</li>
+<li><strong>Progression:</strong> Unlimited (requires Grenades from Store claims)</li>
+</ul>
+<p style="margin-top: 15px; color: #6c757d; font-size: 13px;">🤖 Automated run at {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</p>
+</div>
+
+</div>
+</div>
+</body>
+</html>
+"""
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
         msg['From'] = sender
         msg['To'] = recipient
-        
         msg.attach(MIMEText(html, 'html'))
         
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
@@ -953,21 +947,20 @@ def send_email_summary(results, num_players):
             server.send_message(msg)
         
         log("✅ Email sent")
-        
+    
     except Exception as e:
         log(f"❌ Email error: {e}")
 
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.1 (Daily Tracking)")
+    log("CS HUB AUTO-CLAIMER v2.2 (Store Timer Fix)")
     log("="*60)
     
     # Show IST tracking info
     ist_now = get_ist_time()
     window_start = get_current_daily_window_start()
     next_reset = get_next_daily_reset()
-    
     log(f"🕐 IST: {ist_now.strftime('%Y-%m-%d %I:%M %p')}")
     log(f"⏰ Next Reset: {format_time_until_reset(next_reset)}")
     log("")
@@ -1010,7 +1003,7 @@ def main():
         total = r['daily'] + r['store'] + r['progression']
         log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']}, Total={total} → {r['status']}")
     
-    # Send email with num_players parameter
+    # Send email for EVERY run (including 0 claims)
     send_email_summary(results, num_players)
     
     log("")
