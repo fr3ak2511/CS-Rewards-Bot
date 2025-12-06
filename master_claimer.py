@@ -13,7 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 PLAYER_ID_FILE = "players.csv"
 HEADLESS = True
@@ -63,98 +63,108 @@ def create_driver():
     """GitHub Actions-compatible driver with Cloudflare bypass - FIXED VERSION"""
 
     try:
-        # Create FRESH options for each attempt (critical - don't reuse)
         options = uc.ChromeOptions()
 
         if HEADLESS:
             options.add_argument("--headless=new")
 
+        # Essential arguments for CI/CD environment
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_argument("--disable-gpu")
-        options.add_argument("--disable-logging")
-        options.add_argument("--disable-notifications")
-        options.add_argument("--disable-popup-blocking")
-
-        # Stealth preferences
-        prefs = {
-            "profile.default_content_setting_values": {
-                "images": 2,
-                "notifications": 2,
-                "popups": 2,
-            }
-        }
-        options.add_experimental_option("prefs", prefs)
+        
+        # Spoof User Agent to look like a real Windows PC (Critical for Cloudflare)
+        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+        options.add_argument("--lang=en-US")
 
         # Try auto-detection first
         try:
-            driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
-            driver.set_page_load_timeout(30)
-            driver.set_script_timeout(30)
-            log("✅ Driver initialized with Cloudflare bypass")
+            driver = uc.Chrome(options=options, use_subprocess=True)
+            driver.set_page_load_timeout(45)
+            driver.set_script_timeout(45)
+            log("✅ Driver initialized")
             return driver
         except Exception as e1:
             log(f"⚠️ Auto-detect failed: {str(e1)[:100]}")
 
-            # Fallback: Try version 142 (current GitHub Actions Chrome)
+            # Fallback: Try specific version (current GitHub Actions Chrome)
             try:
-                # Create FRESH options again (critical)
+                # Create FRESH options
                 options2 = uc.ChromeOptions()
-
-                if HEADLESS:
-                    options2.add_argument("--headless=new")
-
+                if HEADLESS: options2.add_argument("--headless=new")
                 options2.add_argument("--window-size=1920,1080")
                 options2.add_argument("--no-sandbox")
                 options2.add_argument("--disable-dev-shm-usage")
-                options2.add_argument("--disable-blink-features=AutomationControlled")
-                options2.add_argument("--disable-gpu")
-                options2.add_argument("--disable-logging")
-                options2.add_argument("--disable-notifications")
-                options2.add_argument("--disable-popup-blocking")
-                options2.add_experimental_option("prefs", prefs)
+                options2.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 
                 driver = uc.Chrome(options=options2, version_main=142, use_subprocess=True)
-                driver.set_page_load_timeout(30)
-                driver.set_script_timeout(30)
                 log("✅ Driver initialized (v142)")
                 return driver
             except Exception as e2:
                 log(f"⚠️ v142 failed: {str(e2)[:100]}")
-
-                # Final fallback: Try version 131
+                
+                # Final fallback
                 try:
-                    # Create FRESH options again
                     options3 = uc.ChromeOptions()
-
-                    if HEADLESS:
-                        options3.add_argument("--headless=new")
-
-                    options3.add_argument("--window-size=1920,1080")
+                    if HEADLESS: options3.add_argument("--headless=new")
                     options3.add_argument("--no-sandbox")
                     options3.add_argument("--disable-dev-shm-usage")
-                    options3.add_argument("--disable-blink-features=AutomationControlled")
-                    options3.add_argument("--disable-gpu")
-                    options3.add_argument("--disable-logging")
-                    options3.add_argument("--disable-notifications")
-                    options3.add_argument("--disable-popup-blocking")
-                    options3.add_experimental_option("prefs", prefs)
-
                     driver = uc.Chrome(options=options3, version_main=131, use_subprocess=True)
-                    driver.set_page_load_timeout(30)
-                    driver.set_script_timeout(30)
                     log("✅ Driver initialized (v131)")
                     return driver
                 except Exception as e3:
-                    log(f"❌ All driver init attempts failed")
-                    raise Exception(f"Driver init failed: {str(e3)[:200]}")
+                    raise Exception(f"All driver attempts failed: {e3}")
 
     except Exception as e:
         log(f"❌ Driver creation error: {e}")
         raise
 
+def bypass_cloudflare(driver):
+    """Specifically handle the 'Verifying you are human' screen"""
+    try:
+        time.sleep(2)
+        title = driver.title.lower()
+        source = driver.page_source.lower()
+        
+        # Check if we are on a challenge page
+        if "just a moment" in title or "verifying" in source or "hub.vertigogames.co" in title:
+            log("🛡️ Cloudflare Challenge detected. Attempting bypass...")
+            
+            # Wait a bit for the automatic JS check
+            time.sleep(5)
+            
+            # Check if we got through just by waiting
+            if "daily rewards" in driver.title.lower() or "login" in driver.page_source.lower():
+                log("✅ Passed Cloudflare (Automatic)")
+                return True
+
+            # Look for the Turnstile/Challenge checkbox
+            # Usually inside a Shadow DOM or iframe
+            try:
+                # Try locating the checkbox directly (common in Turnstile)
+                checkbox = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
+                if checkbox:
+                    checkbox[0].click()
+                    log("✅ Clicked Verification Checkbox")
+                    time.sleep(3)
+            except:
+                pass
+            
+            # Wait up to 15 seconds for redirect
+            for _ in range(15):
+                if "daily-rewards" in driver.current_url or "hub.vertigogames.co" in driver.current_url:
+                    # If the page source has changed significantly
+                    if "verifying" not in driver.page_source.lower():
+                        log("✅ Cloudflare cleared")
+                        return True
+                time.sleep(1)
+                
+            log("⚠️ Warning: Might still be on Cloudflare page")
+            driver.save_screenshot("cloudflare_debug.png")
+            
+    except Exception as e:
+        log(f"ℹ️ Cloudflare check error (ignorable): {e}")
 
 def accept_cookies(driver):
     """Accept cookie banner"""
@@ -178,7 +188,12 @@ def login_to_hub(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        time.sleep(0.4)
+        
+        # --- NEW: Run Cloudflare Bypass immediately ---
+        bypass_cloudflare(driver)
+        # ----------------------------------------------
+
+        time.sleep(1)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
         
         accept_cookies(driver)
@@ -332,8 +347,8 @@ def login_to_hub(driver, player_id):
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
-        log("Checking for popup...")
-        time.sleep(0.8)
+        # log("Checking for popup...") # Reduced verbosity
+        time.sleep(0.5)
         
         popup_selectors = [
             "//div[contains(@class, 'modal') and not(contains(@style, 'display: none'))]",
@@ -349,13 +364,12 @@ def close_popup(driver):
                 visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
                 if visible_popups:
                     popup_found = True
-                    log(f"✓ Popup detected")
+                    # log(f"✓ Popup detected")
                     break
             except:
                 continue
         
         if not popup_found:
-            log("No popup detected")
             return True
         
         # METHOD 1: Continue button
@@ -375,23 +389,9 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
                     
-                    log("✓ Continue clicked")
+                    # log("✓ Continue clicked")
                     time.sleep(0.8)
-                    
-                    popup_still_visible = False
-                    for ps in popup_selectors:
-                        try:
-                            popup_elements = driver.find_elements(By.XPATH, ps)
-                            if any(elem.is_displayed() for elem in popup_elements):
-                                popup_still_visible = True
-                                break
-                        except:
-                            continue
-                    
-                    if not popup_still_visible:
-                        log("✅ Popup closed via Continue")
-                        return True
-                    break
+                    return True
             except:
                 continue
         
@@ -416,23 +416,9 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
                     
-                    log("✓ Close clicked")
+                    # log("✓ Close clicked")
                     time.sleep(0.8)
-                    
-                    popup_still_visible = False
-                    for ps in popup_selectors:
-                        try:
-                            popup_elements = driver.find_elements(By.XPATH, ps)
-                            if any(elem.is_displayed() for elem in popup_elements):
-                                popup_still_visible = True
-                                break
-                        except:
-                            continue
-                    
-                    if not popup_still_visible:
-                        log("✅ Popup closed via Close button")
-                        return True
-                    break
+                    return True
             except:
                 continue
         
@@ -440,16 +426,15 @@ def close_popup(driver):
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
-            log("✓ ESC pressed")
+            # log("✓ ESC pressed")
             return True
         except:
             pass
         
-        log("⚠️  Popup may still be visible")
         return False
         
     except Exception as e:
-        log(f"❌ Popup close error: {e}")
+        # log(f"❌ Popup close error: {e}")
         return False
 
 def ensure_store_page(driver):
@@ -547,6 +532,7 @@ def claim_daily_rewards(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
+        bypass_cloudflare(driver) # Check here too
         time.sleep(1.5)
         
         for _ in range(2):
@@ -592,6 +578,7 @@ def claim_store_rewards(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/store")
+        bypass_cloudflare(driver)
         time.sleep(2)
         
         for _ in range(2):
@@ -718,6 +705,7 @@ def claim_progression_program_rewards(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
+        bypass_cloudflare(driver)
         time.sleep(2)
         
         for _ in range(2):
@@ -824,7 +812,6 @@ def process_player(player_id):
         log(f"{'='*60}")
         
         driver = create_driver()
-        log("✅ Driver ready")
         
         if not login_to_hub(driver, player_id):
             stats['status'] = "Login Failed"
@@ -1005,7 +992,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.1 (Daily Tracking)")
+    log("CS HUB AUTO-CLAIMER v2.2 (Cloudflare Fix)")
     log("="*60)
     
     # Show IST tracking info
