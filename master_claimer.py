@@ -5,8 +5,8 @@ import smtplib
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import undetected_chromedriver as uc
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -14,7 +14,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from webdriver_manager.chrome import ChromeDriverManager
 
 PLAYER_ID_FILE = "players.csv"
 HEADLESS = True
@@ -61,55 +60,51 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
-    """GitHub Actions-compatible driver"""
-    options = Options()
-    
+    """GitHub Actions-compatible driver with Cloudflare bypass"""
+    options = uc.ChromeOptions()
+
     if HEADLESS:
         options.add_argument("--headless=new")
-        options.add_argument("--window-size=1920,1080")
-    
-    options.add_argument("--incognito")
-    options.add_argument("--start-maximized")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-infobars")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--disable-dev-shm-usage")
+
+    options.add_argument("--window-size=1920,1080")
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-logging")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--disable-gpu")
-    options.add_argument("--disable-web-security")
-    options.add_argument("--disable-popup-blocking")
+    options.add_argument("--disable-logging")
     options.add_argument("--disable-notifications")
-    options.add_argument("--disable-default-apps")
-    options.add_argument("--disable-features=VizDisplayCompositor")
-    options.add_argument("--disable-background-timer-throttling")
-    options.add_argument("--disable-renderer-backgrounding")
-    options.add_argument("--disable-backgrounding-occluded-windows")
-    
+    options.add_argument("--disable-popup-blocking")
+
+    # Stealth preferences
     prefs = {
         "profile.default_content_setting_values": {
             "images": 2,
             "notifications": 2,
             "popups": 2,
-        },
-        "profile.default_content_settings.popups": 0,
-        "profile.managed_default_content_settings.popups": 0,
+        }
     }
     options.add_experimental_option("prefs", prefs)
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
-    
+
     try:
-        driver_path = ChromeDriverManager().install()
-    except:
-        driver_path = "/usr/bin/chromedriver"
-    
-    service = Service(driver_path)
-    driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(30)
-    driver.set_script_timeout(30)
-    
-    return driver
+        # Use undetected-chromedriver with auto-detection
+        driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
+        driver.set_page_load_timeout(30)
+        driver.set_script_timeout(30)
+        log("✅ Driver initialized with Cloudflare bypass")
+        return driver
+    except Exception as e:
+        log(f"⚠️ UC driver failed: {e}, trying fallback...")
+        # Fallback to specific version
+        try:
+            driver = uc.Chrome(options=options, version_main=131, use_subprocess=True)
+            driver.set_page_load_timeout(30)
+            driver.set_script_timeout(30)
+            log("✅ Driver initialized (v131)")
+            return driver
+        except Exception as e2:
+            log(f"❌ Driver init failed: {e2}")
+            raise
+
 
 def accept_cookies(driver):
     """Accept cookie banner"""
