@@ -140,7 +140,9 @@ def bypass_cloudflare(driver):
                 return True
 
             # Look for the Turnstile/Challenge checkbox
+            # Usually inside a Shadow DOM or iframe
             try:
+                # Try locating the checkbox directly (common in Turnstile)
                 checkbox = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
                 if checkbox:
                     checkbox[0].click()
@@ -152,12 +154,14 @@ def bypass_cloudflare(driver):
             # Wait up to 15 seconds for redirect
             for _ in range(15):
                 if "daily-rewards" in driver.current_url or "hub.vertigogames.co" in driver.current_url:
+                    # If the page source has changed significantly
                     if "verifying" not in driver.page_source.lower():
                         log("✅ Cloudflare cleared")
                         return True
                 time.sleep(1)
                 
             log("⚠️ Warning: Might still be on Cloudflare page")
+            driver.save_screenshot("cloudflare_debug.png")
             
     except Exception as e:
         log(f"ℹ️ Cloudflare check error (ignorable): {e}")
@@ -185,7 +189,9 @@ def login_to_hub(driver, player_id):
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         
+        # --- NEW: Run Cloudflare Bypass immediately ---
         bypass_cloudflare(driver)
+        # ----------------------------------------------
 
         time.sleep(1)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
@@ -341,6 +347,7 @@ def login_to_hub(driver, player_id):
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
+        # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
         
         popup_selectors = [
@@ -357,6 +364,7 @@ def close_popup(driver):
                 visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
                 if visible_popups:
                     popup_found = True
+                    # log(f"✓ Popup detected")
                     break
             except:
                 continue
@@ -381,6 +389,7 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
                     
+                    # log("✓ Continue clicked")
                     time.sleep(0.8)
                     return True
             except:
@@ -407,6 +416,7 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
                     
+                    # log("✓ Close clicked")
                     time.sleep(0.8)
                     return True
             except:
@@ -416,6 +426,7 @@ def close_popup(driver):
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
+            # log("✓ ESC pressed")
             return True
         except:
             pass
@@ -423,6 +434,7 @@ def close_popup(driver):
         return False
         
     except Exception as e:
+        # log(f"❌ Popup close error: {e}")
         return False
 
 def ensure_store_page(driver):
@@ -520,7 +532,7 @@ def claim_daily_rewards(driver, player_id):
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        bypass_cloudflare(driver)
+        bypass_cloudflare(driver) # Check here too
         time.sleep(1.5)
         
         for _ in range(2):
@@ -559,7 +571,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - FIXED TIMER CHECK"""
+    """Claim Store Daily Rewards - ONLY green available buttons"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -593,56 +605,55 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # Find and click ONLY buttons that are NOT timers
+            # Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
             result = driver.execute_script("""
-                // Helper to check for timers in parent hierarchy
-                function hasTimerInParents(element) {
-                    let p = element.parentElement;
-                    // Check up to 4 levels up
-                    for(let i=0; i<4; i++) {
-                        if (p) {
-                            let text = (p.innerText || '').toLowerCase();
-                            // STRICT CHECK FOR TIMER TEXT
-                            if (text.includes('next in') || text.match(/\\d+h\\s+\\d+m/)) {
-                                return true;
-                            }
-                            p = p.parentElement;
-                        }
-                    }
-                    return false;
-                }
-
-                let allButtons = document.querySelectorAll('button');
+                // Find Store Bonus cards
+                let allDivs = document.querySelectorAll('div');
+                let storeBonusCards = [];
                 
-                for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    
-                    if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
-                        
-                        // Check if this is a "Store Bonus" area
-                        let isStoreBonus = false;
-                        let p = btn.parentElement;
-                        for(let i=0; i<5; i++) {
-                            if (p && (p.innerText || '').includes('Store Bonus')) {
-                                isStoreBonus = true;
+                for (let div of allDivs) {
+                    let text = div.innerText || '';
+                    if (text.includes('Store Bonus') && text.includes('+1')) {
+                        let parent = div.parentElement;
+                        let attempts = 0;
+                        while (parent && attempts < 5) {
+                            let parentText = parent.innerText || '';
+                            if (parentText.includes('Gold (Daily)') || 
+                                parentText.includes('Cash (Daily)') || 
+                                parentText.includes('Luckyloon (Daily)')) {
+                                storeBonusCards.push(parent);
                                 break;
                             }
-                            if(p) p = p.parentElement;
+                            parent = parent.parentElement;
+                            attempts++;
                         }
+                    }
+                }
+                
+                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
+                
+                // Find buttons with "Claim" text (NO timer)
+                for (let card of storeBonusCards) {
+                    let cardText = card.innerText || '';
+                    
+                    // SKIP cards with timer
+                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                        console.log('⏭️  Skipping card with timer');
+                        continue;
+                    }
+                    
+                    // Find button
+                    let buttons = card.querySelectorAll('button');
+                    
+                    for (let btn of buttons) {
+                        let btnText = btn.innerText.trim().toLowerCase();
                         
-                        if (isStoreBonus) {
-                            // NOW CHECK FOR TIMER
-                            if (hasTimerInParents(btn)) {
-                                console.log('⏭️ Skipping button (Timer detected in parent)');
-                                continue;
-                            }
-
-                            // If we get here, it's a valid claim button
+                        if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                             
                             setTimeout(function() {
                                 btn.click();
-                                console.log('✅ Clicked Valid Claim button');
+                                console.log('✅ Clicked GREEN Claim button');
                             }, 500);
                             
                             return true;
@@ -650,7 +661,7 @@ def claim_store_rewards(driver, player_id):
                     }
                 }
                 
-                console.log('No valid claim buttons found');
+                console.log('No more available claim buttons found');
                 return false;
             """)
             
@@ -981,7 +992,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.3 (Timer Fix)")
+    log("CS HUB AUTO-CLAIMER v2.2 (Cloudflare Fix)")
     log("="*60)
     
     # Show IST tracking info
