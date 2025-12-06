@@ -60,50 +60,100 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
-    """GitHub Actions-compatible driver with Cloudflare bypass"""
-    options = uc.ChromeOptions()
-
-    if HEADLESS:
-        options.add_argument("--headless=new")
-
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--disable-logging")
-    options.add_argument("--disable-notifications")
-    options.add_argument("--disable-popup-blocking")
-
-    # Stealth preferences
-    prefs = {
-        "profile.default_content_setting_values": {
-            "images": 2,
-            "notifications": 2,
-            "popups": 2,
-        }
-    }
-    options.add_experimental_option("prefs", prefs)
+    """GitHub Actions-compatible driver with Cloudflare bypass - FIXED VERSION"""
 
     try:
-        # Use undetected-chromedriver with auto-detection
-        driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
-        driver.set_page_load_timeout(30)
-        driver.set_script_timeout(30)
-        log("✅ Driver initialized with Cloudflare bypass")
-        return driver
-    except Exception as e:
-        log(f"⚠️ UC driver failed: {e}, trying fallback...")
-        # Fallback to specific version
+        # Create FRESH options for each attempt (critical - don't reuse)
+        options = uc.ChromeOptions()
+
+        if HEADLESS:
+            options.add_argument("--headless=new")
+
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-logging")
+        options.add_argument("--disable-notifications")
+        options.add_argument("--disable-popup-blocking")
+
+        # Stealth preferences
+        prefs = {
+            "profile.default_content_setting_values": {
+                "images": 2,
+                "notifications": 2,
+                "popups": 2,
+            }
+        }
+        options.add_experimental_option("prefs", prefs)
+
+        # Try auto-detection first
         try:
-            driver = uc.Chrome(options=options, version_main=131, use_subprocess=True)
+            driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
-            log("✅ Driver initialized (v131)")
+            log("✅ Driver initialized with Cloudflare bypass")
             return driver
-        except Exception as e2:
-            log(f"❌ Driver init failed: {e2}")
-            raise
+        except Exception as e1:
+            log(f"⚠️ Auto-detect failed: {str(e1)[:100]}")
+
+            # Fallback: Try version 142 (current GitHub Actions Chrome)
+            try:
+                # Create FRESH options again (critical)
+                options2 = uc.ChromeOptions()
+
+                if HEADLESS:
+                    options2.add_argument("--headless=new")
+
+                options2.add_argument("--window-size=1920,1080")
+                options2.add_argument("--no-sandbox")
+                options2.add_argument("--disable-dev-shm-usage")
+                options2.add_argument("--disable-blink-features=AutomationControlled")
+                options2.add_argument("--disable-gpu")
+                options2.add_argument("--disable-logging")
+                options2.add_argument("--disable-notifications")
+                options2.add_argument("--disable-popup-blocking")
+                options2.add_experimental_option("prefs", prefs)
+
+                driver = uc.Chrome(options=options2, version_main=142, use_subprocess=True)
+                driver.set_page_load_timeout(30)
+                driver.set_script_timeout(30)
+                log("✅ Driver initialized (v142)")
+                return driver
+            except Exception as e2:
+                log(f"⚠️ v142 failed: {str(e2)[:100]}")
+
+                # Final fallback: Try version 131
+                try:
+                    # Create FRESH options again
+                    options3 = uc.ChromeOptions()
+
+                    if HEADLESS:
+                        options3.add_argument("--headless=new")
+
+                    options3.add_argument("--window-size=1920,1080")
+                    options3.add_argument("--no-sandbox")
+                    options3.add_argument("--disable-dev-shm-usage")
+                    options3.add_argument("--disable-blink-features=AutomationControlled")
+                    options3.add_argument("--disable-gpu")
+                    options3.add_argument("--disable-logging")
+                    options3.add_argument("--disable-notifications")
+                    options3.add_argument("--disable-popup-blocking")
+                    options3.add_experimental_option("prefs", prefs)
+
+                    driver = uc.Chrome(options=options3, version_main=131, use_subprocess=True)
+                    driver.set_page_load_timeout(30)
+                    driver.set_script_timeout(30)
+                    log("✅ Driver initialized (v131)")
+                    return driver
+                except Exception as e3:
+                    log(f"❌ All driver init attempts failed")
+                    raise Exception(f"Driver init failed: {str(e3)[:200]}")
+
+    except Exception as e:
+        log(f"❌ Driver creation error: {e}")
+        raise
 
 
 def accept_cookies(driver):
