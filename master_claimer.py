@@ -140,9 +140,7 @@ def bypass_cloudflare(driver):
                 return True
 
             # Look for the Turnstile/Challenge checkbox
-            # Usually inside a Shadow DOM or iframe
             try:
-                # Try locating the checkbox directly (common in Turnstile)
                 checkbox = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
                 if checkbox:
                     checkbox[0].click()
@@ -154,14 +152,12 @@ def bypass_cloudflare(driver):
             # Wait up to 15 seconds for redirect
             for _ in range(15):
                 if "daily-rewards" in driver.current_url or "hub.vertigogames.co" in driver.current_url:
-                    # If the page source has changed significantly
                     if "verifying" not in driver.page_source.lower():
                         log("✅ Cloudflare cleared")
                         return True
                 time.sleep(1)
                 
             log("⚠️ Warning: Might still be on Cloudflare page")
-            driver.save_screenshot("cloudflare_debug.png")
             
     except Exception as e:
         log(f"ℹ️ Cloudflare check error (ignorable): {e}")
@@ -189,9 +185,7 @@ def login_to_hub(driver, player_id):
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         
-        # --- NEW: Run Cloudflare Bypass immediately ---
         bypass_cloudflare(driver)
-        # ----------------------------------------------
 
         time.sleep(1)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
@@ -347,7 +341,6 @@ def login_to_hub(driver, player_id):
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
-        # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
         
         popup_selectors = [
@@ -364,7 +357,6 @@ def close_popup(driver):
                 visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
                 if visible_popups:
                     popup_found = True
-                    # log(f"✓ Popup detected")
                     break
             except:
                 continue
@@ -389,7 +381,6 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
                     
-                    # log("✓ Continue clicked")
                     time.sleep(0.8)
                     return True
             except:
@@ -416,7 +407,6 @@ def close_popup(driver):
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
                     
-                    # log("✓ Close clicked")
                     time.sleep(0.8)
                     return True
             except:
@@ -426,7 +416,6 @@ def close_popup(driver):
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
-            # log("✓ ESC pressed")
             return True
         except:
             pass
@@ -434,7 +423,6 @@ def close_popup(driver):
         return False
         
     except Exception as e:
-        # log(f"❌ Popup close error: {e}")
         return False
 
 def ensure_store_page(driver):
@@ -527,526 +515,4 @@ def navigate_to_daily_rewards_section_store(driver):
 
 def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page"""
-    log("🎁 Claiming Daily Rewards...")
-    claimed = 0
-    
-    try:
-        driver.get("https://hub.vertigogames.co/daily-rewards")
-        bypass_cloudflare(driver) # Check here too
-        time.sleep(1.5)
-        
-        for _ in range(2):
-            close_popup(driver)
-        
-        for attempt in range(10):
-            result = driver.execute_script("""
-                let buttons = document.querySelectorAll('button');
-                for (let btn of buttons) {
-                    let text = btn.innerText.trim().toLowerCase();
-                    if (text === 'claim' && btn.offsetParent !== null) {
-                        if (!btn.innerText.toLowerCase().includes('buy') && 
-                            !btn.innerText.toLowerCase().includes('purchase')) {
-                            btn.click();
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            """)
-            
-            if result:
-                log(f"✅ Daily #{claimed + 1}")
-                claimed += 1
-                time.sleep(1.5)
-                close_popup(driver)
-            else:
-                log("ℹ️  No more daily rewards")
-                break
-        
-        driver.save_screenshot(f"daily_final_{player_id}.png")
-        
-    except Exception as e:
-        log(f"❌ Daily error: {e}")
-    
-    return claimed
-
-def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - ONLY green available buttons"""
-    log("🏪 Claiming Store...")
-    claimed = 0
-    max_claims = 3
-    
-    try:
-        driver.get("https://hub.vertigogames.co/store")
-        bypass_cloudflare(driver)
-        time.sleep(2)
-        
-        for _ in range(2):
-            close_popup(driver)
-        
-        if not ensure_store_page(driver):
-            log("❌ Cannot access Store")
-            return 0
-        
-        if not navigate_to_daily_rewards_section_store(driver):
-            log("⚠️  Navigation failed")
-        
-        time.sleep(0.5)
-        driver.save_screenshot(f"store_01_ready_{player_id}.png")
-        
-        # Claim loop
-        for attempt in range(max_claims):
-            log(f"\n--- Store Claim Attempt {attempt + 1}/{max_claims} ---")
-            
-            if attempt > 0:
-                log("Re-navigating to Daily Rewards section...")
-                if not navigate_to_daily_rewards_section_store(driver):
-                    log("⚠️  Re-navigation failed")
-                    break
-                time.sleep(0.5)
-            
-            # Find and click ONLY green "Claim" buttons (SKIP buttons with timers)
-            result = driver.execute_script("""
-                // Find Store Bonus cards
-                let allDivs = document.querySelectorAll('div');
-                let storeBonusCards = [];
-                
-                for (let div of allDivs) {
-                    let text = div.innerText || '';
-                    if (text.includes('Store Bonus') && text.includes('+1')) {
-                        let parent = div.parentElement;
-                        let attempts = 0;
-                        while (parent && attempts < 5) {
-                            let parentText = parent.innerText || '';
-                            if (parentText.includes('Gold (Daily)') || 
-                                parentText.includes('Cash (Daily)') || 
-                                parentText.includes('Luckyloon (Daily)')) {
-                                storeBonusCards.push(parent);
-                                break;
-                            }
-                            parent = parent.parentElement;
-                            attempts++;
-                        }
-                    }
-                }
-                
-                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
-                
-                // Find buttons with "Claim" text (NO timer)
-                for (let card of storeBonusCards) {
-                    let cardText = card.innerText || '';
-                    
-                    // SKIP cards with timer
-                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                        console.log('⏭️  Skipping card with timer');
-                        continue;
-                    }
-                    
-                    // Find button
-                    let buttons = card.querySelectorAll('button');
-                    
-                    for (let btn of buttons) {
-                        let btnText = btn.innerText.trim().toLowerCase();
-                        
-                        if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
-                            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            
-                            setTimeout(function() {
-                                btn.click();
-                                console.log('✅ Clicked GREEN Claim button');
-                            }, 500);
-                            
-                            return true;
-                        }
-                    }
-                }
-                
-                console.log('No more available claim buttons found');
-                return false;
-            """)
-            
-            if result:
-                log(f"✅ Store Claim #{claimed + 1} SUCCESS")
-                claimed += 1
-                time.sleep(1.5)
-                
-                log("Handling post-claim popup...")
-                close_popup(driver)
-                time.sleep(0.5)
-                
-                if not ensure_store_page(driver):
-                    log("⚠️  Lost Store page")
-                    break
-                
-                time.sleep(0.3)
-            else:
-                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
-                break
-        
-        log(f"\n{'='*60}")
-        log(f"Store Claims Complete: {claimed}/{max_claims}")
-        log(f"{'='*60}")
-        
-        driver.save_screenshot(f"store_final_{player_id}.png")
-        
-    except Exception as e:
-        log(f"❌ Store error: {e}")
-        try:
-            driver.save_screenshot(f"store_error_{player_id}.png")
-        except:
-            pass
-    
-    return claimed
-
-def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - FIXED VERSION"""
-    log("🎯 Claiming Progression Program...")
-    claimed = 0
-    
-    try:
-        driver.get("https://hub.vertigogames.co/progression-program")
-        bypass_cloudflare(driver)
-        time.sleep(2)
-        
-        for _ in range(2):
-            close_popup(driver)
-        
-        time.sleep(0.5)
-        driver.save_screenshot(f"progression_01_ready_{player_id}.png")
-        
-        max_attempts = 8
-        for attempt in range(max_attempts):
-            log(f"\n--- Progression Claim Attempt {attempt + 1}/{max_attempts} ---")
-            
-            result = driver.execute_script("""
-                let allButtons = document.querySelectorAll('button');
-                let claimButtons = [];
-                
-                for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    
-                    if (btnText === 'claim') {
-                        if (btn.offsetParent !== null && !btn.disabled) {
-                            let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
-                            
-                            if (!parentText.includes('Delivered')) {
-                                claimButtons.push(btn);
-                            }
-                        }
-                    }
-                }
-                
-                console.log('Found ' + claimButtons.length + ' claim buttons');
-                
-                if (claimButtons.length > 0) {
-                    let btn = claimButtons[0];
-                    btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                    
-                    setTimeout(function() {
-                        btn.click();
-                        console.log('✅ Clicked Progression Claim button');
-                    }, 600);
-                    
-                    return true;
-                }
-                
-                console.log('No more claim buttons found');
-                return false;
-            """)
-            
-            if result:
-                log(f"✅ Progression Claim #{claimed + 1} SUCCESS")
-                claimed += 1
-                time.sleep(1.5)
-                
-                log("Handling post-claim popup...")
-                close_popup(driver)
-                time.sleep(0.5)
-            else:
-                log(f"ℹ️  No more claim buttons (attempt {attempt + 1})")
-                
-                if attempt < max_attempts - 1:
-                    log("Scrolling horizontally...")
-                    try:
-                        driver.execute_script("""
-                            let containers = document.querySelectorAll('div');
-                            for (let container of containers) {
-                                if (container.scrollWidth > container.clientWidth) {
-                                    container.scrollLeft += 400;
-                                    console.log('Scrolled right');
-                                    break;
-                                }
-                            }
-                        """)
-                        log("✓ Scrolled right")
-                        time.sleep(1)
-                    except:
-                        log("⚠️  Scroll failed")
-                        break
-                else:
-                    break
-        
-        log(f"\n{'='*60}")
-        log(f"Progression Claims Complete: {claimed}")
-        log(f"{'='*60}")
-        
-        driver.save_screenshot(f"progression_final_{player_id}.png")
-        
-    except Exception as e:
-        log(f"❌ Progression error: {e}")
-        try:
-            driver.save_screenshot(f"progression_error_{player_id}.png")
-        except:
-            pass
-    
-    return claimed
-
-def process_player(player_id):
-    """Process single player - ALL reward pages IN CORRECT ORDER"""
-    driver = None
-    stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
-    
-    try:
-        log(f"\n{'='*60}")
-        log(f"🚀 {player_id}")
-        log(f"{'='*60}")
-        
-        driver = create_driver()
-        
-        if not login_to_hub(driver, player_id):
-            stats['status'] = "Login Failed"
-            return stats
-        
-        # CORRECT ORDER: Daily → Store (earn grenades) → Progression (use grenades)
-        stats['daily'] = claim_daily_rewards(driver, player_id)
-        stats['store'] = claim_store_rewards(driver, player_id)
-        stats['progression'] = claim_progression_program_rewards(driver, player_id)
-        
-        total = stats['daily'] + stats['store'] + stats['progression']
-        
-        if total > 0:
-            stats['status'] = "Success"
-            log(f"🎉 Total: {total} (D:{stats['daily']} S:{stats['store']} P:{stats['progression']})")
-        else:
-            stats['status'] = "No Rewards"
-            log("⚠️  None claimed")
-        
-    except Exception as e:
-        log(f"❌ Error: {e}")
-        stats['status'] = "Error"
-    finally:
-        if driver:
-            try:
-                driver.quit()
-            except:
-                pass
-    
-    return stats
-
-def send_email_summary(results, num_players):
-    """Send email with daily tracking stats"""
-    try:
-        sender = os.environ.get("SENDER_EMAIL")
-        recipient = os.environ.get("RECIPIENT_EMAIL")
-        password = os.environ.get("GMAIL_APP_PASSWORD")
-        
-        if not all([sender, recipient, password]):
-            log("⚠️  Email env vars missing")
-            return
-        
-        # Calculate totals
-        total_d = sum(r['daily'] for r in results)
-        total_s = sum(r['store'] for r in results)
-        total_p = sum(r['progression'] for r in results)
-        total_all = total_d + total_s + total_p
-        
-        success_count = sum(1 for r in results if r['status'] == 'Success')
-        
-        # Daily tracking calculations
-        expected_store_total = num_players * EXPECTED_STORE_PER_PLAYER
-        store_progress_pct = int((total_s / expected_store_total) * 100) if expected_store_total > 0 else 0
-        
-        # Time calculations
-        ist_now = get_ist_time()
-        window_start = get_current_daily_window_start()
-        next_reset = get_next_daily_reset()
-        time_until_reset = format_time_until_reset(next_reset)
-        hours_since_reset = int((ist_now - window_start).total_seconds() // 3600)
-        
-        # Build enhanced HTML email
-        html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif;">
-        <h2>🎮 Hub Rewards Summary</h2>
-        
-        <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📊 Daily Window Tracking (5:30 AM IST Reset)</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 5px;"><strong>Current Time:</strong></td>
-                    <td>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>Window Started:</strong></td>
-                    <td>{window_start.strftime('%Y-%m-%d %I:%M %p IST')} ({hours_since_reset}h ago)</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>Next Reset:</strong></td>
-                    <td>{next_reset.strftime('%Y-%m-%d %I:%M %p IST')} (in {time_until_reset})</td>
-                </tr>
-            </table>
-        </div>
-        
-        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📈 Today's Cumulative Stats (Since 5:30 AM)</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 5px;"><strong>💰 Total Daily:</strong></td>
-                    <td><strong>{total_d}</strong> (varies per player)</td>
-                </tr>
-                <tr style="background-color: {'#d4edda' if total_s == expected_store_total else '#fff3cd'};">
-                    <td style="padding: 5px;"><strong>🏪 Total Store:</strong></td>
-                    <td><strong>{total_s} / {expected_store_total}</strong> ({store_progress_pct}%) {'✅ COMPLETE' if total_s == expected_store_total else f'⚠️ {expected_store_total - total_s} remaining'}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px;"><strong>🎯 Total Progression:</strong></td>
-                    <td><strong>{total_p}</strong> (grenade-dependent)</td>
-                </tr>
-                <tr style="background-color: #e7f3ff;">
-                    <td style="padding: 5px;"><strong>🎁 TOTAL ALL:</strong></td>
-                    <td><strong style="font-size: 1.2em;">{total_all}</strong> claims</td>
-                </tr>
-            </table>
-        </div>
-        
-        <h3>👥 Per-Player Breakdown (This Run)</h3>
-        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-        <tr style="background-color: #f0f0f0;">
-            <th>ID</th><th>Daily</th><th>Store</th><th>Progression</th><th>Total</th><th>Status</th>
-        </tr>
-        """
-        
-        for r in results:
-            total_player = r['daily'] + r['store'] + r['progression']
-            
-            if r['status'] == 'Success':
-                status_color = "#90EE90"
-            elif r['status'] == 'No Rewards':
-                status_color = "#FFE4B5"
-            else:
-                status_color = "#FFB6C1"
-            
-            row_html = f"""<tr>
-                <td>{r['player_id']}</td>
-                <td>{r['daily']}</td>
-                <td>{r['store']}{' ✅' if r['store'] == EXPECTED_STORE_PER_PLAYER else ''}</td>
-                <td>{r['progression']}</td>
-                <td><strong>{total_player}</strong></td>
-                <td style="background-color: {status_color};">{r['status']}</td>
-            </tr>"""
-            html += row_html
-        
-        html += f"""
-        <tr style="background-color: #e0e0e0; font-weight: bold;">
-            <td>TOTAL</td>
-            <td>{total_d}</td>
-            <td>{total_s}</td>
-            <td>{total_p}</td>
-            <td>{total_all}</td>
-            <td>{success_count}/{len(results)}</td>
-        </tr>
-        </table>
-        
-        <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;">
-            <p style="margin: 5px 0;"><strong>💡 Note:</strong></p>
-            <ul style="margin: 5px 0;">
-                <li><strong>Store Rewards:</strong> Exactly 3 per player per day (resets at 5:30 AM IST)</li>
-                <li><strong>Daily Rewards:</strong> Variable (~1 per hour, player-dependent)</li>
-                <li><strong>Progression:</strong> Unlimited (requires Grenades from Store claims)</li>
-            </ul>
-        </div>
-        
-        <p style="margin-top: 20px; color: #666; font-size: 0.9em;">
-            🤖 Automated run at {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}
-        </p>
-        </body>
-        </html>
-        """
-        
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
-        msg['From'] = sender
-        msg['To'] = recipient
-        
-        msg.attach(MIMEText(html, 'html'))
-        
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender, password)
-            server.send_message(msg)
-        
-        log("✅ Email sent")
-        
-    except Exception as e:
-        log(f"❌ Email error: {e}")
-
-def main():
-    """Main orchestrator"""
-    log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2 (Cloudflare Fix)")
-    log("="*60)
-    
-    # Show IST tracking info
-    ist_now = get_ist_time()
-    window_start = get_current_daily_window_start()
-    next_reset = get_next_daily_reset()
-    
-    log(f"🕐 IST: {ist_now.strftime('%Y-%m-%d %I:%M %p')}")
-    log(f"⏰ Next Reset: {format_time_until_reset(next_reset)}")
-    log("")
-    
-    # Read players
-    players = []
-    try:
-        with open(PLAYER_ID_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            players = [row['player_id'].strip() for row in reader if row['player_id'].strip()]
-    except Exception as e:
-        log(f"❌ Cannot read {PLAYER_ID_FILE}: {e}")
-        return
-    
-    num_players = len(players)
-    log(f"📋 {num_players} player(s)")
-    log("")
-    
-    results = []
-    
-    # Process each player
-    for player_id in players:
-        stats = process_player(player_id)
-        results.append(stats)
-        time.sleep(3)
-    
-    # Final summary
-    log("")
-    log("="*60)
-    log("FINAL SUMMARY")
-    log("="*60)
-    
-    total_d = sum(r['daily'] for r in results)
-    total_s = sum(r['store'] for r in results)
-    total_p = sum(r['progression'] for r in results)
-    
-    log(f"Daily: {total_d}, Store: {total_s}/{num_players * EXPECTED_STORE_PER_PLAYER}, Progression: {total_p}")
-    
-    for r in results:
-        total = r['daily'] + r['store'] + r['progression']
-        log(f"{r['player_id']}: D={r['daily']}, S={r['store']}, P={r['progression']}, Total={total} → {r['status']}")
-    
-    # Send email with num_players parameter
-    send_email_summary(results, num_players)
-    
-    log("")
-    log("🏁 Done!")
-
-if __name__ == "__main__":
-    main()
+  
