@@ -91,8 +91,9 @@ def create_driver():
             }
             options.add_experimental_option("prefs", prefs)
 
-            # version_main=None allows uc to find the installed Chrome (v144) and download matching driver
-            driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
+            # FORCE Version 144 to match the GitHub Runner's browser
+            driver = uc.Chrome(options=options, version_main=144, use_subprocess=True)
+            
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
             log("✅ Driver initialized")
@@ -979,7 +980,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.5 (Chrome 144 Fix)")
+    log("CS HUB AUTO-CLAIMER v2.6 (Chrome 144 Forced)")
     log("="*60)
     
     # Show IST tracking info
