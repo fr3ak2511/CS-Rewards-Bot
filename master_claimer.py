@@ -60,65 +60,52 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
-    """GitHub Actions-compatible driver with Cloudflare bypass - FIXED VERSION"""
-
-    try:
-        options = uc.ChromeOptions()
-
-        if HEADLESS:
-            options.add_argument("--headless=new")
-
-        # Essential arguments for CI/CD environment
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        
-        # Spoof User Agent to look like a real Windows PC (Critical for Cloudflare)
-        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-        options.add_argument("--lang=en-US")
-
-        # Try auto-detection first
+    """GitHub Actions-compatible driver with Cloudflare bypass - FIXED FOR CHROME 144"""
+    
+    # Attempt to initialize driver up to 3 times
+    for attempt in range(3):
         try:
-            driver = uc.Chrome(options=options, use_subprocess=True)
-            driver.set_page_load_timeout(45)
-            driver.set_script_timeout(45)
+            options = uc.ChromeOptions()
+
+            if HEADLESS:
+                options.add_argument("--headless=new")
+
+            options.add_argument("--window-size=1920,1080")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--disable-logging")
+            options.add_argument("--disable-notifications")
+            options.add_argument("--disable-popup-blocking")
+            # Helps with port conflicts
+            options.add_argument("--remote-debugging-port=0") 
+
+            # Stealth preferences
+            prefs = {
+                "profile.default_content_setting_values": {
+                    "images": 2,
+                    "notifications": 2,
+                    "popups": 2,
+                }
+            }
+            options.add_experimental_option("prefs", prefs)
+
+            # version_main=None allows uc to find the installed Chrome (v144) and download matching driver
+            driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
+            driver.set_page_load_timeout(30)
+            driver.set_script_timeout(30)
             log("✅ Driver initialized")
             return driver
-        except Exception as e1:
-            log(f"⚠️ Auto-detect failed: {str(e1)[:100]}")
 
-            # Fallback: Try specific version (current GitHub Actions Chrome)
-            try:
-                # Create FRESH options
-                options2 = uc.ChromeOptions()
-                if HEADLESS: options2.add_argument("--headless=new")
-                options2.add_argument("--window-size=1920,1080")
-                options2.add_argument("--no-sandbox")
-                options2.add_argument("--disable-dev-shm-usage")
-                options2.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-
-                driver = uc.Chrome(options=options2, version_main=142, use_subprocess=True)
-                log("✅ Driver initialized (v142)")
-                return driver
-            except Exception as e2:
-                log(f"⚠️ v142 failed: {str(e2)[:100]}")
-                
-                # Final fallback
-                try:
-                    options3 = uc.ChromeOptions()
-                    if HEADLESS: options3.add_argument("--headless=new")
-                    options3.add_argument("--no-sandbox")
-                    options3.add_argument("--disable-dev-shm-usage")
-                    driver = uc.Chrome(options=options3, version_main=131, use_subprocess=True)
-                    log("✅ Driver initialized (v131)")
-                    return driver
-                except Exception as e3:
-                    raise Exception(f"All driver attempts failed: {e3}")
-
-    except Exception as e:
-        log(f"❌ Driver creation error: {e}")
-        raise
+        except Exception as e:
+            log(f"⚠️ Driver init attempt {attempt+1} failed: {str(e)[:100]}")
+            time.sleep(2) # Wait briefly before retry
+            
+            # If it's the last attempt, raise the error
+            if attempt == 2:
+                log(f"❌ All driver init attempts failed")
+                raise
 
 def bypass_cloudflare(driver):
     """Specifically handle the 'Verifying you are human' screen"""
@@ -992,7 +979,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.4 (Free Button Fix)")
+    log("CS HUB AUTO-CLAIMER v2.5 (Chrome 144 Fix)")
     log("="*60)
     
     # Show IST tracking info
