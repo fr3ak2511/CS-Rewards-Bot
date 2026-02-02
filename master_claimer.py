@@ -60,7 +60,7 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
-    """GitHub Actions-compatible driver - FORCED CHROME 144"""
+    """GitHub Actions-compatible driver with Cloudflare bypass - FIXED FOR CHROME 144"""
     
     # Attempt to initialize driver up to 3 times
     for attempt in range(3):
@@ -91,12 +91,12 @@ def create_driver():
             }
             options.add_experimental_option("prefs", prefs)
 
-            # --- FIX: FORCE VERSION 144 to match GitHub Runner ---
+            # FORCE Version 144 to match the GitHub Runner's browser
             driver = uc.Chrome(options=options, version_main=144, use_subprocess=True)
             
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
-            log("✅ Driver initialized (v144)")
+            log("✅ Driver initialized")
             return driver
 
         except Exception as e:
@@ -148,6 +148,7 @@ def bypass_cloudflare(driver):
                 time.sleep(1)
                 
             log("⚠️ Warning: Might still be on Cloudflare page")
+            driver.save_screenshot("cloudflare_debug.png")
             
     except Exception as e:
         log(f"ℹ️ Cloudflare check error (ignorable): {e}")
@@ -529,7 +530,7 @@ def claim_daily_rewards(driver, player_id):
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
-                    if ((text === 'claim' || text === 'free') && btn.offsetParent !== null) {
+                    if (text === 'claim' && btn.offsetParent !== null) {
                         if (!btn.innerText.toLowerCase().includes('buy') && 
                             !btn.innerText.toLowerCase().includes('purchase')) {
                             btn.click();
@@ -557,7 +558,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - FIXED FOR 'FREE' BUTTONS"""
+    """Claim Store Daily Rewards - FIXED: LOOK FOR 'FREE' BUTTONS"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -591,57 +592,56 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # Find and click 'CLAIM' OR 'FREE' buttons (checking timers)
+            # Find and click ONLY green "Free" buttons (SKIP buttons with timers)
             result = driver.execute_script("""
-                // Helper to check for timers in parent hierarchy
-                function hasTimerInParents(element) {
-                    let p = element.parentElement;
-                    // Check up to 4 levels up
-                    for(let i=0; i<4; i++) {
-                        if (p) {
-                            let text = (p.innerText || '').toLowerCase();
-                            // STRICT CHECK FOR TIMER TEXT
-                            if (text.includes('next in') || text.match(/\\d+h\\s+\\d+m/)) {
-                                return true;
-                            }
-                            p = p.parentElement;
-                        }
-                    }
-                    return false;
-                }
-
-                let allButtons = document.querySelectorAll('button');
+                // Find Store Bonus cards
+                let allDivs = document.querySelectorAll('div');
+                let storeBonusCards = [];
                 
-                for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    
-                    // --- CHANGED: Check for 'claim' OR 'free' ---
-                    if ((btnText === 'claim' || btnText === 'free') && btn.offsetParent !== null && !btn.disabled) {
-                        
-                        // Check if this is a "Store Bonus" area
-                        let isStoreBonus = false;
-                        let p = btn.parentElement;
-                        for(let i=0; i<5; i++) {
-                            if (p && (p.innerText || '').includes('Store Bonus')) {
-                                isStoreBonus = true;
+                for (let div of allDivs) {
+                    let text = div.innerText || '';
+                    if (text.includes('Store Bonus') && text.includes('+1')) {
+                        let parent = div.parentElement;
+                        let attempts = 0;
+                        while (parent && attempts < 5) {
+                            let parentText = parent.innerText || '';
+                            if (parentText.includes('Gold (Daily)') || 
+                                parentText.includes('Cash (Daily)') || 
+                                parentText.includes('Luckyloon (Daily)')) {
+                                storeBonusCards.push(parent);
                                 break;
                             }
-                            if(p) p = p.parentElement;
+                            parent = parent.parentElement;
+                            attempts++;
                         }
+                    }
+                }
+                
+                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
+                
+                // Find buttons with "Free" text (NO timer)
+                for (let card of storeBonusCards) {
+                    let cardText = card.innerText || '';
+                    
+                    // SKIP cards with timer
+                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                        console.log('⏭️  Skipping card with timer');
+                        continue;
+                    }
+                    
+                    // Find button
+                    let buttons = card.querySelectorAll('button');
+                    
+                    for (let btn of buttons) {
+                        let btnText = btn.innerText.trim().toLowerCase();
                         
-                        if (isStoreBonus) {
-                            // NOW CHECK FOR TIMER
-                            if (hasTimerInParents(btn)) {
-                                console.log('⏭️ Skipping button (Timer detected in parent)');
-                                continue;
-                            }
-
-                            // If we get here, it's a valid claim button
+                        // CHANGED: Look for 'free' instead of 'claim'
+                        if (btnText === 'free' && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                             
                             setTimeout(function() {
                                 btn.click();
-                                console.log('✅ Clicked Valid Claim/Free button');
+                                console.log('✅ Clicked GREEN Free button');
                             }, 500);
                             
                             return true;
@@ -649,7 +649,7 @@ def claim_store_rewards(driver, player_id):
                     }
                 }
                 
-                console.log('No valid claim buttons found');
+                console.log('No more available free buttons found');
                 return false;
             """)
             
