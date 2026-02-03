@@ -512,14 +512,17 @@ def navigate_to_daily_rewards_section_store(driver):
         return False
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page - WITH TIMER CHECK"""
+    """Claim daily rewards page - WITH TIMER CHECK + WAIT"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver) # Check here too
-        time.sleep(1.5)
+        
+        # --- WAIT FOR TIMERS TO LOAD ---
+        time.sleep(5) 
+        # -------------------------------
         
         for _ in range(2):
             close_popup(driver)
@@ -573,7 +576,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - FALSE CLAIM FIX"""
+    """Claim Store Daily Rewards - FALSE CLAIM FIX + WAIT"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -595,6 +598,11 @@ def claim_store_rewards(driver, player_id):
         
         time.sleep(0.5)
         driver.save_screenshot(f"store_01_ready_{player_id}.png")
+        
+        # --- CRITICAL FIX: WAIT FOR TIMERS TO RENDER ---
+        log("⏳ Waiting for timers to render (8s)...")
+        time.sleep(8)
+        # -----------------------------------------------
         
         # Claim loop
         for attempt in range(max_claims):
@@ -687,7 +695,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - WITH TIMER CHECK"""
+    """Claim Progression Program rewards - WITH TIMER CHECK + WAIT"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     
@@ -995,7 +1003,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.8 (Universal Timer Fix)")
+    log("CS HUB AUTO-CLAIMER v2.9 (Latency Fix)")
     log("="*60)
     
     # Show IST tracking info
