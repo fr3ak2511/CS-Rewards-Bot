@@ -531,7 +531,7 @@ def claim_daily_rewards(driver, player_id):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
-                    let text = btn.innerText.trim().toLowerCase();
+                    let text = (btn.innerText || btn.textContent).trim().toLowerCase();
                     if ((text === 'claim' || text === 'free') && btn.offsetParent !== null) {
                         
                         // Check for timer in parent hierarchy
@@ -539,7 +539,7 @@ def claim_daily_rewards(driver, player_id):
                         let parent = btn.parentElement;
                         for(let i=0; i<5; i++) { 
                             if(parent) {
-                                let pText = parent.innerText || '';
+                                let pText = (parent.innerText || parent.textContent) || '';
                                 if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
                                     isBlocked = true;
                                     break;
@@ -597,12 +597,14 @@ def claim_store_rewards(driver, player_id):
             log("⚠️  Navigation failed")
         
         time.sleep(0.5)
-        driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
         # --- CRITICAL FIX: WAIT FOR TIMERS TO RENDER ---
-        log("⏳ Waiting for timers to render (8s)...")
-        time.sleep(8)
+        log("⏳ Waiting for timers to render (10s)...")
+        time.sleep(10)
         # -----------------------------------------------
+        
+        # DEBUG: Screenshot AFTER wait to see true state
+        driver.save_screenshot(f"store_01_ready_{player_id}.png")
         
         # Claim loop
         for attempt in range(max_claims):
@@ -620,7 +622,7 @@ def claim_store_rewards(driver, player_id):
                 let allButtons = document.querySelectorAll('button');
                 
                 for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
+                    let btnText = (btn.innerText || btn.textContent).trim().toLowerCase();
                     
                     if ((btnText === 'claim' || btnText === 'free') && btn.offsetParent !== null && !btn.disabled) {
                         
@@ -630,7 +632,7 @@ def claim_store_rewards(driver, player_id):
                         
                         for(let i=0; i<5; i++) { 
                             if(parent) {
-                                let pText = parent.innerText || '';
+                                let pText = (parent.innerText || parent.textContent) || '';
                                 // Look for "Next in" or typical timer format 00:00:00
                                 if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
                                     isBlocked = true;
@@ -719,7 +721,7 @@ def claim_progression_program_rewards(driver, player_id):
                 let claimButtons = [];
                 
                 for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
+                    let btnText = (btn.innerText || btn.textContent).trim().toLowerCase();
                     
                     if (btnText === 'claim') {
                         if (btn.offsetParent !== null && !btn.disabled) {
@@ -729,7 +731,7 @@ def claim_progression_program_rewards(driver, player_id):
                             let parent = btn.parentElement;
                             for(let i=0; i<5; i++) { 
                                 if(parent) {
-                                    let pText = parent.innerText || '';
+                                    let pText = (parent.innerText || parent.textContent) || '';
                                     if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
                                         isBlocked = true;
                                         break;
@@ -739,7 +741,7 @@ def claim_progression_program_rewards(driver, player_id):
                             }
                             if (isBlocked) { continue; }
 
-                            let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
+                            let parentText = (btn.parentElement.innerText || btn.parentElement.textContent) || '';
                             if (!parentText.includes('Delivered')) {
                                 claimButtons.push(btn);
                             }
@@ -1003,7 +1005,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.9 (Latency Fix)")
+    log("CS HUB AUTO-CLAIMER v3.0 (Robust Timer Check)")
     log("="*60)
     
     # Show IST tracking info
