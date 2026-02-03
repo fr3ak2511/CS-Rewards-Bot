@@ -60,7 +60,7 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
-    """GitHub Actions-compatible driver with Cloudflare bypass - FIXED FOR CHROME 144"""
+    """GitHub Actions-compatible driver - FORCED CHROME 144"""
     
     # Attempt to initialize driver up to 3 times
     for attempt in range(3):
@@ -91,12 +91,12 @@ def create_driver():
             }
             options.add_experimental_option("prefs", prefs)
 
-            # FORCE Version 144 to match the GitHub Runner's browser
+            # FORCE Version 144 to match GitHub Runner
             driver = uc.Chrome(options=options, version_main=144, use_subprocess=True)
             
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
-            log("✅ Driver initialized")
+            log("✅ Driver initialized (v144)")
             return driver
 
         except Exception as e:
@@ -148,7 +148,6 @@ def bypass_cloudflare(driver):
                 time.sleep(1)
                 
             log("⚠️ Warning: Might still be on Cloudflare page")
-            driver.save_screenshot("cloudflare_debug.png")
             
     except Exception as e:
         log(f"ℹ️ Cloudflare check error (ignorable): {e}")
@@ -513,7 +512,7 @@ def navigate_to_daily_rewards_section_store(driver):
         return False
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page"""
+    """Claim daily rewards page - WITH TIMER CHECK"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
@@ -530,7 +529,23 @@ def claim_daily_rewards(driver, player_id):
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
-                    if (text === 'claim' && btn.offsetParent !== null) {
+                    if ((text === 'claim' || text === 'free') && btn.offsetParent !== null) {
+                        
+                        // Check for timer in parent hierarchy
+                        let isBlocked = false;
+                        let parent = btn.parentElement;
+                        for(let i=0; i<5; i++) { 
+                            if(parent) {
+                                let pText = parent.innerText || '';
+                                if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
+                                    isBlocked = true;
+                                    break;
+                                }
+                                parent = parent.parentElement;
+                            }
+                        }
+                        if (isBlocked) { continue; }
+
                         if (!btn.innerText.toLowerCase().includes('buy') && 
                             !btn.innerText.toLowerCase().includes('purchase')) {
                             btn.click();
@@ -558,7 +573,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - FIXED: LOOK FOR 'FREE' BUTTONS"""
+    """Claim Store Daily Rewards - FALSE CLAIM FIX"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -594,62 +609,47 @@ def claim_store_rewards(driver, player_id):
             
             # Find and click ONLY green "Free" buttons (SKIP buttons with timers)
             result = driver.execute_script("""
-                // Find Store Bonus cards
-                let allDivs = document.querySelectorAll('div');
-                let storeBonusCards = [];
+                let allButtons = document.querySelectorAll('button');
                 
-                for (let div of allDivs) {
-                    let text = div.innerText || '';
-                    if (text.includes('Store Bonus') && text.includes('+1')) {
-                        let parent = div.parentElement;
-                        let attempts = 0;
-                        while (parent && attempts < 5) {
-                            let parentText = parent.innerText || '';
-                            if (parentText.includes('Gold (Daily)') || 
-                                parentText.includes('Cash (Daily)') || 
-                                parentText.includes('Luckyloon (Daily)')) {
-                                storeBonusCards.push(parent);
-                                break;
-                            }
-                            parent = parent.parentElement;
-                            attempts++;
-                        }
-                    }
-                }
-                
-                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
-                
-                // Find buttons with "Free" text (NO timer)
-                for (let card of storeBonusCards) {
-                    let cardText = card.innerText || '';
+                for (let btn of allButtons) {
+                    let btnText = btn.innerText.trim().toLowerCase();
                     
-                    // SKIP cards with timer
-                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                        console.log('⏭️  Skipping card with timer');
-                        continue;
-                    }
-                    
-                    // Find button
-                    let buttons = card.querySelectorAll('button');
-                    
-                    for (let btn of buttons) {
-                        let btnText = btn.innerText.trim().toLowerCase();
+                    if ((btnText === 'claim' || btnText === 'free') && btn.offsetParent !== null && !btn.disabled) {
                         
-                        // CHANGED: Look for 'free' instead of 'claim'
-                        if (btnText === 'free' && btn.offsetParent !== null && !btn.disabled) {
-                            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            
-                            setTimeout(function() {
-                                btn.click();
-                                console.log('✅ Clicked GREEN Free button');
-                            }, 500);
-                            
-                            return true;
+                        // Check for timer in parent hierarchy (up to 5 levels up)
+                        let isBlocked = false;
+                        let parent = btn.parentElement;
+                        
+                        for(let i=0; i<5; i++) { 
+                            if(parent) {
+                                let pText = parent.innerText || '';
+                                // Look for "Next in" or typical timer format 00:00:00
+                                if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
+                                    isBlocked = true;
+                                    break;
+                                }
+                                parent = parent.parentElement;
+                            }
                         }
+                        
+                        if (isBlocked) {
+                            console.log("Skipping button with active timer");
+                            continue;
+                        }
+
+                        // If we are here, it's valid
+                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        
+                        setTimeout(function() {
+                            btn.click();
+                            console.log('✅ Clicked Valid Claim/Free button');
+                        }, 500);
+                        
+                        return true;
                     }
                 }
                 
-                console.log('No more available free buttons found');
+                console.log('No valid claim buttons found');
                 return false;
             """)
             
@@ -687,7 +687,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - FIXED VERSION"""
+    """Claim Progression Program rewards - WITH TIMER CHECK"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     
@@ -715,8 +715,23 @@ def claim_progression_program_rewards(driver, player_id):
                     
                     if (btnText === 'claim') {
                         if (btn.offsetParent !== null && !btn.disabled) {
-                            let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
                             
+                            // Check for timer (Safety)
+                            let isBlocked = false;
+                            let parent = btn.parentElement;
+                            for(let i=0; i<5; i++) { 
+                                if(parent) {
+                                    let pText = parent.innerText || '';
+                                    if (pText.includes("Next in") || pText.match(/\\d{2}:\\d{2}:\\d{2}/)) { 
+                                        isBlocked = true;
+                                        break;
+                                    }
+                                    parent = parent.parentElement;
+                                }
+                            }
+                            if (isBlocked) { continue; }
+
+                            let parentText = btn.parentElement ? (btn.parentElement.innerText || '') : '';
                             if (!parentText.includes('Delivered')) {
                                 claimButtons.push(btn);
                             }
@@ -948,9 +963,9 @@ def send_email_summary(results, num_players):
         <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;">
             <p style="margin: 5px 0;"><strong>💡 Note:</strong></p>
             <ul style="margin: 5px 0;">
-                <li><strong>Store Rewards:</strong> Exactly 3 per player per day (resets at 5:30 AM IST)</li>
-                <li><strong>Daily Rewards:</strong> Variable (~1 per hour, player-dependent)</li>
-                <li><strong>Progression:</strong> Unlimited (requires Grenades from Store claims)</li>
+                <li><strong>Store Rewards:</strong> Exactly 3 per player per day (Available after exactly 24 hours of Claiming)</li>
+                <li><strong>Daily Rewards:</strong> Variable (resets at 5:30 AM IST)</li>
+                <li><strong>Progression:</strong> Unlimited (requires Grenades/Bullets from Store claims)</li>
             </ul>
         </div>
         
@@ -980,7 +995,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.6 (Chrome 144 Forced)")
+    log("CS HUB AUTO-CLAIMER v2.8 (Universal Timer Fix)")
     log("="*60)
     
     # Show IST tracking info
