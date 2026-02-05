@@ -331,7 +331,7 @@ def login_to_hub(driver, player_id):
         return False
 
 def close_popup(driver):
-    """Multi-method popup closing strategy"""
+    """Multi-method popup closing strategy - Returns True if popup closed, False if none found"""
     try:
         # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
@@ -356,7 +356,7 @@ def close_popup(driver):
                 continue
         
         if not popup_found:
-            return True
+            return False  # <--- CHANGED: Return False if no popup found to prevent counting false clicks
         
         # METHOD 1: Continue button
         continue_selectors = [
@@ -512,20 +512,20 @@ def navigate_to_daily_rewards_section_store(driver):
         return False
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page - WITH TIMER CHECK + WAIT"""
+    """Claim daily rewards page - COUNT ONLY IF POPUP DETECTED"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
-        bypass_cloudflare(driver) # Check here too
+        bypass_cloudflare(driver) 
         
         # --- WAIT FOR TIMERS TO LOAD ---
         time.sleep(5) 
         # -------------------------------
         
         for _ in range(2):
-            close_popup(driver)
+            close_popup(driver) # Close initial popups but dont count them
         
         for attempt in range(10):
             result = driver.execute_script("""
@@ -560,10 +560,16 @@ def claim_daily_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Daily #{claimed + 1}")
-                claimed += 1
-                time.sleep(1.5)
-                close_popup(driver)
+                log(f"🖱️ Clicked... waiting for confirmation popup")
+                time.sleep(3.0) # Wait for popup to animate in
+                
+                # KEY CHANGE: Only increment if popup is found & closed
+                if close_popup(driver):
+                    log(f"✅ Daily #{claimed + 1} VERIFIED (Popup closed)")
+                    claimed += 1
+                else:
+                    log(f"⚠️ Clicked but no confirmation popup. (False Alert prevented)")
+                    
             else:
                 log("ℹ️  No more daily rewards")
                 break
@@ -576,7 +582,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - FALSE CLAIM FIX + WAIT"""
+    """Claim Store Daily Rewards - COUNT ONLY IF POPUP DETECTED"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -664,12 +670,16 @@ def claim_store_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Store Claim #{claimed + 1} SUCCESS")
-                claimed += 1
-                time.sleep(1.5)
+                log(f"🖱️ Clicked... waiting for confirmation popup")
+                time.sleep(3.0) # Give time for popup
                 
-                log("Handling post-claim popup...")
-                close_popup(driver)
+                # KEY CHANGE: Only increment if popup is found & closed
+                if close_popup(driver):
+                    log(f"✅ Store Claim #{claimed + 1} VERIFIED (Popup closed)")
+                    claimed += 1
+                else:
+                    log("⚠️ Clicked but no confirmation popup. (False Alert prevented)")
+                
                 time.sleep(0.5)
                 
                 if not ensure_store_page(driver):
@@ -697,7 +707,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression Program rewards - WITH TIMER CHECK + WAIT"""
+    """Claim Progression Program rewards - COUNT ONLY IF POPUP DETECTED"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     
@@ -768,13 +778,16 @@ def claim_progression_program_rewards(driver, player_id):
             """)
             
             if result:
-                log(f"✅ Progression Claim #{claimed + 1} SUCCESS")
-                claimed += 1
-                time.sleep(1.5)
+                log(f"🖱️ Clicked... waiting for confirmation popup")
+                time.sleep(3.0) # Wait for popup
                 
-                log("Handling post-claim popup...")
-                close_popup(driver)
-                time.sleep(0.5)
+                # KEY CHANGE: Only increment if popup is found & closed
+                if close_popup(driver):
+                    log(f"✅ Progression Claim #{claimed + 1} VERIFIED (Popup closed)")
+                    claimed += 1
+                else:
+                    log("⚠️ Clicked but no confirmation popup. (False Alert prevented)")
+                    
             else:
                 log(f"ℹ️  No more claim buttons (attempt {attempt + 1})")
                 
@@ -1005,7 +1018,7 @@ def send_email_summary(results, num_players):
 def main():
     """Main orchestrator"""
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v3.0 (Robust Timer Check)")
+    log("CS HUB AUTO-CLAIMER v3.1 (Popup Verification Fix)")
     log("="*60)
     
     # Show IST tracking info
