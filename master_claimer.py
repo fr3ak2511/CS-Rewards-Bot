@@ -140,8 +140,7 @@ def accept_cookies(driver):
         btn = WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((
                 By.XPATH,
-                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or "
-                "contains(text(), 'Allow') or contains(text(), 'Consent')]"
+                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Consent')]"
             ))
         )
         btn.click()
@@ -330,12 +329,7 @@ def close_popup(driver):
         if not popup_found:
             return True # If no popup, proceed
         
-        # Method 1: Continue
-        continue_selectors = [
-            "//button[normalize-space()='Continue']",
-            "//button[contains(text(), 'Continue')]",
-        ]
-        
+        continue_selectors = ["//button[normalize-space()='Continue']", "//button[contains(text(), 'Continue')]"]
         for selector in continue_selectors:
             try:
                 continue_btn = driver.find_element(By.XPATH, selector)
@@ -343,16 +337,9 @@ def close_popup(driver):
                     driver.execute_script("arguments[0].click();", continue_btn)
                     time.sleep(0.8)
                     return True
-            except:
-                continue
+            except: continue
         
-        # Method 2: Close
-        close_selectors = [
-            "//button[normalize-space()='Close']",
-            "//button[contains(@class, 'close')]",
-            "//*[name()='svg']/parent::button",
-        ]
-        
+        close_selectors = ["//button[normalize-space()='Close']", "//button[contains(@class, 'close')]", "//*[name()='svg']/parent::button"]
         for selector in close_selectors:
             try:
                 close_btn = driver.find_element(By.XPATH, selector)
@@ -360,90 +347,50 @@ def close_popup(driver):
                     driver.execute_script("arguments[0].click();", close_btn)
                     time.sleep(0.8)
                     return True
-            except:
-                continue
+            except: continue
                 
-        # Method 3: ESC
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
             return True
-        except:
-            pass
+        except: pass
             
         return False
-    except:
-        return False
+    except: return False
 
 def ensure_store_page(driver):
     """Check if on Store page"""
     try:
-        if "/store" in driver.current_url.lower():
-            log("✓ On Store page")
-            return True
-        
-        log(f"⚠️  Not on Store, navigating...")
+        if "/store" in driver.current_url.lower(): return True
         driver.get("https://hub.vertigogames.co/store")
         time.sleep(1.0)
-        
-        if "/store" in driver.current_url.lower():
-            log("✓ Back on Store")
-            return True
-        else:
-            log("❌ Failed to reach Store")
-            return False
-    except:
-        return False
+        return "/store" in driver.current_url.lower()
+    except: return False
 
 def click_daily_rewards_tab(driver):
-    """Click Daily Rewards TAB (UPDATED FOR Daily Rewards-2)"""
+    """Click Daily Rewards TAB"""
     log("Clicking Daily Rewards tab...")
-    
     try:
-        # UPDATED SCRIPT: Looks for "Daily Rewards" OR "Daily Rewards-2"
         result = driver.execute_script("""
             let allElements = document.querySelectorAll('*');
-            
             for (let elem of allElements) {
-                // Flexible match for the tab name
+                // Flexible match: "Daily Rewards" or "Daily Rewards-2"
                 if (elem.innerText && (elem.innerText.trim() === 'Daily Rewards' || elem.innerText.trim() === 'Daily Rewards-2')) {
-                    
-                    let className = elem.className || '';
-                    if (!className.toLowerCase().includes('tab')) {
-                        let parent = elem.parentElement;
-                        let parentClass = parent ? (parent.className || '') : '';
-                        if (!parentClass.toLowerCase().includes('tab')) {
-                            continue;
-                        }
+                    if (!elem.className.includes('sidebar') && !elem.parentElement.className.includes('sidebar')) {
+                        elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
+                        setTimeout(() => { elem.click(); }, 800);
+                        return true;
                     }
-                    
-                    // Skip sidebar elements
-                    let parent = elem.parentElement;
-                    let parentClass = parent ? (parent.className || '') : '';
-                    if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
-                        continue;
-                    }
-                    
-                    // Scroll & Click
-                    elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
-                    
-                    setTimeout(() => {
-                        elem.click();
-                    }, 800);
-                    
-                    return true;
                 }
             }
             return false;
         """)
-        
         if result:
             log("✅ Daily Rewards tab clicked")
             time.sleep(1.5)
             return True
     except Exception as e:
         log(f"❌ Tab click failed: {e}")
-    
     return False
 
 def navigate_to_daily_rewards_section_store(driver):
@@ -452,7 +399,6 @@ def navigate_to_daily_rewards_section_store(driver):
     ensure_store_page(driver)
     close_popup(driver)
     time.sleep(0.3)
-    
     tab_clicked = click_daily_rewards_tab(driver)
     if tab_clicked:
         log("✅ In Daily Rewards section")
@@ -466,30 +412,25 @@ def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page - LIMIT 1"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
-    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
-        time.sleep(3) # Wait for load
+        time.sleep(3)
         close_popup(driver)
         
-        for attempt in range(10):
+        # Max 1 attempt loop
+        for attempt in range(1):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
                     let text = btn.innerText.trim().toLowerCase();
                     if ((text === 'claim' || text === 'free') && btn.offsetParent !== null) {
-                        
-                        // Check for timer (parent text)
                         let parent = btn.parentElement;
                         let hasTimer = false;
                         if(parent && (parent.innerText.includes('Next in') || parent.innerText.match(/\\d+h\\s+\\d+m/))) {
                             hasTimer = true;
                         }
-                        
-                        if (!hasTimer && !btn.innerText.toLowerCase().includes('buy') && 
-                            !btn.innerText.toLowerCase().includes('purchase')) {
-                            
+                        if (!hasTimer && !btn.innerText.toLowerCase().includes('buy')) {
                             // NUCLEAR CLICK
                             ['mousedown', 'mouseup', 'click'].forEach(evt => 
                                 btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
@@ -500,26 +441,20 @@ def claim_daily_rewards(driver, player_id):
                 }
                 return false;
             """)
-            
             if result:
                 log(f"✅ Daily Claimed (1/1)")
-                claimed += 1
+                claimed = 1
                 time.sleep(3.0)
                 close_popup(driver)
-                break # LIMIT TO 1 PER USER REQUEST
             else:
                 log("ℹ️  No daily rewards available")
-                break
-        
         driver.save_screenshot(f"daily_final_{player_id}.png")
-        
     except Exception as e:
         log(f"❌ Daily error: {e}")
-    
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - BROADER SEARCH + NUCLEAR CLICK"""
+    """Claim Store Daily Rewards - '1/1 LEFT' Targeting"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -529,7 +464,6 @@ def claim_store_rewards(driver, player_id):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        
         if not ensure_store_page(driver): return 0
         if not navigate_to_daily_rewards_section_store(driver):
             log("⚠️  Navigation failed")
@@ -544,23 +478,22 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # v4.6 IMPROVED FINDER: Looks for ANY "Store Bonus" card with +1
-            # Removes reliance on specific reward names like "Luckyloon"
+            # v4.7 SPECIFIC FIX: LOOK FOR '1/1 LEFT' in the container
             result = driver.execute_script("""
                 let allDivs = document.querySelectorAll('div');
-                let storeBonusCards = [];
+                let targetCards = [];
                 
-                // 1. Find Cards GENERICALLY
+                // 1. Find Cards by "1/1 LEFT" marker
                 for (let div of allDivs) {
-                    let text = div.innerText || '';
-                    if (text.includes('Store Bonus') && text.includes('+1')) {
-                        // Found header, traverse up to find card container
+                    let text = (div.innerText || '').toUpperCase();
+                    // STRICT CHECK: MUST CONTAIN "1/1 LEFT"
+                    if (text.includes('1/1 LEFT')) {
                         let parent = div.parentElement;
                         let attempts = 0;
-                        while (parent && attempts < 5) {
-                            // Verify it is a card by checking for button
+                        while (parent && attempts < 6) {
+                            // Check if this parent contains a button
                             if (parent.querySelector('button')) {
-                                storeBonusCards.push(parent);
+                                targetCards.push(parent);
                                 break;
                             }
                             parent = parent.parentElement;
@@ -569,20 +502,17 @@ def claim_store_rewards(driver, player_id):
                     }
                 }
                 
-                console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
+                console.log('Found ' + targetCards.length + ' available cards (1/1 LEFT)');
                 
-                // 2. Find Button & Click
-                for (let card of storeBonusCards) {
-                    let cardText = card.innerText || '';
-                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) continue;
-                    
+                // 2. Click the Free Button inside
+                for (let card of targetCards) {
                     let buttons = card.querySelectorAll('button');
                     for (let btn of buttons) {
                         let btnText = btn.innerText.trim().toLowerCase();
                         if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
                             
-                            // NUCLEAR CLICK SEQUENCE
+                            // NUCLEAR CLICK
                             ['mousedown', 'mouseup', 'click'].forEach(evt => 
                                 btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
                             );
@@ -599,6 +529,7 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(3.0)
                 close_popup(driver)
                 time.sleep(0.5)
+                if not ensure_store_page(driver): break
             else:
                 log(f"ℹ️  No more available claims (attempt {attempt + 1})")
                 break
@@ -631,7 +562,6 @@ def claim_progression_program_rewards(driver, player_id):
                          if (!pText.includes('Delivered')) {
                              btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
                              
-                             // NUCLEAR CLICK
                              ['mousedown', 'mouseup', 'click'].forEach(evt => 
                                 btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
                              );
@@ -692,9 +622,7 @@ def send_email_summary(results, num_players):
         total_p = sum(r['progression'] for r in results)
         total_all = total_d + total_s + total_p
         
-        # Calculate expected Store total (3 per player)
         expected_store = num_players * 3
-        
         ist_now = get_ist_time()
         
         html = f"""
@@ -739,7 +667,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v4.6 (Broad Finder + Nuclear)")
+    log("CS HUB AUTO-CLAIMER v4.7 (1/1 LEFT Logic)")
     log("="*60)
     
     players = []
