@@ -368,13 +368,13 @@ def ensure_store_page(driver):
     except: return False
 
 def click_daily_rewards_tab(driver):
-    """Click Daily Rewards TAB"""
+    """Click Daily Rewards TAB (UPDATED FOR Daily Rewards-2)"""
     log("Clicking Daily Rewards tab...")
+    
     try:
         result = driver.execute_script("""
             let allElements = document.querySelectorAll('*');
             for (let elem of allElements) {
-                // Flexible match: "Daily Rewards" or "Daily Rewards-2"
                 if (elem.innerText && (elem.innerText.trim() === 'Daily Rewards' || elem.innerText.trim() === 'Daily Rewards-2')) {
                     if (!elem.className.includes('sidebar') && !elem.parentElement.className.includes('sidebar')) {
                         elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
@@ -385,12 +385,14 @@ def click_daily_rewards_tab(driver):
             }
             return false;
         """)
+        
         if result:
             log("✅ Daily Rewards tab clicked")
             time.sleep(1.5)
             return True
     except Exception as e:
         log(f"❌ Tab click failed: {e}")
+    
     return False
 
 def navigate_to_daily_rewards_section_store(driver):
@@ -399,6 +401,7 @@ def navigate_to_daily_rewards_section_store(driver):
     ensure_store_page(driver)
     close_popup(driver)
     time.sleep(0.3)
+    
     tab_clicked = click_daily_rewards_tab(driver)
     if tab_clicked:
         log("✅ In Daily Rewards section")
@@ -412,14 +415,14 @@ def claim_daily_rewards(driver, player_id):
     """Claim daily rewards page - LIMIT 1"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
+    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
-        time.sleep(3)
+        time.sleep(3) # Wait for load
         close_popup(driver)
         
-        # Max 1 attempt loop
-        for attempt in range(1):
+        for attempt in range(1): # Max 1
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
@@ -431,7 +434,6 @@ def claim_daily_rewards(driver, player_id):
                             hasTimer = true;
                         }
                         if (!hasTimer && !btn.innerText.toLowerCase().includes('buy')) {
-                            // NUCLEAR CLICK
                             ['mousedown', 'mouseup', 'click'].forEach(evt => 
                                 btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
                             );
@@ -448,9 +450,12 @@ def claim_daily_rewards(driver, player_id):
                 close_popup(driver)
             else:
                 log("ℹ️  No daily rewards available")
+        
         driver.save_screenshot(f"daily_final_{player_id}.png")
+        
     except Exception as e:
         log(f"❌ Daily error: {e}")
+    
     return claimed
 
 def claim_store_rewards(driver, player_id):
@@ -464,6 +469,7 @@ def claim_store_rewards(driver, player_id):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
+        
         if not ensure_store_page(driver): return 0
         if not navigate_to_daily_rewards_section_store(driver):
             log("⚠️  Navigation failed")
@@ -478,49 +484,44 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # v4.7 SPECIFIC FIX: LOOK FOR '1/1 LEFT' in the container
+            # v4.9 SNIPER LOGIC: Find text "1/1 LEFT", then click its button
             result = driver.execute_script("""
                 let allDivs = document.querySelectorAll('div');
-                let targetCards = [];
+                let foundButton = false;
                 
-                // 1. Find Cards by "1/1 LEFT" marker
                 for (let div of allDivs) {
                     let text = (div.innerText || '').toUpperCase();
-                    // STRICT CHECK: MUST CONTAIN "1/1 LEFT"
+                    
+                    // STRICT CHECK: The div must explicitly contain "1/1 LEFT"
                     if (text.includes('1/1 LEFT')) {
                         let parent = div.parentElement;
                         let attempts = 0;
+                        
+                        // Traverse up to find the container that holds the button
                         while (parent && attempts < 6) {
-                            // Check if this parent contains a button
-                            if (parent.querySelector('button')) {
-                                targetCards.push(parent);
-                                break;
+                            let btn = parent.querySelector('button');
+                            if (btn) {
+                                let btnText = btn.innerText.trim().toLowerCase();
+                                // Ensure it is the correct button
+                                if ((btnText === 'free' || btnText === 'claim') && !btn.disabled) {
+                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    
+                                    // NUCLEAR CLICK
+                                    ['mousedown', 'mouseup', 'click'].forEach(evt => 
+                                        btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
+                                    );
+                                    console.log('Clicked button for 1/1 LEFT item');
+                                    foundButton = true;
+                                    break;
+                                }
                             }
                             parent = parent.parentElement;
                             attempts++;
                         }
                     }
+                    if (foundButton) break;
                 }
-                
-                console.log('Found ' + targetCards.length + ' available cards (1/1 LEFT)');
-                
-                // 2. Click the Free Button inside
-                for (let card of targetCards) {
-                    let buttons = card.querySelectorAll('button');
-                    for (let btn of buttons) {
-                        let btnText = btn.innerText.trim().toLowerCase();
-                        if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
-                            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            
-                            // NUCLEAR CLICK
-                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
-                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
-                            );
-                            return true;
-                        }
-                    }
-                }
-                return false;
+                return foundButton;
             """)
             
             if result:
@@ -531,7 +532,7 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(0.5)
                 if not ensure_store_page(driver): break
             else:
-                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
+                log(f"ℹ️  No more '1/1 LEFT' items found (attempt {attempt + 1})")
                 break
         
         log(f"Store Claims Complete: {claimed}/{max_claims}")
@@ -561,7 +562,6 @@ def claim_progression_program_rewards(driver, player_id):
                          let pText = (btn.parentElement.innerText || btn.parentElement.textContent) || '';
                          if (!pText.includes('Delivered')) {
                              btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                             
                              ['mousedown', 'mouseup', 'click'].forEach(evt => 
                                 btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
                              );
@@ -667,7 +667,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v4.7 (1/1 LEFT Logic)")
+    log("CS HUB AUTO-CLAIMER v4.9 ('1/1 LEFT' Sniper)")
     log("="*60)
     
     players = []
