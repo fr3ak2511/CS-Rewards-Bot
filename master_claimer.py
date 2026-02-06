@@ -329,7 +329,12 @@ def close_popup(driver):
         if not popup_found:
             return True # If no popup, proceed
         
-        continue_selectors = ["//button[normalize-space()='Continue']", "//button[contains(text(), 'Continue')]"]
+        # Method 1: Continue
+        continue_selectors = [
+            "//button[normalize-space()='Continue']",
+            "//button[contains(text(), 'Continue')]",
+        ]
+        
         for selector in continue_selectors:
             try:
                 continue_btn = driver.find_element(By.XPATH, selector)
@@ -337,9 +342,16 @@ def close_popup(driver):
                     driver.execute_script("arguments[0].click();", continue_btn)
                     time.sleep(0.8)
                     return True
-            except: continue
+            except:
+                continue
         
-        close_selectors = ["//button[normalize-space()='Close']", "//button[contains(@class, 'close')]", "//*[name()='svg']/parent::button"]
+        # Method 2: Close
+        close_selectors = [
+            "//button[normalize-space()='Close']",
+            "//button[contains(@class, 'close')]",
+            "//*[name()='svg']/parent::button",
+        ]
+        
         for selector in close_selectors:
             try:
                 close_btn = driver.find_element(By.XPATH, selector)
@@ -347,16 +359,20 @@ def close_popup(driver):
                     driver.execute_script("arguments[0].click();", close_btn)
                     time.sleep(0.8)
                     return True
-            except: continue
+            except:
+                continue
                 
+        # Method 3: ESC
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
             return True
-        except: pass
+        except:
+            pass
             
         return False
-    except: return False
+    except:
+        return False
 
 def ensure_store_page(driver):
     """Check if on Store page"""
@@ -422,7 +438,8 @@ def claim_daily_rewards(driver, player_id):
         time.sleep(3) # Wait for load
         close_popup(driver)
         
-        for attempt in range(1): # Max 1
+        # Max 1 attempt loop
+        for attempt in range(1):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
@@ -459,7 +476,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - '1/1 LEFT' Targeting"""
+    """Claim Store Daily Rewards - HYBRID HUNTER"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -484,44 +501,60 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # v4.9 SNIPER LOGIC: Find text "1/1 LEFT", then click its button
+            # v5.0 HYBRID FINDER: "1/1 LEFT" OR "Luckyloon (Daily)"
             result = driver.execute_script("""
                 let allDivs = document.querySelectorAll('div');
-                let foundButton = false;
+                let targetCards = [];
                 
+                // 1. Find Cards by "1/1 LEFT" marker OR specific "Luckyloon" text
                 for (let div of allDivs) {
-                    let text = (div.innerText || '').toUpperCase();
+                    let text = (div.innerText || '').trim();
+                    let upperText = text.toUpperCase();
                     
-                    // STRICT CHECK: The div must explicitly contain "1/1 LEFT"
-                    if (text.includes('1/1 LEFT')) {
+                    // STRATEGY A: The sure-fire "1/1 LEFT"
+                    let matchA = upperText.includes('1/1 LEFT');
+                    
+                    // STRATEGY B: The backup "Luckyloon (Daily)" + "Store Bonus"
+                    // Note: User confirmed it is "Luckyloon" (Singular)
+                    let matchB = text.includes('Luckyloon (Daily)') && text.includes('Store Bonus');
+                    
+                    if (matchA || matchB) {
                         let parent = div.parentElement;
                         let attempts = 0;
-                        
-                        // Traverse up to find the container that holds the button
-                        while (parent && attempts < 6) {
-                            let btn = parent.querySelector('button');
-                            if (btn) {
-                                let btnText = btn.innerText.trim().toLowerCase();
-                                // Ensure it is the correct button
-                                if ((btnText === 'free' || btnText === 'claim') && !btn.disabled) {
-                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                    
-                                    // NUCLEAR CLICK
-                                    ['mousedown', 'mouseup', 'click'].forEach(evt => 
-                                        btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
-                                    );
-                                    console.log('Clicked button for 1/1 LEFT item');
-                                    foundButton = true;
-                                    break;
-                                }
+                        while (parent && attempts < 10) { // Increased depth to 10
+                            // Check if this parent contains a button
+                            if (parent.querySelector('button')) {
+                                targetCards.push(parent);
+                                break;
                             }
                             parent = parent.parentElement;
                             attempts++;
                         }
                     }
-                    if (foundButton) break;
                 }
-                return foundButton;
+                
+                console.log('Found ' + targetCards.length + ' potential cards');
+                
+                // 2. Click the Free Button inside
+                for (let card of targetCards) {
+                    let cardText = card.innerText || '';
+                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) continue;
+                    
+                    let buttons = card.querySelectorAll('button');
+                    for (let btn of buttons) {
+                        let btnText = btn.innerText.trim().toLowerCase();
+                        if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
+                            btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                            
+                            // NUCLEAR CLICK
+                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
+                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
+                            );
+                            return true;
+                        }
+                    }
+                }
+                return false;
             """)
             
             if result:
@@ -532,7 +565,7 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(0.5)
                 if not ensure_store_page(driver): break
             else:
-                log(f"ℹ️  No more '1/1 LEFT' items found (attempt {attempt + 1})")
+                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
                 break
         
         log(f"Store Claims Complete: {claimed}/{max_claims}")
@@ -651,7 +684,7 @@ def send_email_summary(results, num_players):
             <td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['progression']}</td>
             <td><strong>{t}</strong></td><td style="background-color: {color};">{r['status']}</td></tr>"""
             
-        html += "</table><div style='margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;'><p><strong>💡 Note:</strong></p><ul><li><strong>Daily Rewards:</strong> Max 1 per player per day.</li><li><strong>Store Rewards:</strong> Max 3 per player per day.</li><li><strong>Progression:</strong> Unlimited.</li></ul></div></body></html>"
+        html += "</table><div style='margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;'><p><strong>💡 Note:</strong></p><ul><li><strong>Daily Rewards:</strong> Max 1 per player.</li><li><strong>Store Rewards:</strong> Max 3 per player.</li><li><strong>Progression:</strong> Unlimited.</li></ul></div></body></html>"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
@@ -667,7 +700,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v4.9 ('1/1 LEFT' Sniper)")
+    log("CS HUB AUTO-CLAIMER v5.0 (Hybrid Hunter)")
     log("="*60)
     
     players = []
