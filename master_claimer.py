@@ -306,6 +306,7 @@ def login_to_hub(driver, player_id):
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
+        # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
         
         popup_selectors = [
@@ -322,6 +323,7 @@ def close_popup(driver):
                 visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
                 if visible_popups:
                     popup_found = True
+                    # log(f"✓ Popup detected")
                     break
             except:
                 continue
@@ -329,6 +331,7 @@ def close_popup(driver):
         if not popup_found:
             return True
         
+        # METHOD 1: Continue button
         continue_selectors = [
             "//button[normalize-space()='Continue']",
             "//button[contains(text(), 'Continue')]",
@@ -344,11 +347,14 @@ def close_popup(driver):
                         continue_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", continue_btn)
+                    
+                    # log("✓ Continue clicked")
                     time.sleep(0.8)
                     return True
             except:
                 continue
         
+        # METHOD 2: Close button
         close_selectors = [
             "//button[normalize-space()='Close']",
             "//button[contains(@class, 'close')]",
@@ -368,21 +374,31 @@ def close_popup(driver):
                         close_btn.click()
                     except:
                         driver.execute_script("arguments[0].click();", close_btn)
+                    
+                    # log("✓ Close clicked")
                     time.sleep(0.8)
                     return True
             except:
                 continue
-                
+        
+        # METHOD 3: ESC key
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
+            # log("✓ ESC pressed")
             return True
         except:
             pass
-            
+        
         return False
-    except:
+        
+    except Exception as e:
+        # log(f"❌ Popup close error: {e}")
         return False
+
+# ==============================================================================
+# Helper functions for Store Rewards (From master_claimer_Store.py)
+# ==============================================================================
 
 def ensure_store_page(driver):
     """Check if on Store page"""
@@ -426,12 +442,14 @@ def click_daily_rewards_tab(driver):
                         }
                     }
                     
+                    // Skip sidebar
                     let parent = elem.parentElement;
                     let parentClass = parent ? (parent.className || '') : '';
                     if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
                         continue;
                     }
                     
+                    // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
                     
                     setTimeout(() => {
@@ -469,9 +487,10 @@ def navigate_to_daily_rewards_section_store(driver):
         log("⚠️  Tab navigation failed")
         return False
 
-# ==========================================================
-#  PHYSICAL CLICK (Required for Daily Page)
-# ==========================================================
+# ==============================================================================
+# Helper functions for Daily Rewards (From master_claimer_Daily.py)
+# ==============================================================================
+
 def physical_click(driver, element):
     """Moves mouse to element coordinates and clicks physically"""
     try:
@@ -490,12 +509,12 @@ def physical_click(driver, element):
         except:
             return False
 
-# ==========================================================
-#  CLAIM LOGIC
-# ==========================================================
+# ==============================================================================
+# Main Claim Functions
+# ==============================================================================
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page - STRICTLY FROM DAILY SCRIPT"""
+    """Claim daily rewards page - FROM master_claimer_Daily.py"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     try:
@@ -516,7 +535,6 @@ def claim_daily_rewards(driver, player_id):
                             if "next in" in parent.text.lower(): continue
                         except: pass
                         
-                        # USES PHYSICAL CLICK
                         if physical_click(driver, btn):
                             log("🖱️ Clicked Daily Reward")
                             time.sleep(3)
@@ -527,7 +545,7 @@ def claim_daily_rewards(driver, player_id):
                 except: continue
             
             if clicked_any:
-                break # Stop after 1 claim (Fixed Logic)
+                break # Stop after 1 claim (as requested in daily logic)
             
         driver.save_screenshot(f"daily_final_{player_id}.png")
     except Exception as e:
@@ -535,7 +553,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - STRICTLY FROM STORE SCRIPT (v2.6 Logic)"""
+    """Claim Store Daily Rewards - FROM master_claimer_Store.py"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -560,7 +578,7 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # USES JS INJECTION FINDER & CLICKER (From v2.6 / Store Script)
+            # v2.6 CARD SEARCH LOGIC (From master_claimer_Store.py)
             result = driver.execute_script("""
                 let allDivs = document.querySelectorAll('div');
                 let storeBonusCards = [];
@@ -627,7 +645,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression - STRICTLY FROM STORE SCRIPT"""
+    """Claim Progression - FROM master_claimer_Store.py"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     try:
@@ -637,7 +655,6 @@ def claim_progression_program_rewards(driver, player_id):
         close_popup(driver)
         
         for _ in range(8):
-            # USES JS INJECTION CLICKER (From Store Script)
             result = driver.execute_script("""
                 let allButtons = document.querySelectorAll('button');
                 for (let btn of allButtons) {
@@ -734,7 +751,7 @@ def send_email_summary(results, num_players):
             <td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td><td>{r['progression']}</td>
             <td><strong>{t}</strong></td><td style="background-color: {color};">{r['status']}</td></tr>"""
             
-        html += "</table><div style='margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;'><p><strong>💡 Note:</strong></p><ul><li><strong>Daily Rewards:</strong> Max 1 per player.</li><li><strong>Store Rewards:</strong> Max 3 per player.</li><li><strong>Progression:</strong> Unlimited.</li></ul></div></body></html>"
+        html += "</table><div style='margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;'><p><strong>💡 Note:</strong></p><ul><li><strong>Daily Rewards:</strong> Max 1 per player per day.</li><li><strong>Store Rewards:</strong> Max 3 per player per day.</li><li><strong>Progression:</strong> Unlimited.</li></ul></div></body></html>"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
@@ -750,7 +767,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v5.4 (Strict Merge: Daily vs Store)")
+    log("CS HUB AUTO-CLAIMER v5.5 (Strict Merge)")
     log("="*60)
     
     players = []
