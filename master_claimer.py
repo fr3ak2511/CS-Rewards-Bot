@@ -452,7 +452,7 @@ def claim_daily_rewards(driver, player_id):
             result = driver.execute_script("""
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
-                    let text = (btn.innerText || btn.textContent).trim().toLowerCase();
+                    let text = btn.innerText.trim().toLowerCase();
                     if ((text === 'claim' || text === 'free') && btn.offsetParent !== null) {
                         
                         // Daily Rewards buttons are Gold/Orange, can't use color check safely.
@@ -486,7 +486,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - COLOR VERIFICATION"""
+    """Claim Store Daily Rewards - IMPROVED COLOR VERIFICATION"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -520,25 +520,28 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(0.5)
             
-            # --- COLOR-BASED CLICKING ---
+            # --- IMPROVED COLOR-BASED CLICKING ---
             result = driver.execute_script("""
                 let allButtons = document.querySelectorAll('button');
                 for (let btn of allButtons) {
                     let btnText = (btn.innerText || btn.textContent).trim().toLowerCase();
                     if ((btnText === 'claim' || btnText === 'free') && btn.offsetParent !== null && !btn.disabled) {
                         
-                        // Check Color! 
-                        // Green has lots of Green (G > R)
-                        // Orange (Cooldown) has lots of Red (R > G)
                         let style = window.getComputedStyle(btn);
                         let rgb = style.backgroundColor.match(/\d+/g);
                         if (rgb) {
                             let r = parseInt(rgb[0]);
                             let g = parseInt(rgb[1]);
+                            let b = parseInt(rgb[2]);
                             
-                            // If Red > Green, it is ORANGE (Cooldown). SKIP IT.
-                            if (r > g) {
-                                console.log("Skipping Orange Button (Cooldown)");
+                            // IMPROVED COLOR LOGIC v3.6
+                            // Green Buttons (Available): High Green, Moderate Red (Lime Green)
+                            // Orange Buttons (Cooldown): High Red, Moderate Green
+                            
+                            // If Red is significantly higher than Green, it's Orange (Cooldown).
+                            // We use a buffer of 20 because Lime Green can be (50, 205, 50).
+                            if (r > (g + 20)) {
+                                console.log("Skipping Orange Button (Cooldown) - R:" + r + " G:" + g);
                                 continue;
                             }
                         }
@@ -786,7 +789,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v3.5 (Color Verification)")
+    log("CS HUB AUTO-CLAIMER v3.6 (Improved Color Logic)")
     log("="*60)
     ist_now = get_ist_time()
     next_reset = get_next_daily_reset()
