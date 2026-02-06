@@ -307,57 +307,94 @@ def login_to_hub(driver, player_id):
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
+        # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
         
         popup_selectors = [
             "//div[contains(@class, 'modal') and not(contains(@style, 'display: none'))]",
-            "//div[contains(@class, 'popup')]",
-            "//div[@data-testid='item-popup-content']"
+            "//div[contains(@class, 'popup') and not(contains(@style, 'display: none'))]",
+            "//div[@data-testid='item-popup-content']",
+            "//div[contains(@class, 'dialog') and not(contains(@style, 'display: none'))]",
         ]
         
         popup_found = False
         for selector in popup_selectors:
-            if driver.find_elements(By.XPATH, selector):
-                popup_found = True
-                break
-                
+            try:
+                popup_elements = driver.find_elements(By.XPATH, selector)
+                visible_popups = [elem for elem in popup_elements if elem.is_displayed()]
+                if visible_popups:
+                    popup_found = True
+                    # log(f"✓ Popup detected")
+                    break
+            except:
+                continue
+        
         if not popup_found:
-            return False
-
-        # Try to close
-        close_selectors = [
+            return True
+        
+        # METHOD 1: Continue button
+        continue_selectors = [
+            "//button[normalize-space()='Continue']",
             "//button[contains(text(), 'Continue')]",
-            "//button[contains(text(), 'Close')]",
+            "//button[contains(@class, 'continue')]",
+            "//*[contains(text(), 'Continue') and (self::button or self::a)]",
+        ]
+        
+        for selector in continue_selectors:
+            try:
+                continue_btn = driver.find_element(By.XPATH, selector)
+                if continue_btn.is_displayed() and continue_btn.is_enabled():
+                    try:
+                        continue_btn.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", continue_btn)
+                    
+                    # log("✓ Continue clicked")
+                    time.sleep(0.8)
+                    return True
+            except:
+                continue
+        
+        # METHOD 2: Close button
+        close_selectors = [
+            "//button[normalize-space()='Close']",
             "//button[contains(@class, 'close')]",
+            "//button[contains(@aria-label, 'Close')]",
+            "//*[contains(@class, 'close') and (self::button or self::span or self::div[@role='button'])]",
+            "//button[text()='×' or text()='X' or text()='✕']",
             "//*[@data-testid='close-button']",
-            "//*[name()='svg']/parent::button"
+            "//*[contains(@class, 'icon-close')]",
+            "//*[name()='svg']/parent::button",
         ]
         
         for selector in close_selectors:
             try:
-                btns = driver.find_elements(By.XPATH, selector)
-                for btn in btns:
-                    if btn.is_displayed():
-                        # Native click first for close buttons
-                        try:
-                            btn.click()
-                        except:
-                            driver.execute_script("arguments[0].click();", btn)
-                        time.sleep(0.8)
-                        return True
+                close_btn = driver.find_element(By.XPATH, selector)
+                if close_btn.is_displayed():
+                    try:
+                        close_btn.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", close_btn)
+                    
+                    # log("✓ Close clicked")
+                    time.sleep(0.8)
+                    return True
             except:
                 continue
-                
-        # ESC fallback
+        
+        # METHOD 3: ESC key
         try:
-            ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+            driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+            time.sleep(0.5)
+            # log("✓ ESC pressed")
             return True
         except:
             pass
-            
+        
         return False
         
     except Exception as e:
+        # log(f"❌ Popup close error: {e}")
         return False
 
 def ensure_store_page(driver):
@@ -383,47 +420,71 @@ def ensure_store_page(driver):
         return False
 
 def click_daily_rewards_tab(driver):
-    """Click Daily Rewards TAB"""
+    """Click Daily Rewards TAB with horizontal scroll"""
     log("Clicking Daily Rewards tab...")
+    
     try:
-        # Use ActionChains for tab click
-        tab = driver.find_element(By.XPATH, "//div[contains(text(), 'Daily Rewards')][not(contains(@class, 'sidebar'))]")
-        ActionChains(driver).move_to_element(tab).click().perform()
-        log("✅ Daily Rewards tab clicked")
-        time.sleep(1.0)
-        return True
-    except:
-        # Fallback JS
-        try:
-            result = driver.execute_script("""
-                let allElements = document.querySelectorAll('*');
-                for (let elem of allElements) {
-                    if (elem.innerText && elem.innerText.includes('Daily Rewards')) {
-                        if (!elem.className.includes('sidebar') && !elem.parentElement.className.includes('sidebar')) {
-                            elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
-                            setTimeout(() => { elem.click(); }, 800);
-                            return true;
+        # MODIFIED SELECTOR: Looks for "Daily Rewards" OR "Daily Rewards-2"
+        result = driver.execute_script("""
+            let allElements = document.querySelectorAll('*');
+            
+            for (let elem of allElements) {
+                // Flexible match: "Daily Rewards" or "Daily Rewards-2"
+                if (elem.innerText && (elem.innerText.includes('Daily Rewards') || elem.innerText.includes('Daily Rewards-2'))) {
+                    
+                    let className = elem.className || '';
+                    if (!className.toLowerCase().includes('tab')) {
+                        let parent = elem.parentElement;
+                        let parentClass = parent ? (parent.className || '') : '';
+                        if (!parentClass.toLowerCase().includes('tab')) {
+                            continue;
                         }
                     }
+                    
+                    // Skip sidebar
+                    let parent = elem.parentElement;
+                    let parentClass = parent ? (parent.className || '') : '';
+                    if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
+                        continue;
+                    }
+                    
+                    // Scroll horizontally to make visible
+                    elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
+                    
+                    setTimeout(() => {
+                        elem.click();
+                    }, 800);
+                    
+                    return true;
                 }
-                return false;
-            """)
-            if result: 
-                time.sleep(1.5)
-                return True
-        except: 
-            pass
+            }
+            return false;
+        """)
+        
+        if result:
+            log("✅ Daily Rewards tab clicked")
+            time.sleep(1.0)
+            return True
+    except Exception as e:
+        log(f"❌ Tab click failed: {e}")
+    
     return False
 
 def navigate_to_daily_rewards_section_store(driver):
     """Navigate to Daily Rewards section in Store"""
+    log("Navigating to Daily Rewards section...")
     ensure_store_page(driver)
     close_popup(driver)
     time.sleep(0.3)
-    if click_daily_rewards_tab(driver):
-        time.sleep(1.5) # Wait for scroll
+    
+    tab_clicked = click_daily_rewards_tab(driver)
+    if tab_clicked:
+        log("✅ In Daily Rewards section")
+        time.sleep(0.7)
         return True
-    return False
+    else:
+        log("⚠️  Tab navigation failed")
+        return False
 
 # ==========================================================
 #  PHYSICAL INTERACTION HELPER (ActionChains)
@@ -494,7 +555,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - DIRECT BUTTON FINDER"""
+    """Claim Store Daily Rewards - UPDATED FOR NEW TAB NAME"""
     log("🏪 Claiming Store...")
     claimed = 0
     
@@ -696,7 +757,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v4.2 (Direct Free Button)")
+    log("CS HUB AUTO-CLAIMER v4.3 (New Tab Name Fix)")
     log("="*60)
     
     players = []
