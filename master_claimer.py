@@ -140,7 +140,8 @@ def accept_cookies(driver):
         btn = WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((
                 By.XPATH,
-                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Consent')]"
+                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or "
+                "contains(text(), 'Allow') or contains(text(), 'Consent')]"
             ))
         )
         btn.click()
@@ -150,7 +151,7 @@ def accept_cookies(driver):
         log("ℹ️  No cookie banner")
 
 def login_to_hub(driver, player_id):
-    """Login using multi-selector strategy (ROBUST VERSION)"""
+    """Login using multi-selector strategy"""
     log(f"🔐 Logging in: {player_id}")
     
     try:
@@ -161,7 +162,6 @@ def login_to_hub(driver, player_id):
         
         accept_cookies(driver)
         
-        # Login button detection (Expanded list)
         login_selectors = [
             "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
             "//a[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
@@ -199,7 +199,6 @@ def login_to_hub(driver, player_id):
         time.sleep(0.5)
         driver.save_screenshot(f"02_login_clicked_{player_id}.png")
         
-        # Input field detection (Specific first)
         input_selectors = [
             "#user-id-input",
             "//input[contains(@placeholder, 'ID') or contains(@placeholder, 'User') or contains(@name, 'user') or contains(@placeholder, 'id')]",
@@ -236,7 +235,6 @@ def login_to_hub(driver, player_id):
         
         driver.save_screenshot(f"03_input_entered_{player_id}.png")
         
-        # Login CTA detection
         login_cta_selectors = [
             "//button[contains(text(), 'Login') or contains(text(), 'Log in') or contains(text(), 'Sign in')]",
             "//button[@type='submit']",
@@ -269,7 +267,6 @@ def login_to_hub(driver, player_id):
         time.sleep(1)
         driver.save_screenshot(f"04_submitted_{player_id}.png")
         
-        # Wait for login completion
         log("⏳ Waiting for login...")
         start_time = time.time()
         max_wait = 12
@@ -492,11 +489,7 @@ def claim_daily_rewards(driver, player_id):
                         
                         if (!hasTimer && !btn.innerText.toLowerCase().includes('buy') && 
                             !btn.innerText.toLowerCase().includes('purchase')) {
-                            
-                            // NUCLEAR CLICK
-                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
-                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
-                            );
+                            btn.click();
                             return true;
                         }
                     }
@@ -522,7 +515,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - v2.6 Logic + Nuclear Click"""
+    """Claim Store Daily Rewards - v2.6 Logic"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -547,7 +540,7 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # v2.6 CARD SEARCH LOGIC + NUCLEAR CLICK
+            # v2.6 CARD SEARCH LOGIC (Matches Screenshots)
             result = driver.execute_script("""
                 // Find Store Bonus cards
                 let allDivs = document.querySelectorAll('div');
@@ -589,11 +582,9 @@ def claim_store_rewards(driver, player_id):
                         let btnText = btn.innerText.trim().toLowerCase();
                         if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            
-                            // NUCLEAR CLICK SEQUENCE
-                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
-                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
-                            );
+                            setTimeout(function() {
+                                btn.click();
+                            }, 500);
                             return true;
                         }
                     }
@@ -639,11 +630,7 @@ def claim_progression_program_rewards(driver, player_id):
                          let pText = (btn.parentElement.innerText || btn.parentElement.textContent) || '';
                          if (!pText.includes('Delivered')) {
                              btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                             
-                             // NUCLEAR CLICK
-                             ['mousedown', 'mouseup', 'click'].forEach(evt => 
-                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
-                             );
+                             setTimeout(function() { btn.click(); }, 300);
                              return true;
                          }
                     }
@@ -750,7 +737,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v4.5 (Restored Login + v2.6 Logic)")
+    log("CS HUB AUTO-CLAIMER v2.6 (Restored + New Tab Fix)")
     log("="*60)
     
     players = []
