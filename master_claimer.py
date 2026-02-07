@@ -28,11 +28,13 @@ def log(msg):
 
 # IST timezone helper functions
 def get_ist_time():
+    """Get current time in IST (UTC+5:30)"""
     utc_now = datetime.utcnow()
     ist_offset = timedelta(hours=5, minutes=30)
     return utc_now + ist_offset
 
 def get_current_daily_window_start():
+    """Get the start of current daily window (5:30 AM IST)"""
     ist_now = get_ist_time()
     if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
         window_start = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0) - timedelta(days=1)
@@ -41,6 +43,7 @@ def get_current_daily_window_start():
     return window_start
 
 def get_next_daily_reset():
+    """Get next daily reset time (5:30 AM IST)"""
     ist_now = get_ist_time()
     if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
         next_reset = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0)
@@ -49,6 +52,7 @@ def get_next_daily_reset():
     return next_reset
 
 def format_time_until_reset(next_reset):
+    """Format time remaining until next reset"""
     ist_now = get_ist_time()
     delta = next_reset - ist_now
     hours, remainder = divmod(delta.seconds, 3600)
@@ -56,6 +60,7 @@ def format_time_until_reset(next_reset):
     return f"{hours}h {minutes}m"
 
 def create_driver():
+    """GitHub Actions-compatible driver - FORCED CHROME 144"""
     for attempt in range(3):
         try:
             options = uc.ChromeOptions()
@@ -94,37 +99,49 @@ def create_driver():
                 raise
 
 def bypass_cloudflare(driver):
+    """Specifically handle the 'Verifying you are human' screen"""
     try:
         time.sleep(2)
         title = driver.title.lower()
         source = driver.page_source.lower()
+        
         if "just a moment" in title or "verifying" in source or "hub.vertigogames.co" in title:
             log("🛡️ Cloudflare Challenge detected. Attempting bypass...")
             time.sleep(5)
+            
             if "daily rewards" in driver.title.lower() or "login" in driver.page_source.lower():
                 log("✅ Passed Cloudflare (Automatic)")
                 return True
+
             try:
                 checkbox = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
                 if checkbox:
                     checkbox[0].click()
                     log("✅ Clicked Verification Checkbox")
                     time.sleep(3)
-            except: pass
+            except:
+                pass
+            
             for _ in range(15):
                 if "daily-rewards" in driver.current_url or "hub.vertigogames.co" in driver.current_url:
                     if "verifying" not in driver.page_source.lower():
                         log("✅ Cloudflare cleared")
                         return True
                 time.sleep(1)
+                
             log("⚠️ Warning: Might still be on Cloudflare page")
+            
     except Exception as e:
         log(f"ℹ️ Cloudflare check error (ignorable): {e}")
 
 def accept_cookies(driver):
+    """Accept cookie banner"""
     try:
         btn = WebDriverWait(driver, 3).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or contains(text(), 'Allow')]"))
+            EC.element_to_be_clickable((
+                By.XPATH,
+                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or contains(text(), 'Allow') or contains(text(), 'Consent')]"
+            ))
         )
         btn.click()
         time.sleep(0.3)
@@ -171,9 +188,11 @@ def login_to_hub(driver, player_id):
         
         if not login_clicked:
             log("❌ No login button found")
+            driver.save_screenshot(f"02_login_not_found_{player_id}.png")
             return False
         
         time.sleep(0.5)
+        driver.save_screenshot(f"02_login_clicked_{player_id}.png")
         
         input_selectors = [
             "#user-id-input",
@@ -201,7 +220,10 @@ def login_to_hub(driver, player_id):
         
         if not input_found:
             log("❌ No input field found")
+            driver.save_screenshot(f"03_input_not_found_{player_id}.png")
             return False
+        
+        driver.save_screenshot(f"03_input_entered_{player_id}.png")
         
         login_cta_selectors = [
             "//button[contains(text(), 'Login') or contains(text(), 'Log in') or contains(text(), 'Sign in')]",
@@ -226,6 +248,7 @@ def login_to_hub(driver, player_id):
                 log("⏎ Enter key pressed")
             except:
                 log("❌ Login CTA not found")
+                driver.save_screenshot(f"04_cta_not_found_{player_id}.png")
                 return False
         
         time.sleep(1)
@@ -233,24 +256,30 @@ def login_to_hub(driver, player_id):
         
         log("⏳ Waiting for login...")
         start_time = time.time()
-        while time.time() - start_time < 12:
+        max_wait = 12
+        while time.time() - start_time < max_wait:
             try:
                 current_url = driver.current_url
                 if "user" in current_url.lower() or "dashboard" in current_url.lower() or "daily-rewards" in current_url.lower():
                     log("✅ Login verified (URL)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
                     return True
                 user_elements = driver.find_elements(By.XPATH, "//button[contains(text(),'Logout') or contains(text(),'Profile') or contains(@class,'user')]")
                 if user_elements:
                     log("✅ Login verified (Logout button)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
                     return True
                 time.sleep(0.3)
             except: time.sleep(0.3)
         
         log("❌ Login verification timeout")
+        driver.save_screenshot(f"05_login_timeout_{player_id}.png")
         return False
         
     except Exception as e:
         log(f"❌ Login exception: {e}")
+        try: driver.save_screenshot(f"99_exception_{player_id}.png")
+        except: pass
         return False
 
 def close_popup(driver):
@@ -351,7 +380,7 @@ def physical_click(driver, element):
 # ==========================================================
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page - FROM master_claimer_Daily.py"""
+    """Claim daily rewards page - STRICTLY FROM master_claimer_Daily.py"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     try:
@@ -372,13 +401,26 @@ def claim_daily_rewards(driver, player_id):
                             if "next in" in parent.text.lower(): continue
                         except: pass
                         
+                        # --- DOUBLE CLICK LOGIC START ---
                         if physical_click(driver, btn):
                             log("🖱️ Clicked Daily Reward")
-                            time.sleep(3)
-                            close_popup(driver)
+                            time.sleep(2)
+                            
+                            # Try confirming click if popup appeared or button allows re-click
+                            try:
+                                close_popup(driver)
+                                time.sleep(1)
+                                if btn.is_displayed() and btn.is_enabled():
+                                    physical_click(driver, btn)
+                                    log("🖱️ Double-tapped Daily Reward button")
+                            except: pass
+                            
+                            time.sleep(3) # Wait for animation
+                            
                             claimed += 1
                             clicked_any = True
                             break 
+                        # --- DOUBLE CLICK LOGIC END ---
                 except: continue
             
             if clicked_any: break
@@ -615,7 +657,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v6.6 (Cherry-Picked Merge)")
+    log("CS HUB AUTO-CLAIMER v6.7 (Daily Fix)")
     log("="*60)
     
     players = []
