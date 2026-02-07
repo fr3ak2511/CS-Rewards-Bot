@@ -464,16 +464,17 @@ def claim_store_rewards(driver, player_id):
                 else:
                     break
         
-        # THIRD CLAIM: Use JavaScript method from master_claimer_v2_6.py
+        # THIRD CLAIM: Use JavaScript method from master_claimer_v2_6.py with fallback
         if claimed < max_claims:
-            log("🔹 Phase 2: JavaScript Method (Claim 3)")
+            log("🔹 Phase 2: JavaScript Method (Claim 3) with Physical Click Fallback")
             for attempt in range(5):  # Increased attempts
                 if claimed >= max_claims:
                     break
                 
                 ensure_store_page(driver)
-                time.sleep(1.5)
+                time.sleep(2)  # Increased wait
                 
+                # Try JavaScript first
                 result = driver.execute_script("""
                     // Target Store Bonus Cards
                     let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
@@ -496,9 +497,7 @@ def claim_store_rewards(driver, player_id):
                             let btnText = btn.innerText.trim().toLowerCase();
                             if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
                                 btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                setTimeout(function() {
-                                    btn.click();
-                                }, 500);
+                                btn.click();  // Direct click instead of setTimeout
                                 return true;
                             }
                         }
@@ -509,16 +508,112 @@ def claim_store_rewards(driver, player_id):
                 if result:
                     claimed += 1
                     log(f"✅ Store Claim #{claimed} (JavaScript)")
-                    time.sleep(3.0)
+                    time.sleep(5)  # Longer wait for server to process
                     close_popup(driver)
-                    time.sleep(1)
+                    time.sleep(2)
+                    
+                    # Verify claim worked by checking if button is gone
+                    verify_result = driver.execute_script("""
+                        let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
+                        if (storeBonusCards.length === 0) {
+                            storeBonusCards = document.querySelectorAll('div');
+                        }
+                        
+                        let freeCount = 0;
+                        for (let card of storeBonusCards) {
+                            let cardText = card.innerText || '';
+                            if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                                continue;
+                            }
+                            let buttons = card.querySelectorAll('button');
+                            for (let btn of buttons) {
+                                let btnText = btn.innerText.trim().toLowerCase();
+                                if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
+                                    freeCount++;
+                                }
+                            }
+                        }
+                        return freeCount;
+                    """)
+                    
+                    if verify_result > 0:
+                        log(f"⚠️ JavaScript claim didn't register. Trying Physical Click fallback...")
+                        claimed -= 1  # Revert the count
+                        
+                        # Try physical click as fallback
+                        ensure_store_page(driver)
+                        time.sleep(1.5)
+                        
+                        found_btn = None
+                        try:
+                            buttons = driver.find_elements(By.TAG_NAME, "button")
+                            for btn in buttons:
+                                try:
+                                    btn_text = btn.text.strip().lower()
+                                    if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
+                                        # Timer Check
+                                        try:
+                                            parent = btn.find_element(By.XPATH, "./..")
+                                            if "next in" in parent.text.lower(): continue
+                                        except: pass
+                                        
+                                        found_btn = btn
+                                        break
+                                except: continue
+                        except: pass
+                        
+                        if found_btn:
+                            log(f"🖱️ Found Free Button with Physical method")
+                            if physical_click(driver, found_btn):
+                                time.sleep(5)
+                                close_popup(driver)
+                                claimed += 1
+                                log(f"✅ Store Claim #{claimed} (Physical Click Fallback)")
+                                ensure_store_page(driver)
+                                time.sleep(1)
+                        else:
+                            if attempt < 4:
+                                time.sleep(3)
+                                continue
+                    
                     if not ensure_store_page(driver): break
                 else:
-                    log(f"ℹ️  No more available claims in Phase 2 (attempt {attempt + 1})")
-                    if attempt < 4:
-                        time.sleep(2)
+                    # JavaScript didn't find button, try physical click
+                    log(f"ℹ️  JavaScript found no button. Trying Physical Click...")
+                    
+                    found_btn = None
+                    try:
+                        buttons = driver.find_elements(By.TAG_NAME, "button")
+                        for btn in buttons:
+                            try:
+                                btn_text = btn.text.strip().lower()
+                                if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
+                                    # Timer Check
+                                    try:
+                                        parent = btn.find_element(By.XPATH, "./..")
+                                        if "next in" in parent.text.lower(): continue
+                                    except: pass
+                                    
+                                    found_btn = btn
+                                    break
+                            except: continue
+                    except: pass
+                    
+                    if found_btn:
+                        log(f"🖱️ Found Free Button with Physical method")
+                        if physical_click(driver, found_btn):
+                            time.sleep(5)
+                            close_popup(driver)
+                            claimed += 1
+                            log(f"✅ Store Claim #{claimed} (Physical Click Fallback)")
+                            ensure_store_page(driver)
+                            time.sleep(1)
                     else:
-                        break
+                        log(f"ℹ️  No more available claims in Phase 2 (attempt {attempt + 1})")
+                        if attempt < 4:
+                            time.sleep(3)
+                        else:
+                            break
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
@@ -594,16 +689,27 @@ def process_player(player_id):
                 log(f"⚠️ Only {stats['store']}/{max_store_expected} Store claimed. Retry {retry + 1}/{store_retry_attempts - 1}...")
                 time.sleep(2)
         
+        # Wait for server to process store claims before attempting progression
+        if stats['store'] > 0:
+            log("⏳ Waiting for server to process store claims...")
+            time.sleep(4)
+        
         # Claim Progression with retry logic
-        progression_retry_attempts = 2
+        progression_retry_attempts = 3  # Increased from 2 to 3
         for retry in range(progression_retry_attempts):
             claimed = claim_progression_program_rewards(driver, player_id)
             stats['progression'] += claimed
             if claimed == 0 and retry < progression_retry_attempts - 1:
                 log(f"⚠️ No progression claimed. Retry {retry + 1}/{progression_retry_attempts - 1}...")
-                time.sleep(2)
+                time.sleep(3)  # Increased wait time
             elif claimed == 0:
+                log(f"ℹ️  No progression rewards available after {progression_retry_attempts} attempts")
                 break
+            else:
+                # Got some claims, try one more time to see if there are more
+                if retry < progression_retry_attempts - 1:
+                    log(f"✅ Claimed {claimed} progression. Checking for more...")
+                    time.sleep(2)
         
         total = stats['daily'] + stats['store'] + stats['progression']
         if total > 0:
