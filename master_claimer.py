@@ -489,7 +489,11 @@ def claim_daily_rewards(driver, player_id):
                         
                         if (!hasTimer && !btn.innerText.toLowerCase().includes('buy') && 
                             !btn.innerText.toLowerCase().includes('purchase')) {
-                            btn.click();
+                            
+                            // NUCLEAR CLICK
+                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
+                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
+                            );
                             return true;
                         }
                     }
@@ -515,7 +519,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - v2.6 Logic"""
+    """Claim Store Daily Rewards - BROADER SEARCH + NUCLEAR CLICK"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -540,22 +544,22 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # v2.6 CARD SEARCH LOGIC (Matches Screenshots)
+            # v4.6 IMPROVED FINDER: Looks for ANY "Store Bonus" card with +1
+            # Removes reliance on specific reward names like "Luckyloon"
             result = driver.execute_script("""
-                // Find Store Bonus cards
                 let allDivs = document.querySelectorAll('div');
                 let storeBonusCards = [];
                 
+                // 1. Find Cards GENERICALLY
                 for (let div of allDivs) {
                     let text = div.innerText || '';
                     if (text.includes('Store Bonus') && text.includes('+1')) {
+                        // Found header, traverse up to find card container
                         let parent = div.parentElement;
                         let attempts = 0;
                         while (parent && attempts < 5) {
-                            let parentText = parent.innerText || '';
-                            if (parentText.includes('Gold (Daily)') || 
-                                parentText.includes('Cash (Daily)') || 
-                                parentText.includes('Luckyloon (Daily)')) {
+                            // Verify it is a card by checking for button
+                            if (parent.querySelector('button')) {
                                 storeBonusCards.push(parent);
                                 break;
                             }
@@ -567,24 +571,21 @@ def claim_store_rewards(driver, player_id):
                 
                 console.log('Found ' + storeBonusCards.length + ' Store Bonus cards');
                 
-                // Find buttons with "Free" text (NO timer)
+                // 2. Find Button & Click
                 for (let card of storeBonusCards) {
                     let cardText = card.innerText || '';
+                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) continue;
                     
-                    // SKIP cards with timer
-                    if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                        continue;
-                    }
-                    
-                    // Find button
                     let buttons = card.querySelectorAll('button');
                     for (let btn of buttons) {
                         let btnText = btn.innerText.trim().toLowerCase();
                         if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
                             btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                            setTimeout(function() {
-                                btn.click();
-                            }, 500);
+                            
+                            // NUCLEAR CLICK SEQUENCE
+                            ['mousedown', 'mouseup', 'click'].forEach(evt => 
+                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
+                            );
                             return true;
                         }
                     }
@@ -598,7 +599,6 @@ def claim_store_rewards(driver, player_id):
                 time.sleep(3.0)
                 close_popup(driver)
                 time.sleep(0.5)
-                if not ensure_store_page(driver): break
             else:
                 log(f"ℹ️  No more available claims (attempt {attempt + 1})")
                 break
@@ -630,7 +630,11 @@ def claim_progression_program_rewards(driver, player_id):
                          let pText = (btn.parentElement.innerText || btn.parentElement.textContent) || '';
                          if (!pText.includes('Delivered')) {
                              btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                             setTimeout(function() { btn.click(); }, 300);
+                             
+                             // NUCLEAR CLICK
+                             ['mousedown', 'mouseup', 'click'].forEach(evt => 
+                                btn.dispatchEvent(new MouseEvent(evt, {bubbles: true, cancelable: true, view: window}))
+                             );
                              return true;
                          }
                     }
@@ -644,10 +648,8 @@ def claim_progression_program_rewards(driver, player_id):
                 time.sleep(2.0)
                 close_popup(driver)
             else:
-                # Scroll if nothing found
                 driver.execute_script("let c=document.querySelectorAll('div');for(let i of c){if(i.scrollWidth>i.clientWidth){i.scrollLeft+=400;}}")
                 time.sleep(1)
-        
     except: pass
     return claimed
 
@@ -737,7 +739,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.6 (Restored + New Tab Fix)")
+    log("CS HUB AUTO-CLAIMER v4.6 (Broad Finder + Nuclear)")
     log("="*60)
     
     players = []
