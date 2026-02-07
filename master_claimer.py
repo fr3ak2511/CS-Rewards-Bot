@@ -150,82 +150,167 @@ def accept_cookies(driver):
         log("ℹ️  No cookie banner")
 
 # ==============================================================================
-# LOGIN LOGIC (From master_claimer_Store.py - Proven Working)
+# LOGIN LOGIC (RESTORED TO ROBUST VERSION FROM YOUR FILES)
 # ==============================================================================
 def login_to_hub(driver, player_id):
+    """Login using multi-selector strategy"""
     log(f"🔐 Logging in: {player_id}")
+    
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(1)
         driver.save_screenshot(f"01_page_loaded_{player_id}.png")
+        
         accept_cookies(driver)
         
+        # FULL 7-SELECTOR LIST FROM YOUR WORKING SCRIPTS
         login_selectors = [
-            "//button[contains(text(),'Login')]", 
-            "//button[contains(text(),'Log in')]",
-            "//a[contains(text(),'Login')]"
+            "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
+            "//a[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
+            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'login')]",
+            "//button[contains(text(), 'claim')]",
+            "//div[contains(text(), 'Daily Rewards') or contains(text(), 'daily')]//button",
+            "//button[contains(@class, 'btn') or contains(@class, 'button')]",
+            "//*[contains(text(), 'Login') or contains(text(), 'login')][@onclick or @href or self::button or self::a]",
         ]
         
         login_clicked = False
-        for selector in login_selectors:
+        for i, selector in enumerate(login_selectors):
             try:
                 elements = driver.find_elements(By.XPATH, selector)
-                for element in elements:
-                    if element.is_displayed() and element.is_enabled():
-                        element.click()
-                        login_clicked = True
-                        log(f"✅ Login button clicked")
-                        break
-                if login_clicked: break
-            except: continue
+                if elements:
+                    for element in elements:
+                        try:
+                            if element.is_displayed() and element.is_enabled():
+                                element.click()
+                                login_clicked = True
+                                log(f"✅ Login button clicked (selector {i+1})")
+                                break
+                        except:
+                            continue
+                if login_clicked:
+                    break
+            except:
+                continue
         
         if not login_clicked:
             log("❌ No login button found")
+            driver.save_screenshot(f"02_login_not_found_{player_id}.png")
             return False
         
         time.sleep(0.5)
+        driver.save_screenshot(f"02_login_clicked_{player_id}.png")
         
-        input_selectors = ["#user-id-input", "//input[@placeholder='User ID']", "//input[@type='text']"]
+        input_selectors = [
+            "#user-id-input",
+            "//input[contains(@placeholder, 'ID') or contains(@placeholder, 'User') or contains(@name, 'user') or contains(@placeholder, 'id')]",
+            "//input[@type='text']",
+            "//input[contains(@class, 'input')]",
+            "//div[contains(@class, 'modal') or contains(@class, 'dialog')]//input[@type='text']",
+        ]
+        
+        input_found = False
         input_box = None
         for selector in input_selectors:
             try:
-                input_box = WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH if "//" in selector else By.CSS_SELECTOR, selector)))
+                if selector.startswith("#"):
+                    input_box = WebDriverWait(driver, 3).until(
+                        EC.visibility_of_element_located((By.ID, selector[1:]))
+                    )
+                else:
+                    input_box = WebDriverWait(driver, 3).until(
+                        EC.visibility_of_element_located((By.XPATH, selector))
+                    )
+                log("✅ Input field found")
                 input_box.clear()
                 input_box.send_keys(player_id)
                 time.sleep(0.1)
+                input_found = True
                 break
-            except: continue
-            
-        if not input_box:
-            log("❌ No input field found")
-            return False
-            
-        try:
-            cta = driver.find_element(By.XPATH, "//button[contains(text(), 'Login') or contains(text(), 'Log in')]")
-            cta.click()
-            log("✅ Login CTA clicked")
-        except:
-            input_box.send_keys(Keys.ENTER)
-            log("⏎ Enter key pressed")
-            
-        time.sleep(1)
+            except:
+                continue
         
+        if not input_found:
+            log("❌ No input field found")
+            driver.save_screenshot(f"03_input_not_found_{player_id}.png")
+            return False
+        
+        driver.save_screenshot(f"03_input_entered_{player_id}.png")
+        
+        login_cta_selectors = [
+            "//button[contains(text(), 'Login') or contains(text(), 'Log in') or contains(text(), 'Sign in')]",
+            "//button[@type='submit']",
+            "//div[contains(@class, 'modal') or contains(@class, 'dialog')]//button[not(contains(text(), 'Cancel')) and not(contains(text(), 'Close'))]",
+            "//button[contains(@class, 'primary') or contains(@class, 'submit')]",
+        ]
+        
+        login_cta_clicked = False
+        for selector in login_cta_selectors:
+            try:
+                btn = WebDriverWait(driver, 2).until(
+                    EC.element_to_be_clickable((By.XPATH, selector))
+                )
+                btn.click()
+                login_cta_clicked = True
+                log("✅ Login CTA clicked")
+                break
+            except:
+                continue
+        
+        if not login_cta_clicked:
+            try:
+                input_box.send_keys(Keys.ENTER)
+                log("⏎ Enter key pressed")
+            except:
+                log("❌ Login CTA not found")
+                driver.save_screenshot(f"04_cta_not_found_{player_id}.png")
+                return False
+        
+        time.sleep(1)
+        driver.save_screenshot(f"04_submitted_{player_id}.png")
+        
+        log("⏳ Waiting for login...")
         start_time = time.time()
-        while time.time() - start_time < 12:
-            if "daily-rewards" in driver.current_url or "dashboard" in driver.current_url:
-                log("✅ Login verified")
-                return True
-            time.sleep(0.5)
-            
+        max_wait = 12
+        
+        while time.time() - start_time < max_wait:
+            try:
+                current_url = driver.current_url
+                if "user" in current_url.lower() or "dashboard" in current_url.lower() or "daily-rewards" in current_url.lower():
+                    log("✅ Login verified (URL)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
+                    return True
+                
+                user_elements = driver.find_elements(
+                    By.XPATH,
+                    "//button[contains(text(),'Logout') or contains(text(),'Profile') or contains(@class,'user')]"
+                )
+                if user_elements:
+                    log("✅ Login verified (Logout button)")
+                    driver.save_screenshot(f"05_login_success_{player_id}.png")
+                    return True
+                
+                time.sleep(0.3)
+            except:
+                time.sleep(0.3)
+        
+        log("❌ Login verification timeout")
+        driver.save_screenshot(f"05_login_timeout_{player_id}.png")
         return False
+        
     except Exception as e:
-        log(f"❌ Login error: {e}")
+        log(f"❌ Login exception: {e}")
+        try:
+            driver.save_screenshot(f"99_exception_{player_id}.png")
+        except:
+            pass
         return False
 
 def close_popup(driver):
     """Multi-method popup closing strategy"""
     try:
+        # log("Checking for popup...") # Reduced verbosity
         time.sleep(0.5)
         
         popup_selectors = [
@@ -249,23 +334,36 @@ def close_popup(driver):
         if not popup_found:
             return True
         
+        # METHOD 1: Continue button
         continue_selectors = [
             "//button[normalize-space()='Continue']",
             "//button[contains(text(), 'Continue')]",
+            "//button[contains(@class, 'continue')]",
+            "//*[contains(text(), 'Continue') and (self::button or self::a)]",
         ]
         
         for selector in continue_selectors:
             try:
                 continue_btn = driver.find_element(By.XPATH, selector)
-                if continue_btn.is_displayed():
-                    driver.execute_script("arguments[0].click();", continue_btn)
+                if continue_btn.is_displayed() and continue_btn.is_enabled():
+                    try:
+                        continue_btn.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", continue_btn)
                     time.sleep(0.8)
                     return True
-            except: continue
+            except:
+                continue
         
+        # METHOD 2: Close button
         close_selectors = [
             "//button[normalize-space()='Close']",
             "//button[contains(@class, 'close')]",
+            "//button[contains(@aria-label, 'Close')]",
+            "//*[contains(@class, 'close') and (self::button or self::span or self::div[@role='button'])]",
+            "//button[text()='×' or text()='X' or text()='✕']",
+            "//*[@data-testid='close-button']",
+            "//*[contains(@class, 'icon-close')]",
             "//*[name()='svg']/parent::button",
         ]
         
@@ -273,19 +371,55 @@ def close_popup(driver):
             try:
                 close_btn = driver.find_element(By.XPATH, selector)
                 if close_btn.is_displayed():
-                    driver.execute_script("arguments[0].click();", close_btn)
+                    try:
+                        close_btn.click()
+                    except:
+                        driver.execute_script("arguments[0].click();", close_btn)
                     time.sleep(0.8)
                     return True
-            except: continue
-                
+            except:
+                continue
+        
+        # METHOD 3: ESC key
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(0.5)
             return True
-        except: pass
-            
+        except:
+            pass
+        
         return False
-    except: return False
+    except:
+        return False
+
+# ==========================================================
+#  PHYSICAL INTERACTION HELPER (From Both Scripts)
+# ==========================================================
+def physical_click(driver, element):
+    """Moves mouse to element coordinates and clicks physically"""
+    try:
+        # 1. Scroll into view (Center)
+        driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", element)
+        time.sleep(0.5)
+        
+        # 2. Physical Move & Click
+        actions = ActionChains(driver)
+        actions.move_to_element(element)
+        actions.pause(0.2) # Hover
+        actions.click()
+        actions.perform()
+        return True
+    except Exception as e:
+        # Fallback to JS
+        try:
+            driver.execute_script("arguments[0].click();", element)
+            return True
+        except:
+            return False
+
+# ==============================================================================
+# STORE NAVIGATION HELPERS (From master_claimer_Store.py)
+# ==============================================================================
 
 def ensure_store_page(driver):
     """Check if on Store page"""
@@ -310,13 +444,18 @@ def ensure_store_page(driver):
         return False
 
 def click_daily_rewards_tab(driver):
-    """Click Daily Rewards TAB"""
+    """Click Daily Rewards TAB with horizontal scroll"""
     log("Clicking Daily Rewards tab...")
+    
     try:
+        # MODIFIED SELECTOR: Looks for "Daily Rewards" OR "Daily Rewards-2"
         result = driver.execute_script("""
             let allElements = document.querySelectorAll('*');
+            
             for (let elem of allElements) {
+                // Flexible match: "Daily Rewards" or "Daily Rewards-2"
                 if (elem.innerText && (elem.innerText.includes('Daily Rewards') || elem.innerText.includes('Daily Rewards-2'))) {
+                    
                     let className = elem.className || '';
                     if (!className.toLowerCase().includes('tab')) {
                         let parent = elem.parentElement;
@@ -325,25 +464,34 @@ def click_daily_rewards_tab(driver):
                             continue;
                         }
                     }
+                    
                     // Skip sidebar
                     let parent = elem.parentElement;
                     let parentClass = parent ? (parent.className || '') : '';
                     if (parentClass.includes('sidebar') || parentClass.includes('menu') || parentClass.includes('side')) {
                         continue;
                     }
+                    
+                    // Scroll horizontally to make visible
                     elem.scrollIntoView({behavior: 'smooth', block: 'nearest', inline: 'center'});
-                    setTimeout(() => { elem.click(); }, 800);
+                    
+                    setTimeout(() => {
+                        elem.click();
+                    }, 800);
+                    
                     return true;
                 }
             }
             return false;
         """)
+        
         if result:
             log("✅ Daily Rewards tab clicked")
             time.sleep(1.0)
             return True
     except Exception as e:
         log(f"❌ Tab click failed: {e}")
+    
     return False
 
 def navigate_to_daily_rewards_section_store(driver):
@@ -352,6 +500,7 @@ def navigate_to_daily_rewards_section_store(driver):
     ensure_store_page(driver)
     close_popup(driver)
     time.sleep(0.3)
+    
     tab_clicked = click_daily_rewards_tab(driver)
     if tab_clicked:
         log("✅ In Daily Rewards section")
@@ -362,48 +511,11 @@ def navigate_to_daily_rewards_section_store(driver):
         return False
 
 # ==============================================================================
-# CLICKING HELPERS (One for Daily, One for Store)
-# ==============================================================================
-
-def physical_click(driver, element):
-    """From master_claimer_Daily.py: ActionChains click"""
-    try:
-        driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center'});", element)
-        time.sleep(0.5)
-        actions = ActionChains(driver)
-        actions.move_to_element(element)
-        actions.pause(0.2)
-        actions.click()
-        actions.perform()
-        return True
-    except Exception as e:
-        try:
-            driver.execute_script("arguments[0].click();", element)
-            return True
-        except:
-            return False
-
-def native_click(driver, element):
-    """From master_claimer_Store.py: ActionChains click"""
-    try:
-        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
-        time.sleep(0.5)
-        actions = ActionChains(driver)
-        actions.move_to_element(element).pause(0.2).click().perform()
-        return True
-    except Exception as e:
-        try:
-            driver.execute_script("arguments[0].click();", element)
-            return True
-        except:
-            return False
-
-# ==============================================================================
 # CLAIM LOGIC
 # ==============================================================================
 
 def claim_daily_rewards(driver, player_id):
-    """Claim daily rewards page - STRICTLY FROM master_claimer_Daily.py"""
+    """Claim daily rewards page - FROM master_claimer_Daily.py"""
     log("🎁 Claiming Daily Rewards...")
     claimed = 0
     try:
@@ -413,12 +525,15 @@ def claim_daily_rewards(driver, player_id):
         close_popup(driver)
         
         for _ in range(10):
+            # Refresh button list every time
             buttons = driver.find_elements(By.TAG_NAME, "button")
             clicked_any = False
+            
             for btn in buttons:
                 try:
                     text = btn.text.lower()
                     if ("claim" in text or "free" in text) and "buy" not in text:
+                        # Timer check
                         try:
                             parent = btn.find_element(By.XPATH, "./..")
                             if "next in" in parent.text.lower(): continue
@@ -427,6 +542,8 @@ def claim_daily_rewards(driver, player_id):
                         if physical_click(driver, btn):
                             log("🖱️ Clicked Daily Reward")
                             time.sleep(3)
+                            
+                            # Assume Success & Close Popup
                             close_popup(driver)
                             claimed += 1
                             clicked_any = True
@@ -434,7 +551,7 @@ def claim_daily_rewards(driver, player_id):
                 except: continue
             
             if clicked_any:
-                break # Stop after 1 claim
+                break # Stop after 1 claim (Fixed Logic from Daily Script)
             
         driver.save_screenshot(f"daily_final_{player_id}.png")
     except Exception as e:
@@ -442,7 +559,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def claim_store_rewards(driver, player_id):
-    """Claim Store Daily Rewards - STRICTLY FROM master_claimer_Store.py"""
+    """Claim Store Daily Rewards - FROM master_claimer_Store.py"""
     log("🏪 Claiming Store...")
     claimed = 0
     max_claims = 3
@@ -467,61 +584,43 @@ def claim_store_rewards(driver, player_id):
                 if not navigate_to_daily_rewards_section_store(driver): break
                 time.sleep(0.5)
             
-            # LOGIC FROM master_claimer_Store.py (Native click + "Store Bonus" check)
-            result = driver.execute_script("""
-                function hasTimerInParents(element) {
-                    let p = element.parentElement;
-                    for(let i=0; i<4; i++) {
-                        if (p) {
-                            let text = (p.innerText || '').toLowerCase();
-                            if (text.includes('next in') || text.match(/\\d+h\\s+\\d+m/)) {
-                                return true;
-                            }
-                            p = p.parentElement;
-                        }
-                    }
-                    return false;
-                }
-
-                let allButtons = document.querySelectorAll('button');
-                for (let btn of allButtons) {
-                    let btnText = btn.innerText.trim().toLowerCase();
-                    if ((btnText === 'claim' || btnText === 'free') && btn.offsetParent !== null && !btn.disabled) {
-                        let isStoreBonus = false;
-                        let p = btn.parentElement;
-                        for(let i=0; i<5; i++) {
-                            if (p && (p.innerText || '').includes('Store Bonus')) {
-                                isStoreBonus = true;
-                                break;
-                            }
-                            if(p) p = p.parentElement;
-                        }
-                        
-                        if (isStoreBonus) {
-                            if (hasTimerInParents(btn)) {
-                                continue;
-                            }
-                            return btn; // Return the element to Python
-                        }
-                    }
-                }
-                return null;
-            """)
+            # STRICT FINDER: Find ANY button with "Free" text (from Store script)
+            buttons = driver.find_elements(By.TAG_NAME, "button")
+            found_btn = None
             
-            # If JS found a button, we click it using native_click
-            if result:
-                log(f"🖱️ Found Button via JS. Clicking...")
-                if native_click(driver, result):
-                    log(f"✅ Store Claim #{claimed + 1} SUCCESS")
-                    claimed += 1
-                    time.sleep(2)
+            for btn in buttons:
+                try:
+                    txt = (btn.text or btn.get_attribute("textContent")).lower()
+                    
+                    if "free" in txt:
+                        if btn.is_enabled() and btn.is_displayed():
+                            # Timer Check
+                            try:
+                                parent = btn.find_element(By.XPATH, "./..")
+                                if "next in" in parent.text.lower(): continue
+                            except: pass
+                            
+                            found_btn = btn
+                            break # Click one at a time
+                except: continue
+            
+            if found_btn:
+                log(f"🖱️ Found Free Button. Clicking...")
+                if physical_click(driver, found_btn):
+                    time.sleep(4)
+                    
+                    # Assume success
                     close_popup(driver)
-                    time.sleep(0.5)
+                    log(f"✅ Store Claim #{claimed + 1} (Assumed Success)")
+                    claimed += 1
+                    
+                    # Refresh page state
+                    ensure_store_page(driver)
             else:
-                log(f"ℹ️  No more available claims (attempt {attempt + 1})")
+                log(f"ℹ️  No 'Free' buttons found (attempt {attempt+1})")
                 break
-        
-        log(f"Store Claims Complete: {claimed}/{max_claims}")
+                
+        log(f"Store Claims Complete: {claimed}/3")
         driver.save_screenshot(f"store_final_{player_id}.png")
         
     except Exception as e:
@@ -530,48 +629,50 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression - STRICTLY FROM master_claimer_Store.py"""
-    log("🎯 Claiming Progression Program...")
+    """Claim Progression - FROM master_claimer_Store.py"""
+    log("🎯 Claiming Progression...")
     claimed = 0
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
         bypass_cloudflare(driver)
-        time.sleep(2)
+        time.sleep(3)
         close_popup(driver)
         
         for _ in range(8):
             buttons = driver.find_elements(By.TAG_NAME, "button")
-            clicked_any = False
-            
+            clicked = False
             for btn in buttons:
                 try:
-                    text = btn.text.lower()
-                    if text == "claim":
+                    if "claim" in btn.text.lower():
+                        # Delivered check
                         try:
                             parent = btn.find_element(By.XPATH, "./..")
-                            if "delivered" in parent.text.lower():
-                                continue
+                            if "delivered" in parent.text.lower(): continue
                         except: pass
                         
-                        if native_click(driver, btn):
-                            log("✅ Clicked Progression Reward")
-                            claimed += 1
+                        if physical_click(driver, btn):
+                            log("🖱️ Clicked Progression")
                             time.sleep(2)
                             close_popup(driver)
-                            clicked_any = True
+                            claimed += 1
+                            clicked = True
                             break
                 except: continue
             
-            if not clicked_any:
+            if not clicked:
+                # Scroll logic
                 try:
                     driver.execute_script("let c=document.querySelectorAll('div');for(let i of c){if(i.scrollWidth>i.clientWidth){i.scrollLeft+=400;}}")
                     time.sleep(1)
                 except: break
-            
+            else:
+                pass 
+                
     except: pass
     return claimed
 
 def process_player(player_id):
+    """Process single player"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     try:
@@ -581,8 +682,13 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
+        # 1. Daily (Uses Logic from Daily Script)
         stats['daily'] = claim_daily_rewards(driver, player_id)
+        
+        # 2. Store (Uses Logic from Store Script)
         stats['store'] = claim_store_rewards(driver, player_id)
+        
+        # 3. Progression (Uses Logic from Store Script)
         stats['progression'] = claim_progression_program_rewards(driver, player_id)
         
         total = stats['daily'] + stats['store'] + stats['progression']
@@ -601,7 +707,7 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results, num_players):
-    """Email Logic from master_claimer_Store.py"""
+    """Rich Text Email from master_claimer_Store.py"""
     try:
         sender = os.environ.get("SENDER_EMAIL")
         recipient = os.environ.get("RECIPIENT_EMAIL")
@@ -622,14 +728,14 @@ def send_email_summary(results, num_players):
         <body style="font-family: Arial, sans-serif;">
         <h2>🎮 Hub Rewards Summary</h2>
         <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📊 Daily Window Tracking (5:30 AM IST Reset)</h3>
+            <h3 style="margin-top: 0;">📊 Run Statistics</h3>
             <p><strong>Time:</strong> {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</p>
         </div>
         <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📈 Today's Stats</h3>
-            <p><strong>Total Daily:</strong> {total_d}</p>
-            <p><strong>Total Store:</strong> {total_s}/{expected_store_total} ({store_progress_pct}%)</p>
-            <p><strong>Total Progression:</strong> {total_p}</p>
+            <h3 style="margin-top: 0;">📈 Totals</h3>
+            <p><strong>Daily:</strong> {total_d} (Max 1 per ID)</p>
+            <p><strong>Store:</strong> {total_s}/{expected_store_total} (Max 3 per ID)</p>
+            <p><strong>Progression:</strong> {total_p}</p>
             <p><strong>GRAND TOTAL: {total_all}</strong></p>
         </div>
         <h3>👥 Per-Player Breakdown</h3>
@@ -667,7 +773,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v6.1 (Strict Component Merge)")
+    log("CS HUB AUTO-CLAIMER v6.2 (Corrected Merge)")
     log("="*60)
     
     players = []
