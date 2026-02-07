@@ -419,12 +419,12 @@ def claim_store_rewards(driver, player_id):
         
         # FIRST 2 CLAIMS: Use physical_click method from master_claimer_Store.py
         log("🔹 Phase 1: Physical Click Method (Claims 1-2)")
-        for attempt in range(3):
+        for attempt in range(5):  # Increased attempts
             if claimed >= 2:
                 break
                 
             ensure_store_page(driver)
-            time.sleep(1)
+            time.sleep(1.5)
             
             found_btn = None
             try:
@@ -449,26 +449,30 @@ def claim_store_rewards(driver, player_id):
                 if physical_click(driver, found_btn):
                     time.sleep(4)
                     
-                    # Assume success (User preference: Better false positive than missed)
+                    # Assume success
                     close_popup(driver)
-                    log(f"✅ Store Claim #{claimed + 1} (Physical Click)")
                     claimed += 1
+                    log(f"✅ Store Claim #{claimed} (Physical Click)")
                     
                     # Refresh page state
                     ensure_store_page(driver)
+                    time.sleep(1)
             else:
                 log(f"ℹ️  No 'Free' buttons found in Phase 1 (attempt {attempt+1})")
-                break
+                if attempt < 4:
+                    time.sleep(2)
+                else:
+                    break
         
         # THIRD CLAIM: Use JavaScript method from master_claimer_v2_6.py
         if claimed < max_claims:
             log("🔹 Phase 2: JavaScript Method (Claim 3)")
-            for attempt in range(3):
+            for attempt in range(5):  # Increased attempts
                 if claimed >= max_claims:
                     break
                 
                 ensure_store_page(driver)
-                time.sleep(1)
+                time.sleep(1.5)
                 
                 result = driver.execute_script("""
                     // Target Store Bonus Cards
@@ -503,17 +507,20 @@ def claim_store_rewards(driver, player_id):
                 """)
                 
                 if result:
-                    log(f"✅ Store Claim #{claimed + 1} (JavaScript)")
                     claimed += 1
+                    log(f"✅ Store Claim #{claimed} (JavaScript)")
                     time.sleep(3.0)
                     close_popup(driver)
-                    time.sleep(0.5)
+                    time.sleep(1)
                     if not ensure_store_page(driver): break
                 else:
                     log(f"ℹ️  No more available claims in Phase 2 (attempt {attempt + 1})")
-                    break
+                    if attempt < 4:
+                        time.sleep(2)
+                    else:
+                        break
         
-        log(f"Store Claims Complete: {claimed}/{max_claims}")
+        log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
         
     except Exception as e:
@@ -562,7 +569,7 @@ def claim_progression_program_rewards(driver, player_id):
     return claimed
 
 def process_player(player_id):
-    """Process single player"""
+    """Process single player with retry logic"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     try:
@@ -572,9 +579,31 @@ def process_player(player_id):
             stats['status'] = "Login Failed"
             return stats
         
+        # Claim Daily Rewards
         stats['daily'] = claim_daily_rewards(driver, player_id)
-        stats['store'] = claim_store_rewards(driver, player_id)
-        stats['progression'] = claim_progression_program_rewards(driver, player_id)
+        
+        # Claim Store Rewards with retry logic
+        max_store_expected = 3
+        store_retry_attempts = 3
+        for retry in range(store_retry_attempts):
+            stats['store'] = claim_store_rewards(driver, player_id)
+            if stats['store'] >= max_store_expected:
+                log(f"✅ All {max_store_expected} Store rewards claimed!")
+                break
+            elif retry < store_retry_attempts - 1:
+                log(f"⚠️ Only {stats['store']}/{max_store_expected} Store claimed. Retry {retry + 1}/{store_retry_attempts - 1}...")
+                time.sleep(2)
+        
+        # Claim Progression with retry logic
+        progression_retry_attempts = 2
+        for retry in range(progression_retry_attempts):
+            claimed = claim_progression_program_rewards(driver, player_id)
+            stats['progression'] += claimed
+            if claimed == 0 and retry < progression_retry_attempts - 1:
+                log(f"⚠️ No progression claimed. Retry {retry + 1}/{progression_retry_attempts - 1}...")
+                time.sleep(2)
+            elif claimed == 0:
+                break
         
         total = stats['daily'] + stats['store'] + stats['progression']
         if total > 0:
@@ -582,7 +611,7 @@ def process_player(player_id):
         else:
             stats['status'] = "No Rewards"
         
-        log(f"🎉 Total: {total}")
+        log(f"🎉 Total: {total} (Daily: {stats['daily']}, Store: {stats['store']}, Progression: {stats['progression']})")
             
     except Exception as e:
         log(f"❌ Error: {e}")
@@ -642,8 +671,8 @@ def send_email_summary(results, num_players):
             <p style="margin: 5px 0;"><strong>💡 Note:</strong></p>
             <ul style="margin: 5px 0;">
                 <li><strong>Store Rewards:</strong> Exactly 3 per player per day.</li>
-                <li><strong>Daily Rewards:</strong> Variable.</li>
-                <li><strong>Progression:</strong> Unlimited.</li>
+                <li><strong>Daily Rewards:</strong> Exactly 1 per player per day.</li>
+                <li><strong>Progression:</strong> Varies (Dependent on Bullets / Grenades claimed from the Store Rewards)</li>
             </ul>
         </div>
         </body></html>"""
