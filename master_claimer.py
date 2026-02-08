@@ -121,11 +121,12 @@ def init_player_history(player_id):
     
     return history
 
-def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None, detected_cooldown=None):
+def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None, detected_cooldown=None, attempted=False):
     """
     Update claim history for a player
     
     detected_cooldown: timedelta object if cooldown was detected on page (even if no claim made)
+    attempted: True if we tried to claim but got 0 (helps distinguish from never tried)
     """
     history = init_player_history(player_id)
     ist_now = get_ist_time()
@@ -144,6 +145,10 @@ def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=N
             history[player_id]["daily"]["next_available"] = next_available.isoformat()
             history[player_id]["daily"]["status"] = "cooldown_detected"
             log(f"📝 Updated history: Daily cooldown detected, next in {format_time_until_reset(next_available)}")
+        elif attempted and claimed_count == 0:
+            # Tried to claim but got nothing - likely on cooldown but not detected
+            history[player_id]["daily"]["status"] = "unavailable"
+            log(f"📝 Updated history: Daily unavailable (no timer detected)")
     
     elif reward_type == "store" and reward_index is not None:
         reward_key = f"reward_{reward_index}"
@@ -160,6 +165,9 @@ def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=N
             history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
             history[player_id]["store"][reward_key]["status"] = "cooldown_detected"
             log(f"📝 Updated history: Store Reward {reward_index} cooldown detected")
+        elif attempted and claimed_count == 0:
+            # Tried to claim but got nothing - mark as unavailable
+            history[player_id]["store"][reward_key]["status"] = "unavailable"
     
     elif reward_type == "progression" and claimed_count > 0:
         history[player_id]["progression"]["last_claim"] = ist_now.isoformat()
@@ -591,6 +599,10 @@ def claim_daily_rewards(driver, player_id):
                 log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
                 time.sleep(1)
         
+        # Mark as attempted if we got 0
+        if claimed == 0:
+            update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
+        
         driver.save_screenshot(f"daily_final_{player_id}.png")
         
     except Exception as e:
@@ -774,6 +786,10 @@ def claim_store_rewards(driver, player_id):
                     else:
                         log(f"ℹ️  No more claims available (attempt {attempt + 1})")
                         break
+        
+        # Mark unclaimed rewards as attempted
+        for i in range(claimed + 1, 4):
+            update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
@@ -961,6 +977,7 @@ def send_email_summary(results, num_players):
             .player-card {{ background: white; border: 1px solid #e0e0e0; padding: 15px; margin: 10px 0; border-radius: 6px; }}
             .status-claimed {{ color: #27ae60; font-weight: bold; }}
             .status-cooldown {{ color: #e67e22; font-weight: bold; }}
+            .status-unavailable {{ color: #95a5a6; font-weight: bold; }}
             .status-available {{ color: #3498db; font-weight: bold; }}
             .legend {{ background: #ecf0f1; padding: 15px; border-radius: 6px; margin-top: 20px; }}
         </style>
@@ -971,7 +988,7 @@ def send_email_summary(results, num_players):
         
         <div class="stat-box">
             <div class="stat-row"><strong>📅 Run Time:</strong> <span>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</span></div>
-            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 32px; font-weight: bold;">{total_all}</span></div>
+            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 18px; font-weight: bold;">{total_all}</span></div>
             <div class="stat-row"><strong>⏰ On Cooldown:</strong> <span>{on_cooldown}</span></div>
         </div>
         
@@ -999,10 +1016,14 @@ def send_email_summary(results, num_players):
             elif not status['daily_available']:
                 if status['daily_status'] == 'claimed':
                     daily_status = f'<span class="status-cooldown">⏰ Already Claimed - Next in {status["daily_next"]}</span>'
-                else:
+                elif status['daily_status'] == 'cooldown_detected':
                     daily_status = f'<span class="status-cooldown">⏰ On Cooldown - Next in {status["daily_next"]}</span>'
+                else:
+                    daily_status = f'<span class="status-cooldown">⏰ On Cooldown</span>'
+            elif status['daily_status'] == 'unavailable':
+                daily_status = f'<span class="status-unavailable">⏳ Not Available</span>'
             else:
-                daily_status = f'<span class="status-available">🔄 Available Now</span>'
+                daily_status = f'<span class="status-available">🔄 Check Manually</span>'
             
             # Store status
             store_status_lines = []
@@ -1012,16 +1033,20 @@ def send_email_summary(results, num_players):
                 elif not status['store_available'][i]:
                     if status['store_status'][i] == 'claimed':
                         store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ Already Claimed - Next in {status["store_next"][i]}</span>')
-                    else:
+                    elif status['store_status'][i] == 'cooldown_detected':
                         store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ On Cooldown - Next in {status["store_next"][i]}</span>')
+                    else:
+                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ On Cooldown</span>')
+                elif status['store_status'][i] == 'unavailable':
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-unavailable">⏳ Not Available</span>')
                 else:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Available Now</span>')
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Check Manually</span>')
             
             # Progression status
             if result['progression'] > 0:
                 prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]} This Run</span>'
             else:
-                prog_status = f'<span class="status-cooldown">⏳ Check after Store claims</span>'
+                prog_status = f'<span class="status-unavailable">⏳ Check after Store claims</span>'
             
             html += f"""
             <div class="player-card">
@@ -1056,9 +1081,9 @@ def send_email_summary(results, num_players):
         <div class="legend">
             <h4 style="margin-top:0;">💡 Status Legend</h4>
             <div><span class="status-claimed">✅ Claimed This Run</span> - Successfully claimed in this run</div>
-            <div><span class="status-cooldown">⏰ Already Claimed</span> - Claimed in previous run, waiting for cooldown</div>
-            <div><span class="status-cooldown">⏰ On Cooldown</span> - Detected cooldown on page</div>
-            <div><span class="status-available">🔄 Available Now</span> - Should be claimable</div>
+            <div><span class="status-cooldown">⏰ Already Claimed / On Cooldown</span> - Claimed previously or detected cooldown</div>
+            <div><span class="status-unavailable">⏳ Not Available</span> - Attempted but could not claim</div>
+            <div><span class="status-available">🔄 Check Manually</span> - Status uncertain, verify on website</div>
             <div style="margin-top:10px;"><strong>Notes:</strong></div>
             <ul style="margin: 5px 0;">
                 <li><strong>Daily Rewards:</strong> Reset at 5:30 AM IST daily</li>
@@ -1085,7 +1110,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.1 (Optimized + Page Detection)")
+    log("CS HUB AUTO-CLAIMER v2.2 (Status Fixes)")
     log("="*60)
     
     players = []
