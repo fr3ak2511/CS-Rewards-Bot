@@ -1,6 +1,7 @@
 import csv
 import time
 import os
+import json
 import smtplib
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
@@ -16,12 +17,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 
 PLAYER_ID_FILE = "players.csv"
+HISTORY_FILE = "claim_history.json"
 HEADLESS = True
 
 # Daily tracking constants
 DAILY_RESET_HOUR_IST = 5
 DAILY_RESET_MINUTE_IST = 30
 EXPECTED_STORE_PER_PLAYER = 3
+STORE_COOLDOWN_HOURS = 24
+PROGRESSION_DEPENDS_ON_STORE = True
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -55,9 +59,112 @@ def format_time_until_reset(next_reset):
     """Format time remaining until next reset"""
     ist_now = get_ist_time()
     delta = next_reset - ist_now
-    hours, remainder = divmod(delta.seconds, 3600)
+    if delta.total_seconds() < 0:
+        return "Available now"
+    hours, remainder = divmod(int(delta.total_seconds()), 3600)
     minutes, _ = divmod(remainder, 60)
-    return f"{hours}h {minutes}m"
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    else:
+        return f"{minutes}m"
+
+# Claim History Management
+def load_claim_history():
+    """Load claim history from JSON file"""
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r') as f:
+                return json.load(f)
+        else:
+            return {}
+    except Exception as e:
+        log(f"⚠️ Error loading history: {e}")
+        return {}
+
+def save_claim_history(history):
+    """Save claim history to JSON file"""
+    try:
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(history, f, indent=2)
+    except Exception as e:
+        log(f"⚠️ Error saving history: {e}")
+
+def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None):
+    """Update claim history for a player"""
+    history = load_claim_history()
+    
+    if player_id not in history:
+        history[player_id] = {
+            "daily": {"last_claim": None, "next_available": None},
+            "store": {
+                "reward_1": {"last_claim": None, "next_available": None},
+                "reward_2": {"last_claim": None, "next_available": None},
+                "reward_3": {"last_claim": None, "next_available": None}
+            },
+            "progression": {"last_claim": None, "last_count": 0}
+        }
+    
+    ist_now = get_ist_time()
+    
+    if reward_type == "daily" and claimed_count > 0:
+        history[player_id]["daily"]["last_claim"] = ist_now.isoformat()
+        next_reset = get_next_daily_reset()
+        history[player_id]["daily"]["next_available"] = next_reset.isoformat()
+    
+    elif reward_type == "store" and reward_index is not None:
+        reward_key = f"reward_{reward_index}"
+        history[player_id]["store"][reward_key]["last_claim"] = ist_now.isoformat()
+        next_available = ist_now + timedelta(hours=STORE_COOLDOWN_HOURS)
+        history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
+    
+    elif reward_type == "progression" and claimed_count > 0:
+        history[player_id]["progression"]["last_claim"] = ist_now.isoformat()
+        history[player_id]["progression"]["last_count"] = claimed_count
+    
+    save_claim_history(history)
+    return history
+
+def get_reward_status(player_id):
+    """Get current status of all rewards for a player"""
+    history = load_claim_history()
+    ist_now = get_ist_time()
+    
+    if player_id not in history:
+        return {
+            "daily_available": True,
+            "store_available": [True, True, True],
+            "daily_next": None,
+            "store_next": [None, None, None]
+        }
+    
+    player_history = history[player_id]
+    
+    # Check daily
+    daily_available = True
+    daily_next = None
+    if player_history["daily"]["next_available"]:
+        next_time = datetime.fromisoformat(player_history["daily"]["next_available"])
+        if ist_now < next_time:
+            daily_available = False
+            daily_next = format_time_until_reset(next_time)
+    
+    # Check store (each reward individually)
+    store_available = [True, True, True]
+    store_next = [None, None, None]
+    for i in range(3):
+        reward_key = f"reward_{i+1}"
+        if player_history["store"][reward_key]["next_available"]:
+            next_time = datetime.fromisoformat(player_history["store"][reward_key]["next_available"])
+            if ist_now < next_time:
+                store_available[i] = False
+                store_next[i] = format_time_until_reset(next_time)
+    
+    return {
+        "daily_available": daily_available,
+        "store_available": store_available,
+        "daily_next": daily_next,
+        "store_next": store_next
+    }
 
 def create_driver():
     """GitHub Actions-compatible driver - FORCED CHROME 144"""
@@ -331,9 +438,40 @@ def close_popup(driver):
     except Exception as e:
         pass
 
+def check_store_page_has_rewards(driver):
+    """Smart check if store page has claimable rewards or is on cooldown"""
+    try:
+        page_text = driver.page_source.lower()
+        
+        # Check for timer indicators
+        has_timer = "next in" in page_text or driver.find_elements(By.XPATH, "//*[contains(text(), 'Next in') or contains(text(), 'next in')]")
+        
+        # Check for Free buttons
+        free_buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Free') or contains(text(), 'free') or contains(text(), 'Claim')]")
+        has_free_buttons = len(free_buttons) > 0
+        
+        if has_timer and not has_free_buttons:
+            log("⏰ All store rewards on cooldown (timer detected, no Free buttons)")
+            return False, "cooldown"
+        elif has_free_buttons:
+            log("🎯 Found Free button(s) - rewards available")
+            return True, "available"
+        else:
+            log("❓ No clear indicators - will attempt claim")
+            return True, "unknown"
+    except:
+        return True, "unknown"
+
 def claim_daily_rewards(driver, player_id):
     """Claim Daily Rewards - From master_claimer_Daily.py"""
     log("🎁 Claiming Daily Rewards...")
+    
+    # Check if on cooldown
+    status = get_reward_status(player_id)
+    if not status["daily_available"]:
+        log(f"⏰ Daily on cooldown. Next: {status['daily_next']}")
+        return 0
+    
     claimed = 0
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
@@ -360,6 +498,7 @@ def claim_daily_rewards(driver, player_id):
                 claimed = 1
                 time.sleep(2)
                 close_popup(driver)
+                update_claim_history(player_id, "daily", claimed_count=1)
                 break
             else:
                 log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
@@ -395,7 +534,7 @@ def physical_click(driver, element):
         return False
 
 def ensure_store_page(driver):
-    """Ensure we're on store page from master_claimer_Store.py"""
+    """Ensure we're on store page"""
     try:
         if "store" not in driver.current_url:
             driver.get("https://hub.vertigogames.co/store")
@@ -406,10 +545,23 @@ def ensure_store_page(driver):
         return False
 
 def claim_store_rewards(driver, player_id):
-    """HYBRID Store Claims - First 2 with physical_click, 3rd with JavaScript"""
-    log("🏪 Claiming Store Rewards (HYBRID MODE)...")
+    """OPTIMIZED HYBRID Store Claims with Smart Early Exit"""
+    log("🏪 Claiming Store Rewards (OPTIMIZED HYBRID)...")
     claimed = 0
     max_claims = 3
+    
+    # Check cooldown status
+    status = get_reward_status(player_id)
+    available_count = sum(status["store_available"])
+    
+    if available_count == 0:
+        log(f"⏰ All store rewards on cooldown")
+        for i, next_time in enumerate(status["store_next"]):
+            if next_time:
+                log(f"  Reward {i+1}: Next in {next_time}")
+        return 0
+    else:
+        log(f"🎯 {available_count}/3 store rewards potentially available")
     
     try:
         driver.get("https://hub.vertigogames.co/store")
@@ -417,14 +569,20 @@ def claim_store_rewards(driver, player_id):
         time.sleep(2)
         close_popup(driver)
         
-        # FIRST 2 CLAIMS: Use physical_click method from master_claimer_Store.py
+        # Smart check before attempting
+        has_rewards, reason = check_store_page_has_rewards(driver)
+        if not has_rewards and reason == "cooldown":
+            log("⏭️ Skipping store claims - all on cooldown")
+            return 0
+        
+        # FIRST 2 CLAIMS: Physical Click (Optimized to 3 attempts)
         log("🔹 Phase 1: Physical Click Method (Claims 1-2)")
-        for attempt in range(5):  # Increased attempts
+        for attempt in range(3):  # Reduced from 5 to 3
             if claimed >= 2:
                 break
                 
             ensure_store_page(driver)
-            time.sleep(1.5)
+            time.sleep(1)  # Reduced from 1.5s
             
             found_btn = None
             try:
@@ -440,64 +598,56 @@ def claim_store_rewards(driver, player_id):
                             except: pass
                             
                             found_btn = btn
-                            break # Click one at a time
+                            break
                     except: continue
-            except: continue
+            except: pass
             
             if found_btn:
                 log(f"🖱️ Found Free Button. Clicking...")
                 if physical_click(driver, found_btn):
                     time.sleep(4)
-                    
-                    # Assume success
                     close_popup(driver)
                     claimed += 1
                     log(f"✅ Store Claim #{claimed} (Physical Click)")
-                    
-                    # Refresh page state
+                    update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
                     ensure_store_page(driver)
                     time.sleep(1)
             else:
-                log(f"ℹ️  No 'Free' buttons found in Phase 1 (attempt {attempt+1})")
-                if attempt < 4:
-                    time.sleep(2)
-                else:
+                log(f"ℹ️  No 'Free' buttons in Phase 1 (attempt {attempt+1})")
+                if attempt >= 1:  # Early exit after 2 attempts if nothing found
                     break
+                time.sleep(1)
         
-        # THIRD CLAIM: Use JavaScript method from master_claimer_v2_6.py with fallback
+        # THIRD CLAIM: JavaScript with Fallback (Optimized to 2 attempts)
         if claimed < max_claims:
-            log("🔹 Phase 2: JavaScript Method (Claim 3) with Physical Click Fallback")
-            for attempt in range(5):  # Increased attempts
+            log("🔹 Phase 2: JavaScript Method (Claim 3) with Fallback")
+            for attempt in range(2):  # Reduced from 5 to 2
                 if claimed >= max_claims:
                     break
                 
                 ensure_store_page(driver)
-                time.sleep(2)  # Increased wait
+                time.sleep(1)  # Reduced from 2s
                 
                 # Try JavaScript first
                 result = driver.execute_script("""
-                    // Target Store Bonus Cards
                     let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
                     if (storeBonusCards.length === 0) {
                         storeBonusCards = document.querySelectorAll('div');
                     }
                     
-                    // Find buttons with "Free" text (NO timer)
                     for (let card of storeBonusCards) {
                         let cardText = card.innerText || '';
                         
-                        // SKIP cards with timer
                         if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
                             continue;
                         }
                         
-                        // Find button
                         let buttons = card.querySelectorAll('button');
                         for (let btn of buttons) {
                             let btnText = btn.innerText.trim().toLowerCase();
                             if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
                                 btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                btn.click();  // Direct click instead of setTimeout
+                                btn.click();
                                 return true;
                             }
                         }
@@ -508,77 +658,13 @@ def claim_store_rewards(driver, player_id):
                 if result:
                     claimed += 1
                     log(f"✅ Store Claim #{claimed} (JavaScript)")
-                    time.sleep(5)  # Longer wait for server to process
+                    time.sleep(4)
                     close_popup(driver)
-                    time.sleep(2)
-                    
-                    # Verify claim worked by checking if button is gone
-                    verify_result = driver.execute_script("""
-                        let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
-                        if (storeBonusCards.length === 0) {
-                            storeBonusCards = document.querySelectorAll('div');
-                        }
-                        
-                        let freeCount = 0;
-                        for (let card of storeBonusCards) {
-                            let cardText = card.innerText || '';
-                            if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                                continue;
-                            }
-                            let buttons = card.querySelectorAll('button');
-                            for (let btn of buttons) {
-                                let btnText = btn.innerText.trim().toLowerCase();
-                                if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
-                                    freeCount++;
-                                }
-                            }
-                        }
-                        return freeCount;
-                    """)
-                    
-                    if verify_result > 0:
-                        log(f"⚠️ JavaScript claim didn't register. Trying Physical Click fallback...")
-                        claimed -= 1  # Revert the count
-                        
-                        # Try physical click as fallback
-                        ensure_store_page(driver)
-                        time.sleep(1.5)
-                        
-                        found_btn = None
-                        try:
-                            buttons = driver.find_elements(By.TAG_NAME, "button")
-                            for btn in buttons:
-                                try:
-                                    btn_text = btn.text.strip().lower()
-                                    if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                                        # Timer Check
-                                        try:
-                                            parent = btn.find_element(By.XPATH, "./..")
-                                            if "next in" in parent.text.lower(): continue
-                                        except: pass
-                                        
-                                        found_btn = btn
-                                        break
-                                except: continue
-                        except: pass
-                        
-                        if found_btn:
-                            log(f"🖱️ Found Free Button with Physical method")
-                            if physical_click(driver, found_btn):
-                                time.sleep(5)
-                                close_popup(driver)
-                                claimed += 1
-                                log(f"✅ Store Claim #{claimed} (Physical Click Fallback)")
-                                ensure_store_page(driver)
-                                time.sleep(1)
-                        else:
-                            if attempt < 4:
-                                time.sleep(3)
-                                continue
-                    
-                    if not ensure_store_page(driver): break
+                    update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
+                    time.sleep(1)
+                    break
                 else:
-                    # JavaScript didn't find button, try physical click
+                    # Fallback to physical click
                     log(f"ℹ️  JavaScript found no button. Trying Physical Click...")
                     
                     found_btn = None
@@ -588,12 +674,10 @@ def claim_store_rewards(driver, player_id):
                             try:
                                 btn_text = btn.text.strip().lower()
                                 if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                                    # Timer Check
                                     try:
                                         parent = btn.find_element(By.XPATH, "./..")
                                         if "next in" in parent.text.lower(): continue
                                     except: pass
-                                    
                                     found_btn = btn
                                     break
                             except: continue
@@ -602,18 +686,16 @@ def claim_store_rewards(driver, player_id):
                     if found_btn:
                         log(f"🖱️ Found Free Button with Physical method")
                         if physical_click(driver, found_btn):
-                            time.sleep(5)
+                            time.sleep(4)
                             close_popup(driver)
                             claimed += 1
-                            log(f"✅ Store Claim #{claimed} (Physical Click Fallback)")
+                            log(f"✅ Store Claim #{claimed} (Physical Fallback)")
+                            update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
                             ensure_store_page(driver)
-                            time.sleep(1)
-                    else:
-                        log(f"ℹ️  No more available claims in Phase 2 (attempt {attempt + 1})")
-                        if attempt < 4:
-                            time.sleep(3)
-                        else:
                             break
+                    else:
+                        log(f"ℹ️  No more claims available (attempt {attempt + 1})")
+                        break
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
@@ -624,7 +706,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression - From master_claimer_v2_6.py"""
+    """Claim Progression - Optimized from master_claimer_v2_6.py"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     try:
@@ -633,7 +715,8 @@ def claim_progression_program_rewards(driver, player_id):
         time.sleep(2)
         close_popup(driver)
         
-        for _ in range(8):
+        # Optimized: Reduced from 8 to 6 internal iterations
+        for _ in range(6):
             result = driver.execute_script("""
                 let allButtons = document.querySelectorAll('button');
                 for (let btn of allButtons) {
@@ -660,11 +743,14 @@ def claim_progression_program_rewards(driver, player_id):
                 driver.execute_script("let c=document.querySelectorAll('div');for(let i of c){if(i.scrollWidth>i.clientWidth){i.scrollLeft+=400;}}")
                 time.sleep(1)
         
+        if claimed > 0:
+            update_claim_history(player_id, "progression", claimed_count=claimed)
+        
     except: pass
     return claimed
 
 def process_player(player_id):
-    """Process single player with retry logic"""
+    """Process single player with optimized retry logic"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
     try:
@@ -677,39 +763,44 @@ def process_player(player_id):
         # Claim Daily Rewards
         stats['daily'] = claim_daily_rewards(driver, player_id)
         
-        # Claim Store Rewards with retry logic
+        # Claim Store Rewards with smart retry (max 2 retries, reduced from 3)
         max_store_expected = 3
-        store_retry_attempts = 3
+        store_retry_attempts = 2  # Reduced from 3
         for retry in range(store_retry_attempts):
             stats['store'] = claim_store_rewards(driver, player_id)
             if stats['store'] >= max_store_expected:
                 log(f"✅ All {max_store_expected} Store rewards claimed!")
                 break
-            elif retry < store_retry_attempts - 1:
-                log(f"⚠️ Only {stats['store']}/{max_store_expected} Store claimed. Retry {retry + 1}/{store_retry_attempts - 1}...")
+            elif stats['store'] > 0 and retry < store_retry_attempts - 1:
+                # Only retry if we got some claims but not all
+                log(f"⚠️ Got {stats['store']}/{max_store_expected}. Retry {retry + 1}/{store_retry_attempts - 1}...")
                 time.sleep(2)
+            elif stats['store'] == 0:
+                # If got 0, likely on cooldown - don't retry
+                log(f"ℹ️  No store claims (likely on cooldown)")
+                break
         
-        # Wait for server to process store claims before attempting progression
+        # Wait for server to process store claims
         if stats['store'] > 0:
             log("⏳ Waiting for server to process store claims...")
-            time.sleep(4)
+            time.sleep(3)
         
-        # Claim Progression with retry logic
-        progression_retry_attempts = 3  # Increased from 2 to 3
+        # Claim Progression with optimized retry (reduced from 3 to 2)
+        progression_retry_attempts = 2
         for retry in range(progression_retry_attempts):
             claimed = claim_progression_program_rewards(driver, player_id)
             stats['progression'] += claimed
             if claimed == 0 and retry < progression_retry_attempts - 1:
                 log(f"⚠️ No progression claimed. Retry {retry + 1}/{progression_retry_attempts - 1}...")
-                time.sleep(3)  # Increased wait time
+                time.sleep(2)
             elif claimed == 0:
-                log(f"ℹ️  No progression rewards available after {progression_retry_attempts} attempts")
+                log(f"ℹ️  No progression rewards available")
                 break
             else:
-                # Got some claims, try one more time to see if there are more
+                # Got claims, check once more for any remaining
                 if retry < progression_retry_attempts - 1:
                     log(f"✅ Claimed {claimed} progression. Checking for more...")
-                    time.sleep(2)
+                    time.sleep(1)
         
         total = stats['daily'] + stats['store'] + stats['progression']
         if total > 0:
@@ -731,7 +822,7 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results, num_players):
-    """Send email summary - Rich HTML format from master_claimer_Store.py"""
+    """Send enhanced email summary with claim history tracking"""
     try:
         sender = os.environ.get("SENDER_EMAIL")
         recipient = os.environ.get("RECIPIENT_EMAIL")
@@ -742,52 +833,172 @@ def send_email_summary(results, num_players):
         total_s = sum(r['store'] for r in results)
         total_p = sum(r['progression'] for r in results)
         total_all = total_d + total_s + total_p
-        success_count = sum(1 for r in results if r['status'] == 'Success')
-        expected_store_total = num_players * EXPECTED_STORE_PER_PLAYER
-        store_progress_pct = int((total_s / expected_store_total) * 100) if expected_store_total > 0 else 0
+        
         ist_now = get_ist_time()
+        history = load_claim_history()
+        
+        # Calculate stats
+        on_cooldown = 0
+        available_now = 0
+        
+        for result in results:
+            player_id = result['player_id']
+            status = get_reward_status(player_id)
+            
+            if not status['daily_available']:
+                on_cooldown += 1
+            
+            cooldown_store = sum(1 for x in status['store_available'] if not x)
+            on_cooldown += cooldown_store
+        
+        # Get next recommended run time
+        next_run_time = None
+        next_run_reason = None
+        for player_id in [r['player_id'] for r in results]:
+            if player_id in history:
+                ph = history[player_id]
+                
+                # Check daily
+                if ph['daily']['next_available']:
+                    next_time = datetime.fromisoformat(ph['daily']['next_available'])
+                    if not next_run_time or next_time < next_run_time:
+                        next_run_time = next_time
+                        next_run_reason = f"Daily rewards reset"
+                
+                # Check store
+                for i in range(3):
+                    reward_key = f"reward_{i+1}"
+                    if ph['store'][reward_key]['next_available']:
+                        next_time = datetime.fromisoformat(ph['store'][reward_key]['next_available'])
+                        if not next_run_time or next_time < next_run_time:
+                            next_run_time = next_time
+                            next_run_reason = f"Store Reward {i+1} available"
         
         html = f"""
         <html>
-        <body style="font-family: Arial, sans-serif;">
+        <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5; padding: 20px; }}
+            .container {{ max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            h2 {{ color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }}
+            .stat-box {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin: 15px 0; }}
+            .stat-row {{ display: flex; justify-content: space-between; margin: 8px 0; }}
+            .section {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3498db; }}
+            .player-card {{ background: white; border: 1px solid #e0e0e0; padding: 15px; margin: 10px 0; border-radius: 6px; }}
+            .status-claimed {{ color: #27ae60; font-weight: bold; }}
+            .status-cooldown {{ color: #e67e22; font-weight: bold; }}
+            .status-available {{ color: #3498db; font-weight: bold; }}
+            .legend {{ background: #ecf0f1; padding: 15px; border-radius: 6px; margin-top: 20px; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+            th {{ background: #34495e; color: white; padding: 12px; text-align: left; }}
+            td {{ padding: 10px; border-bottom: 1px solid #e0e0e0; }}
+            .highlight {{ background: #fff3cd; font-weight: bold; }}
+        </style>
+        </head>
+        <body>
+        <div class="container">
         <h2>🎮 Hub Rewards Summary</h2>
-        <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📊 Daily Window Tracking (5:30 AM IST Reset)</h3>
-            <p><strong>Time:</strong> {ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</p>
+        
+        <div class="stat-box">
+            <div class="stat-row"><strong>📅 Run Time:</strong> <span>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</span></div>
+            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 24px;">{total_all}</span></div>
+            <div class="stat-row"><strong>⏰ On Cooldown:</strong> <span>{on_cooldown}</span></div>
         </div>
-        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0;">📈 Today's Stats</h3>
-            <p><strong>Total Daily:</strong> {total_d}</p>
-            <p><strong>Total Store:</strong> {total_s}/{expected_store_total} ({store_progress_pct}%)</p>
-            <p><strong>Total Progression:</strong> {total_p}</p>
-            <p><strong>GRAND TOTAL: {total_all}</strong></p>
+        
+        <div class="section">
+            <h3 style="margin-top:0;">📊 Current Run Breakdown</h3>
+            <div class="stat-row"><strong>🎁 Daily:</strong> {total_d}/{num_players}</div>
+            <div class="stat-row"><strong>🏪 Store:</strong> {total_s}/{num_players * 3}</div>
+            <div class="stat-row"><strong>🎯 Progression:</strong> {total_p}</div>
         </div>
-        <h3>👥 Per-Player Breakdown</h3>
-        <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-        <tr style="background-color: #f0f0f0;"><th>ID</th><th>Daily</th><th>Store</th><th>Progression</th><th>Total</th><th>Status</th></tr>
         """
-        for r in results:
-            status_color = "#90EE90" if r['status'] == 'Success' else "#FFE4B5" if r['status'] == 'No Rewards' else "#FFB6C1"
-            html += f"""<tr>
-                <td>{r['player_id']}</td><td>{r['daily']}</td><td>{r['store']}</td>
-                <td>{r['progression']}</td><td><strong>{r['daily']+r['store']+r['progression']}</strong></td><td style="background-color: {status_color};">{r['status']}</td>
-            </tr>"""
-        html += """</table>
-        <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;">
-            <p style="margin: 5px 0;"><strong>💡 Note:</strong></p>
+        
+        # Per-player detailed status
+        html += """
+        <div class="section">
+            <h3 style="margin-top:0;">👥 Detailed Player Status</h3>
+        """
+        
+        for result in results:
+            player_id = result['player_id']
+            status = get_reward_status(player_id)
+            
+            # Daily status
+            if result['daily'] > 0:
+                daily_status = f'<span class="status-claimed">✅ Claimed This Run</span>'
+            elif not status['daily_available']:
+                daily_status = f'<span class="status-cooldown">⏰ Next in {status["daily_next"]}</span>'
+            else:
+                daily_status = f'<span class="status-available">🔄 Available Now</span>'
+            
+            # Store status
+            store_status_lines = []
+            for i in range(3):
+                if i < result['store']:
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-claimed">✅ Claimed</span>')
+                elif not status['store_available'][i]:
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ Next in {status["store_next"][i]}</span>')
+                else:
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Available</span>')
+            
+            # Progression status
+            if result['progression'] > 0:
+                prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]}</span>'
+            else:
+                prog_status = f'<span class="status-cooldown">⏳ Check after Store claims</span>'
+            
+            html += f"""
+            <div class="player-card">
+                <strong style="color: #2c3e50; font-size: 16px;">🆔 {player_id}</strong>
+                <div style="margin-top: 10px;">
+                    <div style="margin: 5px 0;">🎁 <strong>Daily:</strong> {daily_status}</div>
+                    <div style="margin: 5px 0;">🏪 <strong>Store:</strong></div>
+                    <div style="margin-left: 20px;">
+                        {"<br>".join(store_status_lines)}
+                    </div>
+                    <div style="margin: 5px 0;">🎯 <strong>Progression:</strong> {prog_status}</div>
+                </div>
+            </div>
+            """
+        
+        html += "</div>"
+        
+        # Next recommended run
+        if next_run_time:
+            time_until = format_time_until_reset(next_run_time)
+            html += f"""
+            <div class="section" style="border-left-color: #e74c3c;">
+                <h3 style="margin-top:0; color: #e74c3c;">⏰ Next Recommended Run</h3>
+                <div class="stat-row"><strong>⏳ In:</strong> {time_until}</div>
+                <div class="stat-row"><strong>📅 Time:</strong> {next_run_time.strftime('%I:%M %p IST')}</div>
+                <div class="stat-row"><strong>📝 Reason:</strong> {next_run_reason}</div>
+            </div>
+            """
+        
+        # Legend
+        html += """
+        <div class="legend">
+            <h4 style="margin-top:0;">💡 Status Legend</h4>
+            <div><span class="status-claimed">✅ Claimed/Completed</span> - Successfully claimed in this or previous run</div>
+            <div><span class="status-cooldown">⏰ On Cooldown</span> - Waiting for reset timer</div>
+            <div><span class="status-available">🔄 Available Now</span> - Ready to claim</div>
+            <div style="margin-top:10px;"><strong>Notes:</strong></div>
             <ul style="margin: 5px 0;">
-                <li><strong>Store Rewards:</strong> Exactly 3 per player per day.</li>
-                <li><strong>Daily Rewards:</strong> Exactly 1 per player per day.</li>
-                <li><strong>Progression:</strong> Varies (Dependent on Bullets / Grenades claimed from the Store Rewards)</li>
+                <li><strong>Daily Rewards:</strong> Reset at 5:30 AM IST daily</li>
+                <li><strong>Store Rewards:</strong> Each reward has individual 24h cooldown from claim time</li>
+                <li><strong>Progression:</strong> Depends on Store rewards (bullets/grenades)</li>
             </ul>
         </div>
-        </body></html>"""
+        """
+        
+        html += "</div></body></html>"
         
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claims)"
+        msg['Subject'] = f"🎮 Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claimed)"
         msg['From'] = sender
         msg['To'] = recipient
         msg.attach(MIMEText(html, 'html'))
+        
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(sender, password)
             server.send_message(msg)
@@ -797,7 +1008,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER UNIFIED (Hybrid Store Logic)")
+    log("CS HUB AUTO-CLAIMER UNIFIED v2.0 (Optimized + Tracking)")
     log("="*60)
     
     players = []
@@ -805,7 +1016,9 @@ def main():
         with open(PLAYER_ID_FILE, 'r') as f:
             reader = csv.DictReader(f)
             players = [row['player_id'].strip() for row in reader if row['player_id'].strip()]
-    except: return
+    except: 
+        log("❌ Could not read players.csv")
+        return
     
     results = []
     for player_id in players:
