@@ -736,82 +736,85 @@ def claim_store_rewards(driver, player_id):
                     break
                 time.sleep(1)
         
-        # THIRD CLAIM: JavaScript with Fallback (Optimized to 2 attempts)
+        # THIRD CLAIM: Physical Click First, JavaScript as Fallback (4 attempts total)
         if claimed < max_claims:
-            log("🔹 Phase 2: JavaScript Method (Claim 3) with Fallback")
-            for attempt in range(2):
+            log("🔹 Phase 2: Claiming 3rd Reward (Physical + JavaScript)")
+            for attempt in range(4):  # Increased from 2 to 4 attempts
                 if claimed >= max_claims:
                     break
                 
                 ensure_store_page(driver)
-                time.sleep(1)
+                time.sleep(1.5)  # Increased wait time
                 
-                result = driver.execute_script("""
-                    let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
-                    if (storeBonusCards.length === 0) {
-                        storeBonusCards = document.querySelectorAll('div');
-                    }
-                    
-                    for (let card of storeBonusCards) {
-                        let cardText = card.innerText || '';
-                        
-                        if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                            continue;
+                # TRY PHYSICAL CLICK FIRST (more reliable)
+                found_btn = None
+                try:
+                    buttons = driver.find_elements(By.TAG_NAME, "button")
+                    for btn in buttons:
+                        try:
+                            btn_text = btn.text.strip().lower()
+                            if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
+                                try:
+                                    parent = btn.find_element(By.XPATH, "./..")
+                                    if "next in" in parent.text.lower(): continue
+                                except: pass
+                                found_btn = btn
+                                break
+                        except: continue
+                except: pass
+                
+                if found_btn:
+                    log(f"🖱️ Found 3rd reward button (Physical). Clicking...")
+                    if physical_click(driver, found_btn):
+                        time.sleep(4)
+                        close_popup(driver)
+                        claimed += 1
+                        log(f"✅ Store Claim #{claimed} (Physical Click)")
+                        update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
+                        ensure_store_page(driver)
+                        break
+                
+                # FALLBACK TO JAVASCRIPT if physical didn't work
+                if claimed < max_claims:
+                    log(f"ℹ️  Physical click failed attempt {attempt+1}. Trying JavaScript...")
+                    result = driver.execute_script("""
+                        let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
+                        if (storeBonusCards.length === 0) {
+                            storeBonusCards = document.querySelectorAll('div');
                         }
                         
-                        let buttons = card.querySelectorAll('button');
-                        for (let btn of buttons) {
-                            let btnText = btn.innerText.trim().toLowerCase();
-                            if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
-                                btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                btn.click();
-                                return true;
+                        for (let card of storeBonusCards) {
+                            let cardText = card.innerText || '';
+                            
+                            if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
+                                continue;
+                            }
+                            
+                            let buttons = card.querySelectorAll('button');
+                            for (let btn of buttons) {
+                                let btnText = btn.innerText.trim().toLowerCase();
+                                if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
+                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                                    btn.click();
+                                    return true;
+                                }
                             }
                         }
-                    }
-                    return false;
-                """)
-                
-                if result:
-                    claimed += 1
-                    log(f"✅ Store Claim #{claimed} (JavaScript)")
-                    time.sleep(4)
-                    close_popup(driver)
-                    update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
-                    time.sleep(1)
-                    break
-                else:
-                    log(f"ℹ️  JavaScript found no button. Trying Physical Click...")
+                        return false;
+                    """)
                     
-                    found_btn = None
-                    try:
-                        buttons = driver.find_elements(By.TAG_NAME, "button")
-                        for btn in buttons:
-                            try:
-                                btn_text = btn.text.strip().lower()
-                                if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                                    try:
-                                        parent = btn.find_element(By.XPATH, "./..")
-                                        if "next in" in parent.text.lower(): continue
-                                    except: pass
-                                    found_btn = btn
-                                    break
-                            except: continue
-                    except: pass
-                    
-                    if found_btn:
-                        log(f"🖱️ Found Free Button with Physical method")
-                        if physical_click(driver, found_btn):
-                            time.sleep(4)
-                            close_popup(driver)
-                            claimed += 1
-                            log(f"✅ Store Claim #{claimed} (Physical Fallback)")
-                            update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
-                            ensure_store_page(driver)
-                            break
-                    else:
-                        log(f"ℹ️  No more claims available (attempt {attempt + 1})")
+                    if result:
+                        claimed += 1
+                        log(f"✅ Store Claim #{claimed} (JavaScript)")
+                        time.sleep(4)
+                        close_popup(driver)
+                        update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
+                        time.sleep(1)
                         break
+                    else:
+                        if attempt < 3:  # Don't log on last attempt
+                            log(f"ℹ️  Both methods failed. Retry {attempt+1}/4...")
+                            time.sleep(2)  # Wait before retry
         
         # Mark unclaimed rewards as attempted
         for i in range(claimed + 1, 4):
@@ -1014,7 +1017,7 @@ def send_email_summary(results, num_players):
         
         <div class="stat-box">
             <div class="stat-row"><strong>📅 Run Time:</strong> <span>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</span></div>
-            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 18px; font-weight: bold;">{total_all}</span></div>
+            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span>{total_all}</span></div>
             <div class="stat-row"><strong>⏰ On Cooldown:</strong> <span>{on_cooldown}</span></div>
         </div>
         
@@ -1136,7 +1139,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.1 (Countdown Timer Detection)")
+    log("CS HUB AUTO-CLAIMER v2.2.2 (3rd Reward Fix + Font Size)")
     log("="*60)
     
     players = []
