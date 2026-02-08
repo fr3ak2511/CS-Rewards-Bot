@@ -3,6 +3,7 @@ import time
 import os
 import json
 import smtplib
+import re
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -37,15 +38,6 @@ def get_ist_time():
     ist_offset = timedelta(hours=5, minutes=30)
     return utc_now + ist_offset
 
-def get_current_daily_window_start():
-    """Get the start of current daily window (5:30 AM IST)"""
-    ist_now = get_ist_time()
-    if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
-        window_start = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0) - timedelta(days=1)
-    else:
-        window_start = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0)
-    return window_start
-
 def get_next_daily_reset():
     """Get next daily reset time (5:30 AM IST)"""
     ist_now = get_ist_time()
@@ -68,6 +60,28 @@ def format_time_until_reset(next_reset):
     else:
         return f"{minutes}m"
 
+def parse_timer_text(timer_text):
+    """Parse 'Next in 23h 45m' into timedelta"""
+    try:
+        # Extract hours and minutes from text like "Next in 23h 45m" or "23h 45m"
+        hours = 0
+        minutes = 0
+        
+        hour_match = re.search(r'(\d+)\s*h', timer_text, re.IGNORECASE)
+        if hour_match:
+            hours = int(hour_match.group(1))
+        
+        min_match = re.search(r'(\d+)\s*m', timer_text, re.IGNORECASE)
+        if min_match:
+            minutes = int(min_match.group(1))
+        
+        if hours > 0 or minutes > 0:
+            return timedelta(hours=hours, minutes=minutes)
+        
+        return None
+    except:
+        return None
+
 # Claim History Management
 def load_claim_history():
     """Load claim history from JSON file"""
@@ -89,40 +103,124 @@ def save_claim_history(history):
     except Exception as e:
         log(f"⚠️ Error saving history: {e}")
 
-def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None):
-    """Update claim history for a player"""
+def init_player_history(player_id):
+    """Initialize history structure for a player if not exists"""
     history = load_claim_history()
     
     if player_id not in history:
         history[player_id] = {
-            "daily": {"last_claim": None, "next_available": None},
+            "daily": {"last_claim": None, "next_available": None, "status": "unknown"},
             "store": {
-                "reward_1": {"last_claim": None, "next_available": None},
-                "reward_2": {"last_claim": None, "next_available": None},
-                "reward_3": {"last_claim": None, "next_available": None}
+                "reward_1": {"last_claim": None, "next_available": None, "status": "unknown"},
+                "reward_2": {"last_claim": None, "next_available": None, "status": "unknown"},
+                "reward_3": {"last_claim": None, "next_available": None, "status": "unknown"}
             },
             "progression": {"last_claim": None, "last_count": 0}
         }
+        save_claim_history(history)
     
+    return history
+
+def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None, detected_cooldown=None):
+    """
+    Update claim history for a player
+    
+    detected_cooldown: timedelta object if cooldown was detected on page (even if no claim made)
+    """
+    history = init_player_history(player_id)
     ist_now = get_ist_time()
     
-    if reward_type == "daily" and claimed_count > 0:
-        history[player_id]["daily"]["last_claim"] = ist_now.isoformat()
-        next_reset = get_next_daily_reset()
-        history[player_id]["daily"]["next_available"] = next_reset.isoformat()
+    if reward_type == "daily":
+        if claimed_count > 0:
+            # Successfully claimed
+            history[player_id]["daily"]["last_claim"] = ist_now.isoformat()
+            next_reset = get_next_daily_reset()
+            history[player_id]["daily"]["next_available"] = next_reset.isoformat()
+            history[player_id]["daily"]["status"] = "claimed"
+            log(f"📝 Updated history: Daily claimed, next at {next_reset.strftime('%I:%M %p')}")
+        elif detected_cooldown is not None:
+            # Detected cooldown on page
+            next_available = ist_now + detected_cooldown
+            history[player_id]["daily"]["next_available"] = next_available.isoformat()
+            history[player_id]["daily"]["status"] = "cooldown_detected"
+            log(f"📝 Updated history: Daily cooldown detected, next in {format_time_until_reset(next_available)}")
     
     elif reward_type == "store" and reward_index is not None:
         reward_key = f"reward_{reward_index}"
-        history[player_id]["store"][reward_key]["last_claim"] = ist_now.isoformat()
-        next_available = ist_now + timedelta(hours=STORE_COOLDOWN_HOURS)
-        history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
+        if claimed_count > 0:
+            # Successfully claimed
+            history[player_id]["store"][reward_key]["last_claim"] = ist_now.isoformat()
+            next_available = ist_now + timedelta(hours=STORE_COOLDOWN_HOURS)
+            history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
+            history[player_id]["store"][reward_key]["status"] = "claimed"
+            log(f"📝 Updated history: Store Reward {reward_index} claimed, next in 24h")
+        elif detected_cooldown is not None:
+            # Detected cooldown on page
+            next_available = ist_now + detected_cooldown
+            history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
+            history[player_id]["store"][reward_key]["status"] = "cooldown_detected"
+            log(f"📝 Updated history: Store Reward {reward_index} cooldown detected")
     
     elif reward_type == "progression" and claimed_count > 0:
         history[player_id]["progression"]["last_claim"] = ist_now.isoformat()
         history[player_id]["progression"]["last_count"] = claimed_count
+        log(f"📝 Updated history: Progression claimed {claimed_count}")
     
     save_claim_history(history)
     return history
+
+def detect_page_cooldowns(driver, player_id, page_type):
+    """
+    Detect cooldowns by analyzing the actual page
+    Updates history with detected cooldowns
+    
+    page_type: 'daily', 'store', or 'progression'
+    Returns: dict with cooldown info
+    """
+    detected = {}
+    
+    try:
+        if page_type == "daily":
+            # Look for timer text on daily page
+            timer_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Next in') or contains(text(), 'next in')]")
+            if timer_elements:
+                timer_text = timer_elements[0].text
+                cooldown_delta = parse_timer_text(timer_text)
+                if cooldown_delta:
+                    log(f"🔍 Daily page: Detected cooldown - {timer_text}")
+                    update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
+                    detected['daily'] = cooldown_delta
+        
+        elif page_type == "store":
+            # Look for store reward cards with timers
+            try:
+                # Find all cards/sections that might contain store rewards
+                page_text = driver.page_source
+                
+                # Find all "Next in" patterns with context
+                timer_pattern = r'Next in\s+(\d+h?\s*\d*m?)'
+                matches = re.finditer(timer_pattern, page_text, re.IGNORECASE)
+                
+                reward_cooldowns = []
+                for match in matches:
+                    timer_text = match.group(0)
+                    cooldown_delta = parse_timer_text(timer_text)
+                    if cooldown_delta:
+                        reward_cooldowns.append(cooldown_delta)
+                
+                # Update history for detected cooldowns
+                for i, cooldown_delta in enumerate(reward_cooldowns[:3]):  # Max 3 store rewards
+                    log(f"🔍 Store page: Reward {i+1} cooldown detected")
+                    update_claim_history(player_id, "store", claimed_count=0, reward_index=i+1, detected_cooldown=cooldown_delta)
+                    detected[f'store_{i+1}'] = cooldown_delta
+                    
+            except Exception as e:
+                log(f"⚠️ Store cooldown detection error: {e}")
+        
+    except Exception as e:
+        log(f"⚠️ Page cooldown detection error: {e}")
+    
+    return detected
 
 def get_reward_status(player_id):
     """Get current status of all rewards for a player"""
@@ -134,7 +232,9 @@ def get_reward_status(player_id):
             "daily_available": True,
             "store_available": [True, True, True],
             "daily_next": None,
-            "store_next": [None, None, None]
+            "daily_status": "unknown",
+            "store_next": [None, None, None],
+            "store_status": ["unknown", "unknown", "unknown"]
         }
     
     player_history = history[player_id]
@@ -142,6 +242,8 @@ def get_reward_status(player_id):
     # Check daily
     daily_available = True
     daily_next = None
+    daily_status = player_history["daily"].get("status", "unknown")
+    
     if player_history["daily"]["next_available"]:
         next_time = datetime.fromisoformat(player_history["daily"]["next_available"])
         if ist_now < next_time:
@@ -151,8 +253,12 @@ def get_reward_status(player_id):
     # Check store (each reward individually)
     store_available = [True, True, True]
     store_next = [None, None, None]
+    store_status = ["unknown", "unknown", "unknown"]
+    
     for i in range(3):
         reward_key = f"reward_{i+1}"
+        store_status[i] = player_history["store"][reward_key].get("status", "unknown")
+        
         if player_history["store"][reward_key]["next_available"]:
             next_time = datetime.fromisoformat(player_history["store"][reward_key]["next_available"])
             if ist_now < next_time:
@@ -163,7 +269,9 @@ def get_reward_status(player_id):
         "daily_available": daily_available,
         "store_available": store_available,
         "daily_next": daily_next,
-        "store_next": store_next
+        "daily_status": daily_status,
+        "store_next": store_next,
+        "store_status": store_status
     }
 
 def create_driver():
@@ -438,38 +546,14 @@ def close_popup(driver):
     except Exception as e:
         pass
 
-def check_store_page_has_rewards(driver):
-    """Smart check if store page has claimable rewards or is on cooldown"""
-    try:
-        page_text = driver.page_source.lower()
-        
-        # Check for timer indicators
-        has_timer = "next in" in page_text or driver.find_elements(By.XPATH, "//*[contains(text(), 'Next in') or contains(text(), 'next in')]")
-        
-        # Check for Free buttons
-        free_buttons = driver.find_elements(By.XPATH, "//button[contains(text(), 'Free') or contains(text(), 'free') or contains(text(), 'Claim')]")
-        has_free_buttons = len(free_buttons) > 0
-        
-        if has_timer and not has_free_buttons:
-            log("⏰ All store rewards on cooldown (timer detected, no Free buttons)")
-            return False, "cooldown"
-        elif has_free_buttons:
-            log("🎯 Found Free button(s) - rewards available")
-            return True, "available"
-        else:
-            log("❓ No clear indicators - will attempt claim")
-            return True, "unknown"
-    except:
-        return True, "unknown"
-
 def claim_daily_rewards(driver, player_id):
-    """Claim Daily Rewards - From master_claimer_Daily.py"""
+    """Claim Daily Rewards with cooldown detection"""
     log("🎁 Claiming Daily Rewards...")
     
-    # Check if on cooldown
+    # Check if on cooldown from history
     status = get_reward_status(player_id)
-    if not status["daily_available"]:
-        log(f"⏰ Daily on cooldown. Next: {status['daily_next']}")
+    if not status["daily_available"] and status["daily_status"] == "claimed":
+        log(f"⏰ Daily already claimed. Next: {status['daily_next']}")
         return 0
     
     claimed = 0
@@ -478,6 +562,9 @@ def claim_daily_rewards(driver, player_id):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
+        
+        # Detect cooldowns from page
+        detect_page_cooldowns(driver, player_id, "daily")
         
         for attempt in range(3):
             result = driver.execute_script("""
@@ -512,7 +599,7 @@ def claim_daily_rewards(driver, player_id):
     return claimed
 
 def physical_click(driver, element):
-    """Physical click helper from master_claimer_Store.py"""
+    """Physical click helper"""
     try:
         driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
         time.sleep(0.5)
@@ -545,23 +632,10 @@ def ensure_store_page(driver):
         return False
 
 def claim_store_rewards(driver, player_id):
-    """OPTIMIZED HYBRID Store Claims with Smart Early Exit"""
-    log("🏪 Claiming Store Rewards (OPTIMIZED HYBRID)...")
+    """OPTIMIZED Store Claims with Page-Based Cooldown Detection"""
+    log("🏪 Claiming Store Rewards (OPTIMIZED + Detection)...")
     claimed = 0
     max_claims = 3
-    
-    # Check cooldown status
-    status = get_reward_status(player_id)
-    available_count = sum(status["store_available"])
-    
-    if available_count == 0:
-        log(f"⏰ All store rewards on cooldown")
-        for i, next_time in enumerate(status["store_next"]):
-            if next_time:
-                log(f"  Reward {i+1}: Next in {next_time}")
-        return 0
-    else:
-        log(f"🎯 {available_count}/3 store rewards potentially available")
     
     try:
         driver.get("https://hub.vertigogames.co/store")
@@ -569,20 +643,27 @@ def claim_store_rewards(driver, player_id):
         time.sleep(2)
         close_popup(driver)
         
-        # Smart check before attempting
-        has_rewards, reason = check_store_page_has_rewards(driver)
-        if not has_rewards and reason == "cooldown":
-            log("⏭️ Skipping store claims - all on cooldown")
+        # Detect cooldowns from actual page
+        detected = detect_page_cooldowns(driver, player_id, "store")
+        
+        # Check status after detection
+        status = get_reward_status(player_id)
+        available_count = sum(status["store_available"])
+        
+        if available_count == 0:
+            log(f"⏰ All store rewards on cooldown (detected from page)")
             return 0
+        else:
+            log(f"🎯 {available_count}/3 store rewards potentially available")
         
         # FIRST 2 CLAIMS: Physical Click (Optimized to 3 attempts)
         log("🔹 Phase 1: Physical Click Method (Claims 1-2)")
-        for attempt in range(3):  # Reduced from 5 to 3
+        for attempt in range(3):
             if claimed >= 2:
                 break
                 
             ensure_store_page(driver)
-            time.sleep(1)  # Reduced from 1.5s
+            time.sleep(1)
             
             found_btn = None
             try:
@@ -591,7 +672,6 @@ def claim_store_rewards(driver, player_id):
                     try:
                         btn_text = btn.text.strip().lower()
                         if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                            # Timer Check
                             try:
                                 parent = btn.find_element(By.XPATH, "./..")
                                 if "next in" in parent.text.lower(): continue
@@ -614,21 +694,20 @@ def claim_store_rewards(driver, player_id):
                     time.sleep(1)
             else:
                 log(f"ℹ️  No 'Free' buttons in Phase 1 (attempt {attempt+1})")
-                if attempt >= 1:  # Early exit after 2 attempts if nothing found
+                if attempt >= 1:
                     break
                 time.sleep(1)
         
         # THIRD CLAIM: JavaScript with Fallback (Optimized to 2 attempts)
         if claimed < max_claims:
             log("🔹 Phase 2: JavaScript Method (Claim 3) with Fallback")
-            for attempt in range(2):  # Reduced from 5 to 2
+            for attempt in range(2):
                 if claimed >= max_claims:
                     break
                 
                 ensure_store_page(driver)
-                time.sleep(1)  # Reduced from 2s
+                time.sleep(1)
                 
-                # Try JavaScript first
                 result = driver.execute_script("""
                     let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
                     if (storeBonusCards.length === 0) {
@@ -664,7 +743,6 @@ def claim_store_rewards(driver, player_id):
                     time.sleep(1)
                     break
                 else:
-                    # Fallback to physical click
                     log(f"ℹ️  JavaScript found no button. Trying Physical Click...")
                     
                     found_btn = None
@@ -706,7 +784,7 @@ def claim_store_rewards(driver, player_id):
     return claimed
 
 def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression - Optimized from master_claimer_v2_6.py"""
+    """Claim Progression - Optimized"""
     log("🎯 Claiming Progression Program...")
     claimed = 0
     try:
@@ -715,7 +793,6 @@ def claim_progression_program_rewards(driver, player_id):
         time.sleep(2)
         close_popup(driver)
         
-        # Optimized: Reduced from 8 to 6 internal iterations
         for _ in range(6):
             result = driver.execute_script("""
                 let allButtons = document.querySelectorAll('button');
@@ -739,7 +816,6 @@ def claim_progression_program_rewards(driver, player_id):
                 time.sleep(2.0)
                 close_popup(driver)
             else:
-                # Scroll if nothing found
                 driver.execute_script("let c=document.querySelectorAll('div');for(let i of c){if(i.scrollWidth>i.clientWidth){i.scrollLeft+=400;}}")
                 time.sleep(1)
         
@@ -753,6 +829,10 @@ def process_player(player_id):
     """Process single player with optimized retry logic"""
     driver = None
     stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
+    
+    # Initialize player history
+    init_player_history(player_id)
+    
     try:
         log(f"\n🚀 {player_id}")
         driver = create_driver()
@@ -763,20 +843,18 @@ def process_player(player_id):
         # Claim Daily Rewards
         stats['daily'] = claim_daily_rewards(driver, player_id)
         
-        # Claim Store Rewards with smart retry (max 2 retries, reduced from 3)
+        # Claim Store Rewards with smart retry (max 2 retries)
         max_store_expected = 3
-        store_retry_attempts = 2  # Reduced from 3
+        store_retry_attempts = 2
         for retry in range(store_retry_attempts):
             stats['store'] = claim_store_rewards(driver, player_id)
             if stats['store'] >= max_store_expected:
                 log(f"✅ All {max_store_expected} Store rewards claimed!")
                 break
             elif stats['store'] > 0 and retry < store_retry_attempts - 1:
-                # Only retry if we got some claims but not all
                 log(f"⚠️ Got {stats['store']}/{max_store_expected}. Retry {retry + 1}/{store_retry_attempts - 1}...")
                 time.sleep(2)
             elif stats['store'] == 0:
-                # If got 0, likely on cooldown - don't retry
                 log(f"ℹ️  No store claims (likely on cooldown)")
                 break
         
@@ -785,7 +863,7 @@ def process_player(player_id):
             log("⏳ Waiting for server to process store claims...")
             time.sleep(3)
         
-        # Claim Progression with optimized retry (reduced from 3 to 2)
+        # Claim Progression with optimized retry
         progression_retry_attempts = 2
         for retry in range(progression_retry_attempts):
             claimed = claim_progression_program_rewards(driver, player_id)
@@ -797,7 +875,6 @@ def process_player(player_id):
                 log(f"ℹ️  No progression rewards available")
                 break
             else:
-                # Got claims, check once more for any remaining
                 if retry < progression_retry_attempts - 1:
                     log(f"✅ Claimed {claimed} progression. Checking for more...")
                     time.sleep(1)
@@ -822,7 +899,7 @@ def process_player(player_id):
     return stats
 
 def send_email_summary(results, num_players):
-    """Send enhanced email summary with claim history tracking"""
+    """Send enhanced email summary with page-based status detection"""
     try:
         sender = os.environ.get("SENDER_EMAIL")
         recipient = os.environ.get("RECIPIENT_EMAIL")
@@ -839,7 +916,6 @@ def send_email_summary(results, num_players):
         
         # Calculate stats
         on_cooldown = 0
-        available_now = 0
         
         for result in results:
             player_id = result['player_id']
@@ -858,14 +934,12 @@ def send_email_summary(results, num_players):
             if player_id in history:
                 ph = history[player_id]
                 
-                # Check daily
                 if ph['daily']['next_available']:
                     next_time = datetime.fromisoformat(ph['daily']['next_available'])
                     if not next_run_time or next_time < next_run_time:
                         next_run_time = next_time
                         next_run_reason = f"Daily rewards reset"
                 
-                # Check store
                 for i in range(3):
                     reward_key = f"reward_{i+1}"
                     if ph['store'][reward_key]['next_available']:
@@ -889,10 +963,6 @@ def send_email_summary(results, num_players):
             .status-cooldown {{ color: #e67e22; font-weight: bold; }}
             .status-available {{ color: #3498db; font-weight: bold; }}
             .legend {{ background: #ecf0f1; padding: 15px; border-radius: 6px; margin-top: 20px; }}
-            table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
-            th {{ background: #34495e; color: white; padding: 12px; text-align: left; }}
-            td {{ padding: 10px; border-bottom: 1px solid #e0e0e0; }}
-            .highlight {{ background: #fff3cd; font-weight: bold; }}
         </style>
         </head>
         <body>
@@ -901,7 +971,7 @@ def send_email_summary(results, num_players):
         
         <div class="stat-box">
             <div class="stat-row"><strong>📅 Run Time:</strong> <span>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</span></div>
-            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 24px;">{total_all}</span></div>
+            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span style="font-size: 32px; font-weight: bold;">{total_all}</span></div>
             <div class="stat-row"><strong>⏰ On Cooldown:</strong> <span>{on_cooldown}</span></div>
         </div>
         
@@ -923,11 +993,14 @@ def send_email_summary(results, num_players):
             player_id = result['player_id']
             status = get_reward_status(player_id)
             
-            # Daily status
+            # Daily status with better indicators
             if result['daily'] > 0:
                 daily_status = f'<span class="status-claimed">✅ Claimed This Run</span>'
             elif not status['daily_available']:
-                daily_status = f'<span class="status-cooldown">⏰ Next in {status["daily_next"]}</span>'
+                if status['daily_status'] == 'claimed':
+                    daily_status = f'<span class="status-cooldown">⏰ Already Claimed - Next in {status["daily_next"]}</span>'
+                else:
+                    daily_status = f'<span class="status-cooldown">⏰ On Cooldown - Next in {status["daily_next"]}</span>'
             else:
                 daily_status = f'<span class="status-available">🔄 Available Now</span>'
             
@@ -935,15 +1008,18 @@ def send_email_summary(results, num_players):
             store_status_lines = []
             for i in range(3):
                 if i < result['store']:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-claimed">✅ Claimed</span>')
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-claimed">✅ Claimed This Run</span>')
                 elif not status['store_available'][i]:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ Next in {status["store_next"][i]}</span>')
+                    if status['store_status'][i] == 'claimed':
+                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ Already Claimed - Next in {status["store_next"][i]}</span>')
+                    else:
+                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ On Cooldown - Next in {status["store_next"][i]}</span>')
                 else:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Available</span>')
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Available Now</span>')
             
             # Progression status
             if result['progression'] > 0:
-                prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]}</span>'
+                prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]} This Run</span>'
             else:
                 prog_status = f'<span class="status-cooldown">⏳ Check after Store claims</span>'
             
@@ -979,9 +1055,10 @@ def send_email_summary(results, num_players):
         html += """
         <div class="legend">
             <h4 style="margin-top:0;">💡 Status Legend</h4>
-            <div><span class="status-claimed">✅ Claimed/Completed</span> - Successfully claimed in this or previous run</div>
-            <div><span class="status-cooldown">⏰ On Cooldown</span> - Waiting for reset timer</div>
-            <div><span class="status-available">🔄 Available Now</span> - Ready to claim</div>
+            <div><span class="status-claimed">✅ Claimed This Run</span> - Successfully claimed in this run</div>
+            <div><span class="status-cooldown">⏰ Already Claimed</span> - Claimed in previous run, waiting for cooldown</div>
+            <div><span class="status-cooldown">⏰ On Cooldown</span> - Detected cooldown on page</div>
+            <div><span class="status-available">🔄 Available Now</span> - Should be claimable</div>
             <div style="margin-top:10px;"><strong>Notes:</strong></div>
             <ul style="margin: 5px 0;">
                 <li><strong>Daily Rewards:</strong> Reset at 5:30 AM IST daily</li>
@@ -1008,7 +1085,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER UNIFIED v2.0 (Optimized + Tracking)")
+    log("CS HUB AUTO-CLAIMER v2.1 (Optimized + Page Detection)")
     log("="*60)
     
     players = []
