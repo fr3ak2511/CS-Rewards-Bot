@@ -61,11 +61,12 @@ def format_time_until_reset(next_reset):
         return f"{minutes}m"
 
 def parse_timer_text(timer_text):
-    """Parse 'Next in 23h 45m' into timedelta"""
+    """Parse timer text into timedelta - handles multiple formats"""
     try:
-        # Extract hours and minutes from text like "Next in 23h 45m" or "23h 45m"
+        # Format 1: "Next in 23h 45m" or "23h 45m"
         hours = 0
         minutes = 0
+        seconds = 0
         
         hour_match = re.search(r'(\d+)\s*h', timer_text, re.IGNORECASE)
         if hour_match:
@@ -75,8 +76,15 @@ def parse_timer_text(timer_text):
         if min_match:
             minutes = int(min_match.group(1))
         
-        if hours > 0 or minutes > 0:
-            return timedelta(hours=hours, minutes=minutes)
+        # Format 2: "HH:MM:SS" countdown timer (e.g., "07:37:27")
+        countdown_match = re.search(r'(\d{1,2}):(\d{2}):(\d{2})', timer_text)
+        if countdown_match:
+            hours = int(countdown_match.group(1))
+            minutes = int(countdown_match.group(2))
+            seconds = int(countdown_match.group(3))
+        
+        if hours > 0 or minutes > 0 or seconds > 0:
+            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
         
         return None
     except:
@@ -189,7 +197,7 @@ def detect_page_cooldowns(driver, player_id, page_type):
     
     try:
         if page_type == "daily":
-            # Look for timer text on daily page
+            # Method 1: Look for "Next in" timer text
             timer_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Next in') or contains(text(), 'next in')]")
             if timer_elements:
                 timer_text = timer_elements[0].text
@@ -198,6 +206,24 @@ def detect_page_cooldowns(driver, player_id, page_type):
                     log(f"🔍 Daily page: Detected cooldown - {timer_text}")
                     update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
                     detected['daily'] = cooldown_delta
+                    return detected
+            
+            # Method 2: Look for countdown timer in HH:MM:SS format (e.g., "07:37:27")
+            page_source = driver.page_source
+            countdown_pattern = r'\b(\d{1,2}):(\d{2}):(\d{2})\b'
+            countdown_matches = re.finditer(countdown_pattern, page_source)
+            
+            for match in countdown_matches:
+                timer_text = match.group(0)
+                # Verify it's actually a countdown (hours should be reasonable, e.g., < 48)
+                hours = int(match.group(1))
+                if hours < 48:  # Reasonable countdown timer
+                    cooldown_delta = parse_timer_text(timer_text)
+                    if cooldown_delta and cooldown_delta.total_seconds() > 60:  # More than 1 minute
+                        log(f"🔍 Daily page: Detected countdown timer - {timer_text}")
+                        update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
+                        detected['daily'] = cooldown_delta
+                        return detected
         
         elif page_type == "store":
             # Look for store reward cards with timers
@@ -1110,7 +1136,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2 (Status Fixes)")
+    log("CS HUB AUTO-CLAIMER v2.2.1 (Countdown Timer Detection)")
     log("="*60)
     
     players = []
