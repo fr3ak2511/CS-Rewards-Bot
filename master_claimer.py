@@ -185,75 +185,202 @@ def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=N
     save_claim_history(history)
     return history
 
+def detect_daily_timer_js(driver):
+    """
+    Use JavaScript DOM traversal to detect the daily timer.
+    Page shows: 'Next reward in' with SEPARATE boxes for hours / minutes / seconds.
+    The old regex on raw HTML was matching random JS timestamps - this is the proper fix.
+    Returns timedelta or None.
+    """
+    try:
+        result = driver.execute_script("""
+            function getNum(el) {
+                return parseInt((el.innerText || el.textContent || '').trim()) || 0;
+            }
+
+            // Strategy 1: Find the "Next reward in" label, walk up, find time boxes by label text
+            let allLeafEls = Array.from(document.querySelectorAll('*')).filter(e => e.children.length === 0);
+            for (let el of allLeafEls) {
+                let txt = (el.innerText || '').trim().toLowerCase();
+                if (txt === 'next reward in' || txt === 'next in' || txt === 'next reward') {
+                    let container = el.parentElement;
+                    for (let depth = 0; depth < 6; depth++) {
+                        if (!container) break;
+                        let leaves = Array.from(container.querySelectorAll('*')).filter(e => e.children.length === 0);
+                        let h = null, m = null, s = 0;
+                        for (let leaf of leaves) {
+                            let t = (leaf.innerText || '').trim().toLowerCase();
+                            if (t === 'hours' || t === 'hour') {
+                                let sib = leaf.previousElementSibling;
+                                if (sib) h = getNum(sib);
+                            }
+                            if (t === 'minutes' || t === 'minute') {
+                                let sib = leaf.previousElementSibling;
+                                if (sib) m = getNum(sib);
+                            }
+                            if (t === 'seconds' || t === 'second') {
+                                let sib = leaf.previousElementSibling;
+                                if (sib) s = getNum(sib);
+                            }
+                        }
+                        if (h !== null && m !== null) return { hours: h, minutes: m, seconds: s, method: 'label-search' };
+                        container = container.parentElement;
+                    }
+                }
+            }
+
+            // Strategy 2: Find 'hours' label and infer siblings
+            let hourLabels = allLeafEls.filter(e => (e.innerText || '').trim().toLowerCase() === 'hours');
+            for (let hl of hourLabels) {
+                let parent = hl.parentElement; // e.g. <div><span>09</span><span>hours</span></div>
+                let grandparent = parent ? parent.parentElement : null;
+                if (!grandparent) continue;
+                let cards = Array.from(grandparent.children);
+                let h = null, m = null, s = 0;
+                for (let card of cards) {
+                    let labels = Array.from(card.querySelectorAll('*')).filter(e => e.children.length === 0);
+                    let hasHour = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'hours');
+                    let hasMin  = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'minutes');
+                    let hasSec  = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'seconds');
+                    let numEl   = labels.find(e => !isNaN(parseInt(e.innerText)) && e.innerText.trim().length <= 3);
+                    if (hasHour && numEl) h = getNum(numEl);
+                    if (hasMin  && numEl) m = getNum(numEl);
+                    if (hasSec  && numEl) s = getNum(numEl);
+                }
+                if (h !== null && m !== null) return { hours: h, minutes: m, seconds: s, method: 'sibling-card' };
+            }
+
+            return null;
+        """)
+
+        if result:
+            h, m, s = result.get('hours', 0), result.get('minutes', 0), result.get('seconds', 0)
+            log(f"🔍 Daily timer (DOM/{result.get('method','?')}): {h}h {m}m {s}s")
+            return timedelta(hours=h, minutes=m, seconds=s)
+
+    except Exception as e:
+        log(f"⚠️ Daily JS timer error: {e}")
+    return None
+
+
+def detect_store_timers_js(driver):
+    """
+    Use JavaScript DOM traversal to detect each store reward card's timer.
+    Each card has its OWN 24h countdown displayed as hour/minute/second boxes.
+    Returns list of up to 3 timedeltas ([] if none found).
+    """
+    try:
+        results = driver.execute_script("""
+            function getNum(el) {
+                return parseInt((el.innerText || el.textContent || '').trim()) || 0;
+            }
+
+            function extractTime(container) {
+                let leaves = Array.from(container.querySelectorAll('*')).filter(e => e.children.length === 0);
+                let h = null, m = null, s = 0;
+                for (let leaf of leaves) {
+                    let t = (leaf.innerText || '').trim().toLowerCase();
+                    if (t === 'hours' || t === 'hour') {
+                        let sib = leaf.previousElementSibling;
+                        if (sib) h = getNum(sib);
+                    }
+                    if (t === 'minutes' || t === 'minute') {
+                        let sib = leaf.previousElementSibling;
+                        if (sib) m = getNum(sib);
+                    }
+                    if (t === 'seconds' || t === 'second') {
+                        let sib = leaf.previousElementSibling;
+                        if (sib) s = getNum(sib);
+                    }
+                    // Also handle "Xh Ym" inline text on button/label
+                    if (t.match(/\\d+h/) && t.match(/\\d+m/)) {
+                        let hm = t.match(/(\\d+)h/), mm = t.match(/(\\d+)m/);
+                        if (hm) h = parseInt(hm[1]);
+                        if (mm) m = parseInt(mm[1]);
+                    }
+                }
+                return (h !== null && m !== null) ? { hours: h, minutes: m, seconds: s } : null;
+            }
+
+            let found = [];
+
+            // Find cards that have a timer (reward is on cooldown)
+            // Look for any container that has 'hours' + 'minutes' labels together
+            let hourLabels = Array.from(document.querySelectorAll('*')).filter(e => 
+                e.children.length === 0 && (e.innerText || '').trim().toLowerCase() === 'hours'
+            );
+
+            for (let hl of hourLabels) {
+                // Walk up to find the card-level container
+                let container = hl.parentElement;
+                for (let d = 0; d < 5; d++) {
+                    if (!container) break;
+                    let ct = (container.innerText || '').toLowerCase();
+                    if (ct.includes('hours') && ct.includes('minutes')) {
+                        let time = extractTime(container);
+                        if (time) {
+                            // Avoid duplicates
+                            let dup = found.some(f => f.hours === time.hours && f.minutes === time.minutes);
+                            if (!dup) found.push(time);
+                            break;
+                        }
+                    }
+                    container = container.parentElement;
+                }
+            }
+
+            return found.slice(0, 3);
+        """)
+
+        timers = []
+        if results:
+            for r in results:
+                h, m, s = r.get('hours', 0), r.get('minutes', 0), r.get('seconds', 0)
+                td = timedelta(hours=h, minutes=m, seconds=s)
+                timers.append(td)
+                log(f"🔍 Store timer (DOM): {h}h {m}m {s}s")
+        return timers
+
+    except Exception as e:
+        log(f"⚠️ Store JS timer error: {e}")
+    return []
+
+
 def detect_page_cooldowns(driver, player_id, page_type):
     """
-    Detect cooldowns by analyzing the actual page
-    Updates history with detected cooldowns
+    Detect cooldowns using proper DOM-based JavaScript (not raw HTML regex).
     
-    page_type: 'daily', 'store', or 'progression'
+    OLD approach (WRONG): regex on page source → matched random JS timestamps
+    NEW approach (CORRECT): JavaScript DOM traversal → finds actual timer boxes
+    
+    page_type: 'daily' or 'store'
     Returns: dict with cooldown info
     """
     detected = {}
-    
+
     try:
         if page_type == "daily":
-            # Method 1: Look for "Next in" timer text
-            timer_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'Next in') or contains(text(), 'next in')]")
-            if timer_elements:
-                timer_text = timer_elements[0].text
-                cooldown_delta = parse_timer_text(timer_text)
-                if cooldown_delta:
-                    log(f"🔍 Daily page: Detected cooldown - {timer_text}")
-                    update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
-                    detected['daily'] = cooldown_delta
-                    return detected
-            
-            # Method 2: Look for countdown timer in HH:MM:SS format (e.g., "07:37:27")
-            page_source = driver.page_source
-            countdown_pattern = r'\b(\d{1,2}):(\d{2}):(\d{2})\b'
-            countdown_matches = re.finditer(countdown_pattern, page_source)
-            
-            for match in countdown_matches:
-                timer_text = match.group(0)
-                # Verify it's actually a countdown (hours should be reasonable, e.g., < 48)
-                hours = int(match.group(1))
-                if hours < 48:  # Reasonable countdown timer
-                    cooldown_delta = parse_timer_text(timer_text)
-                    if cooldown_delta and cooldown_delta.total_seconds() > 60:  # More than 1 minute
-                        log(f"🔍 Daily page: Detected countdown timer - {timer_text}")
-                        update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
-                        detected['daily'] = cooldown_delta
-                        return detected
-        
+            cooldown_delta = detect_daily_timer_js(driver)
+            if cooldown_delta and cooldown_delta.total_seconds() > 60:
+                update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
+                detected['daily'] = cooldown_delta
+                log(f"✅ Daily cooldown saved: next in {cooldown_delta}")
+            else:
+                log(f"ℹ️  No daily timer found on page (not yet claimed or expired)")
+
         elif page_type == "store":
-            # Look for store reward cards with timers
-            try:
-                # Find all cards/sections that might contain store rewards
-                page_text = driver.page_source
-                
-                # Find all "Next in" patterns with context
-                timer_pattern = r'Next in\s+(\d+h?\s*\d*m?)'
-                matches = re.finditer(timer_pattern, page_text, re.IGNORECASE)
-                
-                reward_cooldowns = []
-                for match in matches:
-                    timer_text = match.group(0)
-                    cooldown_delta = parse_timer_text(timer_text)
-                    if cooldown_delta:
-                        reward_cooldowns.append(cooldown_delta)
-                
-                # Update history for detected cooldowns
-                for i, cooldown_delta in enumerate(reward_cooldowns[:3]):  # Max 3 store rewards
-                    log(f"🔍 Store page: Reward {i+1} cooldown detected")
+            timers = detect_store_timers_js(driver)
+            if timers:
+                for i, cooldown_delta in enumerate(timers[:3]):
                     update_claim_history(player_id, "store", claimed_count=0, reward_index=i+1, detected_cooldown=cooldown_delta)
                     detected[f'store_{i+1}'] = cooldown_delta
-                    
-            except Exception as e:
-                log(f"⚠️ Store cooldown detection error: {e}")
-        
+                log(f"⏰ {len(timers)} store reward(s) on cooldown")
+            else:
+                log(f"ℹ️  No store timers found on page")
+
     except Exception as e:
         log(f"⚠️ Page cooldown detection error: {e}")
-    
+
     return detected
 
 def get_reward_status(player_id):
@@ -625,9 +752,13 @@ def claim_daily_rewards(driver, player_id):
                 log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
                 time.sleep(1)
         
-        # Mark as attempted if we got 0
+        # Mark as attempted if we got 0 AND didn't detect a cooldown
         if claimed == 0:
-            update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
+            # Check if we already detected a cooldown
+            status = get_reward_status(player_id)
+            if status["daily_status"] != "cooldown_detected":
+                # Only mark as unavailable if we didn't find a timer
+                update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
         
@@ -816,9 +947,12 @@ def claim_store_rewards(driver, player_id):
                             log(f"ℹ️  Both methods failed. Retry {attempt+1}/4...")
                             time.sleep(2)  # Wait before retry
         
-        # Mark unclaimed rewards as attempted
+        # Mark unclaimed rewards as attempted (but not if already detected as on cooldown)
+        status = get_reward_status(player_id)
         for i in range(claimed + 1, 4):
-            update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
+            # Only mark as unavailable if we didn't detect a cooldown timer
+            if status["store_status"][i-1] != "cooldown_detected":
+                update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
@@ -1139,7 +1273,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.2 (3rd Reward Fix + Font Size)")
+    log("CS HUB AUTO-CLAIMER v2.2.4 (DOM-Based Timer Detection)")
     log("="*60)
     
     players = []
