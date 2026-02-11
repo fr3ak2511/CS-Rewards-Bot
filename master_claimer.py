@@ -625,9 +625,13 @@ def claim_daily_rewards(driver, player_id):
                 log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
                 time.sleep(1)
         
-        # Mark as attempted if we got 0
+        # Mark as attempted if we got 0 AND didn't detect a cooldown
         if claimed == 0:
-            update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
+            # Check if we already detected a cooldown
+            status = get_reward_status(player_id)
+            if status["daily_status"] != "cooldown_detected":
+                # Only mark as unavailable if we didn't find a timer
+                update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
         
@@ -816,9 +820,12 @@ def claim_store_rewards(driver, player_id):
                             log(f"ℹ️  Both methods failed. Retry {attempt+1}/4...")
                             time.sleep(2)  # Wait before retry
         
-        # Mark unclaimed rewards as attempted
+        # Mark unclaimed rewards as attempted (but not if already detected as on cooldown)
+        status = get_reward_status(player_id)
         for i in range(claimed + 1, 4):
-            update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
+            # Only mark as unavailable if we didn't detect a cooldown timer
+            if status["store_status"][i-1] != "cooldown_detected":
+                update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
         driver.save_screenshot(f"store_final_{player_id}.png")
@@ -1139,7 +1146,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.2 (3rd Reward Fix + Font Size)")
+    log("CS HUB AUTO-CLAIMER v2.2.3 (Timer Detection Fix)")
     log("="*60)
     
     players = []
