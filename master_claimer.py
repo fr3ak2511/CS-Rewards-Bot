@@ -752,12 +752,14 @@ def claim_daily_rewards(driver, player_id):
                 log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
                 time.sleep(1)
         
-        # Mark as attempted if we got 0 AND didn't detect a cooldown
+        # Mark as attempted if we got 0 AND didn't already have a future timer
         if claimed == 0:
-            # Check if we already detected a cooldown
             status = get_reward_status(player_id)
-            if status["daily_status"] != "cooldown_detected":
-                # Only mark as unavailable if we didn't find a timer
+            already_tracked = (
+                status["daily_status"] in ["cooldown_detected", "claimed"]
+                or status["daily_next"] is not None
+            )
+            if not already_tracked:
                 update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
         
         driver.save_screenshot(f"daily_final_{player_id}.png")
@@ -947,11 +949,15 @@ def claim_store_rewards(driver, player_id):
                             log(f"ℹ️  Both methods failed. Retry {attempt+1}/4...")
                             time.sleep(2)  # Wait before retry
         
-        # Mark unclaimed rewards as attempted (but not if already detected as on cooldown)
+        # Mark unclaimed rewards as attempted ONLY if we have no existing future timer
         status = get_reward_status(player_id)
         for i in range(claimed + 1, 4):
-            # Only mark as unavailable if we didn't detect a cooldown timer
-            if status["store_status"][i-1] != "cooldown_detected":
+            # Preserve history if we already have a future timer from previous claim
+            already_tracked = (
+                status["store_status"][i-1] in ["cooldown_detected", "claimed"]
+                or status["store_next"][i-1] is not None  # next_available is in the future
+            )
+            if not already_tracked:
                 update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
         
         log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
@@ -1173,33 +1179,27 @@ def send_email_summary(results, num_players):
             player_id = result['player_id']
             status = get_reward_status(player_id)
             
-            # Daily status with better indicators
+            # Daily status - next_available timer takes priority over status field
             if result['daily'] > 0:
                 daily_status = f'<span class="status-claimed">✅ Claimed This Run</span>'
-            elif not status['daily_available']:
-                if status['daily_status'] == 'claimed':
-                    daily_status = f'<span class="status-cooldown">⏰ Already Claimed - Next in {status["daily_next"]}</span>'
-                elif status['daily_status'] == 'cooldown_detected':
-                    daily_status = f'<span class="status-cooldown">⏰ On Cooldown - Next in {status["daily_next"]}</span>'
-                else:
-                    daily_status = f'<span class="status-cooldown">⏰ On Cooldown</span>'
+            elif status['daily_next'] is not None:
+                # We have a calculated next-available time - always show it
+                label = "Already Claimed" if status['daily_status'] == 'claimed' else "On Cooldown"
+                daily_status = f'<span class="status-cooldown">⏰ {label} - Next in {status["daily_next"]}</span>'
             elif status['daily_status'] == 'unavailable':
                 daily_status = f'<span class="status-unavailable">⏳ Not Available</span>'
             else:
                 daily_status = f'<span class="status-available">🔄 Check Manually</span>'
             
-            # Store status
+            # Store status - next_available timer takes priority over status field
             store_status_lines = []
             for i in range(3):
                 if i < result['store']:
                     store_status_lines.append(f'Reward {i+1}: <span class="status-claimed">✅ Claimed This Run</span>')
-                elif not status['store_available'][i]:
-                    if status['store_status'][i] == 'claimed':
-                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ Already Claimed - Next in {status["store_next"][i]}</span>')
-                    elif status['store_status'][i] == 'cooldown_detected':
-                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ On Cooldown - Next in {status["store_next"][i]}</span>')
-                    else:
-                        store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ On Cooldown</span>')
+                elif status['store_next'][i] is not None:
+                    # We have a calculated next-available time - always show it
+                    label = "Already Claimed" if status['store_status'][i] == 'claimed' else "On Cooldown"
+                    store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ {label} - Next in {status["store_next"][i]}</span>')
                 elif status['store_status'][i] == 'unavailable':
                     store_status_lines.append(f'Reward {i+1}: <span class="status-unavailable">⏳ Not Available</span>')
                 else:
@@ -1273,7 +1273,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.4 (DOM-Based Timer Detection)")
+    log("CS HUB AUTO-CLAIMER v2.2.5 (Timer Display Fix)")
     log("="*60)
     
     players = []
