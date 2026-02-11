@@ -131,50 +131,62 @@ def init_player_history(player_id):
 
 def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None, detected_cooldown=None, attempted=False):
     """
-    Update claim history for a player
+    Update claim history for a player.
     
-    detected_cooldown: timedelta object if cooldown was detected on page (even if no claim made)
-    attempted: True if we tried to claim but got 0 (helps distinguish from never tried)
+    CRITICAL RULE: Never overwrite a recent last_claim with 'unavailable'.
+    If last_claim + cooldown > now → reward is clearly still on cooldown, don't touch it.
     """
     history = init_player_history(player_id)
     ist_now = get_ist_time()
     
     if reward_type == "daily":
         if claimed_count > 0:
-            # Successfully claimed
             history[player_id]["daily"]["last_claim"] = ist_now.isoformat()
             next_reset = get_next_daily_reset()
             history[player_id]["daily"]["next_available"] = next_reset.isoformat()
             history[player_id]["daily"]["status"] = "claimed"
             log(f"📝 Updated history: Daily claimed, next at {next_reset.strftime('%I:%M %p')}")
         elif detected_cooldown is not None:
-            # Detected cooldown on page
             next_available = ist_now + detected_cooldown
             history[player_id]["daily"]["next_available"] = next_available.isoformat()
             history[player_id]["daily"]["status"] = "cooldown_detected"
             log(f"📝 Updated history: Daily cooldown detected, next in {format_time_until_reset(next_available)}")
         elif attempted and claimed_count == 0:
-            # Tried to claim but got nothing - likely on cooldown but not detected
+            # NEVER overwrite if we have a recent last_claim still within cooldown window
+            last_claim = history[player_id]["daily"].get("last_claim")
+            if last_claim:
+                last_time = datetime.fromisoformat(last_claim)
+                cooldown_end = last_time + timedelta(hours=24)
+                if ist_now < cooldown_end:
+                    log(f"📝 Skipping daily 'unavailable' — last_claim still within cooldown window")
+                    save_claim_history(history)
+                    return history
             history[player_id]["daily"]["status"] = "unavailable"
-            log(f"📝 Updated history: Daily unavailable (no timer detected)")
+            log(f"📝 Updated history: Daily unavailable")
     
     elif reward_type == "store" and reward_index is not None:
         reward_key = f"reward_{reward_index}"
         if claimed_count > 0:
-            # Successfully claimed
             history[player_id]["store"][reward_key]["last_claim"] = ist_now.isoformat()
             next_available = ist_now + timedelta(hours=STORE_COOLDOWN_HOURS)
             history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
             history[player_id]["store"][reward_key]["status"] = "claimed"
             log(f"📝 Updated history: Store Reward {reward_index} claimed, next in 24h")
         elif detected_cooldown is not None:
-            # Detected cooldown on page
             next_available = ist_now + detected_cooldown
             history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
             history[player_id]["store"][reward_key]["status"] = "cooldown_detected"
             log(f"📝 Updated history: Store Reward {reward_index} cooldown detected")
         elif attempted and claimed_count == 0:
-            # Tried to claim but got nothing - mark as unavailable
+            # NEVER overwrite if we have a recent last_claim still within cooldown window
+            last_claim = history[player_id]["store"][reward_key].get("last_claim")
+            if last_claim:
+                last_time = datetime.fromisoformat(last_claim)
+                cooldown_end = last_time + timedelta(hours=STORE_COOLDOWN_HOURS)
+                if ist_now < cooldown_end:
+                    log(f"📝 Skipping store {reward_index} 'unavailable' — last_claim still within cooldown")
+                    save_claim_history(history)
+                    return history
             history[player_id]["store"][reward_key]["status"] = "unavailable"
     
     elif reward_type == "progression" and claimed_count > 0:
@@ -265,85 +277,42 @@ def detect_daily_timer_js(driver):
 
 def detect_store_timers_js(driver):
     """
-    Use JavaScript DOM traversal to detect each store reward card's timer.
-    Each card has its OWN 24h countdown displayed as hour/minute/second boxes.
+    Detect store reward cooldown timers.
+    Store page uses TEXT format: "Next in 14h 59m" on each card button/label.
+    Uses XPath element text matching - NOT raw HTML regex (which matches JS/CSS too).
     Returns list of up to 3 timedeltas ([] if none found).
     """
+    timers = []
     try:
-        results = driver.execute_script("""
-            function getNum(el) {
-                return parseInt((el.innerText || el.textContent || '').trim()) || 0;
-            }
+        # Find all visible elements whose text contains "Next in"
+        # XPath on rendered DOM - avoids matching JS/CSS in page source
+        elements = driver.find_elements(
+            By.XPATH,
+            "//*[contains(text(), 'Next in') or contains(text(), 'next in')]"
+        )
 
-            function extractTime(container) {
-                let leaves = Array.from(container.querySelectorAll('*')).filter(e => e.children.length === 0);
-                let h = null, m = null, s = 0;
-                for (let leaf of leaves) {
-                    let t = (leaf.innerText || '').trim().toLowerCase();
-                    if (t === 'hours' || t === 'hour') {
-                        let sib = leaf.previousElementSibling;
-                        if (sib) h = getNum(sib);
-                    }
-                    if (t === 'minutes' || t === 'minute') {
-                        let sib = leaf.previousElementSibling;
-                        if (sib) m = getNum(sib);
-                    }
-                    if (t === 'seconds' || t === 'second') {
-                        let sib = leaf.previousElementSibling;
-                        if (sib) s = getNum(sib);
-                    }
-                    // Also handle "Xh Ym" inline text on button/label
-                    if (t.match(/\\d+h/) && t.match(/\\d+m/)) {
-                        let hm = t.match(/(\\d+)h/), mm = t.match(/(\\d+)m/);
-                        if (hm) h = parseInt(hm[1]);
-                        if (mm) m = parseInt(mm[1]);
-                    }
-                }
-                return (h !== null && m !== null) ? { hours: h, minutes: m, seconds: s } : null;
-            }
-
-            let found = [];
-
-            // Find cards that have a timer (reward is on cooldown)
-            // Look for any container that has 'hours' + 'minutes' labels together
-            let hourLabels = Array.from(document.querySelectorAll('*')).filter(e => 
-                e.children.length === 0 && (e.innerText || '').trim().toLowerCase() === 'hours'
-            );
-
-            for (let hl of hourLabels) {
-                // Walk up to find the card-level container
-                let container = hl.parentElement;
-                for (let d = 0; d < 5; d++) {
-                    if (!container) break;
-                    let ct = (container.innerText || '').toLowerCase();
-                    if (ct.includes('hours') && ct.includes('minutes')) {
-                        let time = extractTime(container);
-                        if (time) {
-                            // Avoid duplicates
-                            let dup = found.some(f => f.hours === time.hours && f.minutes === time.minutes);
-                            if (!dup) found.push(time);
-                            break;
-                        }
-                    }
-                    container = container.parentElement;
-                }
-            }
-
-            return found.slice(0, 3);
-        """)
-
-        timers = []
-        if results:
-            for r in results:
-                h, m, s = r.get('hours', 0), r.get('minutes', 0), r.get('seconds', 0)
-                td = timedelta(hours=h, minutes=m, seconds=s)
-                timers.append(td)
-                log(f"🔍 Store timer (DOM): {h}h {m}m {s}s")
-        return timers
+        seen = set()
+        for el in elements:
+            try:
+                text = el.text.strip()
+                if not text:
+                    continue
+                delta = parse_timer_text(text)
+                if delta and delta.total_seconds() > 60:
+                    key = (delta.seconds // 3600, (delta.seconds % 3600) // 60)
+                    if key not in seen:
+                        seen.add(key)
+                        timers.append(delta)
+                        log(f"🔍 Store timer (XPath): {text.strip()}")
+                if len(timers) >= 3:
+                    break
+            except Exception:
+                continue
 
     except Exception as e:
-        log(f"⚠️ Store JS timer error: {e}")
-    return []
+        log(f"⚠️ Store timer detection error: {e}")
+
+    return timers
 
 
 def detect_page_cooldowns(driver, player_id, page_type):
@@ -384,7 +353,14 @@ def detect_page_cooldowns(driver, player_id, page_type):
     return detected
 
 def get_reward_status(player_id):
-    """Get current status of all rewards for a player"""
+    """
+    Get current status of all rewards for a player.
+    
+    Source of truth priority:
+    1. last_claim + cooldown window  → most reliable (we wrote this ourselves when claiming)
+    2. next_available from history   → fallback (set by detection or claim)
+    3. status field                  → last resort label
+    """
     history = load_claim_history()
     ist_now = get_ist_time()
     
@@ -400,28 +376,57 @@ def get_reward_status(player_id):
     
     player_history = history[player_id]
     
-    # Check daily
+    # ── DAILY ──────────────────────────────────────────────────────────────────
     daily_available = True
     daily_next = None
     daily_status = player_history["daily"].get("status", "unknown")
     
-    if player_history["daily"]["next_available"]:
+    # Priority 1: last_claim within window → guaranteed on cooldown
+    last_daily_claim = player_history["daily"].get("last_claim")
+    if last_daily_claim:
+        last_claim_time = datetime.fromisoformat(last_daily_claim)
+        # Daily resets at a fixed time, so use next_available if set, else +24h
+        next_reset = None
+        if player_history["daily"]["next_available"]:
+            next_reset = datetime.fromisoformat(player_history["daily"]["next_available"])
+        if next_reset is None:
+            next_reset = last_claim_time + timedelta(hours=24)
+        if ist_now < next_reset:
+            daily_available = False
+            daily_next = format_time_until_reset(next_reset)
+            daily_status = "claimed"
+    
+    # Priority 2: next_available still in future (from page detection)
+    if daily_available and player_history["daily"]["next_available"]:
         next_time = datetime.fromisoformat(player_history["daily"]["next_available"])
         if ist_now < next_time:
             daily_available = False
             daily_next = format_time_until_reset(next_time)
     
-    # Check store (each reward individually)
+    # ── STORE ──────────────────────────────────────────────────────────────────
     store_available = [True, True, True]
     store_next = [None, None, None]
     store_status = ["unknown", "unknown", "unknown"]
     
     for i in range(3):
         reward_key = f"reward_{i+1}"
-        store_status[i] = player_history["store"][reward_key].get("status", "unknown")
+        reward_data = player_history["store"][reward_key]
+        store_status[i] = reward_data.get("status", "unknown")
         
-        if player_history["store"][reward_key]["next_available"]:
-            next_time = datetime.fromisoformat(player_history["store"][reward_key]["next_available"])
+        # Priority 1: last_claim within 24h window → guaranteed on cooldown
+        last_store_claim = reward_data.get("last_claim")
+        if last_store_claim:
+            last_claim_time = datetime.fromisoformat(last_store_claim)
+            cooldown_end = last_claim_time + timedelta(hours=STORE_COOLDOWN_HOURS)
+            if ist_now < cooldown_end:
+                store_available[i] = False
+                store_next[i] = format_time_until_reset(cooldown_end)
+                store_status[i] = "claimed"
+                continue  # No need to check next_available
+        
+        # Priority 2: next_available still in future (from page detection)
+        if reward_data["next_available"]:
+            next_time = datetime.fromisoformat(reward_data["next_available"])
             if ist_now < next_time:
                 store_available[i] = False
                 store_next[i] = format_time_until_reset(next_time)
@@ -1273,7 +1278,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.5 (Timer Display Fix)")
+    log("CS HUB AUTO-CLAIMER v2.2.6 (last_claim Source of Truth)")
     log("="*60)
     
     players = []
