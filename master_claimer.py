@@ -277,153 +277,135 @@ def detect_daily_timer_js(driver):
 
 def detect_store_timers_js(driver):
     """
-    Detect store reward cooldown timers WITH CARD POSITION.
+    Detect store reward cooldown timers PER CARD using reward name anchors.
 
-    Store page has 3 reward cards. Each card either:
-    - Shows "Next in HH:MM:SS" or "Next in Xh Ym" (on cooldown)
-    - Shows "Free" button (available to claim)
+    The 3 store cards are always:
+      Card 1 = Gold (Daily)   - 5 Gold
+      Card 2 = Cash (Daily)   - 500 Cash
+      Card 3 = Luckyloon (Daily) - 10 Luckyloon
 
-    CRITICAL: We must detect WHICH CARD POSITION (1/2/3) each timer belongs to,
-    not just collect timers sequentially. Otherwise misassignment occurs when
-    some cards are available and others are on cooldown.
+    Strategy: anchor on each card's unique reward name, walk up the DOM to the
+    card container, then check if that container has a visible "Next in" timer.
 
-    Example failure with naive sequential approach:
-      Card 1 = Free, Card 2 = "Next in 10h", Card 3 = "Next in 12h"
-      → Naive: assigns 10h→reward_1, 12h→reward_2  (WRONG!)
-      → Correct: reward_1=None, reward_2=10h, reward_3=12h  (RIGHT)
+    This approach is immune to:
+    - DOM ordering issues (Free buttons mixed with timers in sorted lists)
+    - Text dedup collapsing all "Free" buttons (same text → only 1 kept)
+    - Parent/child double-counting
 
     Returns: dict {1: timedelta_or_None, 2: timedelta_or_None, 3: timedelta_or_None}
-    Cards with no timer (available) → None.
+             None = card is available (Free button active)
+             timedelta = card is on cooldown
     """
     result = {1: None, 2: None, 3: None}
     try:
-        # Use JS to find the 3 store bonus cards IN ORDER, and extract their timer text
-        card_timers = driver.execute_script("""
-            // Strategy: find all elements that contain "Next in" text (own text nodes only)
-            // and return them in DOM order with their index among "Next in" elements
-            let timerElements = [];
-            let allEls = Array.from(document.querySelectorAll('*'));
-            for (let el of allEls) {
-                let ownText = Array.from(el.childNodes)
-                    .filter(n => n.nodeType === Node.TEXT_NODE)
-                    .map(n => n.textContent)
-                    .join('').trim();
-                if (ownText.toLowerCase().includes('next in') && ownText.length < 50) {
-                    timerElements.push(ownText);
+        card_results = driver.execute_script("""
+            var rewardAnchors = {
+                1: ['gold (daily)', 'gold(daily)', '5 gold', 'gold daily'],
+                2: ['cash (daily)', 'cash(daily)', '500 cash', 'cash daily'],
+                3: ['luckyloon (daily)', 'luckyloon(daily)', '10 luckyloon', 'luckyloon daily']
+            };
+
+            function findCardStatus(anchorKeywords) {
+                var allEls = Array.from(document.querySelectorAll('*'));
+
+                // Step 1: Find the label element for this reward card
+                var labelEl = null;
+                for (var i = 0; i < allEls.length; i++) {
+                    var el = allEls[i];
+                    var ownText = Array.from(el.childNodes)
+                        .filter(function(n) { return n.nodeType === 3; })
+                        .map(function(n) { return n.textContent; })
+                        .join('').trim().toLowerCase();
+                    var matched = anchorKeywords.some(function(kw) { return ownText.includes(kw); });
+                    if (matched && ownText.length < 35) {
+                        labelEl = el;
+                        break;
+                    }
                 }
+                if (!labelEl) return 'not_found';
+
+                // Step 2: Walk UP the DOM to find the card container
+                // The card container will contain "Next in" text if on cooldown
+                var node = labelEl;
+                for (var depth = 0; depth < 15; depth++) {
+                    node = node.parentElement;
+                    if (!node || node === document.body || node === document.documentElement) break;
+
+                    var nodeText = (node.innerText || node.textContent || '').toLowerCase();
+
+                    if (nodeText.includes('next in')) {
+                        // Found card container with a timer - extract the timer text
+                        var children = Array.from(node.querySelectorAll('*'));
+                        for (var j = 0; j < children.length; j++) {
+                            var child = children[j];
+                            var childOwn = Array.from(child.childNodes)
+                                .filter(function(n) { return n.nodeType === 3; })
+                                .map(function(n) { return n.textContent; })
+                                .join('').trim();
+                            if (childOwn.toLowerCase().includes('next in') && childOwn.length < 50) {
+                                var fullText = (child.innerText || child.textContent || '').trim();
+                                if (fullText.length > 5 && fullText.length < 50) {
+                                    return 'timer:' + fullText;
+                                }
+                            }
+                        }
+                        return 'timer:unknown';
+                    }
+
+                    // If we've reached a node that contains a Free button AND label
+                    // without finding "next in", this card is available
+                    if (depth >= 4) {
+                        var btns = node.querySelectorAll('button');
+                        for (var b = 0; b < btns.length; b++) {
+                            if ((btns[b].innerText || '').trim().toLowerCase() === 'free') {
+                                return 'free';
+                            }
+                        }
+                    }
+                }
+                return 'free';
             }
-            return timerElements.slice(0, 6);  // max 6 raw matches
+
+            var results = {};
+            for (var cardNum in rewardAnchors) {
+                results[cardNum] = findCardStatus(rewardAnchors[cardNum]);
+            }
+            return results;
         """)
 
-        if not card_timers:
+        if not card_results:
+            log("⚠️ Store timer JS returned no results")
             return result
 
-        # Deduplicate while preserving order
-        seen = set()
-        unique_timers = []
-        for t in card_timers:
-            if t not in seen:
-                seen.add(t)
-                unique_timers.append(t)
+        REWARD_NAMES = {1: "Gold", 2: "Cash", 3: "Luckyloon"}
+        for card_num_str, status in card_results.items():
+            card_num = int(card_num_str)
+            name = REWARD_NAMES.get(card_num, f"Reward {card_num}")
 
-        # Now figure out card positions.
-        # We need to know total card count visible on page (3 store bonus cards).
-        # Query the page to count how many bonus cards exist (with or without timer).
-        try:
-            card_count = driver.execute_script("""
-                // Count distinct store bonus cards by finding cards that have EITHER
-                // a "Free" button OR a "Next in" timer — these are the 3 store reward cards
-                let freeButtons = Array.from(document.querySelectorAll('button')).filter(b => {
-                    return (b.innerText||'').trim().toLowerCase() === 'free' && b.offsetParent !== null;
-                }).length;
-                return freeButtons;
-            """)
-        except:
-            card_count = 0
-
-        # We know there are always 3 store cards.
-        # available_count = 3 - len(unique_timers)
-        # The timers are for the cards that are ON COOLDOWN.
-        # We need to figure out WHICH positions are on cooldown vs available.
-        # 
-        # Strategy: use JS to get per-card status in order
-        card_statuses = driver.execute_script("""
-            // Find store bonus card containers in order.
-            // Each card has either a Free button or a Next in timer.
-            // Return array of status per card: 'timer:TEXT' or 'free' or 'unknown'
-            let results = [];
-            
-            // Method: find all elements with "Next in" text or "Free" button,
-            // then sort by DOM position to reconstruct card order
-            let cardIndicators = [];
-            
-            // Collect timer elements with their position
-            let allEls = Array.from(document.querySelectorAll('*'));
-            for (let el of allEls) {
-                let ownText = Array.from(el.childNodes)
-                    .filter(n => n.nodeType === Node.TEXT_NODE)
-                    .map(n => n.textContent).join('').trim();
-                if (ownText.toLowerCase().includes('next in') && ownText.length < 50) {
-                    cardIndicators.push({type: 'timer', text: ownText, el: el});
-                }
-            }
-            
-            // Collect Free buttons
-            let buttons = Array.from(document.querySelectorAll('button'));
-            for (let btn of buttons) {
-                if ((btn.innerText||'').trim().toLowerCase() === 'free' && btn.offsetParent !== null) {
-                    cardIndicators.push({type: 'free', text: 'Free', el: btn});
-                }
-            }
-            
-            // Sort by DOM position (compareDocumentPosition)
-            cardIndicators.sort((a, b) => {
-                let pos = a.el.compareDocumentPosition(b.el);
-                return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
-            });
-            
-            // Deduplicate consecutive same-type entries (parent+child both matching)
-            let deduped = [];
-            let lastText = null;
-            for (let item of cardIndicators) {
-                if (item.text !== lastText) {
-                    deduped.push({type: item.type, text: item.text});
-                    lastText = item.text;
-                }
-                if (deduped.length >= 3) break;
-            }
-            
-            return deduped.map(d => d.type === 'timer' ? 'timer:' + d.text : 'free');
-        """)
-
-        if card_statuses and len(card_statuses) >= 1:
-            for i, status in enumerate(card_statuses[:3]):
-                card_num = i + 1
-                if status.startswith('timer:'):
-                    timer_text = status[6:]
+            if status.startswith('timer:'):
+                timer_text = status[6:]
+                if timer_text == 'unknown':
+                    log(f"⚠️ Store {name}: timer detected but text unparseable")
+                else:
                     delta = parse_timer_text(timer_text)
                     if delta and delta.total_seconds() > 60:
                         result[card_num] = delta
-                        log(f"🔍 Store timer card {card_num} (JS): {timer_text}")
+                        log(f"🔍 Store {name}: On Cooldown - {timer_text}")
                     else:
-                        log(f"🔍 Store card {card_num}: timer parse failed for '{timer_text}'")
-                elif status == 'free':
-                    log(f"🔍 Store card {card_num}: Free (available)")
-                else:
-                    log(f"🔍 Store card {card_num}: unknown status")
-        else:
-            # Fallback: assign sequentially if JS card detection failed
-            log(f"⚠️ Card position detection failed, falling back to sequential assignment")
-            for i, t in enumerate(unique_timers[:3]):
-                delta = parse_timer_text(t)
-                if delta and delta.total_seconds() > 60:
-                    result[i + 1] = delta
-                    log(f"🔍 Store timer (fallback seq): {t}")
+                        log(f"⚠️ Store {name}: timer parse failed for '{timer_text}'")
+            elif status == 'free':
+                log(f"🔍 Store {name}: Free (available)")
+            elif status == 'not_found':
+                log(f"⚠️ Store {name}: reward label not found in page - checking fallback")
+                # Fallback: if label not found, treat as unknown (don't mark available wrongly)
+            else:
+                log(f"⚠️ Store {name}: unknown status '{status}'")
 
     except Exception as e:
         log(f"⚠️ Store timer detection error: {e}")
 
     return result
+
 
 
 def detect_page_cooldowns(driver, player_id, page_type):
@@ -1313,18 +1295,20 @@ def send_email_summary(results, num_players):
                 daily_status = f'<span class="status-available">🔄 Check Manually</span>'
             
             # Store status - next_available timer takes priority over status field
+            STORE_REWARD_NAMES = {0: "🥇 Gold", 1: "💵 Cash", 2: "🍀 Luckyloon"}
             store_status_lines = []
             for i in range(3):
+                reward_label = STORE_REWARD_NAMES.get(i, f"Reward {i+1}")
                 if i < result['store']:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-claimed">✅ Claimed This Run</span>')
+                    store_status_lines.append(f'{reward_label}: <span class="status-claimed">✅ Claimed This Run</span>')
                 elif status['store_next'][i] is not None:
                     # We have a calculated next-available time - always show it
                     label = "Already Claimed" if status['store_status'][i] == 'claimed' else "On Cooldown"
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-cooldown">⏰ {label} - Next in {status["store_next"][i]}</span>')
+                    store_status_lines.append(f'{reward_label}: <span class="status-cooldown">⏰ {label} - Next in {status["store_next"][i]}</span>')
                 elif status['store_status'][i] == 'unavailable':
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-unavailable">⏳ Not Available</span>')
+                    store_status_lines.append(f'{reward_label}: <span class="status-unavailable">⏳ Not Available</span>')
                 else:
-                    store_status_lines.append(f'Reward {i+1}: <span class="status-available">🔄 Check Manually</span>')
+                    store_status_lines.append(f'{reward_label}: <span class="status-available">🔄 Check Manually</span>')
             
             # Progression status
             if result['progression'] > 0:
@@ -1394,7 +1378,7 @@ def send_email_summary(results, num_players):
 
 def main():
     log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.8 (Per-Card Timer Position Fix)")
+    log("CS HUB AUTO-CLAIMER v2.2.9 (Fix Cash Timer + Reward Name Labels)")
     log("="*60)
     
     players = []
