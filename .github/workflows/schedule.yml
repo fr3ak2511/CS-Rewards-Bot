@@ -1,17 +1,21 @@
 name: Hourly Rewards Claimer
 
 on:
-  # Safety net triggers - 4x per day in IST:
-  #   UTC 00:00 = IST 05:30
-  #   UTC 06:00 = IST 11:30
-  #   UTC 12:00 = IST 17:30
-  #   UTC 18:00 = IST 23:30
+  # 5 triggers per day providing complete 24h coverage with zero gaps (IST):
   #
-  # The script internally sleeps and wakes up exactly when rewards are ready
-  # (within 90 seconds), so most claims happen mid-job, not at trigger time.
-  # Max possible delay for any missed reward = 30 min (5.5h budget + 6h interval).
+  #   UTC 00:00 = IST 05:30  → job lives until 11:00 IST
+  #   UTC 06:00 = IST 11:30  → job lives until 17:00 IST
+  #   UTC 12:00 = IST 17:30  → job lives until 23:00 IST
+  #   UTC 18:00 = IST 23:30  → job lives until 05:00 IST
+  #   UTC 23:00 = IST 04:30  → job lives until 10:00 IST  ← fills the 05:00-05:30 IST gap
+  #
+  # Script sleeps internally and wakes within 90 seconds of any reward becoming
+  # available — claims are NOT limited to trigger times.
+  #
+  # Month-end safety: 23:30 IST job covers until 05:00 IST, 04:30 IST job covers
+  # from 04:30 onward — zero uncovered window before month flips.
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 0,6,12,18,23 * * *'
   workflow_dispatch:
 
 concurrency:
