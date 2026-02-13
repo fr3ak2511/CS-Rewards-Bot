@@ -22,14 +22,10 @@ on:
     - cron: '0 */2 * * *'
   workflow_dispatch:
 
-concurrency:
-  group: rewards-claimer
-  cancel-in-progress: true   # If a long-sleeping job is still alive when next trigger fires, cancel it and start fresh
-
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 130     # 2h 10min — slightly over the 2h trigger interval so sleeping jobs get replaced cleanly
+    timeout-minutes: 130     # 2h 10min â€” slightly over the 2h trigger interval so sleeping jobs get replaced cleanly
 
     steps:
       - name: Checkout Code
