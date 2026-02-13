@@ -1384,7 +1384,7 @@ def get_next_wake_time(players):
     Returns: datetime (IST) of the earliest upcoming reward, or None if all unknown.
     """
     history = load_history()
-    ist_now = get_ist_now()
+    ist_now = get_ist_time()
     soonest = None
 
     for player_id in players:
@@ -1443,7 +1443,7 @@ def main():
 
     # GitHub Actions job time budget - we started "now"
     # GitHub Actions has a 6h job limit; we stay well within by capping at 5.5h
-    JOB_START = get_ist_now()
+    JOB_START = get_ist_time()
     JOB_MAX_SECONDS = 5.5 * 3600          # 5.5 hours max total job time
     MIN_SLEEP_SECONDS = 60                 # Never wake up less than 60s early
     EARLY_WAKE_BUFFER = 90                 # Wake 90s before reward to allow page load
@@ -1451,7 +1451,7 @@ def main():
 
     while True:
         run_count += 1
-        run_start = get_ist_now()
+        run_start = get_ist_time()
         elapsed_total = (run_start - JOB_START).total_seconds()
 
         log(f"\n{'='*60}")
@@ -1469,7 +1469,7 @@ def main():
 
         # ── Calculate when to next wake up ────────────────────────────
         next_wake = get_next_wake_time(players)
-        ist_now = get_ist_now()
+        ist_now = get_ist_time()
         elapsed_total = (ist_now - JOB_START).total_seconds()
         remaining_budget = JOB_MAX_SECONDS - elapsed_total
 
