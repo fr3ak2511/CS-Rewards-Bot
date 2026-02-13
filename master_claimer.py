@@ -1383,7 +1383,7 @@ def get_next_wake_time(players):
     
     Returns: datetime (IST) of the earliest upcoming reward, or None if all unknown.
     """
-    history = load_history()
+    history = load_claim_history()
     ist_now = get_ist_time()
     soonest = None
 
