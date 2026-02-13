@@ -1,31 +1,35 @@
 name: Hourly Rewards Claimer
 
 on:
-  # 5 triggers per day providing complete 24h coverage with zero gaps (IST):
+  # Triggers every 2 hours UTC (IST = UTC+5:30):
+  #   UTC 00:00 = IST 05:30
+  #   UTC 02:00 = IST 07:30
+  #   UTC 04:00 = IST 09:30
+  #   UTC 06:00 = IST 11:30
+  #   UTC 08:00 = IST 13:30
+  #   UTC 10:00 = IST 15:30
+  #   UTC 12:00 = IST 17:30
+  #   UTC 14:00 = IST 19:30
+  #   UTC 16:00 = IST 21:30
+  #   UTC 18:00 = IST 23:30
+  #   UTC 20:00 = IST 01:30
+  #   UTC 22:00 = IST 03:30
   #
-  #   UTC 00:00 = IST 05:30  → job lives until 11:00 IST
-  #   UTC 06:00 = IST 11:30  → job lives until 17:00 IST
-  #   UTC 12:00 = IST 17:30  → job lives until 23:00 IST
-  #   UTC 18:00 = IST 23:30  → job lives until 05:00 IST
-  #   UTC 23:00 = IST 04:30  → job lives until 10:00 IST  ← fills the 05:00-05:30 IST gap
-  #
-  # Script sleeps internally and wakes within 90 seconds of any reward becoming
-  # available — claims are NOT limited to trigger times.
-  #
-  # Month-end safety: 23:30 IST job covers until 05:00 IST, 04:30 IST job covers
-  # from 04:30 onward — zero uncovered window before month flips.
+  # Max wait for any unclaimed reward = 2h (vs 1h before, but script sleeps
+  # internally so actual claim happens within 90s of reward becoming available).
+  # concurrency cancel-in-progress handles overlap if a job runs long.
   schedule:
-    - cron: '0 0,6,12,18,23 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 concurrency:
   group: rewards-claimer
-  cancel-in-progress: true   # Safe: 5.5h job + 6h interval = no real overlap
+  cancel-in-progress: true   # If a long-sleeping job is still alive when next trigger fires, cancel it and start fresh
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 330     # 5.5 hours - matches internal JOB_MAX_SECONDS
+    timeout-minutes: 130     # 2h 10min — slightly over the 2h trigger interval so sleeping jobs get replaced cleanly
 
     steps:
       - name: Checkout Code
