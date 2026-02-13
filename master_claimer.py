@@ -1444,7 +1444,7 @@ def main():
     # GitHub Actions job time budget - we started "now"
     # GitHub Actions has a 6h job limit; we stay well within by capping at 5.5h
     JOB_START = get_ist_time()
-    JOB_MAX_SECONDS = 5.5 * 3600          # 5.5 hours max total job time
+    JOB_MAX_SECONDS = 1.9 * 3600          # 1h 54min — stays within 2h trigger interval
     MIN_SLEEP_SECONDS = 60                 # Never wake up less than 60s early
     EARLY_WAKE_BUFFER = 90                 # Wake 90s before reward to allow page load
     run_count = 0
