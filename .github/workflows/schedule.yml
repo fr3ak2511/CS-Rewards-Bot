@@ -1,18 +1,27 @@
 name: Hourly Rewards Claimer
 
 on:
+  # Safety net triggers - 4x per day in IST:
+  #   UTC 00:00 = IST 05:30
+  #   UTC 06:00 = IST 11:30
+  #   UTC 12:00 = IST 17:30
+  #   UTC 18:00 = IST 23:30
+  #
+  # The script internally sleeps and wakes up exactly when rewards are ready
+  # (within 90 seconds), so most claims happen mid-job, not at trigger time.
+  # Max possible delay for any missed reward = 30 min (5.5h budget + 6h interval).
   schedule:
-    - cron: '0 * * * *'  # Runs every hour at minute 0
-  workflow_dispatch:  # Allows manual trigger button
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: rewards-claimer
-  cancel-in-progress: true
+  cancel-in-progress: true   # Safe: 5.5h job + 6h interval = no real overlap
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 330     # 5.5 hours - matches internal JOB_MAX_SECONDS
 
     steps:
       - name: Checkout Code
