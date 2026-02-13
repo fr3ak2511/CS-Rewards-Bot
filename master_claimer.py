@@ -1376,28 +1376,133 @@ def send_email_summary(results, num_players):
     except Exception as e:
         log(f"❌ Email error: {e}")
 
-def main():
-    log("="*60)
-    log("CS HUB AUTO-CLAIMER v2.2.9 (Fix Cash Timer + Reward Name Labels)")
-    log("="*60)
+def get_next_wake_time(players):
+    """
+    After a run, scan claim_history for all players and find the SOONEST
+    absolute datetime when any reward (daily or store) will next become available.
     
-    players = []
+    Returns: datetime (IST) of the earliest upcoming reward, or None if all unknown.
+    """
+    history = load_history()
+    ist_now = get_ist_now()
+    soonest = None
+
+    for player_id in players:
+        if player_id not in history:
+            continue
+        ph = history[player_id]
+
+        # Check daily
+        daily_na = ph["daily"].get("next_available")
+        if daily_na:
+            t = datetime.fromisoformat(daily_na)
+            if t > ist_now:
+                if soonest is None or t < soonest:
+                    soonest = t
+
+        # Check each store reward
+        for rkey in ["reward_1", "reward_2", "reward_3"]:
+            store_na = ph["store"][rkey].get("next_available")
+            if store_na:
+                t = datetime.fromisoformat(store_na)
+                if t > ist_now:
+                    if soonest is None or t < soonest:
+                        soonest = t
+
+            last_claim = ph["store"][rkey].get("last_claim")
+            if last_claim:
+                cooldown_end = datetime.fromisoformat(last_claim) + timedelta(hours=STORE_COOLDOWN_HOURS)
+                if cooldown_end > ist_now:
+                    if soonest is None or cooldown_end < soonest:
+                        soonest = cooldown_end
+
+        # Also check daily last_claim + 24h
+        last_daily = ph["daily"].get("last_claim")
+        if last_daily:
+            next_daily = datetime.fromisoformat(last_daily) + timedelta(hours=24)
+            if next_daily > ist_now:
+                if soonest is None or next_daily < soonest:
+                    soonest = next_daily
+
+    return soonest
+
+
+def main():
+    log("=" * 60)
+    log("CS HUB AUTO-CLAIMER v2.2.9 (Fix Cash Timer + Reward Name Labels)")
+    log("=" * 60)
+    log("")
+
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
             reader = csv.DictReader(f)
             players = [row['player_id'].strip() for row in reader if row['player_id'].strip()]
-    except: 
+    except:
         log("❌ Could not read players.csv")
         return
-    
-    results = []
-    for player_id in players:
-        stats = process_player(player_id)
-        results.append(stats)
-        time.sleep(3)
-    
-    send_email_summary(results, len(players))
-    log("🏁 Done!")
+
+    # GitHub Actions job time budget - we started "now"
+    # GitHub Actions has a 6h job limit; we stay well within by capping at 5.5h
+    JOB_START = get_ist_now()
+    JOB_MAX_SECONDS = 5.5 * 3600          # 5.5 hours max total job time
+    MIN_SLEEP_SECONDS = 60                 # Never wake up less than 60s early
+    EARLY_WAKE_BUFFER = 90                 # Wake 90s before reward to allow page load
+    run_count = 0
+
+    while True:
+        run_count += 1
+        run_start = get_ist_now()
+        elapsed_total = (run_start - JOB_START).total_seconds()
+
+        log(f"\n{'='*60}")
+        log(f"🔄 Run #{run_count}  |  Job elapsed: {int(elapsed_total//3600)}h {int((elapsed_total%3600)//60)}m")
+        log(f"{'='*60}\n")
+
+        # ── Process all players ────────────────────────────────────────
+        results = []
+        for player_id in players:
+            stats = process_player(player_id)
+            results.append(stats)
+            time.sleep(3)
+
+        send_email_summary(results, len(players))
+
+        # ── Calculate when to next wake up ────────────────────────────
+        next_wake = get_next_wake_time(players)
+        ist_now = get_ist_now()
+        elapsed_total = (ist_now - JOB_START).total_seconds()
+        remaining_budget = JOB_MAX_SECONDS - elapsed_total
+
+        if next_wake is None:
+            log("⏹  No future rewards detected — exiting (next scheduled run will catch them)")
+            break
+
+        sleep_needed = (next_wake - ist_now).total_seconds() - EARLY_WAKE_BUFFER
+
+        if sleep_needed < MIN_SLEEP_SECONDS:
+            # Rewards already available or available within 60s - loop immediately
+            log(f"⚡ Next reward available in <{int(sleep_needed)+EARLY_WAKE_BUFFER}s — re-running immediately")
+            time.sleep(max(0, sleep_needed))
+            continue
+
+        if sleep_needed > remaining_budget:
+            # Next reward is beyond our remaining job budget — exit cleanly
+            wake_str = next_wake.strftime('%H:%M IST')
+            log(f"⏹  Next reward at {wake_str} is beyond job time budget — exiting")
+            log(f"   (Next scheduled GitHub Actions run will claim it)")
+            break
+
+        # Sleep until just before the next reward is available
+        wake_str = next_wake.strftime('%d-%b %H:%M:%S IST')
+        h = int(sleep_needed // 3600)
+        m = int((sleep_needed % 3600) // 60)
+        s = int(sleep_needed % 60)
+        log(f"💤 Sleeping {h}h {m}m {s}s — waking at {wake_str} for next available reward")
+        log(f"   (Job budget remaining: {int(remaining_budget//3600)}h {int((remaining_budget%3600)//60)}m)")
+        time.sleep(sleep_needed)
+
+    log("\n🏁 Job complete!")
+
 
 if __name__ == "__main__":
     main()
