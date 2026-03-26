@@ -31,8 +31,9 @@ STORE_COOLDOWN_HOURS = 24
 PROGRESSION_DEPENDS_ON_STORE = True
 MAX_CONCURRENT_BROWSERS = 3  # Safe limit for GitHub Actions
 
-# Thread lock for safe JSON file writes during concurrent processing
+# Thread locks for safe concurrent processing
 history_lock = threading.Lock()
+driver_lock = threading.Lock() # Prevents driver patch collisions
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -432,11 +433,15 @@ def create_driver():
             prefs = {"profile.default_content_setting_values": {"images": 2, "notifications": 2, "popups": 2}}
             options.add_experimental_option("prefs", prefs)
 
-            driver = uc.Chrome(options=options, version_main=144, use_subprocess=True)
+            # Let threads safely grab the driver one by one
+            with driver_lock:
+                driver = uc.Chrome(options=options, use_subprocess=True)
+                
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
             return driver
         except Exception as e:
+            log(f"⚠️ Driver init attempt {attempt+1} failed: {str(e)[:100]}")
             time.sleep(2)
             if attempt == 2: raise
 
