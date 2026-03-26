@@ -1,31 +1,40 @@
 name: Hourly Rewards Claimer
 
 on:
-  # Triggers every 2 hours UTC (IST = UTC+5:30):
-  #   UTC 00:00 = IST 05:30
-  #   UTC 02:00 = IST 07:30
-  #   UTC 04:00 = IST 09:30
-  #   UTC 06:00 = IST 11:30
-  #   UTC 08:00 = IST 13:30
-  #   UTC 10:00 = IST 15:30
-  #   UTC 12:00 = IST 17:30
-  #   UTC 14:00 = IST 19:30
-  #   UTC 16:00 = IST 21:30
-  #   UTC 18:00 = IST 23:30
-  #   UTC 20:00 = IST 01:30
-  #   UTC 22:00 = IST 03:30
+  # FIX #1: Cron shifted from '0 */2' to '5 */2' (UTC+5min = IST+5min).
+  # This starts the first cycle at 05:35 AM IST instead of 05:30 AM IST,
+  # giving the game server ~2-3 min boot time after its 05:30 daily reset
+  # before the script attempts to claim daily rewards.
   #
-  # Max wait for any unclaimed reward = 2h (vs 1h before, but script sleeps
-  # internally so actual claim happens within 90s of reward becoming available).
+  # Updated UTC → IST mapping (UTC+5:30):
+  #   UTC 00:05 = IST 05:35
+  #   UTC 02:05 = IST 07:35
+  #   UTC 04:05 = IST 09:35
+  #   UTC 06:05 = IST 11:35
+  #   UTC 08:05 = IST 13:35
+  #   UTC 10:05 = IST 15:35
+  #   UTC 12:05 = IST 17:35
+  #   UTC 14:05 = IST 19:35
+  #   UTC 16:05 = IST 21:35
+  #   UTC 18:05 = IST 23:35
+  #   UTC 20:05 = IST 01:35
+  #   UTC 22:05 = IST 03:35
+  #
+  # Max wait for any unclaimed reward = 2h (the script sleeps internally
+  # so actual claim happens within 90s of a reward becoming available).
   # concurrency cancel-in-progress handles overlap if a job runs long.
   schedule:
-    - cron: '0 */2 * * *'
+    - cron: '5 */2 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: rewards-claimer
+  cancel-in-progress: true
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 130     # 2h 10min â€” slightly over the 2h trigger interval so sleeping jobs get replaced cleanly
+    timeout-minutes: 130     # 2h 10min — slightly over the 2h trigger interval so sleeping jobs get replaced cleanly
 
     steps:
       - name: Checkout Code
