@@ -6,6 +6,8 @@ import json
 import smtplib
 import re
 import threading
+import shutil
+import stat
 import subprocess
 import concurrent.futures
 from datetime import datetime, timedelta
@@ -40,16 +42,36 @@ driver_lock = threading.Lock()
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
-# --- DYNAMIC CHROME VERSION CHECKER ---
-def get_chrome_major_version():
-    """Dynamically detects the installed Chrome version to prevent driver mismatches"""
-    try:
-        if sys.platform.startswith('linux'):
-            output = subprocess.check_output(['google-chrome', '--version'], stderr=subprocess.STDOUT)
-            version_str = output.decode('utf-8').strip().split()[-1]
-            return int(version_str.split('.')[0])
-    except Exception as e:
-        log(f"⚠️ Could not detect Chrome version: {e}")
+# --- NATIVE CHROME DRIVER HANDLER ---
+def get_safe_chromedriver():
+    """Finds GitHub's native chromedriver and copies it to a local path to prevent 'Exec format errors'"""
+    uc_cache_dir = os.path.expanduser("~/.local/share/undetected_chromedriver")
+    safe_driver_path = os.path.join(uc_cache_dir, "github_chromedriver")
+    
+    if os.path.exists(safe_driver_path):
+        return safe_driver_path
+        
+    system_driver = None
+    if sys.platform.startswith('linux'):
+        chrome_driver_dir = os.environ.get('CHROMEWEBDRIVER')
+        if chrome_driver_dir:
+            path = os.path.join(chrome_driver_dir, 'chromedriver')
+            if os.path.exists(path): system_driver = path
+            
+        if not system_driver:
+            for p in ['/usr/bin/chromedriver', '/usr/local/bin/chromedriver']:
+                if os.path.exists(p): 
+                    system_driver = p
+                    break
+                    
+    if system_driver:
+        os.makedirs(uc_cache_dir, exist_ok=True)
+        shutil.copy2(system_driver, safe_driver_path)
+        # Ensure the copied file has executable permissions
+        st = os.stat(safe_driver_path)
+        os.chmod(safe_driver_path, st.st_mode | stat.S_IEXEC)
+        return safe_driver_path
+        
     return None
 
 # --- IST TIME HELPERS ---
@@ -316,7 +338,6 @@ def get_reward_status(player_id):
     return {"daily_available": da, "store_available": sa, "daily_next": dn, "daily_status": ds, "store_next": sn, "store_status": ss}
 
 def create_driver():
-    major_version = get_chrome_major_version()
     for attempt in range(3):
         try:
             options = uc.ChromeOptions()
@@ -333,10 +354,11 @@ def create_driver():
             prefs = {"profile.default_content_setting_values": {"images": 2, "notifications": 2, "popups": 2}}
             options.add_experimental_option("prefs", prefs)
 
-            # Let threads safely grab the driver one by one
+            # Let threads safely locate and copy the system driver
             with driver_lock:
-                if major_version:
-                    driver = uc.Chrome(options=options, use_subprocess=True, version_main=major_version)
+                safe_driver = get_safe_chromedriver()
+                if safe_driver:
+                    driver = uc.Chrome(options=options, use_subprocess=True, driver_executable_path=safe_driver)
                 else:
                     driver = uc.Chrome(options=options, use_subprocess=True)
                 
@@ -595,7 +617,6 @@ def send_email_summary(results, num_players):
                         nt = datetime.fromisoformat(ph['store'][f"reward_{i+1}"]['next_available'])
                         if not next_run_time or nt < next_run_time: next_run_time = nt
         
-        # NOTE: Loyalty Banner has been removed from this HTML block
         html = f"""
         <html>
         <head>
@@ -713,8 +734,16 @@ def get_next_wake_time(players):
 
 def main():
     log("=" * 60)
-    log("CS HUB AUTO-CLAIMER v3.1 (Dynamic Chrome Versioning)")
+    log("CS HUB AUTO-CLAIMER v3.2 (Safe Driver Init)")
     log("=" * 60)
+
+    # CLEAN UP CORRUPTED DRIVERS FROM PREVIOUS RUNS
+    uc_cache_dir = os.path.expanduser("~/.local/share/undetected_chromedriver")
+    if os.path.exists(uc_cache_dir):
+        try:
+            shutil.rmtree(uc_cache_dir)
+            log("🗑️ Cleared corrupted undetected_chromedriver cache.")
+        except Exception as e: log(f"⚠️ Failed to clear cache: {e}")
 
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
