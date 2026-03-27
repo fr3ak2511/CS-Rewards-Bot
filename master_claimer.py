@@ -7,11 +7,14 @@ from selenium.webdriver.common.by import By
 PLAYER_ID_FILE = "players.csv"
 HEADLESS = True
 
+# =========================
+# LOGGER
+# =========================
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 # =========================
-# 🔥 BULLETPROOF DRIVER FIX
+# DRIVER (FIXED PROPERLY)
 # =========================
 def create_driver():
     for attempt in range(3):
@@ -26,7 +29,6 @@ def create_driver():
             options.add_argument("--disable-gpu")
             options.add_argument("--remote-debugging-port=9222")
 
-            # ✅ CRITICAL FIX: Force correct chrome binary
             options.binary_location = "/usr/bin/google-chrome"
 
             driver = uc.Chrome(
@@ -37,11 +39,11 @@ def create_driver():
 
             driver.set_page_load_timeout(30)
 
-            log("✅ Driver initialized SUCCESS")
+            log("✅ Driver initialized")
             return driver
 
         except Exception as e:
-            log(f"⚠️ Driver init failed {attempt+1}: {e}")
+            log(f"⚠️ Driver init failed ({attempt+1}): {str(e)[:120]}")
             time.sleep(2)
 
             if attempt == 2:
@@ -51,10 +53,11 @@ def create_driver():
 # LOGIN
 # =========================
 def login_to_hub(driver, player_id):
-    driver.get("https://hub.vertigogames.co/daily-rewards")
-    time.sleep(3)
-
     try:
+        driver.get("https://hub.vertigogames.co/daily-rewards")
+        time.sleep(3)
+
+        # Click login
         for btn in driver.find_elements(By.TAG_NAME, "button"):
             if "login" in btn.text.lower():
                 btn.click()
@@ -62,26 +65,32 @@ def login_to_hub(driver, player_id):
 
         time.sleep(2)
 
+        # Enter ID
         inputs = driver.find_elements(By.TAG_NAME, "input")
-        inputs[0].send_keys(player_id)
+        if not inputs:
+            return False
 
+        inputs[0].send_keys(player_id)
         time.sleep(1)
 
+        # Submit
         for btn in driver.find_elements(By.TAG_NAME, "button"):
             if "login" in btn.text.lower() or "submit" in btn.text.lower():
                 btn.click()
                 break
 
         time.sleep(3)
+        log("✅ Login success")
         return True
 
-    except:
+    except Exception as e:
+        log(f"❌ Login failed: {e}")
         return False
 
 # =========================
 # DAILY
 # =========================
-def claim_daily_rewards(driver, player_id):
+def claim_daily(driver):
     driver.get("https://hub.vertigogames.co/daily-rewards")
     time.sleep(2)
 
@@ -98,7 +107,7 @@ def claim_daily_rewards(driver, player_id):
 # =========================
 # STORE
 # =========================
-def claim_store_rewards(driver, player_id):
+def claim_store(driver):
     driver.get("https://hub.vertigogames.co/store")
     time.sleep(2)
 
@@ -124,13 +133,13 @@ def claim_store_rewards(driver, player_id):
 # =========================
 # PROGRESSION
 # =========================
-def claim_progression_program_rewards(driver, player_id):
+def claim_progression(driver):
     driver.get("https://hub.vertigogames.co/progression-program")
     time.sleep(2)
 
     claimed = 0
 
-    for _ in range(5):
+    for _ in range(6):
         res = driver.execute_script("""
             let btns=document.querySelectorAll('button');
             for(let b of btns){
@@ -148,9 +157,9 @@ def claim_progression_program_rewards(driver, player_id):
     return claimed
 
 # =========================
-# 🆕 LOYALTY
+# LOYALTY
 # =========================
-def claim_loyalty_rewards(driver, player_id):
+def claim_loyalty(driver):
     driver.get("https://hub.vertigogames.co/loyalty-program")
     time.sleep(2)
 
@@ -177,22 +186,25 @@ def claim_loyalty_rewards(driver, player_id):
     return claimed
 
 # =========================
-# PROCESS
+# PROCESS PLAYER
 # =========================
 def process_player(player_id):
+    log(f"\n🚀 Processing: {player_id}")
+
     driver = create_driver()
 
     if not login_to_hub(driver, player_id):
+        driver.quit()
         raise RuntimeError("Login failed")
 
-    d = claim_daily_rewards(driver, player_id)
-    s = claim_store_rewards(driver, player_id)
-    p = claim_progression_program_rewards(driver, player_id)
-    l = claim_loyalty_rewards(driver, player_id)
+    d = claim_daily(driver)
+    s = claim_store(driver)
+    p = claim_progression(driver)
+    l = claim_loyalty(driver)
 
     total = d + s + p + l
 
-    log(f"{player_id} → {total} claimed")
+    log(f"🎯 RESULT → D:{d} S:{s} P:{p} L:{l} | TOTAL:{total}")
 
     driver.quit()
 
