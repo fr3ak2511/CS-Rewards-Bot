@@ -11,30 +11,19 @@ jobs:
     timeout-minutes: 130
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
+
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
       - name: Run Script
-        env:
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
-
-      - name: Upload Debug Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-data
-          path: |
-            *.png
-            *.html
-          retention-days: 1
