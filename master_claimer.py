@@ -27,6 +27,7 @@ DAILY_RESET_MINUTE_IST = 30
 EXPECTED_STORE_PER_PLAYER = 3
 STORE_COOLDOWN_HOURS = 24
 PROGRESSION_DEPENDS_ON_STORE = True
+LOYALTY_COOLDOWN_HOURS = 24   # NEW: loyalty Store Bonus — same 24h pattern as store rewards
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -123,9 +124,18 @@ def init_player_history(player_id):
                 "reward_2": {"last_claim": None, "next_available": None, "status": "unknown"},
                 "reward_3": {"last_claim": None, "next_available": None, "status": "unknown"}
             },
-            "progression": {"last_claim": None, "last_count": 0}
+            "progression": {"last_claim": None, "last_count": 0},
+            # NEW: loyalty included from the start for new players
+            "loyalty": {"last_claim": None, "next_available": None, "status": "unknown"}
         }
         save_claim_history(history)
+    else:
+        # NEW: migrate existing records that pre-date the loyalty feature
+        if "loyalty" not in history[player_id]:
+            history[player_id]["loyalty"] = {
+                "last_claim": None, "next_available": None, "status": "unknown"
+            }
+            save_claim_history(history)
     
     return history
 
@@ -193,7 +203,32 @@ def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=N
         history[player_id]["progression"]["last_claim"] = ist_now.isoformat()
         history[player_id]["progression"]["last_count"] = claimed_count
         log(f"📝 Updated history: Progression claimed {claimed_count}")
-    
+
+    # NEW: loyalty tracking — identical pattern to store (ist_now + detected_cooldown, no changes to existing logic)
+    elif reward_type == "loyalty":
+        if claimed_count > 0:
+            history[player_id]["loyalty"]["last_claim"] = ist_now.isoformat()
+            next_available = ist_now + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+            history[player_id]["loyalty"]["next_available"] = next_available.isoformat()
+            history[player_id]["loyalty"]["status"] = "claimed"
+            log(f"📝 Updated history: Loyalty claimed {claimed_count}, next in {LOYALTY_COOLDOWN_HOURS}h")
+        elif detected_cooldown is not None:
+            next_available = ist_now + detected_cooldown
+            history[player_id]["loyalty"]["next_available"] = next_available.isoformat()
+            history[player_id]["loyalty"]["status"] = "cooldown_detected"
+            log(f"📝 Updated history: Loyalty cooldown detected, next in {format_time_until_reset(next_available)}")
+        elif attempted and claimed_count == 0:
+            last_claim = history[player_id]["loyalty"].get("last_claim")
+            if last_claim:
+                last_time = datetime.fromisoformat(last_claim)
+                cooldown_end = last_time + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+                if ist_now < cooldown_end:
+                    log(f"📝 Skipping loyalty 'unavailable' — last_claim still within cooldown")
+                    save_claim_history(history)
+                    return history
+            history[player_id]["loyalty"]["status"] = "unavailable"
+            log(f"📝 Updated history: Loyalty unavailable")
+
     save_claim_history(history)
     return history
 
@@ -407,6 +442,37 @@ def detect_store_timers_js(driver):
     return result
 
 
+# NEW: Detect loyalty program cooldown timer
+def detect_loyalty_timer_js(driver):
+    """
+    Detect the loyalty program Store Bonus cooldown timer.
+    The page shows 'Next in Xh Ym' inline on the card when on cooldown.
+    Returns timedelta or None (None = reward may be available).
+    """
+    try:
+        result = driver.execute_script("""
+            var allEls = Array.from(document.querySelectorAll('*'));
+            for (var i = 0; i < allEls.length; i++) {
+                var el = allEls[i];
+                var ownText = Array.from(el.childNodes)
+                    .filter(function(n) { return n.nodeType === 3; })
+                    .map(function(n) { return n.textContent; })
+                    .join('').trim();
+                if (ownText.toLowerCase().includes('next in') && ownText.length < 60) {
+                    return ownText;
+                }
+            }
+            return null;
+        """)
+        if result:
+            delta = parse_timer_text(result)
+            if delta and delta.total_seconds() > 60:
+                log(f"🔍 Loyalty timer: {result}")
+                return delta
+    except Exception as e:
+        log(f"⚠️ Loyalty JS timer error: {e}")
+    return None
+
 
 def detect_page_cooldowns(driver, player_id, page_type):
     """
@@ -415,7 +481,7 @@ def detect_page_cooldowns(driver, player_id, page_type):
     OLD approach (WRONG): regex on page source → matched random JS timestamps
     NEW approach (CORRECT): JavaScript DOM traversal → finds actual timer boxes
     
-    page_type: 'daily' or 'store'
+    page_type: 'daily', 'store', or 'loyalty'
     Returns: dict with cooldown info
     """
     detected = {}
@@ -445,6 +511,16 @@ def detect_page_cooldowns(driver, player_id, page_type):
             else:
                 log(f"ℹ️  No store timers found on page")
 
+        # NEW: loyalty cooldown detection
+        elif page_type == "loyalty":
+            cooldown_delta = detect_loyalty_timer_js(driver)
+            if cooldown_delta and cooldown_delta.total_seconds() > 60:
+                update_claim_history(player_id, "loyalty", claimed_count=0, detected_cooldown=cooldown_delta)
+                detected['loyalty'] = cooldown_delta
+                log(f"✅ Loyalty cooldown saved: next in {cooldown_delta}")
+            else:
+                log(f"ℹ️  No loyalty timer found on page (reward may be available)")
+
     except Exception as e:
         log(f"⚠️ Page cooldown detection error: {e}")
 
@@ -469,7 +545,11 @@ def get_reward_status(player_id):
             "daily_next": None,
             "daily_status": "unknown",
             "store_next": [None, None, None],
-            "store_status": ["unknown", "unknown", "unknown"]
+            "store_status": ["unknown", "unknown", "unknown"],
+            # NEW
+            "loyalty_available": True,
+            "loyalty_next": None,
+            "loyalty_status": "unknown"
         }
     
     player_history = history[player_id]
@@ -528,14 +608,39 @@ def get_reward_status(player_id):
             if ist_now < next_time:
                 store_available[i] = False
                 store_next[i] = format_time_until_reset(next_time)
-    
+
+    # NEW: ── LOYALTY ──────────────────────────────────────────────────────────
+    loyalty_available = True
+    loyalty_next = None
+    loyalty_data = player_history.get("loyalty", {})
+    loyalty_status = loyalty_data.get("status", "unknown")
+
+    last_loyalty_claim = loyalty_data.get("last_claim")
+    if last_loyalty_claim:
+        last_claim_time = datetime.fromisoformat(last_loyalty_claim)
+        cooldown_end = last_claim_time + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+        if ist_now < cooldown_end:
+            loyalty_available = False
+            loyalty_next = format_time_until_reset(cooldown_end)
+            loyalty_status = "claimed"
+
+    if loyalty_available and loyalty_data.get("next_available"):
+        next_time = datetime.fromisoformat(loyalty_data["next_available"])
+        if ist_now < next_time:
+            loyalty_available = False
+            loyalty_next = format_time_until_reset(next_time)
+
     return {
         "daily_available": daily_available,
         "store_available": store_available,
         "daily_next": daily_next,
         "daily_status": daily_status,
         "store_next": store_next,
-        "store_status": store_status
+        "store_status": store_status,
+        # NEW
+        "loyalty_available": loyalty_available,
+        "loyalty_next": loyalty_next,
+        "loyalty_status": loyalty_status
     }
 
 def create_driver():
@@ -1113,16 +1218,130 @@ def claim_progression_program_rewards(driver, player_id):
     except: pass
     return claimed
 
-def process_player(player_id):
+
+# NEW: Claim Loyalty Program rewards
+def claim_loyalty_program(driver, player_id):
+    """
+    Claim Loyalty Program rewards from hub.vertigogames.co/loyalty-program.
+
+    Loyalty Points (LP) accumulate from purchases and gameplay activity.
+    Once a tier threshold is met, the lock becomes a green Claim/Free button.
+    Each tier card also has a periodic Store Bonus with a 'Next in Xh Ym' cooldown.
+
+    Strategy:
+    - Navigate to loyalty page
+    - Detect and record any active timer first
+    - Click any Claim/Free button NOT inside a 'Next in' countdown container
+      (covers unlocked tier rewards AND available Store Bonus buttons)
+    - Loop up to 5 times to claim multiple tiers in one pass if available
+    """
+    log("🏆 Claiming Loyalty Program Rewards...")
+
+    # Pre-check: within cooldown from last known claim?
+    status = get_reward_status(player_id)
+    if not status["loyalty_available"] and status["loyalty_status"] == "claimed":
+        log(f"⏰ Loyalty already claimed. Next: {status['loyalty_next']}")
+        return 0
+
+    claimed = 0
+    try:
+        driver.get("https://hub.vertigogames.co/loyalty-program")
+        bypass_cloudflare(driver)
+        time.sleep(2)
+        close_popup(driver)
+
+        # Detect cooldown from page
+        detect_page_cooldowns(driver, player_id, "loyalty")
+
+        # Refresh status after detection
+        status = get_reward_status(player_id)
+        if not status["loyalty_available"]:
+            log(f"⏰ Loyalty on cooldown (detected from page). Next: {status['loyalty_next']}")
+            driver.save_screenshot(f"loyalty_final_{player_id}.png")
+            return 0
+
+        # Click all available Claim/Free buttons (up to 5 tiers)
+        for attempt in range(5):
+            result = driver.execute_script("""
+                var buttons = Array.from(document.querySelectorAll('button'));
+                for (var i = 0; i < buttons.length; i++) {
+                    var btn = buttons[i];
+                    var btnText = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+
+                    // Only target Claim or Free buttons
+                    if (btnText !== 'claim' && btnText !== 'free') continue;
+                    if (!btn.offsetParent || btn.disabled) continue;
+
+                    // Walk up DOM to check if this button sits inside a 'Next in' cooldown container
+                    var node = btn.parentElement;
+                    var onCooldown = false;
+                    for (var depth = 0; depth < 8; depth++) {
+                        if (!node) break;
+                        var nodeText = (node.innerText || node.textContent || '').toLowerCase();
+                        if (nodeText.includes('next in')) {
+                            onCooldown = true;
+                            break;
+                        }
+                        // Stop at large containers to avoid matching page-level text
+                        if (node.offsetHeight > 600) break;
+                        node = node.parentElement;
+                    }
+
+                    if (!onCooldown) {
+                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        setTimeout(function() { btn.click(); }, 300);
+                        return { clicked: true, text: btnText };
+                    }
+                }
+                return { clicked: false };
+            """)
+
+            if result and result.get('clicked'):
+                log(f"✅ Loyalty Reward Claimed (button: '{result.get('text', '?')}')")
+                claimed += 1
+                time.sleep(2)
+                close_popup(driver)
+                time.sleep(1)
+            else:
+                log(f"ℹ️  No claimable loyalty rewards found (attempt {attempt + 1})")
+                break
+
+        if claimed > 0:
+            update_claim_history(player_id, "loyalty", claimed_count=claimed)
+            # Re-detect timer so wake scheduler knows when next reward is available
+            time.sleep(1)
+            detect_page_cooldowns(driver, player_id, "loyalty")
+        else:
+            # Tried but found nothing — mark attempted
+            update_claim_history(player_id, "loyalty", claimed_count=0, attempted=True)
+
+        driver.save_screenshot(f"loyalty_final_{player_id}.png")
+        log(f"📊 Loyalty Claims Complete: {claimed}")
+
+    except Exception as e:
+        log(f"❌ Loyalty error: {e}")
+
+    return claimed
+
+
+def process_player(player_id, has_loyalty=False):
     """Process single player with optimized retry logic"""
     driver = None
-    stats = {"player_id": player_id, "daily": 0, "store": 0, "progression": 0, "status": "Failed"}
+    stats = {
+        "player_id": player_id,
+        "daily": 0,
+        "store": 0,
+        "progression": 0,
+        "loyalty": 0,           # NEW
+        "has_loyalty": has_loyalty,  # NEW
+        "status": "Failed"
+    }
     
     # Initialize player history
     init_player_history(player_id)
     
     try:
-        log(f"\n🚀 {player_id}")
+        log(f"\n🚀 {player_id}" + (" [loyalty]" if has_loyalty else ""))
         driver = create_driver()
         if not login_to_hub(driver, player_id):
             stats['status'] = "Login Failed"
@@ -1166,14 +1385,20 @@ def process_player(player_id):
                 if retry < progression_retry_attempts - 1:
                     log(f"✅ Claimed {claimed} progression. Checking for more...")
                     time.sleep(1)
+
+        # NEW: Claim Loyalty Program (only for IDs with has_loyalty=True)
+        if has_loyalty:
+            stats['loyalty'] = claim_loyalty_program(driver, player_id)
+        else:
+            log("ℹ️  Loyalty not enabled for this ID")
         
-        total = stats['daily'] + stats['store'] + stats['progression']
+        total = stats['daily'] + stats['store'] + stats['progression'] + stats['loyalty']
         if total > 0:
             stats['status'] = "Success"
         else:
             stats['status'] = "No Rewards"
         
-        log(f"🎉 Total: {total} (Daily: {stats['daily']}, Store: {stats['store']}, Progression: {stats['progression']})")
+        log(f"🎉 Total: {total} (Daily: {stats['daily']}, Store: {stats['store']}, Progression: {stats['progression']}, Loyalty: {stats['loyalty']})")
             
     except Exception as e:
         log(f"❌ Error: {e}")
@@ -1197,7 +1422,9 @@ def send_email_summary(results, num_players):
         total_d = sum(r['daily'] for r in results)
         total_s = sum(r['store'] for r in results)
         total_p = sum(r['progression'] for r in results)
-        total_all = total_d + total_s + total_p
+        total_l = sum(r.get('loyalty', 0) for r in results)  # NEW
+        total_all = total_d + total_s + total_p + total_l
+        num_loyalty_players = sum(1 for r in results if r.get('has_loyalty', False))  # NEW
         
         ist_now = get_ist_time()
         history = load_claim_history()
@@ -1235,6 +1462,14 @@ def send_email_summary(results, num_players):
                         if not next_run_time or next_time < next_run_time:
                             next_run_time = next_time
                             next_run_reason = f"Store Reward {i+1} available"
+
+                # NEW: include loyalty in next-run calculation
+                loyalty_na = ph.get('loyalty', {}).get('next_available')
+                if loyalty_na:
+                    next_time = datetime.fromisoformat(loyalty_na)
+                    if not next_run_time or next_time < next_run_time:
+                        next_run_time = next_time
+                        next_run_reason = "Loyalty Program reward available"
         
         html = f"""
         <html>
@@ -1269,6 +1504,7 @@ def send_email_summary(results, num_players):
             <div class="stat-row"><strong>🎁 Daily:</strong> {total_d}/{num_players}</div>
             <div class="stat-row"><strong>🏪 Store:</strong> {total_s}/{num_players * 3}</div>
             <div class="stat-row"><strong>🎯 Progression:</strong> {total_p}</div>
+            <div class="stat-row"><strong>🏆 Loyalty:</strong> {total_l}{f'/{num_loyalty_players}' if num_loyalty_players else ' (none enrolled)'}</div>
         </div>
         """
         
@@ -1281,6 +1517,7 @@ def send_email_summary(results, num_players):
         for result in results:
             player_id = result['player_id']
             status = get_reward_status(player_id)
+            has_loyalty_flag = result.get('has_loyalty', False)
             
             # Daily status - next_available timer takes priority over status field
             if result['daily'] > 0:
@@ -1315,6 +1552,19 @@ def send_email_summary(results, num_players):
                 prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]} This Run</span>'
             else:
                 prog_status = f'<span class="status-unavailable">⏳ Check after Store claims</span>'
+
+            # NEW: Loyalty status
+            if not has_loyalty_flag:
+                loyalty_status_html = '<span class="status-unavailable">— Not enrolled</span>'
+            elif result.get('loyalty', 0) > 0:
+                loyalty_status_html = f'<span class="status-claimed">✅ Claimed {result["loyalty"]} This Run</span>'
+            elif status['loyalty_next'] is not None:
+                label = "Already Claimed" if status['loyalty_status'] == 'claimed' else "On Cooldown"
+                loyalty_status_html = f'<span class="status-cooldown">⏰ {label} - Next in {status["loyalty_next"]}</span>'
+            elif status['loyalty_status'] == 'unavailable':
+                loyalty_status_html = '<span class="status-unavailable">⏳ Not Available / No LP yet</span>'
+            else:
+                loyalty_status_html = '<span class="status-available">🔄 Check Manually</span>'
             
             html += f"""
             <div class="player-card">
@@ -1326,6 +1576,7 @@ def send_email_summary(results, num_players):
                         {"<br>".join(store_status_lines)}
                     </div>
                     <div style="margin: 5px 0;">🎯 <strong>Progression:</strong> {prog_status}</div>
+                    <div style="margin: 5px 0;">🏆 <strong>Loyalty:</strong> {loyalty_status_html}</div>
                 </div>
             </div>
             """
@@ -1357,6 +1608,7 @@ def send_email_summary(results, num_players):
                 <li><strong>Daily Rewards:</strong> Reset at 5:30 AM IST daily</li>
                 <li><strong>Store Rewards:</strong> Each reward has individual 24h cooldown from claim time</li>
                 <li><strong>Progression:</strong> Depends on Store rewards (bullets/grenades)</li>
+                <li><strong>Loyalty:</strong> Tier rewards unlock when LP threshold met; Store Bonus has 24h cooldown. Enable per-ID via has_loyalty=true in players.csv</li>
             </ul>
         </div>
         """
@@ -1379,15 +1631,17 @@ def send_email_summary(results, num_players):
 def get_next_wake_time(players):
     """
     After a run, scan claim_history for all players and find the SOONEST
-    absolute datetime when any reward (daily or store) will next become available.
+    absolute datetime when any reward (daily, store, or loyalty) will next become available.
     
     Returns: datetime (IST) of the earliest upcoming reward, or None if all unknown.
+    players: list of dicts {"player_id": str, "has_loyalty": bool}
     """
     history = load_claim_history()
     ist_now = get_ist_time()
     soonest = None
 
-    for player_id in players:
+    for p in players:
+        player_id = p["player_id"] if isinstance(p, dict) else p
         if player_id not in history:
             continue
         ph = history[player_id]
@@ -1424,25 +1678,53 @@ def get_next_wake_time(players):
                 if soonest is None or next_daily < soonest:
                     soonest = next_daily
 
+        # NEW: Check loyalty next_available and last_claim cooldown
+        loyalty_ph = ph.get("loyalty", {})
+        loyalty_na = loyalty_ph.get("next_available")
+        if loyalty_na:
+            t = datetime.fromisoformat(loyalty_na)
+            if t > ist_now:
+                if soonest is None or t < soonest:
+                    soonest = t
+
+        last_loyalty = loyalty_ph.get("last_claim")
+        if last_loyalty:
+            cooldown_end = datetime.fromisoformat(last_loyalty) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+            if cooldown_end > ist_now:
+                if soonest is None or cooldown_end < soonest:
+                    soonest = cooldown_end
+
     return soonest
 
 
 def main():
     log("=" * 60)
-    log("CS HUB AUTO-CLAIMER v2.2.9 (Fix Cash Timer + Reward Name Labels)")
+    log("CS HUB AUTO-CLAIMER v2.3.0 (+ Loyalty Program)")
     log("=" * 60)
     log("")
 
+    # NEW: Read optional has_loyalty column from players.csv
+    # Format: player_id,has_loyalty
+    # has_loyalty accepts: true/yes/1 (case-insensitive); anything else or missing = False
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
             reader = csv.DictReader(f)
-            players = [row['player_id'].strip() for row in reader if row['player_id'].strip()]
+            players = []
+            for row in reader:
+                pid = row.get('player_id', '').strip()
+                if not pid:
+                    continue
+                hl_raw = row.get('has_loyalty', '').strip().lower()
+                has_loyalty = hl_raw in ('true', 'yes', '1')
+                players.append({"player_id": pid, "has_loyalty": has_loyalty})
     except:
         log("❌ Could not read players.csv")
         return
 
+    loyalty_count = sum(1 for p in players if p['has_loyalty'])
+    log(f"👥 Loaded {len(players)} players ({loyalty_count} with loyalty enabled)")
+
     # GitHub Actions job time budget - we started "now"
-    # GitHub Actions has a 6h job limit; we stay well within by capping at 5.5h
     JOB_START = get_ist_time()
     JOB_MAX_SECONDS = 1.9 * 3600          # 1h 54min — stays within 2h trigger interval
     MIN_SLEEP_SECONDS = 60                 # Never wake up less than 60s early
@@ -1460,8 +1742,8 @@ def main():
 
         # ── Process all players ────────────────────────────────────────
         results = []
-        for player_id in players:
-            stats = process_player(player_id)
+        for p in players:
+            stats = process_player(p["player_id"], has_loyalty=p["has_loyalty"])
             results.append(stats)
             time.sleep(3)
 
