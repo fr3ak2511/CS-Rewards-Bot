@@ -1,42 +1,20 @@
 name: Hourly Rewards Claimer
 
 on:
-  # Triggers every 2 hours UTC, shifted 5 min so first run lands at 5:35 AM IST
-  # (5:30 AM IST = game server daily reset; 5 min buffer for server boot time)
-  #
-  #   UTC 00:05 = IST 05:35  ← first daily claim of the day
-  #   UTC 02:05 = IST 07:35
-  #   UTC 04:05 = IST 09:35
-  #   UTC 06:05 = IST 11:35
-  #   UTC 08:05 = IST 13:35
-  #   UTC 10:05 = IST 15:35
-  #   UTC 12:05 = IST 17:35
-  #   UTC 14:05 = IST 19:35
-  #   UTC 16:05 = IST 21:35
-  #   UTC 18:05 = IST 23:35
-  #   UTC 20:05 = IST 01:35
-  #   UTC 22:05 = IST 03:35
-  #
-  # Max wait for any unclaimed reward = 2h (script sleeps internally
-  # so actual claim happens within 90s of a reward becoming available).
   schedule:
-    - cron: '5 */2 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
-
-concurrency:
-  group: rewards-claimer
-  cancel-in-progress: true
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 130     # 2h 10min — slightly over the 2h trigger interval
+    timeout-minutes: 130
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
@@ -44,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Master Claimer
+      - name: Run Script
         env:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
