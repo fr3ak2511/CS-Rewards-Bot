@@ -643,8 +643,40 @@ def get_reward_status(player_id):
         "loyalty_status": loyalty_status
     }
 
+def get_chrome_major_version():
+    """
+    Detect the major version of Chrome installed on the runner at runtime.
+    This ensures ChromeDriver always matches the installed Chrome version,
+    regardless of which version GitHub Actions has deployed.
+    Returns int (e.g. 146) or None if detection fails.
+    """
+    import subprocess
+    candidates = ['google-chrome', 'google-chrome-stable', 'chromium-browser', 'chromium']
+    for binary in candidates:
+        try:
+            result = subprocess.run(
+                [binary, '--version'],
+                capture_output=True, text=True, timeout=5
+            )
+            output = result.stdout.strip()   # e.g. "Google Chrome 146.0.7680.0"
+            if output:
+                major = int(output.split()[-1].split('.')[0])
+                log(f"🔍 Detected Chrome version: {major} (from '{binary} --version': {output})")
+                return major
+        except Exception:
+            continue
+    log("⚠️ Could not detect Chrome version — will let undetected_chromedriver auto-detect")
+    return None
+
+
 def create_driver():
-    """GitHub Actions-compatible driver - FORCED CHROME 144"""
+    """
+    GitHub Actions-compatible driver.
+    Detects the installed Chrome version at runtime so ChromeDriver always matches,
+    regardless of which Chrome version GitHub has deployed on the runner.
+    """
+    chrome_version = get_chrome_major_version()
+
     for attempt in range(3):
         try:
             options = uc.ChromeOptions()
@@ -658,7 +690,7 @@ def create_driver():
             options.add_argument("--disable-logging")
             options.add_argument("--disable-notifications")
             options.add_argument("--disable-popup-blocking")
-            options.add_argument("--remote-debugging-port=0") 
+            options.add_argument("--remote-debugging-port=0")
 
             prefs = {
                 "profile.default_content_setting_values": {
@@ -669,10 +701,14 @@ def create_driver():
             }
             options.add_experimental_option("prefs", prefs)
 
-            driver = uc.Chrome(options=options, use_subprocess=True)
+            if chrome_version:
+                driver = uc.Chrome(options=options, version_main=chrome_version, use_subprocess=True)
+            else:
+                driver = uc.Chrome(options=options, use_subprocess=True)
+
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
-            log("✅ Driver initialized (v144)")
+            log(f"✅ Driver initialized (Chrome v{chrome_version or 'auto'})")
             return driver
 
         except Exception as e:
