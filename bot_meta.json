@@ -6,19 +6,19 @@
     "last_checked_date": "2026-03-28"
   },
   "last_run": {
-    "timestamp": "2026-03-28T22:49:52.227812",
+    "timestamp": "2026-03-28T22:56:43.104876",
     "run_label": "Manual Run",
-    "total_claimed": 0,
+    "total_claimed": 5,
     "efficiency": 100.0,
-    "duration_seconds": 75,
+    "duration_seconds": 184,
     "per_type": {
-      "daily": 0,
-      "store": 0,
-      "progression": 0,
+      "daily": 1,
+      "store": 3,
+      "progression": 1,
       "loyalty": 0
     },
-    "slowest_player": null,
-    "avg_time_per_player": 0
+    "slowest_player": "55CE80118E81AE87",
+    "avg_time_per_player": 106.0
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
@@ -45,6 +45,7 @@
     "2B50290C73E02027",
     "188A50EA1ABE0765",
     "4D1AA8C2C628E73F",
-    "B4BAE5FC4CACA8F7"
+    "B4BAE5FC4CACA8F7",
+    "55CE80118E81AE87"
   ]
 }
