@@ -2,312 +2,420 @@
   "E1E9729A4885E6D9": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:30:00.529260",
+      "status": "cooldown_detected"
     }
   },
   "4DC0E2AA7130D7E6": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.646282",
+      "status": "cooldown_detected"
     }
   },
   "FBF717E3BFDF5E94": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.950611",
+      "status": "cooldown_detected"
     }
   },
   "46C57810F646B91F": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:30:00.294256",
+      "status": "cooldown_detected"
     }
   },
   "8EE5A8F3D8CAD1F3": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.700151",
+      "status": "cooldown_detected"
     }
   },
   "E72DC1D6C5301F47": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:30:00.013527",
+      "status": "cooldown_detected"
     }
   },
   "5899855DAA167B36": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:30:00.303123",
+      "status": "cooldown_detected"
     }
   },
   "5D14D66D5B6C7B8F": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.759489",
+      "status": "cooldown_detected"
     }
   },
   "5429611A24A8F01A": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.529928",
+      "status": "cooldown_detected"
     }
   },
   "856EB1365FA9D02E": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.685658",
+      "status": "cooldown_detected"
     }
   },
   "F251D3D226496061": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:29:59.966435",
+      "status": "cooldown_detected"
     }
   },
   "3D9A901755C3B2D8": {
     "daily": {
       "last_claim": null,
-      "next_available": null
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
       "last_claim": null,
       "last_count": 0
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": "2026-03-29T05:30:00.313306",
+      "status": "cooldown_detected"
     }
   },
   "86CD85689FAE9549": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -316,30 +424,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.596216",
+      "status": "cooldown_detected"
     }
   },
   "A32124B011061E03": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -348,30 +458,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:29:59.938960",
+      "status": "cooldown_detected"
     }
   },
   "63989CEF5D15F053": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -380,30 +492,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:29:59.901391",
+      "status": "cooldown_detected"
     }
   },
   "B0036841F0183A12": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -412,30 +526,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.153156",
+      "status": "cooldown_detected"
     }
   },
   "A6DA56D3C46DF31B": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -444,30 +560,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.487497",
+      "status": "cooldown_detected"
     }
   },
   "7E53CF9C948CED45": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -476,30 +594,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.024305",
+      "status": "cooldown_detected"
     }
   },
   "E796C81690AB75C0": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -508,30 +628,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.537651",
+      "status": "cooldown_detected"
     }
   },
   "F820398935D2C403": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -540,30 +662,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:29:59.683702",
+      "status": "cooldown_detected"
     }
   },
   "C3960960443AF932": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -572,30 +696,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.383129",
+      "status": "cooldown_detected"
     }
   },
   "2B50290C73E02027": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -604,30 +730,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:29:59.751241",
+      "status": "cooldown_detected"
     }
   },
   "188A50EA1ABE0765": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -636,30 +764,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:29:59.963755",
+      "status": "cooldown_detected"
     }
   },
   "4D1AA8C2C628E73F": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -668,30 +798,32 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.171418",
+      "status": "cooldown_detected"
     }
   },
   "B4BAE5FC4CACA8F7": {
     "daily": {
       "last_claim": null,
-      "next_available": null,
-      "status": "unknown"
+      "next_available": "2026-03-29T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_2": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       },
       "reward_3": {
         "last_claim": null,
-        "next_available": null,
-        "status": "unknown"
+        "next_available": "2026-03-29T05:30:00",
+        "status": "cooldown_detected"
       }
     },
     "progression": {
@@ -700,7 +832,9 @@
     },
     "loyalty": {
       "last_claim": null,
-      "last_count": 0
+      "last_count": 0,
+      "next_available": "2026-03-29T05:30:00.378861",
+      "status": "cooldown_detected"
     }
   }
 }
