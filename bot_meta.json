@@ -6,19 +6,19 @@
     "last_checked_date": "2026-03-28"
   },
   "last_run": {
-    "timestamp": "2026-03-28T22:36:44.522192",
+    "timestamp": "2026-03-28T22:49:52.227812",
     "run_label": "Manual Run",
     "total_claimed": 0,
-    "efficiency": 0.0,
-    "duration_seconds": 1474,
+    "efficiency": 100.0,
+    "duration_seconds": 75,
     "per_type": {
       "daily": 0,
       "store": 0,
       "progression": 0,
       "loyalty": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 55.6
+    "slowest_player": null,
+    "avg_time_per_player": 0
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
