@@ -1,15 +1,18 @@
+# master_claimer.py  –– CS Rewards Bot v3.0.0
+# Staged delivery note: file is written top-to-bottom in one block.
+# If generation stops mid-file, continue from the exact line indicated.
+
 import csv
 import time
 import os
 import json
 import smtplib
 import re
+import subprocess
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import undetected_chromedriver as uc
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
@@ -17,1203 +20,986 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
 
-PLAYER_ID_FILE = "players.csv"
-HISTORY_FILE = "claim_history.json"
-HEADLESS = True
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 1 — CONSTANTS & CONFIG
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# Daily tracking constants
-DAILY_RESET_HOUR_IST = 5
+VERSION        = "v3.0.0"
+PLAYER_ID_FILE = "players.csv"
+HISTORY_FILE   = "claim_history.json"
+BOT_META_FILE  = "bot_meta.json"
+HEADLESS       = True
+
+DAILY_RESET_HOUR_IST   = 5
 DAILY_RESET_MINUTE_IST = 30
-EXPECTED_STORE_PER_PLAYER = 3
-STORE_COOLDOWN_HOURS = 24
-PROGRESSION_DEPENDS_ON_STORE = True
-LOYALTY_COOLDOWN_HOURS = 24   # NEW: loyalty Store Bonus — same 24h pattern as store rewards
+LOYALTY_COOLDOWN_HOURS = 24   # Loyalty is rolling 24h (not anchored to daily reset)
+
+# Email — reads original secret names (GMAIL_APP_PASSWORD / SENDER_EMAIL / RECIPIENT_EMAIL)
+# with SMTP_* as fallback so both old and new secret naming works.
+SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.gmail.com")
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "465"))
+SMTP_USERNAME = os.getenv("SENDER_EMAIL",  os.getenv("SMTP_USERNAME", ""))
+SMTP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", os.getenv("SMTP_PASSWORD", ""))
+SMTP_FROM     = os.getenv("SENDER_EMAIL",  os.getenv("SMTP_FROM", ""))
+SMTP_TO       = os.getenv("RECIPIENT_EMAIL", os.getenv("SMTP_TO", ""))
+
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
-# IST timezone helper functions
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 2 — TIME HELPERS & RUN CLASSIFICATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def get_ist_time():
-    """Get current time in IST (UTC+5:30)"""
-    utc_now = datetime.utcnow()
-    ist_offset = timedelta(hours=5, minutes=30)
-    return utc_now + ist_offset
+    return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
 
 def get_next_daily_reset():
-    """Get next daily reset time (5:30 AM IST)"""
-    ist_now = get_ist_time()
-    if ist_now.hour < DAILY_RESET_HOUR_IST or (ist_now.hour == DAILY_RESET_HOUR_IST and ist_now.minute < DAILY_RESET_MINUTE_IST):
-        next_reset = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0)
-    else:
-        next_reset = ist_now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST, second=0, microsecond=0) + timedelta(days=1)
-    return next_reset
+    ist = get_ist_time()
+    r = ist.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST,
+                    second=0, microsecond=0)
+    if ist >= r:
+        r += timedelta(days=1)
+    return r
 
-def format_time_until_reset(next_reset):
-    """Format time remaining until next reset"""
-    ist_now = get_ist_time()
-    delta = next_reset - ist_now
+
+def get_last_daily_reset():
+    """Returns the most recent 5:30 AM IST reset that has already passed."""
+    ist = get_ist_time()
+    r = ist.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST,
+                    second=0, microsecond=0)
+    if ist < r:
+        r -= timedelta(days=1)
+    return r
+
+
+def format_time_until(dt):
+    delta = dt - get_ist_time()
     if delta.total_seconds() < 0:
         return "Available now"
-    hours, remainder = divmod(int(delta.total_seconds()), 3600)
-    minutes, _ = divmod(remainder, 60)
-    if hours > 0:
-        return f"{hours}h {minutes}m"
-    else:
-        return f"{minutes}m"
+    h, rem = divmod(int(delta.total_seconds()), 3600)
+    m, _   = divmod(rem, 60)
+    return f"{h}h {m}m" if h > 0 else f"{m}m"
 
-def parse_timer_text(timer_text):
-    """Parse timer text into timedelta - handles multiple formats"""
+
+def parse_timer_text(text):
     try:
-        # Format 1: "Next in 23h 45m" or "23h 45m"
-        hours = 0
-        minutes = 0
-        seconds = 0
-        
-        hour_match = re.search(r'(\d+)\s*h', timer_text, re.IGNORECASE)
-        if hour_match:
-            hours = int(hour_match.group(1))
-        
-        min_match = re.search(r'(\d+)\s*m', timer_text, re.IGNORECASE)
-        if min_match:
-            minutes = int(min_match.group(1))
-        
-        # Format 2: "HH:MM:SS" countdown timer (e.g., "07:37:27")
-        countdown_match = re.search(r'(\d{1,2}):(\d{2}):(\d{2})', timer_text)
-        if countdown_match:
-            hours = int(countdown_match.group(1))
-            minutes = int(countdown_match.group(2))
-            seconds = int(countdown_match.group(3))
-        
-        if hours > 0 or minutes > 0 or seconds > 0:
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-        
-        return None
+        h = m = s = 0
+        mh = re.search(r'(\d+)\s*h', text, re.IGNORECASE)
+        mm = re.search(r'(\d+)\s*m', text, re.IGNORECASE)
+        mc = re.search(r'(\d{1,2}):(\d{2}):(\d{2})', text)
+        if mh: h = int(mh.group(1))
+        if mm: m = int(mm.group(1))
+        if mc: h, m, s = int(mc.group(1)), int(mc.group(2)), int(mc.group(3))
+        if h > 0 or m > 0 or s > 0:
+            return timedelta(hours=h, minutes=m, seconds=s)
     except:
-        return None
+        pass
+    return None
 
-# Claim History Management
-def load_claim_history():
-    """Load claim history from JSON file"""
+
+# All 8 IST trigger times for the 3-hourly schedule (cron: '5 0/3 * * *')
+# Index 0 = Primary, 1-7 = Backup #1 through Backup #7
+_RUN_SLOTS = [(5,35), (8,35), (11,35), (14,35), (17,35), (20,35), (23,35), (2,35)]
+
+def determine_run_context():
+    """
+    Returns (label, index):
+      label = 'Primary Run' | 'Backup Run #N' | 'Manual Run'
+      index = 0 (primary) | 1-7 (backups) | -1 (manual)
+    """
+    event = os.getenv("GITHUB_EVENT_NAME", "schedule")
+    if event == "workflow_dispatch":
+        return "Manual Run", -1
+    ist = get_ist_time()
+    h, mi = ist.hour, ist.minute
+    for i, (slot_h, slot_m) in enumerate(_RUN_SLOTS):
+        # Allow ±10 min window around each slot
+        slot_dt = ist.replace(hour=slot_h, minute=slot_m, second=0, microsecond=0)
+        if abs((ist - slot_dt).total_seconds()) <= 600:
+            label = "Primary Run" if i == 0 else f"Backup Run #{i}"
+            return label, i
+    # Fallback — treat unrecognised times as backup
+    return "Backup Run", 1
+
+
+def next_scheduled_runs_ist():
+    """Return list of (label, 'HH:MM IST') for all 8 slots."""
+    return [
+        ("Primary Run" if i == 0 else f"Backup #{i}", f"{h:02d}:{m:02d} IST")
+        for i, (h, m) in enumerate(_RUN_SLOTS)
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 3 — BOT META  (streak, last-run delta, new-ID tracking)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_META_DEFAULT = {
+    "streak": {
+        "current": 0,
+        "best": 0,
+        "last_success_date": None,   # YYYY-MM-DD (IST)
+        "last_checked_date": None
+    },
+    "last_run": None,          # filled after each run
+    "new_ids_seen": []         # IDs we've processed at least once
+}
+
+
+def load_bot_meta():
+    if os.path.exists(BOT_META_FILE):
+        try:
+            with open(BOT_META_FILE, 'r') as f:
+                data = json.load(f)
+            # Migrate old schema if needed
+            if "streak" not in data:
+                data["streak"] = _META_DEFAULT["streak"].copy()
+                data["streak"]["current"] = data.pop("streak_days", 0)
+            if "new_ids_seen" not in data:
+                data["new_ids_seen"] = data.pop("known_ids", [])
+            if "last_run" not in data:
+                old = data.pop("last_run_stats", {})
+                data["last_run"] = {
+                    "timestamp": None, "run_label": None,
+                    "total_claimed": old.get("claimed", 0),
+                    "efficiency": old.get("efficiency", 0.0),
+                    "duration_seconds": old.get("duration", 0),
+                    "per_type": {"daily": 0, "store": 0, "progression": 0, "loyalty": 0},
+                    "slowest_player": None, "avg_time_per_player": 0
+                } if old else None
+            return data
+        except Exception as e:
+            log(f"⚠️ Could not load {BOT_META_FILE}: {e}")
+    import copy
+    return copy.deepcopy(_META_DEFAULT)
+
+
+def save_bot_meta(meta):
     try:
-        if os.path.exists(HISTORY_FILE):
+        with open(BOT_META_FILE, 'w') as f:
+            json.dump(meta, f, indent=2)
+    except Exception as e:
+        log(f"⚠️ Could not save {BOT_META_FILE}: {e}")
+
+
+def is_new_id(pid, meta):
+    return pid not in meta.get("new_ids_seen", [])
+
+
+def mark_id_seen(pid, meta):
+    if pid not in meta.get("new_ids_seen", []):
+        meta["new_ids_seen"].append(pid)
+
+
+def update_streak_day_level(meta, all_ok_today):
+    """
+    Option B (day-level): streak increments if any run today results in
+    all enrolled IDs having all rewards claimed.
+    """
+    streak   = meta.setdefault("streak", _META_DEFAULT["streak"].copy())
+    ist_date = get_ist_time().strftime("%Y-%m-%d")
+
+    if all_ok_today:
+        if streak.get("last_success_date") != ist_date:
+            streak["current"] = streak.get("current", 0) + 1
+            streak["best"]    = max(streak.get("best", 0), streak["current"])
+            streak["last_success_date"] = ist_date
+            log(f"🔥 Streak: Day {streak['current']} (Best: {streak['best']})")
+    else:
+        # Break streak only if yesterday wasn't a success and we haven't already
+        # marked today as success
+        last_ok = streak.get("last_success_date")
+        if last_ok and last_ok != ist_date:
+            yesterday = (datetime.strptime(ist_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+            if last_ok < yesterday:
+                if streak.get("current", 0) > 0:
+                    log(f"💔 Streak broken at Day {streak['current']}")
+                streak["current"] = 0
+
+    streak["last_checked_date"] = ist_date
+    meta["streak"] = streak
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — CLAIM HISTORY
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def load_claim_history():
+    if os.path.exists(HISTORY_FILE):
+        try:
             with open(HISTORY_FILE, 'r') as f:
                 return json.load(f)
-        else:
-            return {}
-    except Exception as e:
-        log(f"⚠️ Error loading history: {e}")
-        return {}
+        except Exception as e:
+            log(f"⚠️ Error reading {HISTORY_FILE}: {e}")
+    return {}
 
-def save_claim_history(history):
-    """Save claim history to JSON file"""
+
+def save_claim_history(h):
     try:
         with open(HISTORY_FILE, 'w') as f:
-            json.dump(history, f, indent=2)
+            json.dump(h, f, indent=2)
     except Exception as e:
-        log(f"⚠️ Error saving history: {e}")
+        log(f"⚠️ Error saving {HISTORY_FILE}: {e}")
 
-def init_player_history(player_id):
-    """Initialize history structure for a player if not exists"""
-    history = load_claim_history()
-    
-    if player_id not in history:
-        history[player_id] = {
-            "daily": {"last_claim": None, "next_available": None, "status": "unknown"},
+
+def init_player_history(pid):
+    h = load_claim_history()
+    if pid not in h:
+        h[pid] = {
+            "daily":       {"last_claim": None, "next_available": None, "status": "unknown"},
             "store": {
-                "reward_1": {"last_claim": None, "next_available": None, "status": "unknown"},
-                "reward_2": {"last_claim": None, "next_available": None, "status": "unknown"},
-                "reward_3": {"last_claim": None, "next_available": None, "status": "unknown"}
+                f"reward_{i}": {"last_claim": None, "next_available": None, "status": "unknown"}
+                for i in range(1, 4)
             },
             "progression": {"last_claim": None, "last_count": 0},
-            # NEW: loyalty included from the start for new players
-            "loyalty": {"last_claim": None, "next_available": None, "status": "unknown"}
+            "loyalty":     {"last_claim": None, "next_available": None, "status": "unknown"}
         }
-        save_claim_history(history)
+        save_claim_history(h)
     else:
-        # NEW: migrate existing records that pre-date the loyalty feature
-        if "loyalty" not in history[player_id]:
-            history[player_id]["loyalty"] = {
-                "last_claim": None, "next_available": None, "status": "unknown"
-            }
-            save_claim_history(history)
-    
-    return history
+        changed = False
+        if "loyalty" not in h[pid]:
+            h[pid]["loyalty"] = {"last_claim": None, "next_available": None, "status": "unknown"}
+            changed = True
+        for rk in ("reward_1", "reward_2", "reward_3"):
+            if "status" not in h[pid]["store"].get(rk, {}):
+                h[pid]["store"].setdefault(rk, {})["status"] = "unknown"
+                changed = True
+        if changed:
+            save_claim_history(h)
+    return h
 
-def update_claim_history(player_id, reward_type, claimed_count=0, reward_index=None, detected_cooldown=None, attempted=False):
+
+def update_claim_history(pid, reward_type, claimed_count=0,
+                         reward_index=None, detected_cooldown=None, attempted=False):
     """
-    Update claim history for a player.
-    
-    CRITICAL RULE: Never overwrite a recent last_claim with 'unavailable'.
-    If last_claim + cooldown > now → reward is clearly still on cooldown, don't touch it.
+    KEY CHANGE v3.0:
+      - DAILY  → next_available anchored to get_next_daily_reset()
+      - STORE  → next_available anchored to get_next_daily_reset()  (changed from 24h rolling)
+      - LOYALTY → next_available = ist_now + LOYALTY_COOLDOWN_HOURS (still rolling 24h)
     """
-    history = init_player_history(player_id)
+    h       = init_player_history(pid)
     ist_now = get_ist_time()
-    
+    nr      = get_next_daily_reset()  # used by both daily and store
+
+    # ── DAILY ─────────────────────────────────────────────────────────────────
     if reward_type == "daily":
         if claimed_count > 0:
-            history[player_id]["daily"]["last_claim"] = ist_now.isoformat()
-            next_reset = get_next_daily_reset()
-            history[player_id]["daily"]["next_available"] = next_reset.isoformat()
-            history[player_id]["daily"]["status"] = "claimed"
-            log(f"📝 Updated history: Daily claimed, next at {next_reset.strftime('%I:%M %p')}")
+            h[pid]["daily"]["last_claim"]     = ist_now.isoformat()
+            h[pid]["daily"]["next_available"] = nr.isoformat()
+            h[pid]["daily"]["status"]         = "claimed"
+            log(f"📝 Daily claimed → next reset {nr.strftime('%I:%M %p IST')}")
         elif detected_cooldown is not None:
-            next_available = ist_now + detected_cooldown
-            history[player_id]["daily"]["next_available"] = next_available.isoformat()
-            history[player_id]["daily"]["status"] = "cooldown_detected"
-            log(f"📝 Updated history: Daily cooldown detected, next in {format_time_until_reset(next_available)}")
-        elif attempted and claimed_count == 0:
-            # NEVER overwrite if we have a recent last_claim still within cooldown window
-            last_claim = history[player_id]["daily"].get("last_claim")
-            if last_claim:
-                last_time = datetime.fromisoformat(last_claim)
-                cooldown_end = last_time + timedelta(hours=24)
-                if ist_now < cooldown_end:
-                    log(f"📝 Skipping daily 'unavailable' — last_claim still within cooldown window")
-                    save_claim_history(history)
-                    return history
-            history[player_id]["daily"]["status"] = "unavailable"
-            log(f"📝 Updated history: Daily unavailable")
-    
-    elif reward_type == "store" and reward_index is not None:
-        reward_key = f"reward_{reward_index}"
-        if claimed_count > 0:
-            history[player_id]["store"][reward_key]["last_claim"] = ist_now.isoformat()
-            next_available = ist_now + timedelta(hours=STORE_COOLDOWN_HOURS)
-            history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
-            history[player_id]["store"][reward_key]["status"] = "claimed"
-            log(f"📝 Updated history: Store Reward {reward_index} claimed, next in 24h")
-        elif detected_cooldown is not None:
-            next_available = ist_now + detected_cooldown
-            history[player_id]["store"][reward_key]["next_available"] = next_available.isoformat()
-            history[player_id]["store"][reward_key]["status"] = "cooldown_detected"
-            log(f"📝 Updated history: Store Reward {reward_index} cooldown detected")
-        elif attempted and claimed_count == 0:
-            # NEVER overwrite if we have a recent last_claim still within cooldown window
-            last_claim = history[player_id]["store"][reward_key].get("last_claim")
-            if last_claim:
-                last_time = datetime.fromisoformat(last_claim)
-                cooldown_end = last_time + timedelta(hours=STORE_COOLDOWN_HOURS)
-                if ist_now < cooldown_end:
-                    log(f"📝 Skipping store {reward_index} 'unavailable' — last_claim still within cooldown")
-                    save_claim_history(history)
-                    return history
-            history[player_id]["store"][reward_key]["status"] = "unavailable"
-    
-    elif reward_type == "progression" and claimed_count > 0:
-        history[player_id]["progression"]["last_claim"] = ist_now.isoformat()
-        history[player_id]["progression"]["last_count"] = claimed_count
-        log(f"📝 Updated history: Progression claimed {claimed_count}")
+            h[pid]["daily"]["next_available"] = nr.isoformat()   # anchor to reset
+            h[pid]["daily"]["status"]         = "cooldown_detected"
+            log(f"📝 Daily cooldown anchored → {nr.strftime('%I:%M %p IST')}")
+        elif attempted:
+            lc = h[pid]["daily"].get("last_claim")
+            if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
+                log(f"📝 Daily — preserving (claimed since last reset)")
+            else:
+                h[pid]["daily"]["status"] = "unavailable"
+                log(f"📝 Daily unavailable")
 
-    # NEW: loyalty tracking — identical pattern to store (ist_now + detected_cooldown, no changes to existing logic)
+    # ── STORE (anchored to daily reset, same as daily) ─────────────────────────
+    elif reward_type == "store" and reward_index is not None:
+        rk = f"reward_{reward_index}"
+        if claimed_count > 0:
+            h[pid]["store"][rk]["last_claim"]     = ist_now.isoformat()
+            h[pid]["store"][rk]["next_available"] = nr.isoformat()   # anchor
+            h[pid]["store"][rk]["status"]         = "claimed"
+            log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
+        elif detected_cooldown is not None:
+            h[pid]["store"][rk]["next_available"] = nr.isoformat()   # anchor
+            h[pid]["store"][rk]["status"]         = "cooldown_detected"
+            log(f"📝 Store {reward_index} cooldown anchored → daily reset")
+        elif attempted:
+            lc = h[pid]["store"][rk].get("last_claim")
+            if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
+                log(f"📝 Store {reward_index} — preserving (claimed since last reset)")
+            else:
+                h[pid]["store"][rk]["status"] = "unavailable"
+
+    # ── PROGRESSION ────────────────────────────────────────────────────────────
+    elif reward_type == "progression" and claimed_count > 0:
+        h[pid]["progression"]["last_claim"] = ist_now.isoformat()
+        h[pid]["progression"]["last_count"] = claimed_count
+        log(f"📝 Progression claimed {claimed_count}")
+
+    # ── LOYALTY (rolling 24h) ──────────────────────────────────────────────────
     elif reward_type == "loyalty":
         if claimed_count > 0:
-            history[player_id]["loyalty"]["last_claim"] = ist_now.isoformat()
-            next_available = ist_now + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-            history[player_id]["loyalty"]["next_available"] = next_available.isoformat()
-            history[player_id]["loyalty"]["status"] = "claimed"
-            log(f"📝 Updated history: Loyalty claimed {claimed_count}, next in {LOYALTY_COOLDOWN_HOURS}h")
+            na = ist_now + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+            h[pid]["loyalty"]["last_claim"]     = ist_now.isoformat()
+            h[pid]["loyalty"]["next_available"] = na.isoformat()
+            h[pid]["loyalty"]["status"]         = "claimed"
+            log(f"📝 Loyalty claimed {claimed_count}, next in {LOYALTY_COOLDOWN_HOURS}h")
         elif detected_cooldown is not None:
-            next_available = ist_now + detected_cooldown
-            history[player_id]["loyalty"]["next_available"] = next_available.isoformat()
-            history[player_id]["loyalty"]["status"] = "cooldown_detected"
-            log(f"📝 Updated history: Loyalty cooldown detected, next in {format_time_until_reset(next_available)}")
-        elif attempted and claimed_count == 0:
-            last_claim = history[player_id]["loyalty"].get("last_claim")
-            if last_claim:
-                last_time = datetime.fromisoformat(last_claim)
-                cooldown_end = last_time + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-                if ist_now < cooldown_end:
-                    log(f"📝 Skipping loyalty 'unavailable' — last_claim still within cooldown")
-                    save_claim_history(history)
-                    return history
-            history[player_id]["loyalty"]["status"] = "unavailable"
-            log(f"📝 Updated history: Loyalty unavailable")
-
-    save_claim_history(history)
-    return history
-
-def detect_daily_timer_js(driver):
-    """
-    Use JavaScript DOM traversal to detect the daily timer.
-    Page shows: 'Next reward in' with SEPARATE boxes for hours / minutes / seconds.
-    The old regex on raw HTML was matching random JS timestamps - this is the proper fix.
-    Returns timedelta or None.
-    """
-    try:
-        result = driver.execute_script("""
-            function getNum(el) {
-                return parseInt((el.innerText || el.textContent || '').trim()) || 0;
-            }
-
-            // Strategy 1: Find the "Next reward in" label, walk up, find time boxes by label text
-            let allLeafEls = Array.from(document.querySelectorAll('*')).filter(e => e.children.length === 0);
-            for (let el of allLeafEls) {
-                let txt = (el.innerText || '').trim().toLowerCase();
-                if (txt === 'next reward in' || txt === 'next in' || txt === 'next reward') {
-                    let container = el.parentElement;
-                    for (let depth = 0; depth < 6; depth++) {
-                        if (!container) break;
-                        let leaves = Array.from(container.querySelectorAll('*')).filter(e => e.children.length === 0);
-                        let h = null, m = null, s = 0;
-                        for (let leaf of leaves) {
-                            let t = (leaf.innerText || '').trim().toLowerCase();
-                            if (t === 'hours' || t === 'hour') {
-                                let sib = leaf.previousElementSibling;
-                                if (sib) h = getNum(sib);
-                            }
-                            if (t === 'minutes' || t === 'minute') {
-                                let sib = leaf.previousElementSibling;
-                                if (sib) m = getNum(sib);
-                            }
-                            if (t === 'seconds' || t === 'second') {
-                                let sib = leaf.previousElementSibling;
-                                if (sib) s = getNum(sib);
-                            }
-                        }
-                        if (h !== null && m !== null) return { hours: h, minutes: m, seconds: s, method: 'label-search' };
-                        container = container.parentElement;
-                    }
-                }
-            }
-
-            // Strategy 2: Find 'hours' label and infer siblings
-            let hourLabels = allLeafEls.filter(e => (e.innerText || '').trim().toLowerCase() === 'hours');
-            for (let hl of hourLabels) {
-                let parent = hl.parentElement; // e.g. <div><span>09</span><span>hours</span></div>
-                let grandparent = parent ? parent.parentElement : null;
-                if (!grandparent) continue;
-                let cards = Array.from(grandparent.children);
-                let h = null, m = null, s = 0;
-                for (let card of cards) {
-                    let labels = Array.from(card.querySelectorAll('*')).filter(e => e.children.length === 0);
-                    let hasHour = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'hours');
-                    let hasMin  = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'minutes');
-                    let hasSec  = labels.some(e => (e.innerText||'').trim().toLowerCase() === 'seconds');
-                    let numEl   = labels.find(e => !isNaN(parseInt(e.innerText)) && e.innerText.trim().length <= 3);
-                    if (hasHour && numEl) h = getNum(numEl);
-                    if (hasMin  && numEl) m = getNum(numEl);
-                    if (hasSec  && numEl) s = getNum(numEl);
-                }
-                if (h !== null && m !== null) return { hours: h, minutes: m, seconds: s, method: 'sibling-card' };
-            }
-
-            return null;
-        """)
-
-        if result:
-            h, m, s = result.get('hours', 0), result.get('minutes', 0), result.get('seconds', 0)
-            log(f"🔍 Daily timer (DOM/{result.get('method','?')}): {h}h {m}m {s}s")
-            return timedelta(hours=h, minutes=m, seconds=s)
-
-    except Exception as e:
-        log(f"⚠️ Daily JS timer error: {e}")
-    return None
-
-
-def detect_store_timers_js(driver):
-    """
-    Detect store reward cooldown timers PER CARD using reward name anchors.
-
-    The 3 store cards are always:
-      Card 1 = Gold (Daily)   - 5 Gold
-      Card 2 = Cash (Daily)   - 500 Cash
-      Card 3 = Luckyloon (Daily) - 10 Luckyloon
-
-    Strategy: anchor on each card's unique reward name, walk up the DOM to the
-    card container, then check if that container has a visible "Next in" timer.
-
-    This approach is immune to:
-    - DOM ordering issues (Free buttons mixed with timers in sorted lists)
-    - Text dedup collapsing all "Free" buttons (same text → only 1 kept)
-    - Parent/child double-counting
-
-    Returns: dict {1: timedelta_or_None, 2: timedelta_or_None, 3: timedelta_or_None}
-             None = card is available (Free button active)
-             timedelta = card is on cooldown
-    """
-    result = {1: None, 2: None, 3: None}
-    try:
-        card_results = driver.execute_script("""
-            var rewardAnchors = {
-                1: ['gold (daily)', 'gold(daily)', '5 gold', 'gold daily'],
-                2: ['cash (daily)', 'cash(daily)', '500 cash', 'cash daily'],
-                3: ['luckyloon (daily)', 'luckyloon(daily)', '10 luckyloon', 'luckyloon daily']
-            };
-
-            function findCardStatus(anchorKeywords) {
-                var allEls = Array.from(document.querySelectorAll('*'));
-
-                // Step 1: Find the label element for this reward card
-                var labelEl = null;
-                for (var i = 0; i < allEls.length; i++) {
-                    var el = allEls[i];
-                    var ownText = Array.from(el.childNodes)
-                        .filter(function(n) { return n.nodeType === 3; })
-                        .map(function(n) { return n.textContent; })
-                        .join('').trim().toLowerCase();
-                    var matched = anchorKeywords.some(function(kw) { return ownText.includes(kw); });
-                    if (matched && ownText.length < 35) {
-                        labelEl = el;
-                        break;
-                    }
-                }
-                if (!labelEl) return 'not_found';
-
-                // Step 2: Walk UP the DOM to find the card container
-                // The card container will contain "Next in" text if on cooldown
-                var node = labelEl;
-                for (var depth = 0; depth < 15; depth++) {
-                    node = node.parentElement;
-                    if (!node || node === document.body || node === document.documentElement) break;
-
-                    var nodeText = (node.innerText || node.textContent || '').toLowerCase();
-
-                    if (nodeText.includes('next in')) {
-                        // Found card container with a timer - extract the timer text
-                        var children = Array.from(node.querySelectorAll('*'));
-                        for (var j = 0; j < children.length; j++) {
-                            var child = children[j];
-                            var childOwn = Array.from(child.childNodes)
-                                .filter(function(n) { return n.nodeType === 3; })
-                                .map(function(n) { return n.textContent; })
-                                .join('').trim();
-                            if (childOwn.toLowerCase().includes('next in') && childOwn.length < 50) {
-                                var fullText = (child.innerText || child.textContent || '').trim();
-                                if (fullText.length > 5 && fullText.length < 50) {
-                                    return 'timer:' + fullText;
-                                }
-                            }
-                        }
-                        return 'timer:unknown';
-                    }
-
-                    // If we've reached a node that contains a Free button AND label
-                    // without finding "next in", this card is available
-                    if (depth >= 4) {
-                        var btns = node.querySelectorAll('button');
-                        for (var b = 0; b < btns.length; b++) {
-                            if ((btns[b].innerText || '').trim().toLowerCase() === 'free') {
-                                return 'free';
-                            }
-                        }
-                    }
-                }
-                return 'free';
-            }
-
-            var results = {};
-            for (var cardNum in rewardAnchors) {
-                results[cardNum] = findCardStatus(rewardAnchors[cardNum]);
-            }
-            return results;
-        """)
-
-        if not card_results:
-            log("⚠️ Store timer JS returned no results")
-            return result
-
-        REWARD_NAMES = {1: "Gold", 2: "Cash", 3: "Luckyloon"}
-        for card_num_str, status in card_results.items():
-            card_num = int(card_num_str)
-            name = REWARD_NAMES.get(card_num, f"Reward {card_num}")
-
-            if status.startswith('timer:'):
-                timer_text = status[6:]
-                if timer_text == 'unknown':
-                    log(f"⚠️ Store {name}: timer detected but text unparseable")
-                else:
-                    delta = parse_timer_text(timer_text)
-                    if delta and delta.total_seconds() > 60:
-                        result[card_num] = delta
-                        log(f"🔍 Store {name}: On Cooldown - {timer_text}")
-                    else:
-                        log(f"⚠️ Store {name}: timer parse failed for '{timer_text}'")
-            elif status == 'free':
-                log(f"🔍 Store {name}: Free (available)")
-            elif status == 'not_found':
-                log(f"⚠️ Store {name}: reward label not found in page - checking fallback")
-                # Fallback: if label not found, treat as unknown (don't mark available wrongly)
+            na = ist_now + detected_cooldown
+            h[pid]["loyalty"]["next_available"] = na.isoformat()
+            h[pid]["loyalty"]["status"]         = "cooldown_detected"
+            log(f"📝 Loyalty cooldown → {format_time_until(na)}")
+        elif attempted:
+            lc = h[pid]["loyalty"].get("last_claim")
+            if lc and ist_now < datetime.fromisoformat(lc) + timedelta(hours=LOYALTY_COOLDOWN_HOURS):
+                log(f"📝 Loyalty — preserving (within 24h cooldown)")
             else:
-                log(f"⚠️ Store {name}: unknown status '{status}'")
+                h[pid]["loyalty"]["status"] = "unavailable"
+                log(f"📝 Loyalty unavailable")
 
-    except Exception as e:
-        log(f"⚠️ Store timer detection error: {e}")
-
-    return result
+    save_claim_history(h)
+    return h
 
 
-# NEW: Detect loyalty program cooldown timer
-def detect_loyalty_timer_js(driver):
+def get_reward_status(pid):
     """
-    Detect the loyalty program Store Bonus cooldown timer.
-    The page shows 'Next in Xh Ym' inline on the card when on cooldown.
-    Returns timedelta or None (None = reward may be available).
+    Returns dict with availability flags and next-available strings.
+    Uses last_reset anchor for daily+store (not 24h rolling).
     """
-    try:
-        result = driver.execute_script("""
-            var allEls = Array.from(document.querySelectorAll('*'));
-            for (var i = 0; i < allEls.length; i++) {
-                var el = allEls[i];
-                var ownText = Array.from(el.childNodes)
-                    .filter(function(n) { return n.nodeType === 3; })
-                    .map(function(n) { return n.textContent; })
-                    .join('').trim();
-                if (ownText.toLowerCase().includes('next in') && ownText.length < 60) {
-                    return ownText;
-                }
-            }
-            return null;
-        """)
-        if result:
-            delta = parse_timer_text(result)
-            if delta and delta.total_seconds() > 60:
-                log(f"🔍 Loyalty timer: {result}")
-                return delta
-    except Exception as e:
-        log(f"⚠️ Loyalty JS timer error: {e}")
-    return None
-
-
-def detect_page_cooldowns(driver, player_id, page_type):
-    """
-    Detect cooldowns using proper DOM-based JavaScript (not raw HTML regex).
-    
-    OLD approach (WRONG): regex on page source → matched random JS timestamps
-    NEW approach (CORRECT): JavaScript DOM traversal → finds actual timer boxes
-    
-    page_type: 'daily', 'store', or 'loyalty'
-    Returns: dict with cooldown info
-    """
-    detected = {}
-
-    try:
-        if page_type == "daily":
-            cooldown_delta = detect_daily_timer_js(driver)
-            if cooldown_delta and cooldown_delta.total_seconds() > 60:
-                update_claim_history(player_id, "daily", claimed_count=0, detected_cooldown=cooldown_delta)
-                detected['daily'] = cooldown_delta
-                log(f"✅ Daily cooldown saved: next in {cooldown_delta}")
-            else:
-                log(f"ℹ️  No daily timer found on page (not yet claimed or expired)")
-
-        elif page_type == "store":
-            # Returns {1: timedelta_or_None, 2: timedelta_or_None, 3: timedelta_or_None}
-            # Each key = card position; None = card is available (shows Free button)
-            timer_map = detect_store_timers_js(driver)
-            on_cooldown = 0
-            for card_num, cooldown_delta in timer_map.items():
-                if cooldown_delta is not None:
-                    update_claim_history(player_id, "store", claimed_count=0, reward_index=card_num, detected_cooldown=cooldown_delta)
-                    detected[f'store_{card_num}'] = cooldown_delta
-                    on_cooldown += 1
-            if on_cooldown > 0:
-                log(f"⏰ {on_cooldown} store reward(s) on cooldown")
-            else:
-                log(f"ℹ️  No store timers found on page")
-
-        # NEW: loyalty cooldown detection
-        elif page_type == "loyalty":
-            cooldown_delta = detect_loyalty_timer_js(driver)
-            if cooldown_delta and cooldown_delta.total_seconds() > 60:
-                update_claim_history(player_id, "loyalty", claimed_count=0, detected_cooldown=cooldown_delta)
-                detected['loyalty'] = cooldown_delta
-                log(f"✅ Loyalty cooldown saved: next in {cooldown_delta}")
-            else:
-                log(f"ℹ️  No loyalty timer found on page (reward may be available)")
-
-    except Exception as e:
-        log(f"⚠️ Page cooldown detection error: {e}")
-
-    return detected
-
-def get_reward_status(player_id):
-    """
-    Get current status of all rewards for a player.
-    
-    Source of truth priority:
-    1. last_claim + cooldown window  → most reliable (we wrote this ourselves when claiming)
-    2. next_available from history   → fallback (set by detection or claim)
-    3. status field                  → last resort label
-    """
-    history = load_claim_history()
+    h       = load_claim_history()
     ist_now = get_ist_time()
-    
-    if player_id not in history:
+    lr      = get_last_daily_reset()
+    nr      = get_next_daily_reset()
+
+    if pid not in h:
         return {
-            "daily_available": True,
-            "store_available": [True, True, True],
-            "daily_next": None,
-            "daily_status": "unknown",
-            "store_next": [None, None, None],
-            "store_status": ["unknown", "unknown", "unknown"],
-            # NEW
+            "daily_available":   True,
+            "daily_next":        None,
+            "daily_status":      "unknown",
+            "store_available":   [True, True, True],
+            "store_next":        [None, None, None],
+            "store_status":      ["unknown", "unknown", "unknown"],
             "loyalty_available": True,
-            "loyalty_next": None,
-            "loyalty_status": "unknown"
+            "loyalty_next":      None,
+            "loyalty_status":    "unknown",
         }
-    
-    player_history = history[player_id]
-    
-    # ── DAILY ──────────────────────────────────────────────────────────────────
-    daily_available = True
-    daily_next = None
-    daily_status = player_history["daily"].get("status", "unknown")
-    
-    # Priority 1: last_claim within window → guaranteed on cooldown
-    last_daily_claim = player_history["daily"].get("last_claim")
-    if last_daily_claim:
-        last_claim_time = datetime.fromisoformat(last_daily_claim)
-        # Daily resets at a fixed time, so use next_available if set, else +24h
-        next_reset = None
-        if player_history["daily"]["next_available"]:
-            next_reset = datetime.fromisoformat(player_history["daily"]["next_available"])
-        if next_reset is None:
-            next_reset = last_claim_time + timedelta(hours=24)
-        if ist_now < next_reset:
-            daily_available = False
-            daily_next = format_time_until_reset(next_reset)
-            daily_status = "claimed"
-    
-    # Priority 2: next_available still in future (from page detection)
-    if daily_available and player_history["daily"]["next_available"]:
-        next_time = datetime.fromisoformat(player_history["daily"]["next_available"])
-        if ist_now < next_time:
-            daily_available = False
-            daily_next = format_time_until_reset(next_time)
-    
-    # ── STORE ──────────────────────────────────────────────────────────────────
-    store_available = [True, True, True]
-    store_next = [None, None, None]
-    store_status = ["unknown", "unknown", "unknown"]
-    
+
+    ph = h[pid]
+
+    # ── DAILY ─────────────────────────────────────────────────────────────────
+    d_avail  = True
+    d_next   = None
+    d_status = ph["daily"].get("status", "unknown")
+
+    lc_d = ph["daily"].get("last_claim")
+    na_d = ph["daily"].get("next_available")
+
+    if lc_d and datetime.fromisoformat(lc_d) >= lr:
+        # Claimed since last reset
+        d_avail  = False
+        d_next   = format_time_until(nr)
+        d_status = "claimed"
+    elif na_d:
+        nt = datetime.fromisoformat(na_d)
+        if ist_now < nt:
+            d_avail = False
+            d_next  = format_time_until(nt)
+
+    # ── STORE (same anchor logic as daily) ────────────────────────────────────
+    s_avail  = [True,      True,      True]
+    s_next   = [None,      None,      None]
+    s_status = ["unknown", "unknown", "unknown"]
+
     for i in range(3):
-        reward_key = f"reward_{i+1}"
-        reward_data = player_history["store"][reward_key]
-        store_status[i] = reward_data.get("status", "unknown")
-        
-        # Priority 1: last_claim within 24h window → guaranteed on cooldown
-        last_store_claim = reward_data.get("last_claim")
-        if last_store_claim:
-            last_claim_time = datetime.fromisoformat(last_store_claim)
-            cooldown_end = last_claim_time + timedelta(hours=STORE_COOLDOWN_HOURS)
-            if ist_now < cooldown_end:
-                store_available[i] = False
-                store_next[i] = format_time_until_reset(cooldown_end)
-                store_status[i] = "claimed"
-                continue  # No need to check next_available
-        
-        # Priority 2: next_available still in future (from page detection)
-        if reward_data["next_available"]:
-            next_time = datetime.fromisoformat(reward_data["next_available"])
-            if ist_now < next_time:
-                store_available[i] = False
-                store_next[i] = format_time_until_reset(next_time)
+        rk = f"reward_{i+1}"
+        rd = ph["store"][rk]
+        s_status[i] = rd.get("status", "unknown")
+        lc_s = rd.get("last_claim")
+        na_s = rd.get("next_available")
 
-    # NEW: ── LOYALTY ──────────────────────────────────────────────────────────
-    loyalty_available = True
-    loyalty_next = None
-    loyalty_data = player_history.get("loyalty", {})
-    loyalty_status = loyalty_data.get("status", "unknown")
+        if lc_s and datetime.fromisoformat(lc_s) >= lr:
+            s_avail[i]  = False
+            s_next[i]   = format_time_until(nr)
+            s_status[i] = "claimed"
+        elif na_s:
+            nt = datetime.fromisoformat(na_s)
+            if ist_now < nt:
+                s_avail[i] = False
+                s_next[i]  = format_time_until(nt)
 
-    last_loyalty_claim = loyalty_data.get("last_claim")
-    if last_loyalty_claim:
-        last_claim_time = datetime.fromisoformat(last_loyalty_claim)
-        cooldown_end = last_claim_time + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-        if ist_now < cooldown_end:
-            loyalty_available = False
-            loyalty_next = format_time_until_reset(cooldown_end)
-            loyalty_status = "claimed"
+    # ── LOYALTY (rolling 24h) ──────────────────────────────────────────────────
+    l_avail  = True
+    l_next   = None
+    ld       = ph.get("loyalty", {})
+    l_status = ld.get("status", "unknown")
 
-    if loyalty_available and loyalty_data.get("next_available"):
-        next_time = datetime.fromisoformat(loyalty_data["next_available"])
-        if ist_now < next_time:
-            loyalty_available = False
-            loyalty_next = format_time_until_reset(next_time)
+    lc_l = ld.get("last_claim")
+    na_l = ld.get("next_available")
+
+    if lc_l:
+        cd_end = datetime.fromisoformat(lc_l) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+        if ist_now < cd_end:
+            l_avail  = False
+            l_next   = format_time_until(cd_end)
+            l_status = "claimed"
+    if l_avail and na_l:
+        nt = datetime.fromisoformat(na_l)
+        if ist_now < nt:
+            l_avail = False
+            l_next  = format_time_until(nt)
 
     return {
-        "daily_available": daily_available,
-        "store_available": store_available,
-        "daily_next": daily_next,
-        "daily_status": daily_status,
-        "store_next": store_next,
-        "store_status": store_status,
-        # NEW
-        "loyalty_available": loyalty_available,
-        "loyalty_next": loyalty_next,
-        "loyalty_status": loyalty_status
+        "daily_available":   d_avail,
+        "daily_next":        d_next,
+        "daily_status":      d_status,
+        "store_available":   s_avail,
+        "store_next":        s_next,
+        "store_status":      s_status,
+        "loyalty_available": l_avail,
+        "loyalty_next":      l_next,
+        "loyalty_status":    l_status,
     }
 
+
+def all_claimable_on_cooldown(pid, has_loyalty):
+    """True when every reward this player can claim is already on cooldown."""
+    s = get_reward_status(pid)
+    return (not s["daily_available"]
+            and not any(s["store_available"])
+            and (not has_loyalty or not s["loyalty_available"]))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — CHROME DRIVER
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def get_chrome_major_version():
-    """
-    Detect the major version of Chrome installed on the runner at runtime.
-    This ensures ChromeDriver always matches the installed Chrome version,
-    regardless of which version GitHub Actions has deployed.
-    Returns int (e.g. 146) or None if detection fails.
-    """
-    import subprocess
-    candidates = ['google-chrome', 'google-chrome-stable', 'chromium-browser', 'chromium']
-    for binary in candidates:
+    for binary in ["google-chrome", "google-chrome-stable", "chromium-browser", "chromium"]:
         try:
-            result = subprocess.run(
-                [binary, '--version'],
-                capture_output=True, text=True, timeout=5
-            )
-            output = result.stdout.strip()   # e.g. "Google Chrome 146.0.7680.0"
-            if output:
-                major = int(output.split()[-1].split('.')[0])
-                log(f"🔍 Detected Chrome version: {major} (from '{binary} --version': {output})")
-                return major
-        except Exception:
+            res = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=5)
+            if res.stdout.strip():
+                v = int(res.stdout.strip().split()[-1].split(".")[0])
+                log(f"🔍 Chrome v{v} detected via {binary}")
+                return v
+        except:
             continue
-    log("⚠️ Could not detect Chrome version — will let undetected_chromedriver auto-detect")
+    log("⚠️ Chrome version detection failed — using uc auto-detect")
     return None
 
 
 def create_driver():
-    """
-    GitHub Actions-compatible driver.
-    Detects the installed Chrome version at runtime so ChromeDriver always matches,
-    regardless of which Chrome version GitHub has deployed on the runner.
-    """
-    chrome_version = get_chrome_major_version()
-
+    chrome_v = get_chrome_major_version()
     for attempt in range(3):
         try:
-            options = uc.ChromeOptions()
+            opts = uc.ChromeOptions()
             if HEADLESS:
-                options.add_argument("--headless=new")
-            options.add_argument("--window-size=1920,1080")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument("--disable-gpu")
-            options.add_argument("--disable-logging")
-            options.add_argument("--disable-notifications")
-            options.add_argument("--disable-popup-blocking")
-            options.add_argument("--remote-debugging-port=0")
-
-            prefs = {
-                "profile.default_content_setting_values": {
-                    "images": 2,
-                    "notifications": 2,
-                    "popups": 2,
-                }
-            }
-            options.add_experimental_option("prefs", prefs)
-
-            if chrome_version:
-                driver = uc.Chrome(options=options, version_main=chrome_version, use_subprocess=True)
-            else:
-                driver = uc.Chrome(options=options, use_subprocess=True)
-
+                opts.add_argument("--headless=new")
+            opts.add_argument("--window-size=1920,1080")
+            opts.add_argument("--no-sandbox")
+            opts.add_argument("--disable-dev-shm-usage")
+            opts.add_argument("--disable-blink-features=AutomationControlled")
+            opts.add_argument("--disable-gpu")
+            opts.add_argument("--disable-logging")
+            opts.add_argument("--disable-notifications")
+            opts.add_argument("--disable-popup-blocking")
+            opts.add_argument("--remote-debugging-port=0")
+            opts.add_experimental_option("prefs", {
+                "profile.default_content_setting_values": {"images": 2, "notifications": 2, "popups": 2}
+            })
+            kwargs = {"version_main": chrome_v} if chrome_v else {}
+            driver = uc.Chrome(options=opts, use_subprocess=True, **kwargs)
             driver.set_page_load_timeout(30)
             driver.set_script_timeout(30)
-            log(f"✅ Driver initialized (Chrome v{chrome_version or 'auto'})")
+            log(f"✅ Driver ready (Chrome v{chrome_v or 'auto'})")
             return driver
-
         except Exception as e:
             log(f"⚠️ Driver init attempt {attempt+1} failed: {str(e)[:100]}")
             time.sleep(2)
             if attempt == 2:
-                log(f"❌ All driver init attempts failed")
                 raise
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 6 — BROWSER HELPERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def bypass_cloudflare(driver):
-    """Specifically handle the 'Verifying you are human' screen"""
     try:
         time.sleep(2)
-        title = driver.title.lower()
-        source = driver.page_source.lower()
-        
-        if "just a moment" in title or "verifying" in source or "hub.vertigogames.co" in title:
-            log("🛡️ Cloudflare Challenge detected. Attempting bypass...")
+        if "just a moment" in driver.title.lower() or "verifying" in driver.page_source.lower():
+            log("🛡️ Cloudflare detected — waiting...")
             time.sleep(5)
-            
-            if "daily rewards" in driver.title.lower() or "login" in driver.page_source.lower():
-                log("✅ Passed Cloudflare (Automatic)")
-                return True
-
             try:
-                checkbox = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
-                if checkbox:
-                    checkbox[0].click()
-                    log("✅ Clicked Verification Checkbox")
-                    time.sleep(3)
+                driver.find_elements(By.XPATH, "//input[@type='checkbox']")[0].click()
+                time.sleep(3)
             except:
                 pass
-            
-            for _ in range(15):
-                if "daily-rewards" in driver.current_url or "hub.vertigogames.co" in driver.current_url:
-                    if "verifying" not in driver.page_source.lower():
-                        log("✅ Cloudflare cleared")
-                        return True
+            for _ in range(10):
+                if "hub.vertigogames.co" in driver.current_url and "verifying" not in driver.page_source.lower():
+                    log("✅ Cloudflare cleared")
+                    return
                 time.sleep(1)
-                
-            log("⚠️ Warning: Might still be on Cloudflare page")
-            
-    except Exception as e:
-        log(f"ℹ️ Cloudflare check error (ignorable): {e}")
+    except:
+        pass
+
 
 def accept_cookies(driver):
-    """Accept cookie banner"""
     try:
-        btn = WebDriverWait(driver, 3).until(
-            EC.element_to_be_clickable((
-                By.XPATH,
-                "//button[normalize-space()='Accept All' or contains(text(), 'Accept') or "
-                "contains(text(), 'Allow') or contains(text(), 'Consent')]"
-            ))
-        )
-        btn.click()
+        WebDriverWait(driver, 3).until(EC.element_to_be_clickable((
+            By.XPATH,
+            "//button[normalize-space()='Accept All' or contains(text(),'Accept') "
+            "or contains(text(),'Allow') or contains(text(),'Consent')]"
+        ))).click()
         time.sleep(0.3)
         log("✅ Cookies accepted")
-    except TimeoutException:
-        log("ℹ️  No cookie banner")
+    except:
+        pass
 
-def login_to_hub(driver, player_id):
-    """Login using multi-selector strategy"""
-    log(f"🔐 Logging in: {player_id}")
-    
+
+def login_to_hub(driver, pid):
+    log(f"🔐 Logging in: {pid}")
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(1)
-        driver.save_screenshot(f"01_page_loaded_{player_id}.png")
-        
         accept_cookies(driver)
-        
-        login_selectors = [
-            "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
-            "//a[contains(text(),'Login') or contains(text(),'Log in') or contains(text(), 'Sign in')]",
-            "//button[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'login')]",
-            "//button[contains(text(), 'claim')]",
-            "//div[contains(text(), 'Daily Rewards') or contains(text(), 'daily')]//button",
-            "//button[contains(@class, 'btn') or contains(@class, 'button')]",
-            "//*[contains(text(), 'Login') or contains(text(), 'login')][@onclick or @href or self::button or self::a]",
-        ]
-        
+
         login_clicked = False
-        for i, selector in enumerate(login_selectors):
+        for sel in [
+            "//button[contains(text(),'Login') or contains(text(),'Log in') or contains(text(),'Sign in')]",
+            "//a[contains(text(),'Login') or contains(text(),'Log in')]",
+            "//button[contains(@class,'btn') or contains(@class,'button')]",
+        ]:
             try:
-                elements = driver.find_elements(By.XPATH, selector)
-                if elements:
-                    for element in elements:
-                        try:
-                            if element.is_displayed() and element.is_enabled():
-                                element.click()
-                                login_clicked = True
-                                log(f"✅ Login button clicked (selector {i+1})")
-                                break
-                        except:
-                            continue
+                for el in driver.find_elements(By.XPATH, sel):
+                    if el.is_displayed() and el.is_enabled():
+                        el.click()
+                        login_clicked = True
+                        break
                 if login_clicked:
                     break
             except:
                 continue
-        
+
         if not login_clicked:
-            log("❌ No login button found")
-            driver.save_screenshot(f"02_login_not_found_{player_id}.png")
+            log("❌ Login button not found")
             return False
-        
+
         time.sleep(2)
-        driver.save_screenshot(f"03_login_clicked_{player_id}.png")
-        
-        # Handle new tab login
-        original_window = driver.current_window_handle
-        all_windows = driver.window_handles
-        if len(all_windows) > 1:
-            log("🔄 New tab detected. Switching...")
-            for window in all_windows:
-                if window != original_window:
-                    driver.switch_to.window(window)
+        orig = driver.current_window_handle
+        if len(driver.window_handles) > 1:
+            for w in driver.window_handles:
+                if w != orig:
+                    driver.switch_to.window(w)
                     break
             time.sleep(1)
-        
-        # Enter Player ID
-        id_input_selectors = [
-            "//input[@placeholder='Player ID' or @name='playerId' or @id='playerId']",
-            "//input[@type='text']",
-            "//input[contains(@placeholder, 'ID')]",
-        ]
-        
-        id_entered = False
-        for selector in id_input_selectors:
+
+        id_field = None
+        for sel in ["//input[@placeholder='Player ID' or @name='playerId']",
+                    "//input[@type='text']",
+                    "//input[contains(@placeholder,'ID')]"]:
             try:
-                id_field = driver.find_element(By.XPATH, selector)
-                if id_field.is_displayed():
-                    id_field.clear()
-                    id_field.send_keys(player_id)
-                    log(f"✅ Entered ID: {player_id}")
-                    id_entered = True
+                f = driver.find_element(By.XPATH, sel)
+                if f.is_displayed():
+                    f.clear()
+                    f.send_keys(pid)
+                    id_field = f
+                    log(f"✅ ID entered: {pid}")
                     break
             except:
                 continue
-        
-        if not id_entered:
-            log("❌ ID field not found")
-            driver.save_screenshot(f"04_id_field_not_found_{player_id}.png")
+
+        if not id_field:
+            log("❌ ID input not found")
             return False
-        
+
         time.sleep(1)
-        driver.save_screenshot(f"05_id_entered_{player_id}.png")
-        
-        # Click Login/Submit
-        submit_selectors = [
-            "//button[contains(text(), 'Login') or contains(text(), 'Submit') or contains(text(), 'Continue')]",
-            "//button[@type='submit']",
-            "//input[@type='submit']",
-        ]
-        
-        submit_clicked = False
-        for selector in submit_selectors:
+        submitted = False
+        for sel in ["//button[contains(text(),'Login') or contains(text(),'Submit') or contains(text(),'Continue')]",
+                    "//button[@type='submit']"]:
             try:
-                submit_btn = driver.find_element(By.XPATH, selector)
-                if submit_btn.is_displayed() and submit_btn.is_enabled():
-                    submit_btn.click()
-                    log("✅ Submit clicked")
-                    submit_clicked = True
+                btn = driver.find_element(By.XPATH, sel)
+                if btn.is_displayed() and btn.is_enabled():
+                    btn.click()
+                    submitted = True
                     break
             except:
                 continue
-        
-        if not submit_clicked:
-            log("⚠️ Submit button not found, trying Enter key")
+        if not submitted:
             try:
                 id_field.send_keys(Keys.RETURN)
-                log("✅ Pressed Enter")
             except:
-                log("❌ Could not submit")
+                log("❌ Could not submit login")
                 return False
-        
+
         time.sleep(3)
-        driver.save_screenshot(f"06_after_submit_{player_id}.png")
-        
-        # Switch back to original window if needed
         if len(driver.window_handles) > 1:
             driver.close()
-            driver.switch_to.window(original_window)
+            driver.switch_to.window(orig)
             time.sleep(1)
-        
-        # Verify login success
+
         time.sleep(2)
-        current_url = driver.current_url
-        page_source = driver.page_source.lower()
-        
-        if "daily-rewards" in current_url or "claim" in page_source or player_id.lower() in page_source:
+        src = driver.page_source.lower()
+        if "daily-rewards" in driver.current_url or "claim" in src or pid.lower() in src:
             log("✅ Login successful")
-            driver.save_screenshot(f"07_login_success_{player_id}.png")
             return True
-        else:
-            log("⚠️ Login verification uncertain")
-            driver.save_screenshot(f"08_login_uncertain_{player_id}.png")
-            return True
-            
+        log("⚠️ Login uncertain — proceeding")
+        return True
     except Exception as e:
         log(f"❌ Login error: {e}")
-        driver.save_screenshot(f"09_login_error_{player_id}.png")
         return False
 
+
 def close_popup(driver):
-    """Close any reward popups"""
     try:
-        close_selectors = [
-            "//button[contains(text(), 'Close') or contains(text(), '×') or contains(@class, 'close')]",
-            "//div[contains(@class, 'modal')]//button",
+        for sel in [
+            "//button[contains(text(),'Close') or contains(text(),'×') or contains(@class,'close')]",
+            "//div[contains(@class,'modal')]//button",
             "//*[@aria-label='Close' or @title='Close']",
-        ]
-        
-        for selector in close_selectors:
+        ]:
             try:
-                btns = driver.find_elements(By.XPATH, selector)
-                for btn in btns:
+                for btn in driver.find_elements(By.XPATH, sel):
                     if btn.is_displayed():
                         btn.click()
                         time.sleep(0.3)
-                        log("✅ Popup closed")
                         return
             except:
                 continue
-                
-        # Click outside modal
-        try:
-            driver.execute_script("""
-                let modals = document.querySelectorAll('[class*="modal"], [class*="overlay"]');
-                for (let m of modals) {
-                    if (m.offsetParent !== null) {
-                        m.click();
-                    }
-                }
-            """)
-        except:
-            pass
-            
-    except Exception as e:
+        driver.execute_script(
+            "document.querySelectorAll('[class*=\"modal\"],[class*=\"overlay\"]')"
+            ".forEach(m=>{ if(m.offsetParent!==null) m.click(); });"
+        )
+    except:
         pass
 
-def claim_daily_rewards(driver, player_id):
-    """Claim Daily Rewards with cooldown detection"""
+
+def physical_click(driver, el):
+    try:
+        driver.execute_script("arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", el)
+        time.sleep(0.5)
+        el.click()
+        return True
+    except:
+        try:
+            ActionChains(driver).move_to_element(el).click().perform()
+            return True
+        except:
+            try:
+                driver.execute_script("arguments[0].click();", el)
+                return True
+            except:
+                return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 7 — TIMER DETECTION (JS DOM)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def detect_daily_timer_js(driver):
+    try:
+        res = driver.execute_script("""
+            function getNum(el){return parseInt((el.innerText||el.textContent||'').trim())||0;}
+            let leafs=Array.from(document.querySelectorAll('*')).filter(e=>e.children.length===0);
+            for(let el of leafs){
+                let t=(el.innerText||'').trim().toLowerCase();
+                if(t==='next reward in'||t==='next in'||t==='next reward'){
+                    let c=el.parentElement;
+                    for(let d=0;d<6;d++){
+                        if(!c)break;
+                        let ls=Array.from(c.querySelectorAll('*')).filter(e=>e.children.length===0);
+                        let h=null,m=null,s=0;
+                        for(let l of ls){
+                            let t2=(l.innerText||'').trim().toLowerCase();
+                            if(t2==='hours'||t2==='hour'){let sb=l.previousElementSibling;if(sb)h=getNum(sb);}
+                            if(t2==='minutes'||t2==='minute'){let sb=l.previousElementSibling;if(sb)m=getNum(sb);}
+                            if(t2==='seconds'||t2==='second'){let sb=l.previousElementSibling;if(sb)s=getNum(sb);}
+                        }
+                        if(h!==null&&m!==null)return{hours:h,minutes:m,seconds:s};
+                        c=c.parentElement;
+                    }
+                }
+            }
+            return null;
+        """)
+        if res:
+            td = timedelta(hours=res.get('hours', 0), minutes=res.get('minutes', 0), seconds=res.get('seconds', 0))
+            log(f"🔍 Daily timer: {res['hours']}h {res['minutes']}m {res['seconds']}s")
+            return td
+    except Exception as e:
+        log(f"⚠️ Daily timer JS error: {e}")
+    return None
+
+
+def detect_store_timers_js(driver):
+    result = {1: None, 2: None, 3: None}
+    try:
+        res = driver.execute_script("""
+            var anchors={
+                1:['gold (daily)','gold(daily)','5 gold','gold daily'],
+                2:['cash (daily)','cash(daily)','500 cash','cash daily'],
+                3:['luckyloon (daily)','luckyloon(daily)','10 luckyloon','luckyloon daily']
+            };
+            function findCard(kws){
+                var els=Array.from(document.querySelectorAll('*'));
+                var lbl=null;
+                for(var i=0;i<els.length;i++){
+                    var own=Array.from(els[i].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim().toLowerCase();
+                    if(kws.some(k=>own.includes(k))&&own.length<35){lbl=els[i];break;}
+                }
+                if(!lbl)return 'not_found';
+                var node=lbl;
+                for(var d=0;d<15;d++){
+                    node=node.parentElement;
+                    if(!node||node===document.body)break;
+                    if((node.innerText||'').toLowerCase().includes('next in')){
+                        var ch=Array.from(node.querySelectorAll('*'));
+                        for(var j=0;j<ch.length;j++){
+                            var own2=Array.from(ch[j].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
+                            if(own2.toLowerCase().includes('next in')&&own2.length<50){
+                                return 'timer:'+(ch[j].innerText||ch[j].textContent||'').trim();
+                            }
+                        }
+                        return 'timer:unknown';
+                    }
+                    if(d>=4){
+                        var btns=node.querySelectorAll('button');
+                        for(var b=0;b<btns.length;b++)if((btns[b].innerText||'').trim().toLowerCase()==='free')return 'free';
+                    }
+                }
+                return 'free';
+            }
+            var r={};
+            for(var k in anchors)r[k]=findCard(anchors[k]);
+            return r;
+        """)
+        if res:
+            NAMES = {1: "Gold", 2: "Cash", 3: "Luckyloon"}
+            for k, status in res.items():
+                n = int(k)
+                if status.startswith('timer:'):
+                    txt = status[6:]
+                    if txt != 'unknown':
+                        d = parse_timer_text(txt)
+                        if d and d.total_seconds() > 60:
+                            result[n] = d
+                            log(f"🔍 Store {NAMES[n]}: cooldown ({txt})")
+                elif status == 'free':
+                    log(f"🔍 Store {NAMES.get(n, n)}: Free")
+    except Exception as e:
+        log(f"⚠️ Store timer JS error: {e}")
+    return result
+
+
+def detect_loyalty_timer_js(driver):
+    try:
+        res = driver.execute_script("""
+            var els=Array.from(document.querySelectorAll('*'));
+            for(var i=0;i<els.length;i++){
+                var own=Array.from(els[i].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
+                if(own.toLowerCase().includes('next in')&&own.length<60)return own;
+            }
+            return null;
+        """)
+        if res:
+            d = parse_timer_text(res)
+            if d and d.total_seconds() > 60:
+                log(f"🔍 Loyalty timer: {res}")
+                return d
+    except Exception as e:
+        log(f"⚠️ Loyalty timer JS error: {e}")
+    return None
+
+
+def detect_page_cooldowns(driver, pid, page_type):
+    if page_type == "daily":
+        d = detect_daily_timer_js(driver)
+        if d and d.total_seconds() > 60:
+            update_claim_history(pid, "daily", detected_cooldown=d)
+    elif page_type == "store":
+        tmap = detect_store_timers_js(driver)
+        for card_n, d in tmap.items():
+            if d is not None:
+                update_claim_history(pid, "store", reward_index=card_n, detected_cooldown=d)
+    elif page_type == "loyalty":
+        d = detect_loyalty_timer_js(driver)
+        if d and d.total_seconds() > 60:
+            update_claim_history(pid, "loyalty", detected_cooldown=d)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 8 — CLAIMING FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def claim_daily_rewards(driver, pid):
+    """Returns (count_claimed, was_skipped)."""
+    s = get_reward_status(pid)
+    if not s["daily_available"]:
+        log(f"⏩ Daily already claimed. Next: {s['daily_next']}")
+        return 0, True
+
     log("🎁 Claiming Daily Rewards...")
-    
-    # Check if on cooldown from history
-    status = get_reward_status(player_id)
-    if not status["daily_available"] and status["daily_status"] == "claimed":
-        log(f"⏰ Daily already claimed. Next: {status['daily_next']}")
-        return 0
-    
     claimed = 0
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        
-        # Detect cooldowns from page
-        detect_page_cooldowns(driver, player_id, "daily")
-        
+        detect_page_cooldowns(driver, pid, "daily")
+
         for attempt in range(3):
-            result = driver.execute_script("""
-                let buttons = document.querySelectorAll('button');
-                for (let btn of buttons) {
-                    let text = (btn.innerText || btn.textContent).trim().toLowerCase();
-                    if (text === 'claim' && btn.offsetParent !== null && !btn.disabled) {
-                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                        setTimeout(function() { btn.click(); }, 300);
+            ok = driver.execute_script("""
+                for(let btn of document.querySelectorAll('button')){
+                    let t=(btn.innerText||btn.textContent).trim().toLowerCase();
+                    if(t==='claim'&&btn.offsetParent!==null&&!btn.disabled){
+                        btn.scrollIntoView({behavior:'smooth',block:'center'});
+                        setTimeout(()=>btn.click(),300);
                         return true;
                     }
                 }
                 return false;
             """)
-            
-            if result:
-                log(f"✅ Daily Reward Claimed")
+            if ok:
+                log("✅ Daily Claimed")
                 claimed = 1
                 time.sleep(2)
                 close_popup(driver)
-                update_claim_history(player_id, "daily", claimed_count=1)
+                update_claim_history(pid, "daily", claimed_count=1)
                 break
             else:
-                log(f"ℹ️  No claimable daily rewards (attempt {attempt + 1})")
+                log(f"ℹ️  No claimable daily (attempt {attempt+1})")
                 time.sleep(1)
-        
-        # Mark as attempted if we got 0 AND didn't already have a future timer
+
         if claimed == 0:
-            status = get_reward_status(player_id)
-            already_tracked = (
-                status["daily_status"] in ["cooldown_detected", "claimed"]
-                or status["daily_next"] is not None
-            )
-            if not already_tracked:
-                update_claim_history(player_id, "daily", claimed_count=0, attempted=True)
-        
-        driver.save_screenshot(f"daily_final_{player_id}.png")
-        
+            s2 = get_reward_status(pid)
+            if s2["daily_available"] and s2["daily_status"] not in ("cooldown_detected", "claimed"):
+                update_claim_history(pid, "daily", attempted=True)
+
+        driver.save_screenshot(f"daily_{pid}.png")
     except Exception as e:
         log(f"❌ Daily error: {e}")
-    
-    return claimed
+    return claimed, False
 
-def physical_click(driver, element):
-    """Physical click helper"""
-    try:
-        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
-        time.sleep(0.5)
-        
-        try:
-            element.click()
-            return True
-        except:
-            try:
-                ActionChains(driver).move_to_element(element).click().perform()
-                return True
-            except:
-                try:
-                    driver.execute_script("arguments[0].click();", element)
-                    return True
-                except:
-                    return False
-    except:
-        return False
 
-def ensure_store_page(driver):
-    """Ensure we're on store page"""
-    try:
-        if "store" not in driver.current_url:
-            driver.get("https://hub.vertigogames.co/store")
-            bypass_cloudflare(driver)
-            time.sleep(2)
-        return True
-    except:
-        return False
+def claim_store_rewards(driver, pid):
+    """Returns (count_claimed, skip_flags[3]) where skip_flags[i]=True means card i already claimed."""
+    s = get_reward_status(pid)
+    skip_flags = [not a for a in s["store_available"]]
 
-def claim_store_rewards(driver, player_id):
-    """OPTIMIZED Store Claims with Page-Based Cooldown Detection"""
-    log("🏪 Claiming Store Rewards (OPTIMIZED + Detection)...")
+    if not any(s["store_available"]):
+        log(f"⏩ All store rewards on cooldown")
+        return 0, skip_flags
+
+    log("🏪 Claiming Store Rewards...")
     claimed = 0
-    max_claims = 3
-    
+
     try:
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        
-        # Detect cooldowns from actual page
-        detected = detect_page_cooldowns(driver, player_id, "store")
-        
-        # Check status after detection
-        status = get_reward_status(player_id)
-        available_count = sum(status["store_available"])
-        
-        if available_count == 0:
-            log(f"⏰ All store rewards on cooldown (detected from page)")
-            return 0
-        else:
-            log(f"🎯 {available_count}/3 store rewards potentially available")
-        
-        # FIRST 2 CLAIMS: Physical Click (Optimized to 3 attempts)
-        log("🔹 Phase 1: Physical Click Method (Claims 1-2)")
+        detect_page_cooldowns(driver, pid, "store")
+
+        # Re-read after detection
+        s2 = get_reward_status(pid)
+        skip_flags = [not a for a in s2["store_available"]]
+        if not any(s2["store_available"]):
+            log("⏩ All store rewards on cooldown (confirmed by page)")
+            return 0, skip_flags
+
+        log(f"🎯 {sum(s2['store_available'])}/3 store rewards available")
+
+        def _find_free_btn():
+            try:
+                for btn in driver.find_elements(By.TAG_NAME, "button"):
+                    try:
+                        if btn.text.strip().lower() == "free" and btn.is_displayed() and btn.is_enabled():
+                            par = btn.find_element(By.XPATH, "./..")
+                            if "next in" in par.text.lower():
+                                continue
+                            return btn
+                    except:
+                        continue
+            except:
+                pass
+            return None
+
+        # Phase 1: physical click (claims 1-2)
         for attempt in range(3):
             if claimed >= 2:
                 break
-                
-            ensure_store_page(driver)
+            if "store" not in driver.current_url:
+                driver.get("https://hub.vertigogames.co/store")
+                bypass_cloudflare(driver)
+                time.sleep(2)
             time.sleep(1)
-            
-            found_btn = None
-            try:
-                buttons = driver.find_elements(By.TAG_NAME, "button")
-                for btn in buttons:
-                    try:
-                        btn_text = btn.text.strip().lower()
-                        if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                            try:
-                                parent = btn.find_element(By.XPATH, "./..")
-                                if "next in" in parent.text.lower(): continue
-                            except: pass
-                            
-                            found_btn = btn
-                            break
-                    except: continue
-            except: pass
-            
-            if found_btn:
-                log(f"🖱️ Found Free Button. Clicking...")
-                if physical_click(driver, found_btn):
+            btn = _find_free_btn()
+            if btn:
+                if physical_click(driver, btn):
                     time.sleep(4)
                     close_popup(driver)
                     claimed += 1
-                    log(f"✅ Store Claim #{claimed} (Physical Click)")
-                    update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
-                    ensure_store_page(driver)
+                    log(f"✅ Store Claim #{claimed}")
+                    update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
                     time.sleep(1)
+            elif attempt >= 1:
+                break
             else:
-                log(f"ℹ️  No 'Free' buttons in Phase 1 (attempt {attempt+1})")
-                if attempt >= 1:
-                    break
                 time.sleep(1)
-        
-        # THIRD CLAIM: Physical Click First, JavaScript as Fallback (4 attempts total)
-        if claimed < max_claims:
-            log("🔹 Phase 2: Claiming 3rd Reward (Physical + JavaScript)")
-            for attempt in range(4):  # Increased from 2 to 4 attempts
-                if claimed >= max_claims:
+
+        # Phase 2: 3rd claim — physical + JS fallback
+        if claimed < 3:
+            for attempt in range(4):
+                if claimed >= 3:
                     break
-                
-                ensure_store_page(driver)
-                time.sleep(1.5)  # Increased wait time
-                
-                # TRY PHYSICAL CLICK FIRST (more reliable)
-                found_btn = None
-                try:
-                    buttons = driver.find_elements(By.TAG_NAME, "button")
-                    for btn in buttons:
-                        try:
-                            btn_text = btn.text.strip().lower()
-                            if btn_text == "free" and btn.is_displayed() and btn.is_enabled():
-                                try:
-                                    parent = btn.find_element(By.XPATH, "./..")
-                                    if "next in" in parent.text.lower(): continue
-                                except: pass
-                                found_btn = btn
-                                break
-                        except: continue
-                except: pass
-                
-                if found_btn:
-                    log(f"🖱️ Found 3rd reward button (Physical). Clicking...")
-                    if physical_click(driver, found_btn):
+                if "store" not in driver.current_url:
+                    driver.get("https://hub.vertigogames.co/store")
+                    bypass_cloudflare(driver)
+                    time.sleep(2)
+                time.sleep(1.5)
+                btn = _find_free_btn()
+                if btn:
+                    if physical_click(driver, btn):
                         time.sleep(4)
                         close_popup(driver)
                         claimed += 1
-                        log(f"✅ Store Claim #{claimed} (Physical Click)")
-                        update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
-                        ensure_store_page(driver)
+                        log(f"✅ Store Claim #{claimed}")
+                        update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
                         break
-                
-                # FALLBACK TO JAVASCRIPT if physical didn't work
-                if claimed < max_claims:
-                    log(f"ℹ️  Physical click failed attempt {attempt+1}. Trying JavaScript...")
-                    result = driver.execute_script("""
-                        let storeBonusCards = document.querySelectorAll('[class*="StoreBonus"]');
-                        if (storeBonusCards.length === 0) {
-                            storeBonusCards = document.querySelectorAll('div');
-                        }
-                        
-                        for (let card of storeBonusCards) {
-                            let cardText = card.innerText || '';
-                            
-                            if (cardText.includes('Next in') || cardText.match(/\\d+h\\s+\\d+m/)) {
-                                continue;
-                            }
-                            
-                            let buttons = card.querySelectorAll('button');
-                            for (let btn of buttons) {
-                                let btnText = btn.innerText.trim().toLowerCase();
-                                if ((btnText === 'free' || btnText === 'claim') && btn.offsetParent !== null && !btn.disabled) {
-                                    btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                                    btn.click();
-                                    return true;
-                                }
+                # JS fallback
+                ok = driver.execute_script("""
+                    let cards=document.querySelectorAll('[class*="StoreBonus"]');
+                    if(!cards.length)cards=document.querySelectorAll('div');
+                    for(let card of cards){
+                        let ct=card.innerText||'';
+                        if(ct.includes('Next in')||ct.match(/\\d+h\\s+\\d+m/))continue;
+                        for(let btn of card.querySelectorAll('button')){
+                            let t=btn.innerText.trim().toLowerCase();
+                            if((t==='free'||t==='claim')&&btn.offsetParent!==null&&!btn.disabled){
+                                btn.scrollIntoView({behavior:'smooth',block:'center'});
+                                btn.click(); return true;
                             }
                         }
-                        return false;
-                    """)
-                    
-                    if result:
-                        claimed += 1
-                        log(f"✅ Store Claim #{claimed} (JavaScript)")
-                        time.sleep(4)
-                        close_popup(driver)
-                        update_claim_history(player_id, "store", claimed_count=1, reward_index=claimed)
-                        time.sleep(1)
-                        break
-                    else:
-                        if attempt < 3:  # Don't log on last attempt
-                            log(f"ℹ️  Both methods failed. Retry {attempt+1}/4...")
-                            time.sleep(2)  # Wait before retry
-        
-        # Mark unclaimed rewards as attempted ONLY if we have no existing future timer
-        status = get_reward_status(player_id)
+                    }
+                    return false;
+                """)
+                if ok:
+                    claimed += 1
+                    log(f"✅ Store Claim #{claimed} (JS)")
+                    time.sleep(4)
+                    close_popup(driver)
+                    update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
+                    break
+                elif attempt < 3:
+                    log(f"ℹ️  Both methods failed, retry {attempt+1}/4")
+                    time.sleep(2)
+
+        # Mark unclaimed as attempted
+        s3 = get_reward_status(pid)
         for i in range(claimed + 1, 4):
-            # Preserve history if we already have a future timer from previous claim
-            already_tracked = (
-                status["store_status"][i-1] in ["cooldown_detected", "claimed"]
-                or status["store_next"][i-1] is not None  # next_available is in the future
-            )
-            if not already_tracked:
-                update_claim_history(player_id, "store", claimed_count=0, reward_index=i, attempted=True)
-        
-        log(f"📊 Store Claims Complete: {claimed}/{max_claims}")
-        driver.save_screenshot(f"store_final_{player_id}.png")
-        
+            if s3["store_available"][i-1] and s3["store_status"][i-1] not in ("cooldown_detected", "claimed"):
+                update_claim_history(pid, "store", reward_index=i, attempted=True)
+
+        log(f"📊 Store: {claimed}/3")
+        driver.save_screenshot(f"store_{pid}.png")
     except Exception as e:
         log(f"❌ Store error: {e}")
-    
-    return claimed
 
-def claim_progression_program_rewards(driver, player_id):
-    """Claim Progression - Optimized"""
+    return claimed, skip_flags
+
+
+def claim_progression_program_rewards(driver, pid):
     log("🎯 Claiming Progression Program...")
     claimed = 0
     try:
@@ -1221,605 +1007,786 @@ def claim_progression_program_rewards(driver, player_id):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        
         for _ in range(6):
-            result = driver.execute_script("""
-                let allButtons = document.querySelectorAll('button');
-                for (let btn of allButtons) {
-                    let btnText = (btn.innerText || btn.textContent).trim().toLowerCase();
-                    if (btnText === 'claim' && btn.offsetParent !== null && !btn.disabled) {
-                         let pText = (btn.parentElement.innerText || btn.parentElement.textContent) || '';
-                         if (!pText.includes('Delivered')) {
-                             btn.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
-                             setTimeout(function() { btn.click(); }, 300);
-                             return true;
-                         }
+            ok = driver.execute_script("""
+                for(let btn of document.querySelectorAll('button')){
+                    let t=(btn.innerText||btn.textContent).trim().toLowerCase();
+                    if(t==='claim'&&btn.offsetParent!==null&&!btn.disabled){
+                        let pt=(btn.parentElement.innerText||btn.parentElement.textContent)||'';
+                        if(!pt.includes('Delivered')){
+                            btn.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
+                            setTimeout(()=>btn.click(),300); return true;
+                        }
                     }
                 }
                 return false;
             """)
-            
-            if result:
-                log(f"✅ Progression Claim SUCCESS")
+            if ok:
                 claimed += 1
                 time.sleep(2.0)
                 close_popup(driver)
             else:
-                driver.execute_script("let c=document.querySelectorAll('div');for(let i of c){if(i.scrollWidth>i.clientWidth){i.scrollLeft+=400;}}")
+                driver.execute_script(
+                    "for(let i of document.querySelectorAll('div'))"
+                    "{if(i.scrollWidth>i.clientWidth)i.scrollLeft+=400;}"
+                )
                 time.sleep(1)
-        
         if claimed > 0:
-            update_claim_history(player_id, "progression", claimed_count=claimed)
-        
-    except: pass
+            update_claim_history(pid, "progression", claimed_count=claimed)
+    except:
+        pass
     return claimed
 
 
-# NEW: Claim Loyalty Program rewards
-def claim_loyalty_program(driver, player_id):
-    """
-    Claim Loyalty Program rewards from hub.vertigogames.co/loyalty-program.
+def claim_loyalty_program(driver, pid):
+    """Returns (count_claimed, was_skipped)."""
+    s = get_reward_status(pid)
+    if not s["loyalty_available"]:
+        log(f"⏩ Loyalty on cooldown. Next: {s['loyalty_next']}")
+        return 0, True
 
-    Loyalty Points (LP) accumulate from purchases and gameplay activity.
-    Once a tier threshold is met, the lock becomes a green Claim/Free button.
-    Each tier card also has a periodic Store Bonus with a 'Next in Xh Ym' cooldown.
-
-    Strategy:
-    - Navigate to loyalty page
-    - Detect and record any active timer first
-    - Click any Claim/Free button NOT inside a 'Next in' countdown container
-      (covers unlocked tier rewards AND available Store Bonus buttons)
-    - Loop up to 5 times to claim multiple tiers in one pass if available
-    """
-    log("🏆 Claiming Loyalty Program Rewards...")
-
-    # Pre-check: within cooldown from last known claim?
-    status = get_reward_status(player_id)
-    if not status["loyalty_available"] and status["loyalty_status"] == "claimed":
-        log(f"⏰ Loyalty already claimed. Next: {status['loyalty_next']}")
-        return 0
-
+    log("🏆 Claiming Loyalty Program...")
     claimed = 0
     try:
         driver.get("https://hub.vertigogames.co/loyalty-program")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
+        detect_page_cooldowns(driver, pid, "loyalty")
 
-        # Detect cooldown from page
-        detect_page_cooldowns(driver, player_id, "loyalty")
+        s2 = get_reward_status(pid)
+        if not s2["loyalty_available"]:
+            log(f"⏩ Loyalty cooldown confirmed by page. Next: {s2['loyalty_next']}")
+            return 0, True
 
-        # Refresh status after detection
-        status = get_reward_status(player_id)
-        if not status["loyalty_available"]:
-            log(f"⏰ Loyalty on cooldown (detected from page). Next: {status['loyalty_next']}")
-            driver.save_screenshot(f"loyalty_final_{player_id}.png")
-            return 0
-
-        # Click all available Claim/Free buttons (up to 5 tiers)
         for attempt in range(5):
-            result = driver.execute_script("""
-                var buttons = Array.from(document.querySelectorAll('button'));
-                for (var i = 0; i < buttons.length; i++) {
-                    var btn = buttons[i];
-                    var btnText = (btn.innerText || btn.textContent || '').trim().toLowerCase();
-
-                    // Only target Claim or Free buttons
-                    if (btnText !== 'claim' && btnText !== 'free') continue;
-                    if (!btn.offsetParent || btn.disabled) continue;
-
-                    // Walk up DOM to check if this button sits inside a 'Next in' cooldown container
-                    var node = btn.parentElement;
-                    var onCooldown = false;
-                    for (var depth = 0; depth < 8; depth++) {
-                        if (!node) break;
-                        var nodeText = (node.innerText || node.textContent || '').toLowerCase();
-                        if (nodeText.includes('next in')) {
-                            onCooldown = true;
-                            break;
-                        }
-                        // Stop at large containers to avoid matching page-level text
-                        if (node.offsetHeight > 600) break;
-                        node = node.parentElement;
+            ok = driver.execute_script("""
+                for(let btn of document.querySelectorAll('button')){
+                    let t=(btn.innerText||btn.textContent||'').trim().toLowerCase();
+                    if(t!=='claim'&&t!=='free') continue;
+                    if(!btn.offsetParent||btn.disabled) continue;
+                    let node=btn.parentElement, cd=false;
+                    for(let d=0;d<8&&node;d++){
+                        if((node.innerText||'').toLowerCase().includes('next in')){cd=true;break;}
+                        if(node.offsetHeight>600)break;
+                        node=node.parentElement;
                     }
-
-                    if (!onCooldown) {
-                        btn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                        setTimeout(function() { btn.click(); }, 300);
-                        return { clicked: true, text: btnText };
+                    if(!cd){
+                        btn.scrollIntoView({behavior:'smooth',block:'center'});
+                        setTimeout(()=>btn.click(),300); return true;
                     }
                 }
-                return { clicked: false };
+                return false;
             """)
-
-            if result and result.get('clicked'):
-                log(f"✅ Loyalty Reward Claimed (button: '{result.get('text', '?')}')")
+            if ok:
+                log(f"✅ Loyalty Claimed")
                 claimed += 1
                 time.sleep(2)
                 close_popup(driver)
                 time.sleep(1)
             else:
-                log(f"ℹ️  No claimable loyalty rewards found (attempt {attempt + 1})")
+                log(f"ℹ️  No claimable loyalty (attempt {attempt+1})")
                 break
 
         if claimed > 0:
-            update_claim_history(player_id, "loyalty", claimed_count=claimed)
-            # Re-detect timer so wake scheduler knows when next reward is available
+            update_claim_history(pid, "loyalty", claimed_count=claimed)
             time.sleep(1)
-            detect_page_cooldowns(driver, player_id, "loyalty")
+            detect_page_cooldowns(driver, pid, "loyalty")
         else:
-            # Tried but found nothing — mark attempted
-            update_claim_history(player_id, "loyalty", claimed_count=0, attempted=True)
+            update_claim_history(pid, "loyalty", attempted=True)
 
-        driver.save_screenshot(f"loyalty_final_{player_id}.png")
-        log(f"📊 Loyalty Claims Complete: {claimed}")
-
+        driver.save_screenshot(f"loyalty_{pid}.png")
+        log(f"📊 Loyalty: {claimed}")
     except Exception as e:
         log(f"❌ Loyalty error: {e}")
+        return claimed, False
 
-    return claimed
+    return claimed, False
 
 
-def process_player(player_id, has_loyalty=False):
-    """Process single player with optimized retry logic"""
-    driver = None
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 9 — PLAYER PROCESSING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def process_player(pid, has_loyalty, is_new, run_label):
+    start = get_ist_time()
     stats = {
-        "player_id": player_id,
-        "daily": 0,
-        "store": 0,
-        "progression": 0,
-        "loyalty": 0,           # NEW
-        "has_loyalty": has_loyalty,  # NEW
-        "status": "Failed"
+        "pid":            pid,
+        "is_new":         is_new,
+        "has_loyalty":    has_loyalty,
+        "daily":          0,
+        "store":          0,
+        "progression":    0,
+        "loyalty":        0,
+        "daily_skipped":  False,
+        "store_skipped":  [False, False, False],
+        "loyalty_skipped":False,
+        "skipped_all":    False,
+        "status":         "Failed",
+        "fail_reason":    None,
+        "duration_s":     0,
+        "possible":       0,
     }
-    
-    # Initialize player history
-    init_player_history(player_id)
-    
+
+    init_player_history(pid)
+
+    # ── Smart skip: no browser needed if everything on cooldown ───────────────
+    if all_claimable_on_cooldown(pid, has_loyalty):
+        log(f"\n⏩ {pid} — all on cooldown, smart-skipping")
+        snap = get_reward_status(pid)
+        stats.update({
+            "skipped_all":    True,
+            "daily_skipped":  True,
+            "store_skipped":  [True, True, True],
+            "loyalty_skipped":has_loyalty,
+            "status":         "All Skipped (Cooldown)",
+        })
+        stats["duration_s"] = int((get_ist_time() - start).total_seconds())
+        return stats
+
+    driver = None
     try:
-        log(f"\n🚀 {player_id}" + (" [loyalty]" if has_loyalty else ""))
+        log(f"\n🚀 {pid}" + (" 🆕 NEW ID" if is_new else "") + f"  [{run_label}]")
         driver = create_driver()
-        if not login_to_hub(driver, player_id):
-            stats['status'] = "Login Failed"
+
+        if not login_to_hub(driver, pid):
+            stats["status"]     = "Login Failed"
+            stats["fail_reason"] = "Could not authenticate"
             return stats
-        
-        # Claim Daily Rewards
-        stats['daily'] = claim_daily_rewards(driver, player_id)
-        
-        # Claim Store Rewards with smart retry (max 2 retries)
-        max_store_expected = 3
-        store_retry_attempts = 2
-        for retry in range(store_retry_attempts):
-            stats['store'] = claim_store_rewards(driver, player_id)
-            if stats['store'] >= max_store_expected:
-                log(f"✅ All {max_store_expected} Store rewards claimed!")
+
+        # Daily
+        d, d_skip = claim_daily_rewards(driver, pid)
+        stats["daily"]         = d
+        stats["daily_skipped"] = d_skip
+        if not d_skip:
+            stats["possible"] += 1
+
+        # Store
+        for retry in range(2):
+            s, s_skips = claim_store_rewards(driver, pid)
+            stats["store"]         = s
+            stats["store_skipped"] = s_skips
+            if s >= 3:
                 break
-            elif stats['store'] > 0 and retry < store_retry_attempts - 1:
-                log(f"⚠️ Got {stats['store']}/{max_store_expected}. Retry {retry + 1}/{store_retry_attempts - 1}...")
+            elif s > 0 and retry < 1:
+                log(f"⚠️ Got {s}/3 store. Retrying...")
                 time.sleep(2)
-            elif stats['store'] == 0:
-                log(f"ℹ️  No store claims (likely on cooldown)")
+            elif s == 0:
                 break
-        
-        # Wait for server to process store claims
-        if stats['store'] > 0:
+
+        stats["possible"] += sum(1 for sk in stats["store_skipped"] if not sk)
+
+        if stats["store"] > 0:
             log("⏳ Waiting for server to process store claims...")
             time.sleep(3)
-        
-        # Claim Progression with optimized retry
-        progression_retry_attempts = 2
-        for retry in range(progression_retry_attempts):
-            claimed = claim_progression_program_rewards(driver, player_id)
-            stats['progression'] += claimed
-            if claimed == 0 and retry < progression_retry_attempts - 1:
-                log(f"⚠️ No progression claimed. Retry {retry + 1}/{progression_retry_attempts - 1}...")
-                time.sleep(2)
-            elif claimed == 0:
-                log(f"ℹ️  No progression rewards available")
-                break
-            else:
-                if retry < progression_retry_attempts - 1:
-                    log(f"✅ Claimed {claimed} progression. Checking for more...")
-                    time.sleep(1)
 
-        # NEW: Claim Loyalty Program (only for IDs with has_loyalty=True)
+        # Progression
+        for retry in range(2):
+            p = claim_progression_program_rewards(driver, pid)
+            stats["progression"] += p
+            if p == 0 and retry < 1:
+                log(f"⚠️ No progression, retrying...")
+                time.sleep(2)
+            elif p == 0:
+                log("ℹ️  No progression available")
+                break
+            elif retry < 1:
+                log(f"✅ Got {p} progression, checking for more...")
+                time.sleep(1)
+
+        # Loyalty
         if has_loyalty:
-            stats['loyalty'] = claim_loyalty_program(driver, player_id)
+            l, l_skip = claim_loyalty_program(driver, pid)
+            stats["loyalty"]         = l
+            stats["loyalty_skipped"] = l_skip
+            if not l_skip:
+                stats["possible"] += 1
         else:
-            log("ℹ️  Loyalty not enabled for this ID")
-        
-        total = stats['daily'] + stats['store'] + stats['progression'] + stats['loyalty']
-        if total > 0:
-            stats['status'] = "Success"
+            stats["loyalty_skipped"] = True
+            log("ℹ️  Loyalty not enrolled for this ID")
+
+        # Status
+        claimed_now = stats["daily"] + stats["store"] + stats.get("loyalty", 0)
+        possible    = stats["possible"]
+        if possible == 0:
+            stats["status"] = "All Skipped (Cooldown)"
+        elif claimed_now >= possible:
+            stats["status"] = "Success"
+        elif claimed_now > 0:
+            stats["status"] = "Partial"
         else:
-            stats['status'] = "No Rewards"
-        
-        log(f"🎉 Total: {total} (Daily: {stats['daily']}, Store: {stats['store']}, Progression: {stats['progression']}, Loyalty: {stats['loyalty']})")
-            
+            stats["status"] = "No Rewards"
+
+        total_inc_prog = claimed_now + stats["progression"]
+        log(f"🎉 {pid}: {total_inc_prog} claimed "
+            f"(D:{stats['daily']} S:{stats['store']} P:{stats['progression']} L:{stats['loyalty']})")
+
     except Exception as e:
         log(f"❌ Error: {e}")
-        stats['status'] = "Error"
+        stats["status"]     = "Error"
+        stats["fail_reason"] = str(e)[:120]
     finally:
         if driver:
             try:
                 driver.quit()
             except:
                 pass
+
+    stats["duration_s"] = int((get_ist_time() - start).total_seconds())
+
+    # Snapshot next-available for email display
+    snap = get_reward_status(pid)
+    stats["store_next"]   = snap["store_next"]
+    stats["daily_next"]   = snap["daily_next"]
+    stats["loyalty_next"] = snap.get("loyalty_next")
+
     return stats
 
-def send_email_summary(results, num_players):
-    """Send enhanced email summary with page-based status detection"""
-    try:
-        sender = os.environ.get("SENDER_EMAIL")
-        recipient = os.environ.get("RECIPIENT_EMAIL")
-        password = os.environ.get("GMAIL_APP_PASSWORD")
-        if not all([sender, recipient, password]): return
-        
-        total_d = sum(r['daily'] for r in results)
-        total_s = sum(r['store'] for r in results)
-        total_p = sum(r['progression'] for r in results)
-        total_l = sum(r.get('loyalty', 0) for r in results)  # NEW
-        total_all = total_d + total_s + total_p + total_l
-        num_loyalty_players = sum(1 for r in results if r.get('has_loyalty', False))  # NEW
-        
-        ist_now = get_ist_time()
-        history = load_claim_history()
-        
-        # Calculate stats
-        on_cooldown = 0
-        
-        for result in results:
-            player_id = result['player_id']
-            status = get_reward_status(player_id)
-            
-            if not status['daily_available']:
-                on_cooldown += 1
-            
-            cooldown_store = sum(1 for x in status['store_available'] if not x)
-            on_cooldown += cooldown_store
-        
-        # Get next recommended run time
-        next_run_time = None
-        next_run_reason = None
-        for player_id in [r['player_id'] for r in results]:
-            if player_id in history:
-                ph = history[player_id]
-                
-                if ph['daily']['next_available']:
-                    next_time = datetime.fromisoformat(ph['daily']['next_available'])
-                    if not next_run_time or next_time < next_run_time:
-                        next_run_time = next_time
-                        next_run_reason = f"Daily rewards reset"
-                
-                for i in range(3):
-                    reward_key = f"reward_{i+1}"
-                    if ph['store'][reward_key]['next_available']:
-                        next_time = datetime.fromisoformat(ph['store'][reward_key]['next_available'])
-                        if not next_run_time or next_time < next_run_time:
-                            next_run_time = next_time
-                            next_run_reason = f"Store Reward {i+1} available"
 
-                # NEW: include loyalty in next-run calculation
-                loyalty_na = ph.get('loyalty', {}).get('next_available')
-                if loyalty_na:
-                    next_time = datetime.fromisoformat(loyalty_na)
-                    if not next_run_time or next_time < next_run_time:
-                        next_run_time = next_time
-                        next_run_reason = "Loyalty Program reward available"
-        
-        html = f"""
-        <html>
-        <head>
-        <style>
-            body {{ font-family: 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5; padding: 20px; }}
-            .container {{ max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-            h2 {{ color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }}
-            .stat-box {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin: 15px 0; }}
-            .stat-row {{ display: flex; justify-content: space-between; margin: 8px 0; }}
-            .section {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3498db; }}
-            .player-card {{ background: white; border: 1px solid #e0e0e0; padding: 15px; margin: 10px 0; border-radius: 6px; }}
-            .status-claimed {{ color: #27ae60; font-weight: bold; }}
-            .status-cooldown {{ color: #e67e22; font-weight: bold; }}
-            .status-unavailable {{ color: #95a5a6; font-weight: bold; }}
-            .status-available {{ color: #3498db; font-weight: bold; }}
-            .legend {{ background: #ecf0f1; padding: 15px; border-radius: 6px; margin-top: 20px; }}
-        </style>
-        </head>
-        <body>
-        <div class="container">
-        <h2>🎮 Hub Rewards Summary</h2>
-        
-        <div class="stat-box">
-            <div class="stat-row"><strong>📅 Run Time:</strong> <span>{ist_now.strftime('%Y-%m-%d %I:%M %p IST')}</span></div>
-            <div class="stat-row"><strong>✅ Claimed This Run:</strong> <span>{total_all}</span></div>
-            <div class="stat-row"><strong>⏰ On Cooldown:</strong> <span>{on_cooldown}</span></div>
-        </div>
-        
-        <div class="section">
-            <h3 style="margin-top:0;">📊 Current Run Breakdown</h3>
-            <div class="stat-row"><strong>🎁 Daily:</strong> {total_d}/{num_players}</div>
-            <div class="stat-row"><strong>🏪 Store:</strong> {total_s}/{num_players * 3}</div>
-            <div class="stat-row"><strong>🎯 Progression:</strong> {total_p}</div>
-            <div class="stat-row"><strong>🏆 Loyalty:</strong> {total_l}{f'/{num_loyalty_players}' if num_loyalty_players else ' (none enrolled)'}</div>
-        </div>
-        """
-        
-        # Per-player detailed status
-        html += """
-        <div class="section">
-            <h3 style="margin-top:0;">👥 Detailed Player Status</h3>
-        """
-        
-        for result in results:
-            player_id = result['player_id']
-            status = get_reward_status(player_id)
-            has_loyalty_flag = result.get('has_loyalty', False)
-            
-            # Daily status - next_available timer takes priority over status field
-            if result['daily'] > 0:
-                daily_status = f'<span class="status-claimed">✅ Claimed This Run</span>'
-            elif status['daily_next'] is not None:
-                # We have a calculated next-available time - always show it
-                label = "Already Claimed" if status['daily_status'] == 'claimed' else "On Cooldown"
-                daily_status = f'<span class="status-cooldown">⏰ {label} - Next in {status["daily_next"]}</span>'
-            elif status['daily_status'] == 'unavailable':
-                daily_status = f'<span class="status-unavailable">⏳ Not Available</span>'
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 10 — EMAIL (Premium Dark Dashboard)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_CSS = """
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#c9d1d9;}
+.wrap{max-width:980px;margin:0 auto;}
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,#161b2e 0%,#0d1117 100%);border:1px solid #30363d;border-radius:14px;padding:26px 30px;margin-bottom:14px;}
+.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:14px;}
+.bp{background:#0f2a1a;color:#3fb950;border:1px solid #238636;}
+.bb{background:#0d1f3a;color:#79c0ff;border:1px solid #1f6feb;}
+.bm{background:#2d1800;color:#ffa657;border:1px solid #9e4c06;}
+.hero-grid{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+.hero-left h1{font-size:20px;font-weight:700;color:#f0f6fc;margin-bottom:6px;}
+.hero-left p{font-size:12px;color:#8b949e;}
+.hero-nums{display:flex;gap:28px;}
+.hnum{text-align:center;}
+.hv{display:block;font-size:34px;font-weight:800;line-height:1;}
+.g{color:#3fb950;}.b{color:#79c0ff;}.a{color:#d29922;}
+.hl{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;}
+/* ── KPI Row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+.kpi{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:16px 18px;}
+.kl{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+.kv{font-size:26px;font-weight:700;color:#f0f6fc;}
+.kv span{font-size:13px;color:#484f58;}
+.ks{font-size:11px;color:#8b949e;margin-top:4px;}
+.du{color:#3fb950;}.dd{color:#f85149;}.de{color:#6e7681;}
+.pb{background:#21262d;border-radius:3px;height:3px;margin-top:10px;}
+.pf{height:3px;border-radius:3px;}
+.pg{background:#3fb950;}.pb2{background:#79c0ff;}.pp{background:#a371f7;}.pa{background:#d29922;}
+/* ── Strip ── */
+.strip{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:11px 18px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.si{font-size:12px;color:#8b949e;}
+.si strong{color:#c9d1d9;}
+/* ── Table ── */
+.tbx{background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.tbh{padding:13px 18px;border-bottom:1px solid #30363d;font-size:13px;font-weight:600;color:#c9d1d9;display:flex;justify-content:space-between;align-items:center;}
+.tbh small{font-size:11px;color:#6e7681;}
+.tsc{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:740px;}
+th{background:#0d1117;color:#6e7681;font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding:9px 10px;text-align:center;border-bottom:1px solid #21262d;white-space:nowrap;}
+th.idh{text-align:left;padding-left:16px;min-width:175px;}
+td{padding:9px 10px;text-align:center;border-bottom:1px solid #0d1117;vertical-align:middle;}
+td.idc{text-align:left;padding-left:16px;font-family:'Courier New',monospace;font-size:11px;color:#79c0ff;white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tr.rs{background:rgba(35,134,54,.08);}
+tr.rp{background:rgba(210,153,34,.08);}
+tr.rf{background:rgba(248,81,73,.08);}
+tr.rk{background:rgba(13,17,23,.4);}
+.ic-ok{color:#3fb950;}.ic-cd{color:#d29922;}.ic-fl{color:#f85149;}
+.ic-lk{color:#484f58;}.ic-pd{color:#388bfd;}.ic-na{color:#484f58;}
+.sb{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;}
+.ss{background:#0f2a1a;color:#3fb950;}.sp{background:#2d1f00;color:#d29922;}
+.sf{background:#2d0f0f;color:#f85149;}.sk{background:#1c2128;color:#484f58;}
+.sn{background:#1c2128;color:#8b949e;}
+/* ── Detail cards ── */
+.dcs{margin-bottom:14px;}
+.dct{font-size:11px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding:0 4px;}
+.dc{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px 18px;margin-bottom:10px;}
+.dcf{border-left:3px solid #f85149;}.dcp{border-left:3px solid #d29922;}
+.dcid{font-family:'Courier New',monospace;font-size:13px;color:#79c0ff;font-weight:600;margin-bottom:10px;}
+.dcr{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid #21262d;}
+.dcr:last-child{border-bottom:none;}
+.dcl{color:#8b949e;}.dcv{color:#c9d1d9;}
+.dce{color:#f85149;font-size:10px;font-style:italic;margin-bottom:8px;}
+/* ── Footer ── */
+.foot{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:20px 24px;}
+.ft{font-size:11px;color:#8b949e;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+.nr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.nr{background:#161b22;border:1px solid #21262d;border-radius:6px;padding:8px 12px;text-align:center;}
+.nrl{font-size:10px;color:#8b949e;margin-bottom:4px;}
+.nrt{font-size:12px;font-family:'Courier New',monospace;color:#c9d1d9;}
+.nr.nrp .nrt{color:#3fb950;font-weight:700;}
+.leg{display:flex;flex-wrap:wrap;gap:12px;padding-top:12px;border-top:1px solid #21262d;margin-top:12px;}
+.leg span{font-size:11px;color:#6e7681;}
+.ver{text-align:center;font-size:10px;color:#484f58;margin-top:12px;padding-top:10px;border-top:1px solid #21262d;}
+"""
+
+
+def _badge_cls(run_label):
+    if run_label == "Primary Run": return "bp"
+    if run_label == "Manual Run":  return "bm"
+    return "bb"
+
+def _row_cls(status):
+    return {"Success":"rs","Partial":"rp","Login Failed":"rf",
+            "Error":"rf","Failed":"rf"}.get(status, "rk")
+
+def _sb_html(status):
+    m = {
+        "Success":              ("ss","✅ Success"),
+        "Partial":              ("sp","⚠️ Partial"),
+        "All Skipped (Cooldown)":("sk","⏩ Skipped"),
+        "No Rewards":           ("sn","⏳ No Rewards"),
+        "Login Failed":         ("sf","🔐 Login Failed"),
+        "Error":                ("sf","❌ Error"),
+        "Failed":               ("sf","❌ Failed"),
+    }
+    cls, lbl = m.get(status, ("sk", status))
+    return f'<span class="sb {cls}">{lbl}</span>'
+
+def _delta_html(cur, prev, unit=""):
+    if prev is None or prev == 0 and cur == 0:
+        return '<span class="de">first run</span>'
+    d = cur - prev
+    if d > 0:  return f'<span class="du">▲{d}{unit}</span>'
+    if d < 0:  return f'<span class="dd">▼{abs(d)}{unit}</span>'
+    return '<span class="de">✓ same</span>'
+
+def _pbar(pct, cls):
+    p = min(int(pct), 100)
+    return f'<div class="pb"><div class="pf {cls}" style="width:{p}%;"></div></div>'
+
+def _drow(lbl, val):
+    return f'<div class="dcr"><span class="dcl">{lbl}</span><span class="dcv">{val}</span></div>'
+
+
+def build_email(results, run_label, run_index, job_start, meta):
+    ist_now  = get_ist_time()
+    dur_s    = int((ist_now - job_start).total_seconds())
+    dur_str  = f"{dur_s // 60}m {dur_s % 60}s"
+    n        = len(results)
+
+    td   = sum(r["daily"]       for r in results)
+    ts   = sum(r["store"]       for r in results)
+    tp   = sum(r["progression"] for r in results)
+    tl   = sum(r.get("loyalty", 0) for r in results)
+    tall = td + ts + tp + tl
+
+    tp_all  = sum(r.get("possible", 0) for r in results)
+    eff     = 100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1)
+    l_enrl  = sum(1 for r in results if r.get("has_loyalty"))
+    skip_ct = sum(1 for r in results if r.get("skipped_all"))
+    act_ct  = n - skip_ct
+
+    streak  = meta.get("streak", {})
+    s_cur   = streak.get("current", 0)
+    s_best  = streak.get("best", 0)
+    lr      = meta.get("last_run") or {}
+    lr_d    = lr.get("per_type", {}).get("daily")
+    lr_s    = lr.get("per_type", {}).get("store")
+    lr_l    = lr.get("per_type", {}).get("loyalty")
+    lr_tot  = lr.get("total_claimed")
+    lr_eff  = lr.get("efficiency")
+
+    timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
+    avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
+    slowest = max(timed, key=lambda x: x[1]) if timed else None
+
+    bc   = _badge_cls(run_label)
+    bi   = {"Primary Run":"🟢","Manual Run":"🔧"}.get(run_label, "🔵")
+
+    d_pct  = min(round(td / n * 100) if n else 0, 100)
+    s_pct  = min(round(ts / (n*3) * 100) if n else 0, 100)
+    l_pct  = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
+    e_pct  = min(int(eff), 100)
+
+    # Pre-build delta strings
+    dlt_d   = _delta_html(td,   lr_d)
+    dlt_s   = _delta_html(ts,   lr_s)
+    dlt_l   = _delta_html(tl,   lr_l)
+    dlt_tot = _delta_html(tall, lr_tot)
+    dlt_eff = _delta_html(round(eff, 1), round(lr_eff, 1) if lr_eff is not None else None, "%")
+
+    # ── Build table rows ──────────────────────────────────────────────────────
+    table_rows   = ""
+    detail_cards = ""
+    has_details  = False
+
+    for r in results:
+        pid    = r["pid"]
+        status = r["status"]
+        rc     = _row_cls(status)
+        new_mark = " 🆕" if r.get("is_new") else ""
+
+        # Daily cell
+        if r["daily_skipped"]:
+            dn = r.get("daily_next") or "next reset"
+            dc = f'<span class="ic-cd" title="Next: {dn}">⏰</span>'
+        elif r["daily"] > 0:
+            dc = '<span class="ic-ok">✅</span>'
+        elif status in ("Login Failed","Error","Failed"):
+            dc = '<span class="ic-fl">❌</span>'
+        else:
+            dc = '<span class="ic-pd">⏳</span>'
+
+        # Map claimed count to which cards were actually free
+        sk = r.get("store_skipped", [False, False, False])
+        if not isinstance(sk, list) or len(sk) < 3:
+            sk = [False, False, False]
+        free_slots = [i for i in range(3) if not sk[i]]
+        claimed_cards = [False, False, False]
+        for j, idx in enumerate(free_slots):
+            if j < r["store"]:
+                claimed_cards[idx] = True
+
+        sn_list = r.get("store_next") or [None, None, None]
+        sc_html = ""
+        for i in range(3):
+            sep = ' style="border-left:2px solid #1a2d4a;"' if i == 0 else ''
+            if sk[i]:
+                nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
+                cell = f'<span class="ic-cd" title="Next: {nxt}">⏰</span>'
+            elif claimed_cards[i]:
+                cell = '<span class="ic-ok">✅</span>'
+            elif status in ("Login Failed","Error","Failed"):
+                cell = '<span class="ic-fl">❌</span>'
             else:
-                daily_status = f'<span class="status-available">🔄 Check Manually</span>'
-            
-            # Store status - next_available timer takes priority over status field
-            STORE_REWARD_NAMES = {0: "🥇 Gold", 1: "💵 Cash", 2: "🍀 Luckyloon"}
-            store_status_lines = []
+                cell = '<span class="ic-pd">⏳</span>'
+            sc_html += f'<td{sep}>{cell}</td>'
+
+        # Progression
+        pc = ('<span class="ic-ok">✅</span>' if r["progression"] > 0
+              else '<span class="ic-fl">❌</span>' if status in ("Login Failed","Error","Failed")
+              else '<span class="ic-lk" title="Awaiting grenades/bullets">⏳</span>')
+
+        # Loyalty
+        if not r.get("has_loyalty"):
+            lc = '<span class="ic-na">—</span>'
+        elif r.get("loyalty_skipped"):
+            ln = r.get("loyalty_next") or "24h"
+            lc = f'<span class="ic-cd" title="Next: {ln}">⏰</span>'
+        elif r.get("loyalty", 0) > 0:
+            lc = '<span class="ic-ok">✅</span>'
+        elif status in ("Login Failed","Error","Failed"):
+            lc = '<span class="ic-fl">❌</span>'
+        else:
+            lc = '<span class="ic-lk" title="Awaiting LP from purchases">🔒</span>'
+
+        # Time
+        d_s = r.get("duration_s", 0)
+        tm  = (f'<span style="color:#6e7681;">{d_s//60}m{d_s%60}s</span>'
+               if d_s and not r.get("skipped_all")
+               else '<span class="ic-na">—</span>')
+
+        table_rows += (
+            f'<tr class="{rc}">'
+            f'<td class="idc">{pid}{new_mark}</td>'
+            f'<td style="border-left:2px solid #1a3a24;">{dc}</td>'
+            f'{sc_html}'
+            f'<td style="border-left:2px solid #2d1f0d;">{pc}</td>'
+            f'<td style="border-left:2px solid #271a45;">{lc}</td>'
+            f'<td style="border-left:2px solid #1c2128;">{tm}</td>'
+            f'<td>{_sb_html(status)}</td>'
+            f'</tr>'
+        )
+
+        # Detail cards for failed / partial only
+        if status in ("Failed","Partial","Login Failed","Error","No Rewards"):
+            has_details = True
+            dc_cls = "dcf" if status in ("Error","Failed","Login Failed") else "dcp"
+            err_html = (f'<div class="dce">⚠️ {r["fail_reason"]}</div>'
+                        if r.get("fail_reason") else "")
+
+            d_val = ("✅ Claimed" if r["daily"] > 0
+                     else f'⏰ {r.get("daily_next") or "On cooldown"}' if r["daily_skipped"]
+                     else "⏳ Not claimed")
+
+            SNAMES = ["🥇 Gold","💵 Cash","🍀 Luckyloon"]
+            s_rows = ""
             for i in range(3):
-                reward_label = STORE_REWARD_NAMES.get(i, f"Reward {i+1}")
-                if i < result['store']:
-                    store_status_lines.append(f'{reward_label}: <span class="status-claimed">✅ Claimed This Run</span>')
-                elif status['store_next'][i] is not None:
-                    # We have a calculated next-available time - always show it
-                    label = "Already Claimed" if status['store_status'][i] == 'claimed' else "On Cooldown"
-                    store_status_lines.append(f'{reward_label}: <span class="status-cooldown">⏰ {label} - Next in {status["store_next"][i]}</span>')
-                elif status['store_status'][i] == 'unavailable':
-                    store_status_lines.append(f'{reward_label}: <span class="status-unavailable">⏳ Not Available</span>')
+                if claimed_cards[i]:
+                    sv = "✅ Claimed"
+                elif sk[i]:
+                    nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "On cooldown"
+                    sv = f"⏰ {nxt}"
                 else:
-                    store_status_lines.append(f'{reward_label}: <span class="status-available">🔄 Check Manually</span>')
-            
-            # Progression status
-            if result['progression'] > 0:
-                prog_status = f'<span class="status-claimed">✅ Claimed {result["progression"]} This Run</span>'
-            else:
-                prog_status = f'<span class="status-unavailable">⏳ Check after Store claims</span>'
+                    sv = "⏳ Not claimed"
+                s_rows += _drow(SNAMES[i], sv)
 
-            # NEW: Loyalty status
-            if not has_loyalty_flag:
-                loyalty_status_html = '<span class="status-unavailable">— Not enrolled</span>'
-            elif result.get('loyalty', 0) > 0:
-                loyalty_status_html = f'<span class="status-claimed">✅ Claimed {result["loyalty"]} This Run</span>'
-            elif status['loyalty_next'] is not None:
-                label = "Already Claimed" if status['loyalty_status'] == 'claimed' else "On Cooldown"
-                loyalty_status_html = f'<span class="status-cooldown">⏰ {label} - Next in {status["loyalty_next"]}</span>'
-            elif status['loyalty_status'] == 'unavailable':
-                loyalty_status_html = '<span class="status-unavailable">⏳ Not Available / No LP yet</span>'
+            pg = (f"✅ {r['progression']} claimed" if r["progression"] > 0
+                  else "⏳ Awaiting grenade/bullet threshold")
+
+            if r.get("has_loyalty"):
+                if r.get("loyalty", 0) > 0:
+                    lv = f"✅ {r['loyalty']} claimed"
+                elif r.get("loyalty_skipped"):
+                    lv = f"⏰ {r.get('loyalty_next') or 'On 24h cooldown'}"
+                else:
+                    lv = "🔒 Awaiting LP threshold from purchases"
             else:
-                loyalty_status_html = '<span class="status-available">🔄 Check Manually</span>'
-            
-            html += f"""
-            <div class="player-card">
-                <strong style="color: #2c3e50; font-size: 16px;">🆔 {player_id}</strong>
-                <div style="margin-top: 10px;">
-                    <div style="margin: 5px 0;">🎁 <strong>Daily:</strong> {daily_status}</div>
-                    <div style="margin: 5px 0;">🏪 <strong>Store:</strong></div>
-                    <div style="margin-left: 20px;">
-                        {"<br>".join(store_status_lines)}
-                    </div>
-                    <div style="margin: 5px 0;">🎯 <strong>Progression:</strong> {prog_status}</div>
-                    <div style="margin: 5px 0;">🏆 <strong>Loyalty:</strong> {loyalty_status_html}</div>
-                </div>
-            </div>
-            """
-        
-        html += "</div>"
-        
-        # Next recommended run
-        if next_run_time:
-            time_until = format_time_until_reset(next_run_time)
-            html += f"""
-            <div class="section" style="border-left-color: #e74c3c;">
-                <h3 style="margin-top:0; color: #e74c3c;">⏰ Next Recommended Run</h3>
-                <div class="stat-row"><strong>⏳ In:</strong> {time_until}</div>
-                <div class="stat-row"><strong>📅 Time:</strong> {next_run_time.strftime('%I:%M %p IST')}</div>
-                <div class="stat-row"><strong>📝 Reason:</strong> {next_run_reason}</div>
-            </div>
-            """
-        
-        # Legend
-        html += """
-        <div class="legend">
-            <h4 style="margin-top:0;">💡 Status Legend</h4>
-            <div><span class="status-claimed">✅ Claimed This Run</span> - Successfully claimed in this run</div>
-            <div><span class="status-cooldown">⏰ Already Claimed / On Cooldown</span> - Claimed previously or detected cooldown</div>
-            <div><span class="status-unavailable">⏳ Not Available</span> - Attempted but could not claim</div>
-            <div><span class="status-available">🔄 Check Manually</span> - Status uncertain, verify on website</div>
-            <div style="margin-top:10px;"><strong>Notes:</strong></div>
-            <ul style="margin: 5px 0;">
-                <li><strong>Daily Rewards:</strong> Reset at 5:30 AM IST daily</li>
-                <li><strong>Store Rewards:</strong> Each reward has individual 24h cooldown from claim time</li>
-                <li><strong>Progression:</strong> Depends on Store rewards (bullets/grenades)</li>
-                <li><strong>Loyalty:</strong> Tier rewards unlock when LP threshold met; Store Bonus has 24h cooldown. Enable per-ID via has_loyalty=true in players.csv</li>
-            </ul>
-        </div>
-        """
-        
-        html += "</div></body></html>"
-        
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"🎮 Hub Rewards - {ist_now.strftime('%d-%b %I:%M %p')} IST ({total_all} claimed)"
-        msg['From'] = sender
-        msg['To'] = recipient
-        msg.attach(MIMEText(html, 'html'))
-        
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender, password)
-            server.send_message(msg)
-        log("✅ Email sent")
+                lv = "— Not enrolled"
+
+            detail_cards += (
+                f'<div class="dc {dc_cls}">'
+                f'<div class="dcid">{pid}{new_mark}</div>'
+                f'{err_html}'
+                f'{_drow("🎁 Daily", d_val)}'
+                f'{s_rows}'
+                f'{_drow("🎯 Progression", pg)}'
+                f'{_drow("🏆 Loyalty", lv)}'
+                f'{_drow("⏱️ Time", str(d_s) + "s") if d_s else ""}'
+                f'</div>'
+            )
+
+    detail_sec = ""
+    if has_details:
+        detail_sec = (
+            f'<div class="dcs">'
+            f'<div class="dct">⚠️ Requires Attention — Failed &amp; Partial IDs</div>'
+            f'{detail_cards}'
+            f'</div>'
+        )
+
+    # ── Run schedule footer ───────────────────────────────────────────────────
+    sched = next_scheduled_runs_ist()
+    nr_html = ""
+    for i, (lbl, t) in enumerate(sched):
+        cls = ' class="nr nrp"' if i == 0 else ' class="nr"'
+        nr_html += f'<div{cls}><div class="nrl">{lbl}</div><div class="nrt">{t}</div></div>'
+
+    slowest_str = f"{slowest[0][:8]}… ({slowest[1]}s)" if slowest else "—"
+
+    # ── Assemble HTML ─────────────────────────────────────────────────────────
+    html = (
+        "<!DOCTYPE html><html lang='en'>"
+        "<head><meta charset='UTF-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+        f"<style>{_CSS}</style></head>"
+        "<body><div class='wrap'>"
+
+        # Hero
+        f"<div class='hero'>"
+        f"<span class='badge {bc}'>{bi} {run_label}</span>"
+        f"<div class='hero-grid'>"
+        f"<div class='hero-left'>"
+        f"<h1>CS Hub Rewards Dashboard</h1>"
+        f"<p>📅 {ist_now.strftime('%d %b %Y, %I:%M %p IST')}"
+        f" &nbsp;·&nbsp; ⏱️ {dur_str}"
+        f" &nbsp;·&nbsp; 👥 {act_ct} active / {skip_ct} smart-skipped</p>"
+        f"</div>"
+        f"<div class='hero-nums'>"
+        f"<div class='hnum'><span class='hv g'>{tall}</span><span class='hl'>Total Claimed</span></div>"
+        f"<div class='hnum'><span class='hv b'>{eff:.1f}%</span><span class='hl'>Efficiency</span></div>"
+        f"<div class='hnum'><span class='hv a'>🔥 {s_cur}</span><span class='hl'>Day Streak</span></div>"
+        f"</div></div></div>"
+
+        # KPI Row
+        f"<div class='kpi-row'>"
+        f"<div class='kpi'><div class='kl'>🎁 Daily</div>"
+        f"<div class='kv'>{td}<span>/{n}</span></div>"
+        f"<div class='ks'>{dlt_d}</div>"
+        f"{_pbar(d_pct, 'pg')}</div>"
+
+        f"<div class='kpi'><div class='kl'>🏪 Store</div>"
+        f"<div class='kv'>{ts}<span>/{n*3}</span></div>"
+        f"<div class='ks'>{dlt_s}</div>"
+        f"{_pbar(s_pct, 'pb2')}</div>"
+
+        f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
+        f"<div class='kv'>{tp}<span> items</span></div>"
+        f"<div class='ks'>Variable — grenade dependent</div>"
+        f"{_pbar(min(tp * 10, 100), 'pp')}</div>"
+
+        f"<div class='kpi'><div class='kl'>🏆 Loyalty</div>"
+        f"<div class='kv'>{tl}<span>/{l_enrl}</span></div>"
+        f"<div class='ks'>{dlt_l}</div>"
+        f"{_pbar(l_pct, 'pa')}</div>"
+        f"</div>"
+
+        # Strip
+        f"<div class='strip'>"
+        f"<span class='si'>⏱️ <strong>{dur_str}</strong> total</span>"
+        f"<span class='si'>👤 Avg <strong>{avg_t}s</strong>/ID</span>"
+        f"<span class='si'>🐢 Slowest: <strong>{slowest_str}</strong></span>"
+        f"<span class='si'>🔥 Best streak: <strong>{s_best} days</strong></span>"
+        f"<span class='si'>📊 Efficiency: <strong>{eff:.1f}%</strong> {dlt_eff}</span>"
+        f"<span class='si'>📦 Total all-time: <strong>{tall}</strong> claimed this run {dlt_tot}</span>"
+        f"</div>"
+
+        # Table
+        f"<div class='tbx'>"
+        f"<div class='tbh'><span>👥 All {n} Player IDs</span>"
+        f"<small>⏩ = already claimed &nbsp;|&nbsp; 🆕 = new ID this run</small></div>"
+        f"<div class='tsc'><table>"
+        f"<tr>"
+        f"<th class='idh'>Player ID</th>"
+        f"<th style='border-left:2px solid #1a3a24;'>🎁 Daily</th>"
+        f"<th style='border-left:2px solid #1a2d4a;'>🥇 Gold</th>"
+        f"<th>💵 Cash</th>"
+        f"<th>🍀 Lucky</th>"
+        f"<th style='border-left:2px solid #2d1f0d;'>🎯 Prog</th>"
+        f"<th style='border-left:2px solid #271a45;'>🏆 Loyal</th>"
+        f"<th style='border-left:2px solid #1c2128;'>⏱️ Time</th>"
+        f"<th>Status</th>"
+        f"</tr>"
+        f"{table_rows}"
+        f"</table></div></div>"
+
+        # Detail cards (only when there are issues)
+        f"{detail_sec}"
+
+        # Footer
+        f"<div class='foot'>"
+        f"<div class='ft'>🗓️ All 8 Scheduled Runs Today (IST)</div>"
+        f"<div class='nr-grid'>{nr_html}</div>"
+        f"<div class='leg'>"
+        f"<span>✅ Claimed this run</span>"
+        f"<span>⏰ Already claimed / on cooldown</span>"
+        f"<span>⏳ Pending (dependency)</span>"
+        f"<span>🔒 LP threshold not met</span>"
+        f"<span>❌ Failed</span>"
+        f"<span>— Not enrolled</span>"
+        f"<span>🆕 New ID (first run)</span>"
+        f"</div>"
+        f"<div class='leg' style='margin-top:8px;'>"
+        f"<span>📌 Daily &amp; Store reset at 5:30 AM IST daily</span>"
+        f"<span>📌 Progression: monthly reset, grenade-dependent</span>"
+        f"<span>📌 Loyalty: 24h rolling, LP-dependent</span>"
+        f"</div>"
+        f"<div class='ver'>CS Rewards Bot {VERSION} &nbsp;·&nbsp; "
+        f"Automated via GitHub Actions &nbsp;·&nbsp; "
+        f"Run #{run_index+1 if run_index >= 0 else '(manual)'} of 8</div>"
+        f"</div>"
+        f"</div></body></html>"
+    )
+    return html
+
+
+def send_email(html_body, subject):
+    if not (SMTP_SERVER and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM and SMTP_TO):
+        log("⚠️ Email env vars missing — skipping email")
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = SMTP_FROM
+        msg["To"]      = SMTP_TO
+        msg.attach(MIMEText(html_body, "html"))
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
+        log("📧 Email sent successfully")
     except Exception as e:
-        log(f"❌ Email error: {e}")
+        log(f"⚠️ Email failed: {e}")
 
-def get_next_wake_time(players):
-    """
-    After a run, scan claim_history for all players and find the SOONEST
-    absolute datetime when any reward (daily, store, or loyalty) will next become available.
-    
-    Returns: datetime (IST) of the earliest upcoming reward, or None if all unknown.
-    players: list of dicts {"player_id": str, "has_loyalty": bool}
-    """
-    history = load_claim_history()
-    ist_now = get_ist_time()
-    soonest = None
 
-    for p in players:
-        player_id = p["player_id"] if isinstance(p, dict) else p
-        if player_id not in history:
-            continue
-        ph = history[player_id]
-
-        # Check daily
-        daily_na = ph["daily"].get("next_available")
-        if daily_na:
-            t = datetime.fromisoformat(daily_na)
-            if t > ist_now:
-                if soonest is None or t < soonest:
-                    soonest = t
-
-        # Check each store reward
-        for rkey in ["reward_1", "reward_2", "reward_3"]:
-            store_na = ph["store"][rkey].get("next_available")
-            if store_na:
-                t = datetime.fromisoformat(store_na)
-                if t > ist_now:
-                    if soonest is None or t < soonest:
-                        soonest = t
-
-            last_claim = ph["store"][rkey].get("last_claim")
-            if last_claim:
-                cooldown_end = datetime.fromisoformat(last_claim) + timedelta(hours=STORE_COOLDOWN_HOURS)
-                if cooldown_end > ist_now:
-                    if soonest is None or cooldown_end < soonest:
-                        soonest = cooldown_end
-
-        # Also check daily last_claim + 24h
-        last_daily = ph["daily"].get("last_claim")
-        if last_daily:
-            next_daily = datetime.fromisoformat(last_daily) + timedelta(hours=24)
-            if next_daily > ist_now:
-                if soonest is None or next_daily < soonest:
-                    soonest = next_daily
-
-        # NEW: Check loyalty next_available and last_claim cooldown
-        loyalty_ph = ph.get("loyalty", {})
-        loyalty_na = loyalty_ph.get("next_available")
-        if loyalty_na:
-            t = datetime.fromisoformat(loyalty_na)
-            if t > ist_now:
-                if soonest is None or t < soonest:
-                    soonest = t
-
-        last_loyalty = loyalty_ph.get("last_claim")
-        if last_loyalty:
-            cooldown_end = datetime.fromisoformat(last_loyalty) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-            if cooldown_end > ist_now:
-                if soonest is None or cooldown_end < soonest:
-                    soonest = cooldown_end
-
-    return soonest
-
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 11 — MAIN
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    job_start = get_ist_time()
     log("=" * 60)
-    log("CS HUB AUTO-CLAIMER v2.3.0 (+ Loyalty Program)")
+    log(f"CS HUB AUTO-CLAIMER {VERSION}")
     log("=" * 60)
-    log("")
 
-    # NEW: Read optional has_loyalty column from players.csv
-    # Format: player_id,has_loyalty
-    # has_loyalty accepts: true/yes/1 (case-insensitive); anything else or missing = False
+    run_label, run_index = determine_run_context()
+    ist_now = get_ist_time()
+    log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
+
+    # Load state files
+    meta = load_bot_meta()
+
+    # Read players
+    players = []
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            players = []
-            for row in reader:
-                pid = row.get('player_id', '').strip()
-                if not pid:
-                    continue
-                hl_raw = row.get('has_loyalty', '').strip().lower()
-                has_loyalty = hl_raw in ('true', 'yes', '1')
-                players.append({"player_id": pid, "has_loyalty": has_loyalty})
-    except:
-        log("❌ Could not read players.csv")
+            for row in csv.DictReader(f):
+                pid = row.get("player_id", "").strip()
+                if pid:
+                    hl = row.get("has_loyalty", "").strip().lower() in ("true", "yes", "1")
+                    players.append((pid, hl))
+    except Exception as e:
+        log(f"❌ Failed to read {PLAYER_ID_FILE}: {e}")
         return
 
-    loyalty_count = sum(1 for p in players if p['has_loyalty'])
-    log(f"👥 Loaded {len(players)} players ({loyalty_count} with loyalty enabled)")
+    log(f"👥 Loaded {len(players)} players "
+        f"({sum(1 for _, h in players if h)} with loyalty)")
 
-    # GitHub Actions job time budget - we started "now"
-    JOB_START = get_ist_time()
-    JOB_MAX_SECONDS = 1.9 * 3600          # 1h 54min — stays within 2h trigger interval
-    MIN_SLEEP_SECONDS = 60                 # Never wake up less than 60s early
-    EARLY_WAKE_BUFFER = 90                 # Wake 90s before reward to allow page load
-    run_count = 0
+    # Process all players
+    results = []
+    for pid, has_loyalty in players:
+        new_id = is_new_id(pid, meta)
+        mark_id_seen(pid, meta)
+        r = process_player(pid, has_loyalty, new_id, run_label)
+        results.append(r)
+        time.sleep(3)
 
-    while True:
-        run_count += 1
-        run_start = get_ist_time()
-        elapsed_total = (run_start - JOB_START).total_seconds()
+    # ── Compute metrics ───────────────────────────────────────────────────────
+    job_end  = get_ist_time()
+    dur_s    = int((job_end - job_start).total_seconds())
+    td       = sum(r["daily"]       for r in results)
+    ts       = sum(r["store"]       for r in results)
+    tp       = sum(r["progression"] for r in results)
+    tl       = sum(r.get("loyalty", 0) for r in results)
+    tall     = td + ts + tp + tl
+    tp_all   = sum(r.get("possible", 0) for r in results)
+    eff      = 100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1)
 
-        log(f"\n{'='*60}")
-        log(f"🔄 Run #{run_count}  |  Job elapsed: {int(elapsed_total//3600)}h {int((elapsed_total%3600)//60)}m")
-        log(f"{'='*60}\n")
+    timed    = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
+    avg_t    = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
+    slowest  = max(timed, key=lambda x: x[1]) if timed else None
 
-        # ── Process all players ────────────────────────────────────────
-        results = []
-        for p in players:
-            stats = process_player(p["player_id"], has_loyalty=p["has_loyalty"])
-            results.append(stats)
-            time.sleep(3)
+    log(f"\n{'='*60}")
+    log(f"Run complete: {tall} claimed | {eff:.1f}% efficiency | {dur_s}s total")
+    log(f"  Daily:{td}  Store:{ts}  Prog:{tp}  Loyalty:{tl}")
+    log(f"{'='*60}")
 
-        send_email_summary(results, len(players))
+    # ── Check if all-ok today (for streak) ────────────────────────────────────
+    n_players = len(players)
+    all_ok = (
+        td == n_players and
+        ts == n_players * 3 and
+        tl == sum(1 for _, h in players if h)
+    )
+    update_streak_day_level(meta, all_ok)
 
-        # ── Calculate when to next wake up ────────────────────────────
-        next_wake = get_next_wake_time(players)
-        ist_now = get_ist_time()
-        elapsed_total = (ist_now - JOB_START).total_seconds()
-        remaining_budget = JOB_MAX_SECONDS - elapsed_total
+    # ── Update last_run in meta ───────────────────────────────────────────────
+    prev_run = meta.get("last_run")
+    meta["last_run"] = {
+        "timestamp":          job_end.isoformat(),
+        "run_label":          run_label,
+        "total_claimed":      tall,
+        "efficiency":         eff,
+        "duration_seconds":   dur_s,
+        "per_type":           {"daily": td, "store": ts, "progression": tp, "loyalty": tl},
+        "slowest_player":     slowest[0] if slowest else None,
+        "avg_time_per_player":avg_t,
+    }
+    # Temporarily restore prev_run for the email delta calculation
+    meta_for_email = dict(meta)
+    meta_for_email["last_run"] = prev_run  # email uses prev run for deltas
 
-        if next_wake is None:
-            log("⏹  No future rewards detected — exiting (next scheduled run will catch them)")
-            break
+    save_bot_meta(meta)
 
-        sleep_needed = (next_wake - ist_now).total_seconds() - EARLY_WAKE_BUFFER
+    # ── Build and send email ──────────────────────────────────────────────────
+    html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
 
-        if sleep_needed < MIN_SLEEP_SECONDS:
-            # Rewards already available or available within 60s - loop immediately
-            log(f"⚡ Next reward available in <{int(sleep_needed)+EARLY_WAKE_BUFFER}s — re-running immediately")
-            time.sleep(max(0, sleep_needed))
-            continue
+    # Subject: Option 1 format
+    ok_count  = sum(1 for r in results if r["status"] == "Success")
+    ist_label = job_start.strftime('%d-%b %I:%M %p')
+    streak_d  = meta["streak"].get("current", 0)
+    subject = (
+        f"🎮 CS Hub | {ist_label} IST | {ok_count}/{n_players} IDs ✅ "
+        f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
+    )
 
-        if sleep_needed > remaining_budget:
-            # Next reward is beyond our remaining job budget — exit cleanly
-            wake_str = next_wake.strftime('%H:%M IST')
-            log(f"⏹  Next reward at {wake_str} is beyond job time budget — exiting")
-            log(f"   (Next scheduled GitHub Actions run will claim it)")
-            break
+    send_email(html_body, subject)
 
-        # Sleep until just before the next reward is available
-        wake_str = next_wake.strftime('%d-%b %H:%M:%S IST')
-        h = int(sleep_needed // 3600)
-        m = int((sleep_needed % 3600) // 60)
-        s = int(sleep_needed % 60)
-        log(f"💤 Sleeping {h}h {m}m {s}s — waking at {wake_str} for next available reward")
-        log(f"   (Job budget remaining: {int(remaining_budget//3600)}h {int((remaining_budget%3600)//60)}m)")
-        time.sleep(sleep_needed)
-
-    log("\n🏁 Job complete!")
+    log("✅ All done.")
 
 
 if __name__ == "__main__":
