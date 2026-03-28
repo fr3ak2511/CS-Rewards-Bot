@@ -52,16 +52,12 @@ jobs:
 
       - name: Run Master Claimer
         env:
-          # Supports both original secret names and SMTP_* aliases
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          SENDER_EMAIL:       ${{ secrets.SENDER_EMAIL }}
-          RECIPIENT_EMAIL:    ${{ secrets.RECIPIENT_EMAIL }}
-          SMTP_SERVER:        ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT:          ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME:      ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD:      ${{ secrets.SMTP_PASSWORD }}
-          SMTP_FROM:          ${{ secrets.SMTP_FROM }}
-          SMTP_TO:            ${{ secrets.SMTP_TO }}
+          SMTP_SERVER: smtp.gmail.com
+          SMTP_PORT: 465
+          SMTP_USERNAME: ${{ secrets.SENDER_EMAIL }}
+          SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.SENDER_EMAIL }}
+          SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
         run: python master_claimer.py
 
       - name: Commit State Files
