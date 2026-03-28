@@ -6,11 +6,11 @@
     "last_checked_date": "2026-03-29"
   },
   "last_run": {
-    "timestamp": "2026-03-29T00:29:04.540611",
+    "timestamp": "2026-03-29T03:11:39.233631",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 78,
+    "duration_seconds": 75,
     "per_type": {
       "daily": 0,
       "store": 0,
