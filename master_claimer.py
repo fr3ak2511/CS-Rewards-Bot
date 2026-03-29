@@ -1099,34 +1099,62 @@ def claim_loyalty_program(driver, pid):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        detect_page_cooldowns(driver, pid, "loyalty")
 
-        s2 = get_reward_status(pid)
-        if not s2["loyalty_available"]:
-            log(f"⏩ Loyalty cooldown confirmed by page. Next: {s2['loyalty_next']}")
-            return 0, True
+        # Run cooldown detection to update history, but DO NOT use it
+        # as a second gate. The page itself is the source of truth — if
+        # a "Claim" button is visible and data-unavailable="false", we click it.
+        # The previous s2 guard was causing false skips when last_claim + 24h
+        # hadn't expired yet even though the hub server allowed claiming.
+        detect_page_cooldowns(driver, pid, "loyalty")
 
         for attempt in range(5):
             ok = driver.execute_script("""
-                for(let btn of document.querySelectorAll('button')){
-                    let t=(btn.innerText||btn.textContent||'').trim().toLowerCase();
-                    if(t!=='claim'&&t!=='free') continue;
-                    if(!btn.offsetParent||btn.disabled) continue;
-                    let node=btn.parentElement, cd=false;
-                    for(let d=0;d<8&&node;d++){
-                        if((node.innerText||'').toLowerCase().includes('next in')){cd=true;break;}
-                        if(node.offsetHeight>600)break;
-                        node=node.parentElement;
+                // Strategy 1: data-unavailable="false" attribute — most reliable.
+                // The hub sets this attribute on buttons the server says are claimable.
+                // Using inline:'center' ensures horizontal carousel cards scroll into view.
+                var availBtns = Array.from(
+                    document.querySelectorAll('button[data-unavailable="false"]')
+                );
+                for(var i=0; i<availBtns.length; i++){
+                    var btn = availBtns[i];
+                    var t = (btn.innerText||btn.textContent||'').trim().toLowerCase();
+                    if(t !== 'claim' && t !== 'free') continue;
+                    if(btn.disabled) continue;
+                    // Scroll into view — inline:'center' handles horizontal sliders
+                    btn.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+                    setTimeout(function(b){ b.click(); }(btn), 300);
+                    return 'attr';
+                }
+
+                // Strategy 2: Text match fallback — for sites that don't use data-unavailable.
+                // Skip offsetParent check (unreliable inside overflow:hidden scroll containers).
+                var allBtns = Array.from(document.querySelectorAll('button'));
+                for(var j=0; j<allBtns.length; j++){
+                    var btn2 = allBtns[j];
+                    if(btn2.disabled) continue;
+                    var t2 = (btn2.innerText||btn2.textContent||'').trim().toLowerCase();
+                    if(t2 !== 'claim' && t2 !== 'free') continue;
+                    // Confirm not on cooldown: check parent tree for 'next in'
+                    var node = btn2.parentElement, cd = false;
+                    for(var d=0; d<10&&node; d++){
+                        var nodeText = (node.innerText||'').toLowerCase();
+                        if(nodeText.includes('next in') || nodeText.includes('delivered')){
+                            cd = true; break;
+                        }
+                        // Don't go higher than the card container (~300px tall)
+                        if(node.offsetHeight > 500) break;
+                        node = node.parentElement;
                     }
                     if(!cd){
-                        btn.scrollIntoView({behavior:'smooth',block:'center'});
-                        setTimeout(()=>btn.click(),300); return true;
+                        btn2.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+                        setTimeout(function(b){ b.click(); }(btn2), 300);
+                        return 'text';
                     }
                 }
                 return false;
             """)
             if ok:
-                log(f"✅ Loyalty Claimed")
+                log(f"✅ Loyalty Claimed (via {ok})")
                 claimed += 1
                 time.sleep(2)
                 close_popup(driver)
