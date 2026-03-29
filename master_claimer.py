@@ -223,6 +223,48 @@ def update_streak_day_level(meta, all_ok_today):
     meta["streak"] = streak
 
 
+def compute_all_ok_today(players):
+    """
+    Day-level all_ok check: reads claim_history.json to determine whether
+    ALL rewards for ALL players have been claimed since today's reset —
+    across ALL runs combined, not just the current run.
+
+    This is the correct implementation of Option B (day-level streak).
+    The previous all_ok used run-level counts (td/ts/tl) which would always
+    be 0 on backup runs where every player was smart-skipped, causing the
+    streak to never increment past the primary run.
+    """
+    h   = load_claim_history()
+    lr  = get_last_daily_reset()
+    ist = get_ist_time()
+
+    for pid, has_loyalty in players:
+        if pid not in h:
+            return False
+        ph = h[pid]
+
+        # Daily — must have been claimed since last 5:30 AM reset
+        lc = ph.get("daily", {}).get("last_claim")
+        if not lc or datetime.fromisoformat(lc) < lr:
+            return False
+
+        # Store — all 3 must be claimed since last reset
+        for i in range(1, 4):
+            lc = ph.get("store", {}).get(f"reward_{i}", {}).get("last_claim")
+            if not lc or datetime.fromisoformat(lc) < lr:
+                return False
+
+        # Loyalty — rolling 24h; must have been claimed within last 24h
+        if has_loyalty:
+            lc = ph.get("loyalty", {}).get("last_claim")
+            if not lc:
+                return False
+            if ist > datetime.fromisoformat(lc) + timedelta(hours=LOYALTY_COOLDOWN_HOURS):
+                return False  # cooldown expired = not claimed recently
+
+    return True
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 4 — CLAIM HISTORY
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -516,21 +558,26 @@ def create_driver():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def bypass_cloudflare(driver):
+    # Only blocks when Cloudflare challenge is actually present.
+    # Removed unconditional 2s sleep — was wasting ~200s per full run.
     try:
-        time.sleep(2)
-        if "just a moment" in driver.title.lower() or "verifying" in driver.page_source.lower():
-            log("🛡️ Cloudflare detected — waiting...")
-            time.sleep(5)
-            try:
-                driver.find_elements(By.XPATH, "//input[@type='checkbox']")[0].click()
-                time.sleep(3)
-            except:
-                pass
-            for _ in range(10):
-                if "hub.vertigogames.co" in driver.current_url and "verifying" not in driver.page_source.lower():
-                    log("✅ Cloudflare cleared")
-                    return
-                time.sleep(1)
+        title  = driver.title.lower()
+        source = driver.page_source.lower()
+        if "just a moment" not in title and "verifying" not in source:
+            return  # No Cloudflare — return immediately
+        log("🛡️ Cloudflare detected — waiting...")
+        time.sleep(5)
+        try:
+            driver.find_elements(By.XPATH, "//input[@type='checkbox']")[0].click()
+            time.sleep(3)
+        except:
+            pass
+        for _ in range(10):
+            if ("hub.vertigogames.co" in driver.current_url
+                    and "verifying" not in driver.page_source.lower()):
+                log("✅ Cloudflare cleared")
+                return
+            time.sleep(1)
     except:
         pass
 
@@ -1286,7 +1333,7 @@ body{background:#111827;font-family:'Segoe UI',Arial,sans-serif;padding:20px;col
 .tbh{background:#1f2937;padding:13px 18px;border-bottom:1px solid #374151;font-size:13px;font-weight:600;color:#e2e8f0;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;}
 .tbh small{font-size:11px;color:#9ca3af;}
 /* ── Scrollable table container ── */
-.tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 10px 10px;}
+.tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 10px 10px;touch-action:pan-x;overscroll-behavior-x:contain;}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:780px;background:#1f2937;}
 th{background:#111827;color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding:10px 10px;text-align:center;border-bottom:1px solid #374151;white-space:nowrap;}
 th.idh{text-align:left;padding-left:16px;min-width:185px;}
@@ -1725,7 +1772,7 @@ def main():
         mark_id_seen(pid, meta)
         r = process_player(pid, has_loyalty, new_id, run_label)
         results.append(r)
-        time.sleep(3)
+        time.sleep(0.5)  # brief pause between players; was 3s (unnecessary)
 
     # ── Compute metrics ───────────────────────────────────────────────────────
     job_end  = get_ist_time()
@@ -1748,12 +1795,12 @@ def main():
     log(f"{'='*60}")
 
     # ── Check if all-ok today (for streak) ────────────────────────────────────
-    n_players = len(players)
-    all_ok = (
-        td == n_players and
-        ts == n_players * 3 and
-        tl == sum(1 for _, h in players if h)
-    )
+    # Uses claim_history.json — checks whether ALL rewards for ALL players
+    # have been claimed since today's reset, across ALL runs today combined.
+    # This is the correct day-level check (Option B).
+    all_ok = compute_all_ok_today(players)
+    if all_ok:
+        log("✅ All rewards claimed today — streak eligible")
     update_streak_day_level(meta, all_ok)
 
     # ── Update last_run in meta ───────────────────────────────────────────────
