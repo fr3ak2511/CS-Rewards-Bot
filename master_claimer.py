@@ -1825,6 +1825,7 @@ def main():
     html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
 
     # Subject: Option 1 format
+    n_players = len(players)
     ok_count  = sum(1 for r in results if r["status"] == "Success")
     ist_label = job_start.strftime('%d-%b %I:%M %p')
     streak_d  = meta["streak"].get("current", 0)
