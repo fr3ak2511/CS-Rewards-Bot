@@ -1118,19 +1118,26 @@ def claim_progression_program_rewards(driver, pid):
         close_popup(driver)
         for _ in range(6):
             ok = driver.execute_script("""
+                // Match both 'Claim' (single reward) and 'Claim all' (multi-reward card).
+                // Keeps original 'Claim' detection intact — 'Claim all' is additive.
                 for(let btn of document.querySelectorAll('button')){
                     let t=(btn.innerText||btn.textContent).trim().toLowerCase();
-                    if(t==='claim'&&btn.offsetParent!==null&&!btn.disabled){
-                        let pt=(btn.parentElement.innerText||btn.parentElement.textContent)||'';
-                        if(!pt.includes('Delivered')){
-                            btn.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
-                            setTimeout(()=>btn.click(),300); return true;
-                        }
-                    }
+                    let isClaimBtn = (t==='claim' || t==='claim all');
+                    if(!isClaimBtn) continue;
+                    if(btn.disabled) continue;
+                    // Only skip via offsetParent for 'Claim' (not 'Claim all' — carousel items
+                    // may not be visible yet but are still valid).
+                    if(t==='claim' && btn.offsetParent===null) continue;
+                    let pt=(btn.parentElement.innerText||btn.parentElement.textContent)||'';
+                    if(pt.includes('Delivered')) continue;
+                    btn.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
+                    setTimeout(()=>btn.click(),300);
+                    return t;
                 }
                 return false;
             """)
             if ok:
+                log(f"✅ Progression: '{ok}' clicked")
                 claimed += 1
                 time.sleep(2.0)
                 close_popup(driver)
@@ -1255,6 +1262,14 @@ def claim_loyalty_program(driver, pid):
             detect_page_cooldowns(driver, pid, "loyalty")
         else:
             update_claim_history(pid, "loyalty", attempted=True)
+            # Return (0, True) — "skipped/not applicable" — so process_player
+            # does NOT add loyalty to possible count.
+            # When claimed=0 and no cooldown was detected, the loyalty tier is
+            # LP-locked (not enough points yet). Marking it as "skipped" prevents
+            # a false "Partial" status alert in the email for LP-locked IDs.
+            log(f"🔒 Loyalty: no claimable tier found — treating as LP-locked (not counted in possible)")
+            driver.save_screenshot(f"loyalty_{pid}.png")
+            return 0, True
 
         driver.save_screenshot(f"loyalty_{pid}.png")
         log(f"📊 Loyalty: {claimed}")
