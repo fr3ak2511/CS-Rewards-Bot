@@ -496,11 +496,30 @@ def get_reward_status(pid):
 
 
 def all_claimable_on_cooldown(pid, has_loyalty):
-    """True when every reward this player can claim is already on cooldown."""
+    """
+    True when every reward this player can claim is already on cooldown.
+
+    LOYALTY SPECIAL RULE: Only treat loyalty as 'on cooldown' for smart-skip
+    purposes if last_claim is set and within the 24h window. We deliberately
+    ignore next_available for loyalty here because it can be poisoned by a
+    false Store Bonus timer detection (next_available set, last_claim = null).
+    A detected cooldown without an actual claim is NOT a reliable skip signal.
+    """
     s = get_reward_status(pid)
-    return (not s["daily_available"]
-            and not any(s["store_available"])
-            and (not has_loyalty or not s["loyalty_available"]))
+
+    if not s["daily_available"] and not any(s["store_available"]):
+        if not has_loyalty:
+            return True
+        # For loyalty: only skip if WE actually claimed it recently
+        h    = load_claim_history()
+        ld   = h.get(pid, {}).get("loyalty", {})
+        lc_l = ld.get("last_claim")
+        if lc_l:
+            cd_end = datetime.fromisoformat(lc_l) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+            if get_ist_time() < cd_end:
+                return True   # actually on cooldown after a real claim
+        return False           # loyalty uncertain or never claimed — do NOT skip
+    return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1130,10 +1149,28 @@ def claim_progression_program_rewards(driver, pid):
 
 def claim_loyalty_program(driver, pid):
     """Returns (count_claimed, was_skipped)."""
-    s = get_reward_status(pid)
-    if not s["loyalty_available"]:
-        log(f"⏩ Loyalty on cooldown. Next: {s['loyalty_next']}")
-        return 0, True
+    # Only skip if WE actually claimed loyalty within the last 24h.
+    # Do NOT skip based on next_available alone — it can be poisoned by a
+    # false Store Bonus timer detection (next_available set, last_claim = null).
+    h    = load_claim_history()
+    ld   = h.get(pid, {}).get("loyalty", {})
+    lc_l = ld.get("last_claim")
+    if lc_l:
+        cd_end = datetime.fromisoformat(lc_l) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
+        if get_ist_time() < cd_end:
+            remaining = format_time_until(cd_end)
+            log(f"⏩ Loyalty claimed recently. Next: {remaining}")
+            return 0, True
+
+    # Self-heal: if next_available is set but last_claim is null, the cooldown
+    # was written by a false timer detection. Clear it so future runs aren't blocked.
+    if ld.get("next_available") and not lc_l:
+        log(f"🔧 Healing corrupt loyalty cooldown (detected without real claim) for {pid}")
+        history = load_claim_history()
+        if pid in history and "loyalty" in history[pid]:
+            history[pid]["loyalty"]["next_available"] = None
+            history[pid]["loyalty"]["status"] = "unknown"
+            save_claim_history(history)
 
     log("🏆 Claiming Loyalty Program...")
     claimed = 0
