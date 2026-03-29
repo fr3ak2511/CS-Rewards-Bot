@@ -3,14 +3,14 @@
     "current": 0,
     "best": 0,
     "last_success_date": null,
-    "last_checked_date": "2026-03-29"
+    "last_checked_date": "2026-03-30"
   },
   "last_run": {
-    "timestamp": "2026-03-29T23:01:29.168274",
-    "run_label": "Manual Run",
+    "timestamp": "2026-03-30T00:45:19.779347",
+    "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 914,
+    "duration_seconds": 923,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -18,7 +18,7 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 35.5
+    "avg_time_per_player": 35.8
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
