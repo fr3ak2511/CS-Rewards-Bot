@@ -968,5 +968,38 @@
       "next_available": null,
       "status": "unavailable"
     }
+  },
+  "50CEC758C5CE5938": {
+    "daily": {
+      "last_claim": "2026-03-30T03:29:33.251038",
+      "next_available": "2026-03-30T05:30:00",
+      "status": "claimed"
+    },
+    "store": {
+      "reward_1": {
+        "last_claim": "2026-03-30T03:29:46.557178",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      },
+      "reward_2": {
+        "last_claim": "2026-03-30T03:29:58.015281",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      },
+      "reward_3": {
+        "last_claim": "2026-03-30T03:30:08.660415",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      }
+    },
+    "progression": {
+      "last_claim": "2026-03-30T03:30:22.812119",
+      "last_count": 1
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": null,
+      "status": "unavailable"
+    }
   }
 }
