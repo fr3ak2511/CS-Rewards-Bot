@@ -830,19 +830,62 @@ def detect_store_timers_js(driver):
 
 
 def detect_loyalty_timer_js(driver):
+    """
+    Detect a real loyalty TIER cooldown timer.
+    Searches within [data-slider-item-id] tier card containers only,
+    so Store Bonus 'Next in' timers from the bottom section are ignored.
+    Falls back to page-wide search only if no slider items found,
+    but still filters out Store Bonus context.
+    """
     try:
         res = driver.execute_script("""
-            var els=Array.from(document.querySelectorAll('*'));
-            for(var i=0;i<els.length;i++){
-                var own=Array.from(els[i].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
-                if(own.toLowerCase().includes('next in')&&own.length<60)return own;
+            // First pass: look WITHIN tier card containers (data-slider-item-id).
+            // These are the Bronze/Silver/Gold loyalty tier cards.
+            // Store Bonus items are in a different DOM section and won't have this attribute.
+            var cards = Array.from(document.querySelectorAll('[data-slider-item-id]'));
+            for(var i=0; i<cards.length; i++){
+                var cardText = (cards[i].innerText||'').toLowerCase();
+                // A tier card on cooldown shows 'next in' but NOT 'claim' or 'delivered'
+                if(cardText.includes('next in') && !cardText.includes('claim')){
+                    // Extract the 'Next in Xh Ym' text from this specific card
+                    var spans = Array.from(cards[i].querySelectorAll('*'));
+                    for(var j=0; j<spans.length; j++){
+                        var own = Array.from(spans[j].childNodes)
+                            .filter(function(n){return n.nodeType===3;})
+                            .map(function(n){return n.textContent;})
+                            .join('').trim();
+                        if(own.toLowerCase().includes('next in') && own.length < 60){
+                            return own;
+                        }
+                    }
+                }
+            }
+
+            // Second pass (fallback): page-wide search but skip Store Bonus context
+            var els = Array.from(document.querySelectorAll('*'));
+            for(var k=0; k<els.length; k++){
+                var ownText = Array.from(els[k].childNodes)
+                    .filter(function(n){return n.nodeType===3;})
+                    .map(function(n){return n.textContent;})
+                    .join('').trim();
+                if(ownText.toLowerCase().includes('next in') && ownText.length < 60){
+                    // Exclude if any ancestor within 6 levels says 'Store Bonus'
+                    var node = els[k].parentElement, isStore = false;
+                    for(var d=0; d<6&&node; d++){
+                        if((node.innerText||'').toLowerCase().includes('store bonus')){
+                            isStore = true; break;
+                        }
+                        node = node.parentElement;
+                    }
+                    if(!isStore) return ownText;
+                }
             }
             return null;
         """)
         if res:
             d = parse_timer_text(res)
             if d and d.total_seconds() > 60:
-                log(f"🔍 Loyalty timer: {res}")
+                log(f"🔍 Loyalty timer (tier): {res}")
                 return d
     except Exception as e:
         log(f"⚠️ Loyalty timer JS error: {e}")
@@ -1109,46 +1152,52 @@ def claim_loyalty_program(driver, pid):
 
         for attempt in range(5):
             ok = driver.execute_script("""
-                // Strategy 1: data-unavailable="false" attribute — most reliable.
-                // The hub sets this attribute on buttons the server says are claimable.
-                // Using inline:'center' ensures horizontal carousel cards scroll into view.
-                var availBtns = Array.from(
-                    document.querySelectorAll('button[data-unavailable="false"]')
-                );
-                for(var i=0; i<availBtns.length; i++){
-                    var btn = availBtns[i];
-                    var t = (btn.innerText||btn.textContent||'').trim().toLowerCase();
-                    if(t !== 'claim' && t !== 'free') continue;
-                    if(btn.disabled) continue;
-                    // Scroll into view — inline:'center' handles horizontal sliders
-                    btn.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
-                    setTimeout(function(b){ b.click(); }(btn), 300);
-                    return 'attr';
+                // PRIMARY STRATEGY: scope search to tier card containers.
+                // [data-slider-item-id] are the Bronze/Silver/Gold tier cards.
+                // Each card is self-contained: it shows EITHER a Claim button
+                // OR 'Delivered' OR 'Next in Xh Ym'. No cross-section confusion.
+                var cards = Array.from(document.querySelectorAll('[data-slider-item-id]'));
+                for(var i=0; i<cards.length; i++){
+                    var card = cards[i];
+                    var cardText = (card.innerText||'').toLowerCase();
+                    // Skip if this card is delivered or on cooldown
+                    if(cardText.includes('delivered')) continue;
+                    if(cardText.includes('next in')) continue;
+                    // Look for a claimable button within this card
+                    var btns = card.querySelectorAll('button');
+                    for(var j=0; j<btns.length; j++){
+                        var btn = btns[j];
+                        if(btn.disabled) continue;
+                        var t = (btn.innerText||btn.textContent||'').trim().toLowerCase();
+                        if(t !== 'claim' && t !== 'free') continue;
+                        // Scroll horizontal carousel to bring card into view
+                        btn.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+                        btn.click();
+                        return 'card';
+                    }
                 }
 
-                // Strategy 2: Text match fallback — for sites that don't use data-unavailable.
-                // Skip offsetParent check (unreliable inside overflow:hidden scroll containers).
+                // FALLBACK: no slider items found — try page-wide but exclude Store Bonus section
                 var allBtns = Array.from(document.querySelectorAll('button'));
-                for(var j=0; j<allBtns.length; j++){
-                    var btn2 = allBtns[j];
+                for(var k=0; k<allBtns.length; k++){
+                    var btn2 = allBtns[k];
                     if(btn2.disabled) continue;
                     var t2 = (btn2.innerText||btn2.textContent||'').trim().toLowerCase();
                     if(t2 !== 'claim' && t2 !== 'free') continue;
-                    // Confirm not on cooldown: check parent tree for 'next in'
+                    // Only go up 3 levels — stay within the immediate card container
                     var node = btn2.parentElement, cd = false;
-                    for(var d=0; d<10&&node; d++){
-                        var nodeText = (node.innerText||'').toLowerCase();
-                        if(nodeText.includes('next in') || nodeText.includes('delivered')){
+                    for(var d=0; d<3&&node; d++){
+                        var nt = (node.innerText||'').toLowerCase();
+                        if(nt.includes('next in') || nt.includes('delivered')
+                           || nt.includes('store bonus')){
                             cd = true; break;
                         }
-                        // Don't go higher than the card container (~300px tall)
-                        if(node.offsetHeight > 500) break;
                         node = node.parentElement;
                     }
                     if(!cd){
                         btn2.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
-                        setTimeout(function(b){ b.click(); }(btn2), 300);
-                        return 'text';
+                        btn2.click();
+                        return 'fallback';
                     }
                 }
                 return false;
