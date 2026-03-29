@@ -28,8 +28,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:02.115121",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "4DC0E2AA7130D7E6": {
@@ -61,8 +61,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:36.560122",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "FBF717E3BFDF5E94": {
@@ -94,8 +94,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:12.870069",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "46C57810F646B91F": {
@@ -127,8 +127,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:47.927597",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "8EE5A8F3D8CAD1F3": {
@@ -160,8 +160,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:22.845551",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "E72DC1D6C5301F47": {
@@ -193,8 +193,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:59.970822",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "5899855DAA167B36": {
@@ -226,8 +226,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:42.955440",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "5D14D66D5B6C7B8F": {
@@ -259,8 +259,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:20.963370",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "5429611A24A8F01A": {
@@ -292,8 +292,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:01.151416",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "856EB1365FA9D02E": {
@@ -325,8 +325,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:39.995788",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "F251D3D226496061": {
@@ -358,8 +358,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:19.991751",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "3D9A901755C3B2D8": {
@@ -391,8 +391,8 @@
     },
     "loyalty": {
       "last_claim": null,
-      "next_available": "2026-03-30T05:29:58.707984",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "86CD85689FAE9549": {
@@ -425,8 +425,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:36.422044",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "A32124B011061E03": {
@@ -459,8 +459,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:13.219780",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "63989CEF5D15F053": {
@@ -493,8 +493,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:49.660229",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "B0036841F0183A12": {
@@ -527,8 +527,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:27.224773",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "A6DA56D3C46DF31B": {
@@ -561,8 +561,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:04.548183",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "7E53CF9C948CED45": {
@@ -589,14 +589,14 @@
       }
     },
     "progression": {
-      "last_claim": null,
-      "last_count": 0
+      "last_claim": "2026-03-29T22:00:55.652522",
+      "last_count": 1
     },
     "loyalty": {
-      "last_claim": null,
+      "last_claim": "2026-03-29T22:01:13.864375",
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:41.371612",
-      "status": "cooldown_detected"
+      "next_available": "2026-03-30T22:01:13.864375",
+      "status": "claimed"
     }
   },
   "E796C81690AB75C0": {
@@ -629,8 +629,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:20.405142",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "F820398935D2C403": {
@@ -663,8 +663,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:57.882848",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "C3960960443AF932": {
@@ -697,8 +697,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:38.143224",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "2B50290C73E02027": {
@@ -731,8 +731,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:20.113844",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "188A50EA1ABE0765": {
@@ -765,8 +765,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:57.618828",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "4D1AA8C2C628E73F": {
@@ -799,8 +799,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:36.280893",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "B4BAE5FC4CACA8F7": {
@@ -833,8 +833,8 @@
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
-      "next_available": "2026-03-30T05:29:14.545489",
-      "status": "cooldown_detected"
+      "next_available": null,
+      "status": "unavailable"
     }
   },
   "55CE80118E81AE87": {
@@ -900,6 +900,39 @@
     "loyalty": {
       "last_claim": null,
       "next_available": "2026-03-30T05:29:25.695267",
+      "status": "unavailable"
+    }
+  },
+  "BC50CD06767F50F4": {
+    "daily": {
+      "last_claim": "2026-03-29T22:05:46.642838",
+      "next_available": "2026-03-30T05:30:00",
+      "status": "claimed"
+    },
+    "store": {
+      "reward_1": {
+        "last_claim": "2026-03-29T22:05:57.578492",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      },
+      "reward_2": {
+        "last_claim": "2026-03-29T22:06:06.861737",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      },
+      "reward_3": {
+        "last_claim": "2026-03-29T22:06:16.374676",
+        "next_available": "2026-03-30T05:30:00",
+        "status": "claimed"
+      }
+    },
+    "progression": {
+      "last_claim": "2026-03-29T22:06:29.542634",
+      "last_count": 1
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": null,
       "status": "unavailable"
     }
   }
