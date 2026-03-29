@@ -21,22 +21,30 @@ on:
 
 concurrency:
   group: rewards-claimer
-  cancel-in-progress: true
+  # false = let the running job finish before starting the next one.
+  # Previously true — if a job ran 44+ min it would get cancelled exactly
+  # when the primary run (UTC 00:05) tried to start, causing primary misses.
+  cancel-in-progress: false
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
-    timeout-minutes: 45     # One clean pass — 25 IDs × ~1 min each + buffer
+    # Raised from 45 → 60 min. Previous 45-min ceiling was too close to the
+    # observed 44-min runtime, causing timeouts and primary run interference.
+    timeout-minutes: 60
 
     permissions:
       contents: write       # Required for the commit-back step
+
+    env:
+      # Force Node.js 24 for all actions — suppresses Node.js 20 deprecation
+      # warnings and improves scheduler reliability on GitHub-hosted runners.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Checkout the branch that triggered the run so the commit-back
-          # step can push directly to it without a detached-HEAD conflict.
           ref: ${{ github.ref_name }}
 
       - name: Set up Python
