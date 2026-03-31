@@ -3,53 +3,8 @@
     "current": 0,
     "best": 0,
     "last_success_date": null,
-    "last_checked_date": "2026-03-31"
+    "last_checked_date": null
   },
-  "last_run": {
-    "timestamp": "2026-03-31T06:59:47.461182",
-    "run_label": "Manual Run",
-    "total_claimed": 105,
-    "efficiency": 100.0,
-    "duration_seconds": 1965,
-    "per_type": {
-      "daily": 26,
-      "store": 78,
-      "progression": 1,
-      "loyalty": 0
-    },
-    "slowest_player": "63989CEF5D15F053",
-    "avg_time_per_player": 74.6
-  },
-  "new_ids_seen": [
-    "E1E9729A4885E6D9",
-    "4DC0E2AA7130D7E6",
-    "FBF717E3BFDF5E94",
-    "46C57810F646B91F",
-    "8EE5A8F3D8CAD1F3",
-    "E72DC1D6C5301F47",
-    "5899855DAA167B36",
-    "5D14D66D5B6C7B8F",
-    "5429611A24A8F01A",
-    "856EB1365FA9D02E",
-    "F251D3D226496061",
-    "3D9A901755C3B2D8",
-    "86CD85689FAE9549",
-    "A32124B011061E03",
-    "63989CEF5D15F053",
-    "B0036841F0183A12",
-    "A6DA56D3C46DF31B",
-    "7E53CF9C948CED45",
-    "E796C81690AB75C0",
-    "F820398935D2C403",
-    "C3960960443AF932",
-    "2B50290C73E02027",
-    "188A50EA1ABE0765",
-    "4D1AA8C2C628E73F",
-    "B4BAE5FC4CACA8F7",
-    "55CE80118E81AE87",
-    "5AAD0DAE73FA8634",
-    "BC50CD06767F50F4",
-    "D210B95416D3FF7B",
-    "50CEC758C5CE5938"
-  ]
+  "last_run": null,
+  "new_ids_seen": []
 }
