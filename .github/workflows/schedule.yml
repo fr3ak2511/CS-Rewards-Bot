@@ -1,84 +1,40 @@
-# .github/workflows/schedule.yml
 name: CS Hub Rewards Claimer
 
 on:
   schedule:
-    # 8 runs/day anchored to 05:30 AM IST (00:00 UTC) reset.
-    # IST = UTC+5:30. To fire at HH:MM IST, subtract 5h30m → UTC.
-    # 05:35 IST = 00:05 UTC  ← Primary Run (just after daily reset)
-    # 08:35 IST = 03:05 UTC
-    # 11:35 IST = 06:05 UTC
-    # 14:35 IST = 09:05 UTC
-    # 17:35 IST = 12:05 UTC
-    # 20:35 IST = 15:05 UTC
-    # 23:35 IST = 18:05 UTC
-    # 02:35 IST = 21:05 UTC
+    # Runs at 05:35 AM IST (00:05 UTC) every day
     - cron: '5 0 * * *'
-    - cron: '5 3 * * *'
-    - cron: '5 6 * * *'
-    - cron: '5 9 * * *'
-    - cron: '5 12 * * *'
-    - cron: '5 15 * * *'
-    - cron: '5 18 * * *'
-    - cron: '5 21 * * *'
-  workflow_dispatch:
-
-concurrency:
-  group: cs-rewards-claimer
-  cancel-in-progress: false
+  workflow_dispatch: # Allows you to manually trigger the script from GitHub
 
 jobs:
   run-claimer:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    permissions:
-      contents: write
-
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      SMTP_SERVER:   ${{ secrets.SMTP_SERVER }}
-      SMTP_PORT:     ${{ secrets.SMTP_PORT }}
-      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      SMTP_FROM:     ${{ secrets.SMTP_FROM }}
-      SMTP_TO:       ${{ secrets.SMTP_TO }}
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
+        uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run claimer
+      - name: Run Master Claimer
+        env:
+          # Ensure your GitHub Secrets are mapped correctly here
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
         run: python master_claimer.py
 
-      - name: Commit updated history and meta
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "bot: update claim history and meta [skip ci]"
-          file_pattern: claim_history.json bot_meta.json
-          commit_user_name: github-actions[bot]
-          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
-          commit_author: ${{ github.repository_owner }} <${{ github.actor }}@users.noreply.github.com>
-
-      - name: Upload debug screenshots
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: debug-screenshots
-          path: |
-            *.png
-            *.html
-          retention-days: 1
-          if-no-files-found: warn
+      - name: Commit state changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add bot_meta.json claim_history.json
+          git commit -m "Automated state update: Streak and Claim History" || echo "No changes to commit"
+          git push
