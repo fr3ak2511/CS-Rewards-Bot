@@ -2019,22 +2019,29 @@ def build_email(results, run_label, run_index, job_start, meta):
     return html
 
 
-def send_email(html_body, subject):
-    if not (SMTP_SERVER and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM and SMTP_TO):
-        log("⚠️ Email env vars missing — skipping email")
-        return
+def send_email(subject, html_body, sender, receiver, password):
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import smtplib
+
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = SMTP_FROM
-        msg["To"]      = SMTP_TO
-        msg.attach(MIMEText(html_body, "html"))
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
-        log("📧 Email sent successfully")
+        msg = MIMEMultipart()
+        msg['From'] = sender
+        msg['To'] = receiver
+        msg['Subject'] = subject
+
+        # THE CRITICAL FIX: Explicitly declaring 'html'
+        msg.attach(MIMEText(html_body, 'html'))
+
+        # Standard Gmail SMTP config
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender, password)
+        server.send_message(msg)
+        server.quit()
+        print("HTML Email sent successfully!")
     except Exception as e:
-        log(f"⚠️ Email failed: {e}")
+        print(f"Failed to send email: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2129,8 +2136,86 @@ def main():
         f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
     )
 
-    send_email(html_body, subject)
-    log("✅ All done.")
+    def _resolve_email_config():
+    """
+    Resolve email settings from either the old or new env var names.
+    """
+    import os
+    server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+
+    try:
+        port = int(os.getenv("SMTP_PORT", "465"))
+    except ValueError:
+        port = 465
+
+    sender = (
+        os.getenv("EMAIL_SENDER")
+        or os.getenv("SENDER_EMAIL")
+        or os.getenv("SMTP_USERNAME")
+        or os.getenv("SMTP_FROM")
+        or ""
+    ).strip()
+
+    password = (
+        os.getenv("EMAIL_PASSWORD")
+        or os.getenv("GMAIL_APP_PASSWORD")
+        or os.getenv("SMTP_PASSWORD")
+        or ""
+    ).strip()
+
+    receiver = (
+        os.getenv("EMAIL_RECEIVER")
+        or os.getenv("RECIPIENT_EMAIL")
+        or os.getenv("SMTP_TO")
+        or ""
+    ).strip()
+
+    return server, port, sender, password, receiver
+
+def send_email(html_body, subject):
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    
+    server, port, sender, password, receiver = _resolve_email_config()
+
+    missing = []
+    if not server:
+        missing.append("SMTP_SERVER")
+    if not sender:
+        missing.append("EMAIL_SENDER")
+    if not password:
+        missing.append("EMAIL_PASSWORD")
+    if not receiver:
+        missing.append("EMAIL_RECEIVER")
+
+    if missing:
+        print(f"⚠️ Email env vars missing ({', '.join(missing)}) — skipping email")
+        return False
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = receiver
+        # The HTML fix is perfectly placed here:
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP_SSL(server, port, timeout=30) as smtp:
+            smtp.login(sender, password)
+            smtp.sendmail(sender, [receiver], msg.as_string())
+
+        print(f"📧 Email sent successfully to {receiver}")
+        return True
+
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"⚠️ Email auth failed: {e.smtp_code} {e.smtp_error}")
+    except smtplib.SMTPException as e:
+        print(f"⚠️ Email SMTP failed: {e}")
+    except Exception as e:
+        print(f"⚠️ Email failed: {type(e).__name__}: {e}")
+
+    return False
 
 
 if __name__ == "__main__":
