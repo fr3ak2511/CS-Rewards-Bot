@@ -2181,37 +2181,34 @@ def _resolve_email_config():
 
 
 def send_email(html_body, subject):
-    """Send the HTML email report via SMTP SSL."""
-    server, port, sender, password, receiver = _resolve_email_config()
+    # 1. THE FAILSAFE: Save a local copy of the email. 
+    # Your schedule.yml will automatically upload this to GitHub Artifacts!
+    try:
+        with open("debug_email.html", "w", encoding="utf-8") as f:
+            f.write(html_body)
+    except Exception as e:
+        pass
 
-    missing = []
-    if not server:   missing.append("SMTP_SERVER")
-    if not sender:   missing.append("EMAIL_SENDER")
-    if not password: missing.append("EMAIL_PASSWORD")
-    if not receiver: missing.append("EMAIL_RECEIVER")
-
-    if missing:
-        log(f"⚠️ Email env vars missing ({', '.join(missing)}) — skipping email")
-        return False
+    if not (SMTP_SERVER and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM and SMTP_TO):
+        log("⚠️ Email env vars missing — skipping email")
+        return
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"]    = sender
-        msg["To"]      = receiver
+        msg["From"]    = SMTP_FROM
+        msg["To"]      = SMTP_TO
+        
+        # 2. THE CRITICAL FIX: Explicitly forcing UTF-8 encoding for the emojis
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP_SSL(server, port, timeout=30) as smtp:
-            smtp.login(sender, password)
-            smtp.sendmail(sender, [receiver], msg.as_string())
-
-        log(f"📧 Email sent successfully")
-        return True
-
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
+            
+        log("📧 Email sent successfully")
     except smtplib.SMTPAuthenticationError as e:
         log(f"⚠️ Email auth failed: {e.smtp_code} {e.smtp_error}")
-    except smtplib.SMTPException as e:
-        log(f"⚠️ Email SMTP error: {e}")
     except Exception as e:
         log(f"⚠️ Email failed: {type(e).__name__}: {e}")
 
