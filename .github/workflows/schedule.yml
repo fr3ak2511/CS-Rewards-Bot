@@ -1,87 +1,84 @@
+# .github/workflows/schedule.yml
 name: CS Hub Rewards Claimer
 
 on:
-  # Triggers every 3 hours, shifted 5 min so the first run of the day
-  # always lands at 05:35 AM IST (game server boots at 05:30 AM IST).
-  #
-  #   UTC 00:05 = IST 05:35  ← Primary Run
-  #   UTC 03:05 = IST 08:35  ← Backup Run #1
-  #   UTC 06:05 = IST 11:35  ← Backup Run #2
-  #   UTC 09:05 = IST 14:35  ← Backup Run #3
-  #   UTC 12:05 = IST 17:35  ← Backup Run #4
-  #   UTC 15:05 = IST 20:35  ← Backup Run #5
-  #   UTC 18:05 = IST 23:35  ← Backup Run #6
-  #   UTC 21:05 = IST 02:35  ← Backup Run #7
-  #
-  # Each job does ONE clean pass and exits — no internal sleep loop.
-  # Backup runs smart-skip IDs where all rewards are already on cooldown.
   schedule:
-    - cron: '5 0/3 * * *'
+    # 8 runs/day anchored to 05:30 AM IST (00:00 UTC) reset.
+    # IST = UTC+5:30. To fire at HH:MM IST, subtract 5h30m → UTC.
+    # 05:35 IST = 00:05 UTC  ← Primary Run (just after daily reset)
+    # 08:35 IST = 03:05 UTC
+    # 11:35 IST = 06:05 UTC
+    # 14:35 IST = 09:05 UTC
+    # 17:35 IST = 12:05 UTC
+    # 20:35 IST = 15:05 UTC
+    # 23:35 IST = 18:05 UTC
+    # 02:35 IST = 21:05 UTC
+    - cron: '5 0 * * *'
+    - cron: '5 3 * * *'
+    - cron: '5 6 * * *'
+    - cron: '5 9 * * *'
+    - cron: '5 12 * * *'
+    - cron: '5 15 * * *'
+    - cron: '5 18 * * *'
+    - cron: '5 21 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: rewards-claimer
-  # false = let the running job finish before starting the next one.
-  # Previously true — if a job ran 44+ min it would get cancelled exactly
-  # when the primary run (UTC 00:05) tried to start, causing primary misses.
+  group: cs-rewards-claimer
   cancel-in-progress: false
 
 jobs:
   run-claimer:
-    runs-on: ubuntu-latest
-    # Raised from 45 → 60 min. Previous 45-min ceiling was too close to the
-    # observed 44-min runtime, causing timeouts and primary run interference.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
-
     permissions:
-      contents: write       # Required for the commit-back step
+      contents: write
 
     env:
-      # Force Node.js 24 for all actions — suppresses Node.js 20 deprecation
-      # warnings and improves scheduler reliability on GitHub-hosted runners.
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      SMTP_SERVER:   ${{ secrets.SMTP_SERVER }}
+      SMTP_PORT:     ${{ secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:     ${{ secrets.SMTP_FROM }}
+      SMTP_TO:       ${{ secrets.SMTP_TO }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: main
 
-      - name: Set up Python
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
+          cache: pip
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Master Claimer
-        env:
-          SMTP_SERVER: smtp.gmail.com
-          SMTP_PORT: 465
-          SMTP_USERNAME: ${{ secrets.SENDER_EMAIL }}
-          SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          SMTP_FROM: ${{ secrets.SENDER_EMAIL }}
-          SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
+      - name: Run claimer
         run: python master_claimer.py
 
-      - name: Commit State Files
-        # Persists claim_history.json and bot_meta.json back to the repo
-        # so streak, last-run deltas, and new-ID tracking survive between runs.
+      - name: Commit updated history and meta
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "bot: update claim history and meta [skip ci]"
-          file_pattern: "claim_history.json bot_meta.json"
+          file_pattern: claim_history.json bot_meta.json
+          commit_user_name: github-actions[bot]
+          commit_user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_author: ${{ github.repository_owner }} <${{ github.actor }}@users.noreply.github.com>
 
-      - name: Upload Debug Artifacts
-        if: always()
+      - name: Upload debug screenshots
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: debug-screenshots
           path: |
             *.png
             *.html
           retention-days: 1
+          if-no-files-found: warn
