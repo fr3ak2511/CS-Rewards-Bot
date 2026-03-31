@@ -2019,29 +2019,6 @@ def build_email(results, run_label, run_index, job_start, meta):
     return html
 
 
-def send_email(subject, html_body, sender, receiver, password):
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    import smtplib
-
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = sender
-        msg['To'] = receiver
-        msg['Subject'] = subject
-
-        # THE CRITICAL FIX: Explicitly declaring 'html'
-        msg.attach(MIMEText(html_body, 'html'))
-
-        # Standard Gmail SMTP config
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender, password)
-        server.send_message(msg)
-        server.quit()
-        print("HTML Email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send email: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2134,6 +2111,8 @@ def main():
     subject = (
         f"🎮 CS Hub | {ist_label} IST | {ok_count}/{n_players} IDs ✅ "
         f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
+	log(f"📧 Sending email: {subject}")
+    	send_email(html_body, subject)
     )
 
     # ── Replace everything from line 2139 to end of file ──────────────────────────
