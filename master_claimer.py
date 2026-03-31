@@ -2111,9 +2111,10 @@ def main():
     subject = (
         f"🎮 CS Hub | {ist_label} IST | {ok_count}/{n_players} IDs ✅ "
         f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
-	log(f"📧 Sending email: {subject}")
-    	send_email(html_body, subject)
     )
+
+    log(f"📧 Sending email: {subject}")
+    send_email(html_body, subject)
 
     # ── Replace everything from line 2139 to end of file ──────────────────────────
 # These two functions must live at MODULE level (no indent), not inside main().
