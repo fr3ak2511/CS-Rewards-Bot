@@ -2,9 +2,9 @@ name: CS Hub Rewards Claimer
 
 on:
   schedule:
-    # Primary Run: 05:35 AM IST (00:05 UTC) to catch the daily reset
+    # Primary Run: 05:35 AM IST (00:05 UTC)
     - cron: '5 0 * * *'
-    # Backup Runs: Every 3 hours (UTC) to catch failures or late rewards
+    # Backup Runs: Every 3 hours (UTC)
     - cron: '0 */3 * * *'
   workflow_dispatch: # Allows manual runs
 
@@ -16,10 +16,10 @@ jobs:
       
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Upgraded to v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # Upgraded to v5
         with:
           python-version: '3.10'
 
@@ -33,6 +33,7 @@ jobs:
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Suppresses the Node.js 20 deprecation warning
         run: python master_claimer.py
 
       - name: Commit state changes
