@@ -2,8 +2,10 @@ name: CS Hub Rewards Claimer
 
 on:
   schedule:
-    # Runs at 05:35 AM IST (00:05 UTC) every day
+    # Primary Run: 05:35 AM IST (00:05 UTC) to catch the daily reset
     - cron: '5 0 * * *'
+    # Backup Runs: Every 3 hours (UTC) to catch failures or late rewards
+    - cron: '0 */3 * * *'
   workflow_dispatch: # Allows manual runs
 
 jobs:
@@ -36,7 +38,7 @@ jobs:
       - name: Commit state changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add bot_meta.json claim_history.json
           git commit -m "Automated state update: Streak and Claim History" || echo "No changes to commit"
           git push
