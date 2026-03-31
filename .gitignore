@@ -1,39 +1,25 @@
-# Python
+# Python caches
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
-*.egg
-*.egg-info/
-dist/
-build/
-*.so
+*$py.class
 
-# Virtual environments
-venv/
-env/
+# Environments and Secrets
 .env
-.venv
+.venv/
+env/
+venv/
+ENV/
+secret.json
 
-# Secrets / credentials — NEVER commit these
-.env.local
-secrets.json
-credentials.json
+# WebDriver binaries
+chromedriver
+geckodriver
 
-# Bot runtime outputs (committed via Actions, not manually)
-# claim_history.json and bot_meta.json are intentionally tracked
-# Debug screenshots are uploaded as artifacts, not committed
-*.png
-*.html
+# Logs and local debug files
+*.log
+RawLogs*.txt
+geckodriver.log
 
-# IDE / OS
-.idea/
-.vscode/
-*.swp
-*.swo
+# OS generated files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
