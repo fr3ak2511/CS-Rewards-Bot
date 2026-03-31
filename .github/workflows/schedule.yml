@@ -4,11 +4,14 @@ on:
   schedule:
     # Runs at 05:35 AM IST (00:05 UTC) every day
     - cron: '5 0 * * *'
-  workflow_dispatch: # Allows you to manually trigger the script from GitHub
+  workflow_dispatch: # Allows manual runs
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # CRITICAL: Allows the bot to push the streak update back to GitHub
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -25,7 +28,6 @@ jobs:
 
       - name: Run Master Claimer
         env:
-          # Ensure your GitHub Secrets are mapped correctly here
           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
@@ -34,7 +36,7 @@ jobs:
       - name: Commit state changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.email "github-actions[bot]@41898282+github-actions[bot]@users.noreply.github.com"
           git add bot_meta.json claim_history.json
           git commit -m "Automated state update: Streak and Claim History" || echo "No changes to commit"
           git push
