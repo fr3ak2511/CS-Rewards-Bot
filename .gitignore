@@ -1,29 +1,39 @@
-# ── OS Generated Files ────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-
-# ── Python Caches & Virtual Environments ──────────────────────────────────────
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.so
+
+# Virtual environments
 venv/
 env/
-
-# ── Secrets ───────────────────────────────────────────────────────────────────
 .env
+.venv
 
-# ── Bot Runtime & State Files ─────────────────────────────────────────────────
-# These are managed by the bot and committed back via GitHub Actions.
-# They should NOT be manually edited or committed by hand.
-claim_history.json
-bot_meta.json
+# Secrets / credentials — NEVER commit these
+.env.local
+secrets.json
+credentials.json
 
-# ── Bot Debug Outputs ─────────────────────────────────────────────────────────
-# Screenshots and HTML logs generated during each run.
-# Uploaded as GitHub Actions artifacts and auto-deleted after 1 day.
+# Bot runtime outputs (committed via Actions, not manually)
+# claim_history.json and bot_meta.json are intentionally tracked
+# Debug screenshots are uploaded as artifacts, not committed
 *.png
 *.html
 
-# ── Legacy Files (safe to delete from repo) ───────────────────────────────────
-# send_email_with_log.py  — references a script that no longer exists
-# store_claims_log.csv    — replaced by claim_history.json
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
