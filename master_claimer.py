@@ -1,7 +1,4 @@
 # master_claimer.py  –– CS Rewards Bot v3.0.0
-# Staged delivery note: file is written top-to-bottom in one block.
-# If generation stops mid-file, continue from the exact line indicated.
-
 import csv
 import time
 import os
@@ -32,10 +29,8 @@ HEADLESS       = True
 
 DAILY_RESET_HOUR_IST   = 5
 DAILY_RESET_MINUTE_IST = 30
-LOYALTY_COOLDOWN_HOURS = 24   # Loyalty is rolling 24h (not anchored to daily reset)
+LOYALTY_COOLDOWN_HOURS = 24
 
-# Email — reads original secret names (GMAIL_APP_PASSWORD / SENDER_EMAIL / RECIPIENT_EMAIL)
-# with SMTP_* as fallback so both old and new secret naming works.
 SMTP_SERVER   = os.getenv("SMTP_SERVER",   "smtp.gmail.com")
 SMTP_PORT     = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USERNAME = os.getenv("SENDER_EMAIL",  os.getenv("SMTP_USERNAME", ""))
@@ -66,7 +61,6 @@ def get_next_daily_reset():
 
 
 def get_last_daily_reset():
-    """Returns the most recent 5:30 AM IST reset that has already passed."""
     ist = get_ist_time()
     r = ist.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST,
                     second=0, microsecond=0)
@@ -100,33 +94,23 @@ def parse_timer_text(text):
     return None
 
 
-# All 8 IST trigger times for the 3-hourly schedule (cron: '5 0/3 * * *')
-# Index 0 = Primary, 1-7 = Backup #1 through Backup #7
 _RUN_SLOTS = [(5,35), (8,35), (11,35), (14,35), (17,35), (20,35), (23,35), (2,35)]
 
 def determine_run_context():
-    """
-    Returns (label, index):
-      label = 'Primary Run' | 'Backup Run #N' | 'Manual Run'
-      index = 0 (primary) | 1-7 (backups) | -1 (manual)
-    """
     event = os.getenv("GITHUB_EVENT_NAME", "schedule")
     if event == "workflow_dispatch":
         return "Manual Run", -1
     ist = get_ist_time()
     h, mi = ist.hour, ist.minute
     for i, (slot_h, slot_m) in enumerate(_RUN_SLOTS):
-        # Allow ±10 min window around each slot
         slot_dt = ist.replace(hour=slot_h, minute=slot_m, second=0, microsecond=0)
         if abs((ist - slot_dt).total_seconds()) <= 600:
             label = "Primary Run" if i == 0 else f"Backup Run #{i}"
             return label, i
-    # Fallback — treat unrecognised times as backup
     return "Backup Run", 1
 
 
 def next_scheduled_runs_ist():
-    """Return list of (label, 'HH:MM IST') for all 8 slots."""
     return [
         ("Primary Run" if i == 0 else f"Backup #{i}", f"{h:02d}:{m:02d} IST")
         for i, (h, m) in enumerate(_RUN_SLOTS)
@@ -134,18 +118,18 @@ def next_scheduled_runs_ist():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECTION 3 — BOT META  (streak, last-run delta, new-ID tracking)
+# SECTION 3 — BOT META
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _META_DEFAULT = {
     "streak": {
         "current": 0,
         "best": 0,
-        "last_success_date": None,   # YYYY-MM-DD (IST)
+        "last_success_date": None,
         "last_checked_date": None
     },
-    "last_run": None,          # filled after each run
-    "new_ids_seen": []         # IDs we've processed at least once
+    "last_run": None,
+    "new_ids_seen": []
 }
 
 
@@ -154,7 +138,6 @@ def load_bot_meta():
         try:
             with open(BOT_META_FILE, 'r') as f:
                 data = json.load(f)
-            # Migrate old schema if needed
             if "streak" not in data:
                 data["streak"] = _META_DEFAULT["streak"].copy()
                 data["streak"]["current"] = data.pop("streak_days", 0)
@@ -195,13 +178,8 @@ def mark_id_seen(pid, meta):
 
 
 def update_streak_day_level(meta, all_ok_today):
-    """
-    Option B (day-level): streak increments if any run today results in
-    all enrolled IDs having all rewards claimed.
-    """
     streak   = meta.setdefault("streak", _META_DEFAULT["streak"].copy())
     ist_date = get_ist_time().strftime("%Y-%m-%d")
-
     if all_ok_today:
         if streak.get("last_success_date") != ist_date:
             streak["current"] = streak.get("current", 0) + 1
@@ -209,8 +187,6 @@ def update_streak_day_level(meta, all_ok_today):
             streak["last_success_date"] = ist_date
             log(f"🔥 Streak: Day {streak['current']} (Best: {streak['best']})")
     else:
-        # Break streak only if yesterday wasn't a success and we haven't already
-        # marked today as success
         last_ok = streak.get("last_success_date")
         if last_ok and last_ok != ist_date:
             yesterday = (datetime.strptime(ist_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -218,50 +194,31 @@ def update_streak_day_level(meta, all_ok_today):
                 if streak.get("current", 0) > 0:
                     log(f"💔 Streak broken at Day {streak['current']}")
                 streak["current"] = 0
-
     streak["last_checked_date"] = ist_date
     meta["streak"] = streak
 
 
 def compute_all_ok_today(players):
-    """
-    Day-level all_ok check: reads claim_history.json to determine whether
-    ALL rewards for ALL players have been claimed since today's reset —
-    across ALL runs combined, not just the current run.
-
-    This is the correct implementation of Option B (day-level streak).
-    The previous all_ok used run-level counts (td/ts/tl) which would always
-    be 0 on backup runs where every player was smart-skipped, causing the
-    streak to never increment past the primary run.
-    """
     h   = load_claim_history()
     lr  = get_last_daily_reset()
     ist = get_ist_time()
-
     for pid, has_loyalty in players:
         if pid not in h:
             return False
         ph = h[pid]
-
-        # Daily — must have been claimed since last 5:30 AM reset
         lc = ph.get("daily", {}).get("last_claim")
         if not lc or datetime.fromisoformat(lc) < lr:
             return False
-
-        # Store — all 3 must be claimed since last reset
         for i in range(1, 4):
             lc = ph.get("store", {}).get(f"reward_{i}", {}).get("last_claim")
             if not lc or datetime.fromisoformat(lc) < lr:
                 return False
-
-        # Loyalty — rolling 24h; must have been claimed within last 24h
         if has_loyalty:
             lc = ph.get("loyalty", {}).get("last_claim")
             if not lc:
                 return False
             if ist > datetime.fromisoformat(lc) + timedelta(hours=LOYALTY_COOLDOWN_HOURS):
-                return False  # cooldown expired = not claimed recently
-
+                return False
     return True
 
 
@@ -296,7 +253,7 @@ def init_player_history(pid):
                 f"reward_{i}": {"last_claim": None, "next_available": None, "status": "unknown"}
                 for i in range(1, 4)
             },
-            "progression": {"last_claim": None, "last_count": 0},
+            "progression": {"last_claim": None, "last_count": 0, "last_visit": None},
             "loyalty":     {"last_claim": None, "next_available": None, "status": "unknown"}
         }
         save_claim_history(h)
@@ -304,6 +261,9 @@ def init_player_history(pid):
         changed = False
         if "loyalty" not in h[pid]:
             h[pid]["loyalty"] = {"last_claim": None, "next_available": None, "status": "unknown"}
+            changed = True
+        if "last_visit" not in h[pid].get("progression", {}):
+            h[pid].setdefault("progression", {})["last_visit"] = None
             changed = True
         for rk in ("reward_1", "reward_2", "reward_3"):
             if "status" not in h[pid]["store"].get(rk, {}):
@@ -316,17 +276,10 @@ def init_player_history(pid):
 
 def update_claim_history(pid, reward_type, claimed_count=0,
                          reward_index=None, detected_cooldown=None, attempted=False):
-    """
-    KEY CHANGE v3.0:
-      - DAILY  → next_available anchored to get_next_daily_reset()
-      - STORE  → next_available anchored to get_next_daily_reset()  (changed from 24h rolling)
-      - LOYALTY → next_available = ist_now + LOYALTY_COOLDOWN_HOURS (still rolling 24h)
-    """
     h       = init_player_history(pid)
     ist_now = get_ist_time()
-    nr      = get_next_daily_reset()  # used by both daily and store
+    nr      = get_next_daily_reset()
 
-    # ── DAILY ─────────────────────────────────────────────────────────────────
     if reward_type == "daily":
         if claimed_count > 0:
             h[pid]["daily"]["last_claim"]     = ist_now.isoformat()
@@ -334,7 +287,7 @@ def update_claim_history(pid, reward_type, claimed_count=0,
             h[pid]["daily"]["status"]         = "claimed"
             log(f"📝 Daily claimed → next reset {nr.strftime('%I:%M %p IST')}")
         elif detected_cooldown is not None:
-            h[pid]["daily"]["next_available"] = nr.isoformat()   # anchor to reset
+            h[pid]["daily"]["next_available"] = nr.isoformat()
             h[pid]["daily"]["status"]         = "cooldown_detected"
             log(f"📝 Daily cooldown anchored → {nr.strftime('%I:%M %p IST')}")
         elif attempted:
@@ -345,16 +298,15 @@ def update_claim_history(pid, reward_type, claimed_count=0,
                 h[pid]["daily"]["status"] = "unavailable"
                 log(f"📝 Daily unavailable")
 
-    # ── STORE (anchored to daily reset, same as daily) ─────────────────────────
     elif reward_type == "store" and reward_index is not None:
         rk = f"reward_{reward_index}"
         if claimed_count > 0:
             h[pid]["store"][rk]["last_claim"]     = ist_now.isoformat()
-            h[pid]["store"][rk]["next_available"] = nr.isoformat()   # anchor
+            h[pid]["store"][rk]["next_available"] = nr.isoformat()
             h[pid]["store"][rk]["status"]         = "claimed"
             log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
         elif detected_cooldown is not None:
-            h[pid]["store"][rk]["next_available"] = nr.isoformat()   # anchor
+            h[pid]["store"][rk]["next_available"] = nr.isoformat()
             h[pid]["store"][rk]["status"]         = "cooldown_detected"
             log(f"📝 Store {reward_index} cooldown anchored → daily reset")
         elif attempted:
@@ -364,13 +316,13 @@ def update_claim_history(pid, reward_type, claimed_count=0,
             else:
                 h[pid]["store"][rk]["status"] = "unavailable"
 
-    # ── PROGRESSION ────────────────────────────────────────────────────────────
-    elif reward_type == "progression" and claimed_count > 0:
-        h[pid]["progression"]["last_claim"] = ist_now.isoformat()
-        h[pid]["progression"]["last_count"] = claimed_count
-        log(f"📝 Progression claimed {claimed_count}")
+    elif reward_type == "progression":
+        h[pid]["progression"]["last_visit"] = ist_now.isoformat()
+        if claimed_count > 0:
+            h[pid]["progression"]["last_claim"] = ist_now.isoformat()
+            h[pid]["progression"]["last_count"] = claimed_count
+            log(f"📝 Progression claimed {claimed_count}, last_visit updated")
 
-    # ── LOYALTY (rolling 24h) ──────────────────────────────────────────────────
     elif reward_type == "loyalty":
         if claimed_count > 0:
             na = ist_now + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
@@ -396,10 +348,6 @@ def update_claim_history(pid, reward_type, claimed_count=0,
 
 
 def get_reward_status(pid):
-    """
-    Returns dict with availability flags and next-available strings.
-    Uses last_reset anchor for daily+store (not 24h rolling).
-    """
     h       = load_claim_history()
     ist_now = get_ist_time()
     lr      = get_last_daily_reset()
@@ -420,16 +368,12 @@ def get_reward_status(pid):
 
     ph = h[pid]
 
-    # ── DAILY ─────────────────────────────────────────────────────────────────
     d_avail  = True
     d_next   = None
     d_status = ph["daily"].get("status", "unknown")
-
     lc_d = ph["daily"].get("last_claim")
     na_d = ph["daily"].get("next_available")
-
     if lc_d and datetime.fromisoformat(lc_d) >= lr:
-        # Claimed since last reset
         d_avail  = False
         d_next   = format_time_until(nr)
         d_status = "claimed"
@@ -439,18 +383,15 @@ def get_reward_status(pid):
             d_avail = False
             d_next  = format_time_until(nt)
 
-    # ── STORE (same anchor logic as daily) ────────────────────────────────────
     s_avail  = [True,      True,      True]
     s_next   = [None,      None,      None]
     s_status = ["unknown", "unknown", "unknown"]
-
     for i in range(3):
         rk = f"reward_{i+1}"
         rd = ph["store"][rk]
         s_status[i] = rd.get("status", "unknown")
         lc_s = rd.get("last_claim")
         na_s = rd.get("next_available")
-
         if lc_s and datetime.fromisoformat(lc_s) >= lr:
             s_avail[i]  = False
             s_next[i]   = format_time_until(nr)
@@ -461,15 +402,12 @@ def get_reward_status(pid):
                 s_avail[i] = False
                 s_next[i]  = format_time_until(nt)
 
-    # ── LOYALTY (rolling 24h) ──────────────────────────────────────────────────
     l_avail  = True
     l_next   = None
     ld       = ph.get("loyalty", {})
     l_status = ld.get("status", "unknown")
-
     lc_l = ld.get("last_claim")
     na_l = ld.get("next_available")
-
     if lc_l:
         cd_end = datetime.fromisoformat(lc_l) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
         if ist_now < cd_end:
@@ -497,28 +435,36 @@ def get_reward_status(pid):
 
 def all_claimable_on_cooldown(pid, has_loyalty):
     """
-    True when every reward this player can claim is already on cooldown.
-
-    LOYALTY SPECIAL RULE: Only treat loyalty as 'on cooldown' for smart-skip
-    purposes if last_claim is set and within the 24h window. We deliberately
-    ignore next_available for loyalty here because it can be poisoned by a
-    false Store Bonus timer detection (next_available set, last_claim = null).
-    A detected cooldown without an actual claim is NOT a reliable skip signal.
+    True only when every claimable reward is on cooldown AND progression
+    was visited within the last 4 hours (so we don't skip it if it may have unlocked).
     """
+    PROGRESSION_CHECK_WINDOW_HOURS = 4
+
     s = get_reward_status(pid)
 
     if not s["daily_available"] and not any(s["store_available"]):
+        h    = load_claim_history()
+        ph   = h.get(pid, {})
+        ist  = get_ist_time()
+
+        last_visit = ph.get("progression", {}).get("last_visit")
+        if last_visit:
+            visit_age = (ist - datetime.fromisoformat(last_visit)).total_seconds() / 3600
+            if visit_age >= PROGRESSION_CHECK_WINDOW_HOURS:
+                log(f"🔄 {pid}: progression not checked in {visit_age:.1f}h — opening browser")
+                return False
+        else:
+            return False
+
         if not has_loyalty:
             return True
-        # For loyalty: only skip if WE actually claimed it recently
-        h    = load_claim_history()
-        ld   = h.get(pid, {}).get("loyalty", {})
-        lc_l = ld.get("last_claim")
+        lc_l = ph.get("loyalty", {}).get("last_claim")
         if lc_l:
             cd_end = datetime.fromisoformat(lc_l) + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-            if get_ist_time() < cd_end:
-                return True   # actually on cooldown after a real claim
-        return False           # loyalty uncertain or never claimed — do NOT skip
+            if ist < cd_end:
+                return True
+        return False
+
     return False
 
 
@@ -577,13 +523,11 @@ def create_driver():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def bypass_cloudflare(driver):
-    # Only blocks when Cloudflare challenge is actually present.
-    # Removed unconditional 2s sleep — was wasting ~200s per full run.
     try:
         title  = driver.title.lower()
         source = driver.page_source.lower()
         if "just a moment" not in title and "verifying" not in source:
-            return  # No Cloudflare — return immediately
+            return
         log("🛡️ Cloudflare detected — waiting...")
         time.sleep(5)
         try:
@@ -614,8 +558,57 @@ def accept_cookies(driver):
         pass
 
 
+def capture_display_name(driver):
+    """
+    Extracts the in-game display name shown in the top-right corner after login.
+    Falls back gracefully — caller treats None as "use masked ID".
+    """
+    try:
+        result = driver.execute_script("""
+            var selectors = [
+                '[class*="username"]',
+                '[class*="display-name"]',
+                '[class*="player-name"]',
+                '[class*="user-name"]',
+                '[class*="nickname"]',
+                '[data-testid="username"]',
+                '[data-testid="display-name"]',
+            ];
+            for (var i = 0; i < selectors.length; i++) {
+                var el = document.querySelector(selectors[i]);
+                if (el) {
+                    var t = (el.innerText || el.textContent || '').trim();
+                    if (t && t.length > 0 && t.length < 40) return t;
+                }
+            }
+            var avatars = document.querySelectorAll('img[src*="avatar"], img[src*="profile"], img[alt*="avatar"], img[alt*="profile"]');
+            for (var j = 0; j < avatars.length; j++) {
+                var parent = avatars[j].parentElement;
+                for (var d = 0; d < 4 && parent; d++) {
+                    var texts = Array.from(parent.querySelectorAll('*')).filter(function(e) {
+                        var t = (e.innerText || '').trim();
+                        return t.length > 1 && t.length < 40 && e.children.length === 0
+                            && !/^[0-9]+$/.test(t) && !t.includes('/') && !t.includes(':');
+                    });
+                    if (texts.length > 0) {
+                        var name = (texts[0].innerText || texts[0].textContent || '').trim();
+                        if (name) return name;
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+            return null;
+        """)
+        if result and len(result.strip()) > 0:
+            log(f"👤 Display name: {result.strip()}")
+            return result.strip()
+    except Exception as e:
+        log(f"⚠️ Display name capture failed (non-critical): {e}")
+    return None
+
+
 def login_to_hub(driver, pid):
-    log(f"🔐 Logging in: {pid}")
+    log(f"🔐 Logging in...")
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
@@ -662,7 +655,7 @@ def login_to_hub(driver, pid):
                     f.clear()
                     f.send_keys(pid)
                     id_field = f
-                    log(f"✅ ID entered: {pid}")
+                    log(f"✅ ID entered")
                     break
             except:
                 continue
@@ -747,182 +740,7 @@ def physical_click(driver, el):
                 return True
             except:
                 return False
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SECTION 7 — TIMER DETECTION (JS DOM)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def detect_daily_timer_js(driver):
-    try:
-        res = driver.execute_script("""
-            function getNum(el){return parseInt((el.innerText||el.textContent||'').trim())||0;}
-            let leafs=Array.from(document.querySelectorAll('*')).filter(e=>e.children.length===0);
-            for(let el of leafs){
-                let t=(el.innerText||'').trim().toLowerCase();
-                if(t==='next reward in'||t==='next in'||t==='next reward'){
-                    let c=el.parentElement;
-                    for(let d=0;d<6;d++){
-                        if(!c)break;
-                        let ls=Array.from(c.querySelectorAll('*')).filter(e=>e.children.length===0);
-                        let h=null,m=null,s=0;
-                        for(let l of ls){
-                            let t2=(l.innerText||'').trim().toLowerCase();
-                            if(t2==='hours'||t2==='hour'){let sb=l.previousElementSibling;if(sb)h=getNum(sb);}
-                            if(t2==='minutes'||t2==='minute'){let sb=l.previousElementSibling;if(sb)m=getNum(sb);}
-                            if(t2==='seconds'||t2==='second'){let sb=l.previousElementSibling;if(sb)s=getNum(sb);}
-                        }
-                        if(h!==null&&m!==null)return{hours:h,minutes:m,seconds:s};
-                        c=c.parentElement;
-                    }
-                }
-            }
-            return null;
-        """)
-        if res:
-            td = timedelta(hours=res.get('hours', 0), minutes=res.get('minutes', 0), seconds=res.get('seconds', 0))
-            log(f"🔍 Daily timer: {res['hours']}h {res['minutes']}m {res['seconds']}s")
-            return td
-    except Exception as e:
-        log(f"⚠️ Daily timer JS error: {e}")
-    return None
-
-
-def detect_store_timers_js(driver):
-    result = {1: None, 2: None, 3: None}
-    try:
-        res = driver.execute_script("""
-            var anchors={
-                1:['gold (daily)','gold(daily)','5 gold','gold daily'],
-                2:['cash (daily)','cash(daily)','500 cash','cash daily'],
-                3:['luckyloon (daily)','luckyloon(daily)','10 luckyloon','luckyloon daily']
-            };
-            function findCard(kws){
-                var els=Array.from(document.querySelectorAll('*'));
-                var lbl=null;
-                for(var i=0;i<els.length;i++){
-                    var own=Array.from(els[i].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim().toLowerCase();
-                    if(kws.some(k=>own.includes(k))&&own.length<35){lbl=els[i];break;}
-                }
-                if(!lbl)return 'not_found';
-                var node=lbl;
-                for(var d=0;d<15;d++){
-                    node=node.parentElement;
-                    if(!node||node===document.body)break;
-                    if((node.innerText||'').toLowerCase().includes('next in')){
-                        var ch=Array.from(node.querySelectorAll('*'));
-                        for(var j=0;j<ch.length;j++){
-                            var own2=Array.from(ch[j].childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
-                            if(own2.toLowerCase().includes('next in')&&own2.length<50){
-                                return 'timer:'+(ch[j].innerText||ch[j].textContent||'').trim();
-                            }
-                        }
-                        return 'timer:unknown';
-                    }
-                    if(d>=4){
-                        var btns=node.querySelectorAll('button');
-                        for(var b=0;b<btns.length;b++)if((btns[b].innerText||'').trim().toLowerCase()==='free')return 'free';
-                    }
-                }
-                return 'free';
-            }
-            var r={};
-            for(var k in anchors)r[k]=findCard(anchors[k]);
-            return r;
-        """)
-        if res:
-            NAMES = {1: "Gold", 2: "Cash", 3: "Luckyloon"}
-            for k, status in res.items():
-                n = int(k)
-                if status.startswith('timer:'):
-                    txt = status[6:]
-                    if txt != 'unknown':
-                        d = parse_timer_text(txt)
-                        if d and d.total_seconds() > 60:
-                            result[n] = d
-                            log(f"🔍 Store {NAMES[n]}: cooldown ({txt})")
-                elif status == 'free':
-                    log(f"🔍 Store {NAMES.get(n, n)}: Free")
-    except Exception as e:
-        log(f"⚠️ Store timer JS error: {e}")
-    return result
-
-
-def detect_loyalty_timer_js(driver):
-    """
-    Detect a real loyalty TIER cooldown timer.
-    Searches within [data-slider-item-id] tier card containers only,
-    so Store Bonus 'Next in' timers from the bottom section are ignored.
-    Falls back to page-wide search only if no slider items found,
-    but still filters out Store Bonus context.
-    """
-    try:
-        res = driver.execute_script("""
-            // First pass: look WITHIN tier card containers (data-slider-item-id).
-            // These are the Bronze/Silver/Gold loyalty tier cards.
-            // Store Bonus items are in a different DOM section and won't have this attribute.
-            var cards = Array.from(document.querySelectorAll('[data-slider-item-id]'));
-            for(var i=0; i<cards.length; i++){
-                var cardText = (cards[i].innerText||'').toLowerCase();
-                // A tier card on cooldown shows 'next in' but NOT 'claim' or 'delivered'
-                if(cardText.includes('next in') && !cardText.includes('claim')){
-                    // Extract the 'Next in Xh Ym' text from this specific card
-                    var spans = Array.from(cards[i].querySelectorAll('*'));
-                    for(var j=0; j<spans.length; j++){
-                        var own = Array.from(spans[j].childNodes)
-                            .filter(function(n){return n.nodeType===3;})
-                            .map(function(n){return n.textContent;})
-                            .join('').trim();
-                        if(own.toLowerCase().includes('next in') && own.length < 60){
-                            return own;
-                        }
-                    }
-                }
-            }
-
-            // Second pass (fallback): page-wide search but skip Store Bonus context
-            var els = Array.from(document.querySelectorAll('*'));
-            for(var k=0; k<els.length; k++){
-                var ownText = Array.from(els[k].childNodes)
-                    .filter(function(n){return n.nodeType===3;})
-                    .map(function(n){return n.textContent;})
-                    .join('').trim();
-                if(ownText.toLowerCase().includes('next in') && ownText.length < 60){
-                    // Exclude if any ancestor within 6 levels says 'Store Bonus'
-                    var node = els[k].parentElement, isStore = false;
-                    for(var d=0; d<6&&node; d++){
-                        if((node.innerText||'').toLowerCase().includes('store bonus')){
-                            isStore = true; break;
-                        }
-                        node = node.parentElement;
-                    }
-                    if(!isStore) return ownText;
-                }
-            }
-            return null;
-        """)
-        if res:
-            d = parse_timer_text(res)
-            if d and d.total_seconds() > 60:
-                log(f"🔍 Loyalty timer (tier): {res}")
-                return d
-    except Exception as e:
-        log(f"⚠️ Loyalty timer JS error: {e}")
-    return None
-
-
-def detect_page_cooldowns(driver, pid, page_type):
-    if page_type == "daily":
-        d = detect_daily_timer_js(driver)
-        if d and d.total_seconds() > 60:
-            update_claim_history(pid, "daily", detected_cooldown=d)
-    elif page_type == "store":
-        tmap = detect_store_timers_js(driver)
-        for card_n, d in tmap.items():
-            if d is not None:
-                update_claim_history(pid, "store", reward_index=card_n, detected_cooldown=d)
-    elif page_type == "loyalty":
-        d = detect_loyalty_timer_js(driver)
+d = detect_loyalty_timer_js(driver)
         if d and d.total_seconds() > 60:
             update_claim_history(pid, "loyalty", detected_cooldown=d)
 
@@ -1000,7 +818,6 @@ def claim_store_rewards(driver, pid):
         close_popup(driver)
         detect_page_cooldowns(driver, pid, "store")
 
-        # Re-read after detection
         s2 = get_reward_status(pid)
         skip_flags = [not a for a in s2["store_available"]]
         if not any(s2["store_available"]):
@@ -1024,7 +841,6 @@ def claim_store_rewards(driver, pid):
                 pass
             return None
 
-        # Phase 1: physical click (claims 1-2)
         for attempt in range(3):
             if claimed >= 2:
                 break
@@ -1047,7 +863,6 @@ def claim_store_rewards(driver, pid):
             else:
                 time.sleep(1)
 
-        # Phase 2: 3rd claim — physical + JS fallback
         if claimed < 3:
             for attempt in range(4):
                 if claimed >= 3:
@@ -1066,7 +881,6 @@ def claim_store_rewards(driver, pid):
                         log(f"✅ Store Claim #{claimed}")
                         update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
                         break
-                # JS fallback
                 ok = driver.execute_script("""
                     let cards=document.querySelectorAll('[class*="StoreBonus"]');
                     if(!cards.length)cards=document.querySelectorAll('div');
@@ -1094,7 +908,6 @@ def claim_store_rewards(driver, pid):
                     log(f"ℹ️  Both methods failed, retry {attempt+1}/4")
                     time.sleep(2)
 
-        # Mark unclaimed as attempted
         s3 = get_reward_status(pid)
         for i in range(claimed + 1, 4):
             if s3["store_available"][i-1] and s3["store_status"][i-1] not in ("cooldown_detected", "claimed"):
@@ -1119,14 +932,11 @@ def claim_progression_program_rewards(driver, pid):
         for _ in range(6):
             ok = driver.execute_script("""
                 // Match both 'Claim' (single reward) and 'Claim all' (multi-reward card).
-                // Keeps original 'Claim' detection intact — 'Claim all' is additive.
                 for(let btn of document.querySelectorAll('button')){
                     let t=(btn.innerText||btn.textContent).trim().toLowerCase();
                     let isClaimBtn = (t==='claim' || t==='claim all');
                     if(!isClaimBtn) continue;
                     if(btn.disabled) continue;
-                    // Only skip via offsetParent for 'Claim' (not 'Claim all' — carousel items
-                    // may not be visible yet but are still valid).
                     if(t==='claim' && btn.offsetParent===null) continue;
                     let pt=(btn.parentElement.innerText||btn.parentElement.textContent)||'';
                     if(pt.includes('Delivered')) continue;
@@ -1149,6 +959,8 @@ def claim_progression_program_rewards(driver, pid):
                 time.sleep(1)
         if claimed > 0:
             update_claim_history(pid, "progression", claimed_count=claimed)
+        else:
+            update_claim_history(pid, "progression", claimed_count=0)
     except:
         pass
     return claimed
@@ -1156,9 +968,6 @@ def claim_progression_program_rewards(driver, pid):
 
 def claim_loyalty_program(driver, pid):
     """Returns (count_claimed, was_skipped)."""
-    # Only skip if WE actually claimed loyalty within the last 24h.
-    # Do NOT skip based on next_available alone — it can be poisoned by a
-    # false Store Bonus timer detection (next_available set, last_claim = null).
     h    = load_claim_history()
     ld   = h.get(pid, {}).get("loyalty", {})
     lc_l = ld.get("last_claim")
@@ -1169,8 +978,6 @@ def claim_loyalty_program(driver, pid):
             log(f"⏩ Loyalty claimed recently. Next: {remaining}")
             return 0, True
 
-    # Self-heal: if next_available is set but last_claim is null, the cooldown
-    # was written by a false timer detection. Clear it so future runs aren't blocked.
     if ld.get("next_available") and not lc_l:
         log(f"🔧 Healing corrupt loyalty cooldown (detected without real claim) for {pid}")
         history = load_claim_history()
@@ -1186,49 +993,33 @@ def claim_loyalty_program(driver, pid):
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-
-        # Run cooldown detection to update history, but DO NOT use it
-        # as a second gate. The page itself is the source of truth — if
-        # a "Claim" button is visible and data-unavailable="false", we click it.
-        # The previous s2 guard was causing false skips when last_claim + 24h
-        # hadn't expired yet even though the hub server allowed claiming.
         detect_page_cooldowns(driver, pid, "loyalty")
 
         for attempt in range(5):
             ok = driver.execute_script("""
-                // PRIMARY STRATEGY: scope search to tier card containers.
-                // [data-slider-item-id] are the Bronze/Silver/Gold tier cards.
-                // Each card is self-contained: it shows EITHER a Claim button
-                // OR 'Delivered' OR 'Next in Xh Ym'. No cross-section confusion.
                 var cards = Array.from(document.querySelectorAll('[data-slider-item-id]'));
                 for(var i=0; i<cards.length; i++){
                     var card = cards[i];
                     var cardText = (card.innerText||'').toLowerCase();
-                    // Skip if this card is delivered or on cooldown
                     if(cardText.includes('delivered')) continue;
                     if(cardText.includes('next in')) continue;
-                    // Look for a claimable button within this card
                     var btns = card.querySelectorAll('button');
                     for(var j=0; j<btns.length; j++){
                         var btn = btns[j];
                         if(btn.disabled) continue;
                         var t = (btn.innerText||btn.textContent||'').trim().toLowerCase();
                         if(t !== 'claim' && t !== 'free') continue;
-                        // Scroll horizontal carousel to bring card into view
                         btn.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
                         btn.click();
                         return 'card';
                     }
                 }
-
-                // FALLBACK: no slider items found — try page-wide but exclude Store Bonus section
                 var allBtns = Array.from(document.querySelectorAll('button'));
                 for(var k=0; k<allBtns.length; k++){
                     var btn2 = allBtns[k];
                     if(btn2.disabled) continue;
                     var t2 = (btn2.innerText||btn2.textContent||'').trim().toLowerCase();
                     if(t2 !== 'claim' && t2 !== 'free') continue;
-                    // Only go up 3 levels — stay within the immediate card container
                     var node = btn2.parentElement, cd = false;
                     for(var d=0; d<3&&node; d++){
                         var nt = (node.innerText||'').toLowerCase();
@@ -1262,11 +1053,6 @@ def claim_loyalty_program(driver, pid):
             detect_page_cooldowns(driver, pid, "loyalty")
         else:
             update_claim_history(pid, "loyalty", attempted=True)
-            # Return (0, True) — "skipped/not applicable" — so process_player
-            # does NOT add loyalty to possible count.
-            # When claimed=0 and no cooldown was detected, the loyalty tier is
-            # LP-locked (not enough points yet). Marking it as "skipped" prevents
-            # a false "Partial" status alert in the email for LP-locked IDs.
             log(f"🔒 Loyalty: no claimable tier found — treating as LP-locked (not counted in possible)")
             driver.save_screenshot(f"loyalty_{pid}.png")
             return 0, True
@@ -1288,6 +1074,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
     start = get_ist_time()
     stats = {
         "pid":            pid,
+        "display_name":   None,
         "is_new":         is_new,
         "has_loyalty":    has_loyalty,
         "daily":          0,
@@ -1306,10 +1093,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
     init_player_history(pid)
 
-    # ── Smart skip: no browser needed if everything on cooldown ───────────────
     if all_claimable_on_cooldown(pid, has_loyalty):
         log(f"\n⏩ {pid} — all on cooldown, smart-skipping")
-        snap = get_reward_status(pid)
         stats.update({
             "skipped_all":    True,
             "daily_skipped":  True,
@@ -1326,9 +1111,11 @@ def process_player(pid, has_loyalty, is_new, run_label):
         driver = create_driver()
 
         if not login_to_hub(driver, pid):
-            stats["status"]     = "Login Failed"
+            stats["status"]      = "Login Failed"
             stats["fail_reason"] = "Could not authenticate"
             return stats
+
+        stats["display_name"] = capture_display_name(driver)
 
         # Daily
         d, d_skip = claim_daily_rewards(driver, pid)
@@ -1399,7 +1186,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
     except Exception as e:
         log(f"❌ Error: {e}")
-        stats["status"]     = "Error"
+        stats["status"]      = "Error"
         stats["fail_reason"] = str(e)[:120]
     finally:
         if driver:
@@ -1410,7 +1197,6 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
     stats["duration_s"] = int((get_ist_time() - start).total_seconds())
 
-    # Snapshot next-available for email display
     snap = get_reward_status(pid)
     stats["store_next"]   = snap["store_next"]
     stats["daily_next"]   = snap["daily_next"]
@@ -1420,86 +1206,132 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECTION 10 — EMAIL (Premium Dark Dashboard)
+# SECTION 10 — EMAIL (Light Theme Dashboard)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _CSS = """
+/* ═══════════════════════════════════════════════════
+   CS Hub Rewards Dashboard — Light Theme v3.0
+   Mobile-first: stacked cards on ≤640px,
+   table layout on >640px.
+═══════════════════════════════════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0;}
-/* ── Base — dark but readable ── */
-body{background:#111827;font-family:'Segoe UI',Arial,sans-serif;padding:20px;color:#e2e8f0;}
+body{background:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;padding:16px;color:#111827;}
 .wrap{max-width:980px;margin:0 auto;}
+
 /* ── Hero ── */
-.hero{background:linear-gradient(135deg,#1e2a3a 0%,#111827 100%);border:1px solid #374151;border-radius:14px;padding:26px 30px;margin-bottom:14px;}
-.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:14px;}
-.bp{background:#14532d;color:#86efac;border:1px solid #16a34a;}
-.bb{background:#1e3a5f;color:#93c5fd;border:1px solid #2563eb;}
-.bm{background:#431407;color:#fdba74;border:1px solid #c2410c;}
-.hero-grid{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
-.hero-left h1{font-size:20px;font-weight:700;color:#f8fafc;margin-bottom:6px;}
-.hero-left p{font-size:12px;color:#94a3b8;}
-.hero-nums{display:flex;gap:28px;}
+.hero{background:linear-gradient(135deg,#1e3a5f 0%,#1e40af 100%);border-radius:14px;padding:22px 24px;margin-bottom:14px;color:#fff;}
+.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px;}
+.bp{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+.bb{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;}
+.bm{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;}
+.hero-grid{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+.hero-left h1{font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;}
+.hero-left p{font-size:12px;color:#bfdbfe;}
+.hero-nums{display:flex;gap:24px;flex-wrap:wrap;}
 .hnum{text-align:center;}
-.hv{display:block;font-size:34px;font-weight:800;line-height:1;}
-.g{color:#4ade80;}.b{color:#60a5fa;}.a{color:#fbbf24;}
-.hl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;}
+.hv{display:block;font-size:30px;font-weight:800;line-height:1;}
+.g{color:#86efac;}.b{color:#bfdbfe;}.a{color:#fde68a;}
+.hl{font-size:10px;color:#bfdbfe;text-transform:uppercase;letter-spacing:.8px;margin-top:4px;}
+
 /* ── KPI Row ── */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
-.kpi{background:#1f2937;border:1px solid #374151;border-radius:10px;padding:16px 18px;}
-.kl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
-.kv{font-size:26px;font-weight:700;color:#f8fafc;}
-.kv span{font-size:13px;color:#6b7280;}
-.ks{font-size:11px;color:#9ca3af;margin-top:4px;}
-.du{color:#4ade80;font-weight:600;}.dd{color:#f87171;font-weight:600;}.de{color:#9ca3af;}
-.pb{background:#374151;border-radius:3px;height:4px;margin-top:10px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.kpi{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.kl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:600;}
+.kv{font-size:24px;font-weight:700;color:#111827;}
+.kv span{font-size:13px;color:#9ca3af;}
+.ks{font-size:11px;color:#6b7280;margin-top:4px;}
+.du{color:#16a34a;font-weight:600;}.dd{color:#dc2626;font-weight:600;}.de{color:#9ca3af;}
+.pb{background:#e5e7eb;border-radius:3px;height:4px;margin-top:10px;}
 .pf{height:4px;border-radius:3px;}
 .pg{background:#22c55e;}.pb2{background:#3b82f6;}.pp{background:#a855f7;}.pa{background:#f59e0b;}
-/* ── Strip ── */
-.strip{background:#1f2937;border:1px solid #374151;border-radius:8px;padding:12px 18px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
-.si{font-size:12px;color:#9ca3af;}
-.si strong{color:#e2e8f0;}
-/* ── Table — FIX: outer wrapper does NOT clip so inner scroll works ── */
-.tbx{border:1px solid #374151;border-radius:10px;margin-bottom:14px;overflow:visible;}
-.tbh{background:#1f2937;padding:13px 18px;border-bottom:1px solid #374151;font-size:13px;font-weight:600;color:#e2e8f0;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;}
-.tbh small{font-size:11px;color:#9ca3af;}
-/* ── Scrollable table container ── */
-.tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 10px 10px;touch-action:pan-x;overscroll-behavior-x:contain;}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:780px;background:#1f2937;}
-th{background:#111827;color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding:10px 10px;text-align:center;border-bottom:1px solid #374151;white-space:nowrap;}
-th.idh{text-align:left;padding-left:16px;min-width:185px;}
-td{padding:10px 10px;text-align:center;border-bottom:1px solid #1f2937;vertical-align:middle;color:#e2e8f0;}
-td.idc{text-align:left;padding-left:16px;font-family:'Courier New',monospace;font-size:11px;color:#60a5fa;white-space:nowrap;font-weight:600;}
-tr:last-child td{border-bottom:none;}
-tr.rs{background:#14271c;}
-tr.rp{background:#292113;}
-tr.rf{background:#2d1515;}
-tr.rk{background:#171e2b;}
-.ic-ok{color:#4ade80;font-size:15px;}.ic-cd{color:#fbbf24;font-size:15px;}.ic-fl{color:#f87171;font-size:15px;}
-.ic-lk{color:#6b7280;font-size:15px;}.ic-pd{color:#60a5fa;font-size:15px;}.ic-na{color:#4b5563;font-size:15px;}
+
+/* ── Run strip ── */
+.strip{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:11px 16px;margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.si{font-size:12px;color:#6b7280;}
+.si strong{color:#111827;}
+
+/* ── Shared status/icon classes ── */
 .sb{display:inline-block;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;}
-.ss{background:#14532d;color:#86efac;}.sp{background:#422006;color:#fdba74;}
-.sf{background:#450a0a;color:#fca5a5;}.sk{background:#1f2937;color:#6b7280;}
-.sn{background:#1f2937;color:#9ca3af;}
+.ss{background:#dcfce7;color:#166534;}.sp{background:#fff7ed;color:#c2410c;}
+.sf{background:#fee2e2;color:#991b1b;}.sk{background:#f3f4f6;color:#6b7280;}
+.sn{background:#f3f4f6;color:#9ca3af;}
+.ic-ok{color:#16a34a;font-size:15px;}.ic-cd{color:#d97706;font-size:15px;}.ic-fl{color:#dc2626;font-size:15px;}
+.ic-lk{color:#9ca3af;font-size:15px;}.ic-pd{color:#2563eb;font-size:15px;}.ic-na{color:#d1d5db;font-size:15px;}
+
+/* ═══════════════════════════════════════════════════
+   DESKTOP TABLE — visible above 640px
+═══════════════════════════════════════════════════ */
+.tbx{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;overflow:visible;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.tbh{background:#f9fafb;padding:13px 18px;border-bottom:1px solid #e5e7eb;font-size:13px;font-weight:600;color:#111827;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0;}
+.tbh small{font-size:11px;color:#6b7280;}
+.tsc{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 10px 10px;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:760px;background:#fff;}
+th{background:#f9fafb;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding:10px;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap;font-weight:600;}
+th.idh{text-align:left;padding-left:14px;min-width:185px;}
+td{padding:9px 10px;text-align:center;border-bottom:1px solid #f3f4f6;vertical-align:middle;color:#374151;}
+td.idc{text-align:left;padding-left:14px;font-family:'Courier New',monospace;font-size:11px;color:#1d4ed8;white-space:nowrap;font-weight:600;}
+tr:last-child td{border-bottom:none;}
+tr.rs{background:#f0fdf4;}
+tr.rp{background:#fff7ed;}
+tr.rf{background:#fef2f2;}
+tr.rk{background:#fafafa;}
+.mob-cards{display:none;}
+
+/* ═══════════════════════════════════════════════════
+   MOBILE STACKED CARDS — active below 640px
+   • Table hidden, each player = a self-contained card
+   • No horizontal scroll, no swipe-action conflicts
+═══════════════════════════════════════════════════ */
+@media(max-width:640px){
+  body{padding:10px;}
+  .hero{padding:16px 14px;}
+  .hero-left h1{font-size:15px;}
+  .hv{font-size:24px;}
+  .kpi-row{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi{padding:12px 12px;}
+  .kv{font-size:20px;}
+  .strip{flex-direction:column;align-items:flex-start;gap:8px;}
+  .tbx{display:none;}
+  .mob-cards{display:block;margin-bottom:14px;}
+  .mc-head{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px 10px 0 0;padding:12px 14px;font-size:13px;font-weight:600;color:#111827;display:flex;justify-content:space-between;align-items:center;}
+  .mc-head small{font-size:11px;color:#6b7280;}
+  .mpc{background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+  .mpc.rs{border-left:3px solid #22c55e;}
+  .mpc.rp{border-left:3px solid #f59e0b;}
+  .mpc.rf{border-left:3px solid #ef4444;}
+  .mpc.rk{border-left:3px solid #d1d5db;}
+  .mpc-id{background:#f9fafb;padding:9px 14px;font-family:'Courier New',monospace;font-size:12px;color:#1d4ed8;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f3f4f6;}
+  .mpc-id .mpc-st{font-family:'Segoe UI',Arial,sans-serif;}
+  .mpc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid #f9fafb;font-size:12px;}
+  .mpc-row:last-child{border-bottom:none;}
+  .mpc-lbl{color:#6b7280;font-size:11px;font-weight:500;}
+  .mpc-val{color:#374151;display:flex;gap:8px;align-items:center;}
+  .nr-grid{grid-template-columns:1fr 1fr;gap:6px;}
+}
+
 /* ── Detail cards ── */
 .dcs{margin-bottom:14px;}
-.dct{font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding:0 4px;}
-.dc{background:#1f2937;border:1px solid #374151;border-radius:8px;padding:14px 18px;margin-bottom:10px;}
-.dcf{border-left:3px solid #f87171;}.dcp{border-left:3px solid #fbbf24;}
-.dcid{font-family:'Courier New',monospace;font-size:13px;color:#60a5fa;font-weight:700;margin-bottom:10px;}
-.dcr{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #374151;}
+.dct{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding:0 4px;}
+.dc{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px 18px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+.dcf{border-left:3px solid #ef4444;}.dcp{border-left:3px solid #f59e0b;}
+.dcid{font-family:'Courier New',monospace;font-size:13px;color:#1d4ed8;font-weight:700;margin-bottom:10px;}
+.dcr{display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid #f3f4f6;}
 .dcr:last-child{border-bottom:none;}
-.dcl{color:#94a3b8;font-weight:500;}.dcv{color:#e2e8f0;}
-.dce{color:#f87171;font-size:11px;font-style:italic;margin-bottom:8px;}
+.dcl{color:#6b7280;font-weight:500;}.dcv{color:#374151;}
+.dce{color:#dc2626;font-size:11px;font-style:italic;margin-bottom:8px;}
+
 /* ── Footer ── */
-.foot{background:#111827;border:1px solid #374151;border-radius:10px;padding:20px 24px;}
-.ft{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;font-weight:600;}
+.foot{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.ft{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;font-weight:600;}
 .nr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
-.nr{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:8px 12px;text-align:center;}
-.nrl{font-size:10px;color:#94a3b8;margin-bottom:4px;font-weight:500;}
-.nrt{font-size:12px;font-family:'Courier New',monospace;color:#e2e8f0;}
-.nr.nrp .nrt{color:#4ade80;font-weight:700;}
-.leg{display:flex;flex-wrap:wrap;gap:12px;padding-top:12px;border-top:1px solid #374151;margin-top:12px;}
-.leg span{font-size:11px;color:#9ca3af;}
-.ver{text-align:center;font-size:10px;color:#6b7280;margin-top:12px;padding-top:10px;border-top:1px solid #374151;}
+.nr{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;text-align:center;}
+.nrl{font-size:10px;color:#6b7280;margin-bottom:4px;font-weight:500;}
+.nrt{font-size:12px;font-family:'Courier New',monospace;color:#374151;}
+.nr.nrp .nrt{color:#16a34a;font-weight:700;}
+.leg{display:flex;flex-wrap:wrap;gap:12px;padding-top:12px;border-top:1px solid #e5e7eb;margin-top:12px;}
+.leg span{font-size:11px;color:#6b7280;}
+.ver{text-align:center;font-size:10px;color:#9ca3af;margin-top:12px;padding-top:10px;border-top:1px solid #e5e7eb;}
 """
 
 
@@ -1508,25 +1340,37 @@ def _badge_cls(run_label):
     if run_label == "Manual Run":  return "bm"
     return "bb"
 
+def _display_label(r):
+    """
+    Returns the privacy-safe display string for a player in the email.
+    Priority: display_name captured from hub → masked ID (last 4 chars only).
+    Raw player IDs are NEVER shown in the email report.
+    """
+    dn = r.get("display_name")
+    if dn:
+        return dn
+    pid = r.get("pid", "")
+    return f"Player …{pid[-4:]}" if len(pid) >= 4 else "Player"
+
 def _row_cls(status):
     return {"Success":"rs","Partial":"rp","Login Failed":"rf",
             "Error":"rf","Failed":"rf"}.get(status, "rk")
 
 def _sb_html(status):
     m = {
-        "Success":              ("ss","✅ Success"),
-        "Partial":              ("sp","⚠️ Partial"),
+        "Success":               ("ss","✅ Success"),
+        "Partial":               ("sp","⚠️ Partial"),
         "All Skipped (Cooldown)":("sk","⏩ Skipped"),
-        "No Rewards":           ("sn","⏳ No Rewards"),
-        "Login Failed":         ("sf","🔐 Login Failed"),
-        "Error":                ("sf","❌ Error"),
-        "Failed":               ("sf","❌ Failed"),
+        "No Rewards":            ("sn","⏳ No Rewards"),
+        "Login Failed":          ("sf","🔐 Login Failed"),
+        "Error":                 ("sf","❌ Error"),
+        "Failed":                ("sf","❌ Failed"),
     }
     cls, lbl = m.get(status, ("sk", status))
     return f'<span class="sb {cls}">{lbl}</span>'
 
 def _delta_html(cur, prev, unit=""):
-    if prev is None or prev == 0 and cur == 0:
+    if prev is None or (prev == 0 and cur == 0):
         return '<span class="de">first run</span>'
     d = cur - prev
     if d > 0:  return f'<span class="du">▲{d}{unit}</span>'
@@ -1547,10 +1391,10 @@ def build_email(results, run_label, run_index, job_start, meta):
     dur_str  = f"{dur_s // 60}m {dur_s % 60}s"
     n        = len(results)
 
-    td   = sum(r["daily"]       for r in results)
-    ts   = sum(r["store"]       for r in results)
-    tp   = sum(r["progression"] for r in results)
-    tl   = sum(r.get("loyalty", 0) for r in results)
+    td   = sum(r["daily"]           for r in results)
+    ts   = sum(r["store"]           for r in results)
+    tp   = sum(r["progression"]     for r in results)
+    tl   = sum(r.get("loyalty", 0)  for r in results)
     tall = td + ts + tp + tl
 
     tp_all  = sum(r.get("possible", 0) for r in results)
@@ -1573,15 +1417,13 @@ def build_email(results, run_label, run_index, job_start, meta):
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
     slowest = max(timed, key=lambda x: x[1]) if timed else None
 
-    bc   = _badge_cls(run_label)
-    bi   = {"Primary Run":"🟢","Manual Run":"🔧"}.get(run_label, "🔵")
+    bc  = _badge_cls(run_label)
+    bi  = {"Primary Run":"🟢","Manual Run":"🔧"}.get(run_label, "🔵")
 
-    d_pct  = min(round(td / n * 100) if n else 0, 100)
-    s_pct  = min(round(ts / (n*3) * 100) if n else 0, 100)
-    l_pct  = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
-    e_pct  = min(int(eff), 100)
+    d_pct = min(round(td / n * 100) if n else 0, 100)
+    s_pct = min(round(ts / (n*3) * 100) if n else 0, 100)
+    l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
 
-    # Pre-build delta strings
     dlt_d   = _delta_html(td,   lr_d)
     dlt_s   = _delta_html(ts,   lr_s)
     dlt_l   = _delta_html(tl,   lr_l)
@@ -1594,12 +1436,12 @@ def build_email(results, run_label, run_index, job_start, meta):
     has_details  = False
 
     for r in results:
-        pid    = r["pid"]
-        status = r["status"]
-        rc     = _row_cls(status)
-        new_mark = " 🆕" if r.get("is_new") else ""
+        pid         = r["pid"]
+        display_lbl = _display_label(r)
+        status      = r["status"]
+        rc          = _row_cls(status)
+        new_mark    = " 🆕" if r.get("is_new") else ""
 
-        # Daily cell
         if r["daily_skipped"]:
             dn = r.get("daily_next") or "next reset"
             dc = f'<span class="ic-cd" title="Next: {dn}">⏰</span>'
@@ -1610,11 +1452,10 @@ def build_email(results, run_label, run_index, job_start, meta):
         else:
             dc = '<span class="ic-pd">⏳</span>'
 
-        # Map claimed count to which cards were actually free
         sk = r.get("store_skipped", [False, False, False])
         if not isinstance(sk, list) or len(sk) < 3:
             sk = [False, False, False]
-        free_slots = [i for i in range(3) if not sk[i]]
+        free_slots    = [i for i in range(3) if not sk[i]]
         claimed_cards = [False, False, False]
         for j, idx in enumerate(free_slots):
             if j < r["store"]:
@@ -1623,9 +1464,9 @@ def build_email(results, run_label, run_index, job_start, meta):
         sn_list = r.get("store_next") or [None, None, None]
         sc_html = ""
         for i in range(3):
-            sep = ' style="border-left:2px solid #1a2d4a;"' if i == 0 else ''
+            sep = ' style="border-left:2px solid #d1d5db;"' if i == 0 else ''
             if sk[i]:
-                nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
+                nxt  = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
                 cell = f'<span class="ic-cd" title="Next: {nxt}">⏰</span>'
             elif claimed_cards[i]:
                 cell = '<span class="ic-ok">✅</span>'
@@ -1635,12 +1476,10 @@ def build_email(results, run_label, run_index, job_start, meta):
                 cell = '<span class="ic-pd">⏳</span>'
             sc_html += f'<td{sep}>{cell}</td>'
 
-        # Progression
         pc = ('<span class="ic-ok">✅</span>' if r["progression"] > 0
               else '<span class="ic-fl">❌</span>' if status in ("Login Failed","Error","Failed")
               else '<span class="ic-lk" title="Awaiting grenades/bullets">⏳</span>')
 
-        # Loyalty
         if not r.get("has_loyalty"):
             lc = '<span class="ic-na">—</span>'
         elif r.get("loyalty_skipped"):
@@ -1653,28 +1492,25 @@ def build_email(results, run_label, run_index, job_start, meta):
         else:
             lc = '<span class="ic-lk" title="Awaiting LP from purchases">🔒</span>'
 
-        # Time
         d_s = r.get("duration_s", 0)
-        tm  = (f'<span style="color:#6e7681;">{d_s//60}m{d_s%60}s</span>'
-               if d_s and not r.get("skipped_all")
-               else '<span class="ic-na">—</span>')
+        tm  = (f'<span style="color:#6b7280;">{d_s//60}m{d_s%60}s</span>'
+               if d_s else '<span class="ic-na">—</span>')
 
         table_rows += (
             f'<tr class="{rc}">'
-            f'<td class="idc">{pid}{new_mark}</td>'
-            f'<td style="border-left:2px solid #1a3a24;">{dc}</td>'
+            f'<td class="idc">{display_lbl}{new_mark}</td>'
+            f'<td style="border-left:2px solid #d1d5db;">{dc}</td>'
             f'{sc_html}'
-            f'<td style="border-left:2px solid #2d1f0d;">{pc}</td>'
-            f'<td style="border-left:2px solid #271a45;">{lc}</td>'
-            f'<td style="border-left:2px solid #1c2128;">{tm}</td>'
+            f'<td style="border-left:2px solid #d1d5db;">{pc}</td>'
+            f'<td style="border-left:2px solid #d1d5db;">{lc}</td>'
+            f'<td style="border-left:2px solid #d1d5db;">{tm}</td>'
             f'<td>{_sb_html(status)}</td>'
             f'</tr>'
         )
 
-        # Detail cards for failed / partial only
         if status in ("Failed","Partial","Login Failed","Error","No Rewards"):
             has_details = True
-            dc_cls = "dcf" if status in ("Error","Failed","Login Failed") else "dcp"
+            dc_cls   = "dcf" if status in ("Error","Failed","Login Failed") else "dcp"
             err_html = (f'<div class="dce">⚠️ {r["fail_reason"]}</div>'
                         if r.get("fail_reason") else "")
 
@@ -1689,7 +1525,7 @@ def build_email(results, run_label, run_index, job_start, meta):
                     sv = "✅ Claimed"
                 elif sk[i]:
                     nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "On cooldown"
-                    sv = f"⏰ {nxt}"
+                    sv  = f"⏰ {nxt}"
                 else:
                     sv = "⏳ Not claimed"
                 s_rows += _drow(SNAMES[i], sv)
@@ -1709,7 +1545,7 @@ def build_email(results, run_label, run_index, job_start, meta):
 
             detail_cards += (
                 f'<div class="dc {dc_cls}">'
-                f'<div class="dcid">{pid}{new_mark}</div>'
+                f'<div class="dcid">{display_lbl}{new_mark}</div>'
                 f'{err_html}'
                 f'{_drow("🎁 Daily", d_val)}'
                 f'{s_rows}'
@@ -1728,16 +1564,78 @@ def build_email(results, run_label, run_index, job_start, meta):
             f'</div>'
         )
 
-    # ── Run schedule footer ───────────────────────────────────────────────────
-    sched = next_scheduled_runs_ist()
+    sched   = next_scheduled_runs_ist()
     nr_html = ""
     for i, (lbl, t) in enumerate(sched):
-        cls = ' class="nr nrp"' if i == 0 else ' class="nr"'
+        cls      = ' class="nr nrp"' if i == 0 else ' class="nr"'
         nr_html += f'<div{cls}><div class="nrl">{lbl}</div><div class="nrt">{t}</div></div>'
 
     slowest_str = f"{slowest[0][:8]}… ({slowest[1]}s)" if slowest else "—"
 
-    # ── Assemble HTML ─────────────────────────────────────────────────────────
+    # ── Mobile stacked cards ──────────────────────────────────────────────────
+    mob_html = ""
+    for r in results:
+        display_lbl = _display_label(r)
+        status      = r["status"]
+        rc          = _row_cls(status)
+        new_mark    = " 🆕" if r.get("is_new") else ""
+        d_s2        = r.get("duration_s", 0)
+        tm2         = f"{d_s2//60}m{d_s2%60}s" if d_s2 else "—"
+
+        sk2 = r.get("store_skipped", [False, False, False])
+        if not isinstance(sk2, list) or len(sk2) < 3:
+            sk2 = [False, False, False]
+        free_slots2 = [i for i in range(3) if not sk2[i]]
+        cc2         = [False, False, False]
+        for j2, idx2 in enumerate(free_slots2):
+            if j2 < r["store"]: cc2[idx2] = True
+
+        def _mc_icon(val, skipped, is_fail):
+            if skipped:  return '⏰'
+            if val > 0:  return '✅'
+            if is_fail:  return '❌'
+            return '⏳'
+
+        is_fail2 = status in ("Login Failed","Error","Failed")
+        d_ic  = _mc_icon(r["daily"], r["daily_skipped"], is_fail2)
+        g_ic  = '⏰' if sk2[0] else ('✅' if cc2[0] else ('❌' if is_fail2 else '⏳'))
+        c_ic  = '⏰' if sk2[1] else ('✅' if cc2[1] else ('❌' if is_fail2 else '⏳'))
+        l_ic  = '⏰' if sk2[2] else ('✅' if cc2[2] else ('❌' if is_fail2 else '⏳'))
+        p_ic  = '✅' if r["progression"] > 0 else ('❌' if is_fail2 else '⏳')
+        if not r.get("has_loyalty"):
+            ly_ic = '—'
+        elif r.get("loyalty_skipped"):
+            ly_ic = '⏰'
+        elif r.get("loyalty", 0) > 0:
+            ly_ic = '✅'
+        elif is_fail2:
+            ly_ic = '❌'
+        else:
+            ly_ic = '🔒'
+
+        mob_html += (
+            f'<div class="mpc {rc}">'
+            f'<div class="mpc-id">{display_lbl}{new_mark}'
+            f'<span class="mpc-st">{_sb_html(status)}</span></div>'
+            f'<div class="mpc-row"><span class="mpc-lbl">🎁 Daily &nbsp;🥇 Gold &nbsp;💵 Cash &nbsp;🍀 Lucky</span>'
+            f'<span class="mpc-val">{d_ic} &nbsp;{g_ic} &nbsp;{c_ic} &nbsp;{l_ic}</span></div>'
+            f'<div class="mpc-row"><span class="mpc-lbl">🎯 Progression</span>'
+            f'<span class="mpc-val">{p_ic} {r["progression"] if r["progression"] > 0 else ""}</span></div>'
+            f'<div class="mpc-row"><span class="mpc-lbl">🏆 Loyalty</span>'
+            f'<span class="mpc-val">{ly_ic}</span></div>'
+            f'<div class="mpc-row"><span class="mpc-lbl">⏱️ Time</span>'
+            f'<span class="mpc-val" style="color:#6b7280;">{tm2}</span></div>'
+            f'</div>'
+        )
+
+    mob_section = (
+        f"<div class='mob-cards'>"
+        f"<div class='mc-head'><span>👥 All {n} Player IDs</span>"
+        f"<small>🆕 = new ID</small></div>"
+        f"{mob_html}"
+        f"</div>"
+    )
+
     html = (
         "<!DOCTYPE html><html lang='en'>"
         "<head><meta charset='UTF-8'>"
@@ -1745,7 +1643,6 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<style>{_CSS}</style></head>"
         "<body><div class='wrap'>"
 
-        # Hero
         f"<div class='hero'>"
         f"<span class='badge {bc}'>{bi} {run_label}</span>"
         f"<div class='hero-grid'>"
@@ -1761,62 +1658,52 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<div class='hnum'><span class='hv a'>🔥 {s_cur}</span><span class='hl'>Day Streak</span></div>"
         f"</div></div></div>"
 
-        # KPI Row
         f"<div class='kpi-row'>"
         f"<div class='kpi'><div class='kl'>🎁 Daily</div>"
         f"<div class='kv'>{td}<span>/{n}</span></div>"
-        f"<div class='ks'>{dlt_d}</div>"
-        f"{_pbar(d_pct, 'pg')}</div>"
-
+        f"<div class='ks'>{dlt_d}</div>{_pbar(d_pct,'pg')}</div>"
         f"<div class='kpi'><div class='kl'>🏪 Store</div>"
         f"<div class='kv'>{ts}<span>/{n*3}</span></div>"
-        f"<div class='ks'>{dlt_s}</div>"
-        f"{_pbar(s_pct, 'pb2')}</div>"
-
+        f"<div class='ks'>{dlt_s}</div>{_pbar(s_pct,'pb2')}</div>"
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
         f"<div class='kv'>{tp}<span> items</span></div>"
         f"<div class='ks'>Variable — grenade dependent</div>"
-        f"{_pbar(min(tp * 10, 100), 'pp')}</div>"
-
+        f"{_pbar(min(tp*10,100),'pp')}</div>"
         f"<div class='kpi'><div class='kl'>🏆 Loyalty</div>"
         f"<div class='kv'>{tl}<span>/{l_enrl}</span></div>"
-        f"<div class='ks'>{dlt_l}</div>"
-        f"{_pbar(l_pct, 'pa')}</div>"
+        f"<div class='ks'>{dlt_l}</div>{_pbar(l_pct,'pa')}</div>"
         f"</div>"
 
-        # Strip
         f"<div class='strip'>"
         f"<span class='si'>⏱️ <strong>{dur_str}</strong> total</span>"
         f"<span class='si'>👤 Avg <strong>{avg_t}s</strong>/ID</span>"
         f"<span class='si'>🐢 Slowest: <strong>{slowest_str}</strong></span>"
         f"<span class='si'>🔥 Best streak: <strong>{s_best} days</strong></span>"
         f"<span class='si'>📊 Efficiency: <strong>{eff:.1f}%</strong> {dlt_eff}</span>"
-        f"<span class='si'>📦 Total all-time: <strong>{tall}</strong> claimed this run {dlt_tot}</span>"
+        f"<span class='si'>📦 Claimed this run: <strong>{tall}</strong> {dlt_tot}</span>"
         f"</div>"
 
-        # Table
         f"<div class='tbx'>"
-        f"<div class='tbh'><span>👥 All {n} Player IDs</span>"
+        f"<div class='tbh'><span>👥 All {n} Players</span>"
         f"<small>⏩ = already claimed &nbsp;|&nbsp; 🆕 = new ID this run</small></div>"
         f"<div class='tsc'><table>"
         f"<tr>"
-        f"<th class='idh'>Player ID</th>"
-        f"<th style='border-left:2px solid #1a3a24;'>🎁 Daily</th>"
-        f"<th style='border-left:2px solid #1a2d4a;'>🥇 Gold</th>"
+        f"<th class='idh'>Player</th>"
+        f"<th style='border-left:2px solid #e5e7eb;'>🎁 Daily</th>"
+        f"<th style='border-left:2px solid #e5e7eb;'>🥇 Gold</th>"
         f"<th>💵 Cash</th>"
         f"<th>🍀 Lucky</th>"
-        f"<th style='border-left:2px solid #2d1f0d;'>🎯 Prog</th>"
-        f"<th style='border-left:2px solid #271a45;'>🏆 Loyal</th>"
-        f"<th style='border-left:2px solid #1c2128;'>⏱️ Time</th>"
+        f"<th style='border-left:2px solid #e5e7eb;'>🎯 Prog</th>"
+        f"<th style='border-left:2px solid #e5e7eb;'>🏆 Loyal</th>"
+        f"<th style='border-left:2px solid #e5e7eb;'>⏱️ Time</th>"
         f"<th>Status</th>"
         f"</tr>"
         f"{table_rows}"
         f"</table></div></div>"
 
-        # Detail cards (only when there are issues)
+        f"{mob_section}"
         f"{detail_sec}"
 
-        # Footer
         f"<div class='foot'>"
         f"<div class='ft'>🗓️ All 8 Scheduled Runs Today (IST)</div>"
         f"<div class='nr-grid'>{nr_html}</div>"
@@ -1875,10 +1762,8 @@ def main():
     ist_now = get_ist_time()
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
 
-    # Load state files
     meta = load_bot_meta()
 
-    # Read players
     players = []
     try:
         with open(PLAYER_ID_FILE, 'r') as f:
@@ -1894,22 +1779,20 @@ def main():
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
 
-    # Process all players
     results = []
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
         mark_id_seen(pid, meta)
         r = process_player(pid, has_loyalty, new_id, run_label)
         results.append(r)
-        time.sleep(0.5)  # brief pause between players; was 3s (unnecessary)
+        time.sleep(0.5)
 
-    # ── Compute metrics ───────────────────────────────────────────────────────
     job_end  = get_ist_time()
     dur_s    = int((job_end - job_start).total_seconds())
-    td       = sum(r["daily"]       for r in results)
-    ts       = sum(r["store"]       for r in results)
-    tp       = sum(r["progression"] for r in results)
-    tl       = sum(r.get("loyalty", 0) for r in results)
+    td       = sum(r["daily"]           for r in results)
+    ts       = sum(r["store"]           for r in results)
+    tp       = sum(r["progression"]     for r in results)
+    tl       = sum(r.get("loyalty", 0)  for r in results)
     tall     = td + ts + tp + tl
     tp_all   = sum(r.get("possible", 0) for r in results)
     eff      = 100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1)
@@ -1923,37 +1806,29 @@ def main():
     log(f"  Daily:{td}  Store:{ts}  Prog:{tp}  Loyalty:{tl}")
     log(f"{'='*60}")
 
-    # ── Check if all-ok today (for streak) ────────────────────────────────────
-    # Uses claim_history.json — checks whether ALL rewards for ALL players
-    # have been claimed since today's reset, across ALL runs today combined.
-    # This is the correct day-level check (Option B).
     all_ok = compute_all_ok_today(players)
     if all_ok:
         log("✅ All rewards claimed today — streak eligible")
     update_streak_day_level(meta, all_ok)
 
-    # ── Update last_run in meta ───────────────────────────────────────────────
     prev_run = meta.get("last_run")
     meta["last_run"] = {
-        "timestamp":          job_end.isoformat(),
-        "run_label":          run_label,
-        "total_claimed":      tall,
-        "efficiency":         eff,
-        "duration_seconds":   dur_s,
-        "per_type":           {"daily": td, "store": ts, "progression": tp, "loyalty": tl},
-        "slowest_player":     slowest[0] if slowest else None,
-        "avg_time_per_player":avg_t,
+        "timestamp":           job_end.isoformat(),
+        "run_label":           run_label,
+        "total_claimed":       tall,
+        "efficiency":          eff,
+        "duration_seconds":    dur_s,
+        "per_type":            {"daily": td, "store": ts, "progression": tp, "loyalty": tl},
+        "slowest_player":      slowest[0] if slowest else None,
+        "avg_time_per_player": avg_t,
     }
-    # Temporarily restore prev_run for the email delta calculation
     meta_for_email = dict(meta)
-    meta_for_email["last_run"] = prev_run  # email uses prev run for deltas
+    meta_for_email["last_run"] = prev_run
 
     save_bot_meta(meta)
 
-    # ── Build and send email ──────────────────────────────────────────────────
     html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
 
-    # Subject: Option 1 format
     n_players = len(players)
     ok_count  = sum(1 for r in results if r["status"] == "Success")
     ist_label = job_start.strftime('%d-%b %I:%M %p')
@@ -1964,7 +1839,6 @@ def main():
     )
 
     send_email(html_body, subject)
-
     log("✅ All done.")
 
 
