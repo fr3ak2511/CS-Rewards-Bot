@@ -2136,11 +2136,18 @@ def main():
         f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
     )
 
-    def _resolve_email_config():
+    # ── Replace everything from line 2139 to end of file ──────────────────────────
+# These two functions must live at MODULE level (no indent), not inside main().
+# The original IndentationError was caused by _resolve_email_config being
+# nested inside main() with its docstring at the same indent as the def line.
+
+
+def _resolve_email_config():
     """
-    Resolve email settings from either the old or new env var names.
+    Resolve email credentials from either the new SMTP_* env vars
+    or the legacy EMAIL_SENDER / EMAIL_PASSWORD / EMAIL_RECEIVER names.
+    Returns (server, port, sender, password, receiver).
     """
-    import os
     server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 
     try:
@@ -2172,48 +2179,41 @@ def main():
 
     return server, port, sender, password, receiver
 
+
 def send_email(html_body, subject):
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    
+    """Send the HTML email report via SMTP SSL."""
     server, port, sender, password, receiver = _resolve_email_config()
 
     missing = []
-    if not server:
-        missing.append("SMTP_SERVER")
-    if not sender:
-        missing.append("EMAIL_SENDER")
-    if not password:
-        missing.append("EMAIL_PASSWORD")
-    if not receiver:
-        missing.append("EMAIL_RECEIVER")
+    if not server:   missing.append("SMTP_SERVER")
+    if not sender:   missing.append("EMAIL_SENDER")
+    if not password: missing.append("EMAIL_PASSWORD")
+    if not receiver: missing.append("EMAIL_RECEIVER")
 
     if missing:
-        print(f"⚠️ Email env vars missing ({', '.join(missing)}) — skipping email")
+        log(f"⚠️ Email env vars missing ({', '.join(missing)}) — skipping email")
         return False
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = sender
-        msg["To"] = receiver
-        # The HTML fix is perfectly placed here:
+        msg["From"]    = sender
+        msg["To"]      = receiver
         msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         with smtplib.SMTP_SSL(server, port, timeout=30) as smtp:
             smtp.login(sender, password)
             smtp.sendmail(sender, [receiver], msg.as_string())
 
-        print(f"📧 Email sent successfully to {receiver}")
+        log(f"📧 Email sent successfully")
         return True
 
     except smtplib.SMTPAuthenticationError as e:
-        print(f"⚠️ Email auth failed: {e.smtp_code} {e.smtp_error}")
+        log(f"⚠️ Email auth failed: {e.smtp_code} {e.smtp_error}")
     except smtplib.SMTPException as e:
-        print(f"⚠️ Email SMTP failed: {e}")
+        log(f"⚠️ Email SMTP error: {e}")
     except Exception as e:
-        print(f"⚠️ Email failed: {type(e).__name__}: {e}")
+        log(f"⚠️ Email failed: {type(e).__name__}: {e}")
 
     return False
 
