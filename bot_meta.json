@@ -39,11 +39,11 @@
     "8FC80EF0CC5B9D39"
   ],
   "last_run": {
-    "timestamp": "2026-04-06T00:45:13.122132",
+    "timestamp": "2026-04-06T03:28:20.095608",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 946,
+    "duration_seconds": 948,
     "per_type": {
       "daily": 0,
       "store": 0,
