@@ -39,18 +39,18 @@
     "8FC80EF0CC5B9D39"
   ],
   "last_run": {
-    "timestamp": "2026-04-11T06:15:57.311705",
-    "run_label": "Manual Run",
-    "total_claimed": 104,
+    "timestamp": "2026-04-11T09:00:26.113778",
+    "run_label": "Backup Run #1",
+    "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 2030,
+    "duration_seconds": 970,
     "per_type": {
-      "daily": 26,
-      "store": 78,
+      "daily": 0,
+      "store": 0,
       "progression": 0,
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 77.2
+    "avg_time_per_player": 36.4
   }
 }
