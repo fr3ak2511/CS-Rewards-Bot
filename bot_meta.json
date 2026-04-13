@@ -2,10 +2,10 @@
   "current_streak": 0,
   "last_run_date": "2026-03-30",
   "streak": {
-    "current": 11,
-    "best": 11,
-    "last_success_date": "2026-04-13",
-    "last_checked_date": "2026-04-13"
+    "current": 12,
+    "best": 12,
+    "last_success_date": "2026-04-14",
+    "last_checked_date": "2026-04-14"
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
@@ -39,18 +39,18 @@
     "8FC80EF0CC5B9D39"
   ],
   "last_run": {
-    "timestamp": "2026-04-13T22:07:35.106160",
+    "timestamp": "2026-04-14T01:14:27.321992",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 981,
+    "duration_seconds": 1099,
     "per_type": {
       "daily": 0,
       "store": 0,
       "progression": 0,
       "loyalty": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 36.9
+    "slowest_player": "5899855DAA167B36",
+    "avg_time_per_player": 41.3
   }
 }
