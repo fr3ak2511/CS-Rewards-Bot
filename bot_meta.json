@@ -40,11 +40,11 @@
     "1956988E56026BA7"
   ],
   "last_run": {
-    "timestamp": "2026-04-19T00:50:56.303729",
+    "timestamp": "2026-04-19T03:33:11.262977",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 977,
+    "duration_seconds": 939,
     "per_type": {
       "daily": 0,
       "store": 0,
