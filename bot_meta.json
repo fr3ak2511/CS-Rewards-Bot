@@ -40,11 +40,11 @@
     "1956988E56026BA7"
   ],
   "last_run": {
-    "timestamp": "2026-04-21T01:07:10.281757",
+    "timestamp": "2026-04-21T03:43:53.986337",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 999,
+    "duration_seconds": 1015,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -52,6 +52,6 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 36.1
+    "avg_time_per_player": 36.7
   }
 }
