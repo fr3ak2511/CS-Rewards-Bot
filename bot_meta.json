@@ -41,18 +41,18 @@
     "631FEB500E5C1EB7"
   ],
   "last_run": {
-    "timestamp": "2026-04-29T06:09:08.490926",
-    "run_label": "Manual Run",
-    "total_claimed": 113,
+    "timestamp": "2026-04-29T09:42:11.798150",
+    "run_label": "Backup Run",
+    "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 2136,
+    "duration_seconds": 1004,
     "per_type": {
-      "daily": 28,
-      "store": 84,
-      "progression": 1,
+      "daily": 0,
+      "store": 0,
+      "progression": 0,
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 75.2
+    "avg_time_per_player": 34.8
   }
 }
