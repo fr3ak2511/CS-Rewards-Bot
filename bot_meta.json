@@ -41,11 +41,11 @@
     "631FEB500E5C1EB7"
   ],
   "last_run": {
-    "timestamp": "2026-04-30T20:07:59.750493",
+    "timestamp": "2026-04-30T22:29:48.739640",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 1048,
+    "duration_seconds": 1047,
     "per_type": {
       "daily": 0,
       "store": 0,
