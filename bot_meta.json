@@ -38,21 +38,22 @@
     "9F151B005C7F548A",
     "8FC80EF0CC5B9D39",
     "1956988E56026BA7",
-    "631FEB500E5C1EB7"
+    "631FEB500E5C1EB7",
+    "6163D9F946C4BD48"
   ],
   "last_run": {
-    "timestamp": "2026-05-03T06:11:37.582569",
+    "timestamp": "2026-05-03T07:24:12.481769",
     "run_label": "Manual Run",
-    "total_claimed": 113,
+    "total_claimed": 6,
     "efficiency": 100.0,
-    "duration_seconds": 2277,
+    "duration_seconds": 1105,
     "per_type": {
-      "daily": 28,
-      "store": 84,
-      "progression": 1,
+      "daily": 1,
+      "store": 3,
+      "progression": 2,
       "loyalty": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 80.4
+    "slowest_player": "6163D9F946C4BD48",
+    "avg_time_per_player": 37.0
   }
 }
