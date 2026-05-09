@@ -1,31 +1,31 @@
 {
   "E1E9729A4885E6D9": {
     "daily": {
-      "last_claim": "2026-05-08T05:34:10.812038",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:33:57.646642",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:34:23.768931",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:34:09.523359",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:34:34.561737",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:34:18.612949",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:34:45.090798",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:34:27.803334",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:34:36.969949",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:38:21.204176"
+      "last_visit": "2026-05-09T05:34:51.922255"
     },
     "loyalty": {
       "last_claim": null,
@@ -35,31 +35,31 @@
   },
   "4DC0E2AA7130D7E6": {
     "daily": {
-      "last_claim": "2026-05-08T05:35:33.901803",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:35:14.465730",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:35:46.813765",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:35:26.344648",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:35:57.526947",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:35:35.460989",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:36:07.804051",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:35:44.821783",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:35:58.650618",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:38:58.310962"
+      "last_visit": "2026-05-09T05:36:08.993684"
     },
     "loyalty": {
       "last_claim": null,
@@ -69,31 +69,31 @@
   },
   "FBF717E3BFDF5E94": {
     "daily": {
-      "last_claim": "2026-05-08T05:36:56.707653",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:36:30.872660",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:37:09.616211",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:36:42.725967",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:37:19.966818",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:36:51.844852",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:37:30.362012",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:37:01.041216",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:37:20.499444",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:39:35.196033"
+      "last_visit": "2026-05-09T05:37:24.979713"
     },
     "loyalty": {
       "last_claim": null,
@@ -103,31 +103,31 @@
   },
   "46C57810F646B91F": {
     "daily": {
-      "last_claim": "2026-05-08T05:38:18.334477",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:37:47.889169",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:38:31.518554",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:37:59.650641",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:38:42.575128",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:38:08.976495",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:38:52.914551",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:38:18.341477",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:38:41.017947",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:40:12.022935"
+      "last_visit": "2026-05-09T05:38:42.071402"
     },
     "loyalty": {
       "last_claim": null,
@@ -137,31 +137,31 @@
   },
   "8EE5A8F3D8CAD1F3": {
     "daily": {
-      "last_claim": "2026-05-08T05:39:40.948333",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:39:05.626762",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:39:54.038006",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:39:17.665671",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:40:04.466022",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:39:26.830161",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:40:14.886842",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:39:35.996704",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:40:03.554929",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:40:49.442015"
+      "last_visit": "2026-05-09T05:40:00.001728"
     },
     "loyalty": {
       "last_claim": null,
@@ -171,31 +171,31 @@
   },
   "E72DC1D6C5301F47": {
     "daily": {
-      "last_claim": "2026-05-08T05:41:03.077964",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:40:21.722672",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:41:16.504486",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:40:33.738361",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:41:27.550713",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:40:42.745374",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:41:38.026720",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:40:51.915024",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:41:25.764089",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:41:26.460004"
+      "last_visit": "2026-05-09T05:41:15.867850"
     },
     "loyalty": {
       "last_claim": null,
@@ -205,31 +205,31 @@
   },
   "5899855DAA167B36": {
     "daily": {
-      "last_claim": "2026-05-08T05:42:26.400613",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:41:38.517838",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:42:39.468536",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:41:50.294439",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:42:49.739424",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:41:59.466534",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:43:00.055580",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:42:08.659859",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:42:48.060400",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:42:04.345993"
+      "last_visit": "2026-05-09T05:42:32.660639"
     },
     "loyalty": {
       "last_claim": null,
@@ -239,31 +239,31 @@
   },
   "5D14D66D5B6C7B8F": {
     "daily": {
-      "last_claim": "2026-05-08T05:43:48.131971",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:42:55.204374",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:44:00.951728",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:43:07.271917",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:44:11.082991",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:43:16.616406",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:44:21.533051",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:43:25.942482",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:44:08.548955",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:42:41.704135"
+      "last_visit": "2026-05-09T05:43:50.062687"
     },
     "loyalty": {
       "last_claim": null,
@@ -273,31 +273,31 @@
   },
   "5429611A24A8F01A": {
     "daily": {
-      "last_claim": "2026-05-08T05:45:10.158808",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:44:11.991270",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:45:23.237513",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:44:23.912743",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:45:33.693118",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:44:32.883513",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:45:43.963731",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:44:42.269874",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:45:30.762671",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:43:18.920602"
+      "last_visit": "2026-05-09T05:45:06.289786"
     },
     "loyalty": {
       "last_claim": null,
@@ -307,31 +307,31 @@
   },
   "856EB1365FA9D02E": {
     "daily": {
-      "last_claim": "2026-05-08T05:46:31.845988",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:45:29.554353",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:46:44.703080",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:45:41.602521",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:46:55.355599",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:45:50.838529",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:47:05.715627",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:46:00.104149",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:46:54.103700",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:43:56.157041"
+      "last_visit": "2026-05-09T05:46:24.066308"
     },
     "loyalty": {
       "last_claim": null,
@@ -341,31 +341,31 @@
   },
   "F251D3D226496061": {
     "daily": {
-      "last_claim": "2026-05-08T05:47:53.076334",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:46:46.989195",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:48:06.143442",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:46:58.737823",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:48:16.505480",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:47:07.869186",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:48:26.808972",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:47:17.097937",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:48:15.915925",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:44:33.777313"
+      "last_visit": "2026-05-09T05:47:40.887204"
     },
     "loyalty": {
       "last_claim": null,
@@ -375,31 +375,31 @@
   },
   "3D9A901755C3B2D8": {
     "daily": {
-      "last_claim": "2026-05-08T05:49:14.231456",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:48:03.887636",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:49:27.183629",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:48:15.860363",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:49:37.709253",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:48:25.074462",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:49:48.268822",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:48:34.470660",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:49:38.871614",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:45:11.218017"
+      "last_visit": "2026-05-09T05:48:58.238341"
     },
     "loyalty": {
       "last_claim": null,
@@ -409,31 +409,31 @@
   },
   "86CD85689FAE9549": {
     "daily": {
-      "last_claim": "2026-05-08T05:50:35.544460",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:49:20.504738",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:50:48.393068",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:49:32.737161",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:50:59.353023",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:49:42.019347",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:51:09.831246",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:49:51.371203",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:51:02.252101",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:45:48.648075"
+      "last_visit": "2026-05-09T05:50:15.157433"
     },
     "loyalty": {
       "last_claim": null,
@@ -444,31 +444,31 @@
   },
   "A32124B011061E03": {
     "daily": {
-      "last_claim": "2026-05-08T05:51:57.449577",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:50:38.304057",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:52:11.015093",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:50:50.453975",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:52:22.436009",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:50:59.813064",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:52:33.524247",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:51:09.171189",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T05:52:36.195163",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:46:24.949072"
+      "last_visit": "2026-05-09T05:51:32.860707"
     },
     "loyalty": {
       "last_claim": null,
@@ -479,31 +479,31 @@
   },
   "63989CEF5D15F053": {
     "daily": {
-      "last_claim": "2026-05-08T05:53:21.805087",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:51:55.456236",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:53:35.030059",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:52:07.616063",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:53:46.665967",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:52:17.012702",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:53:57.614921",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:52:26.519353",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T05:53:59.526018",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:47:01.900966"
+      "last_visit": "2026-05-09T05:52:50.455907"
     },
     "loyalty": {
       "last_claim": null,
@@ -514,31 +514,31 @@
   },
   "B0036841F0183A12": {
     "daily": {
-      "last_claim": "2026-05-08T05:54:45.607804",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:53:14.638987",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:54:58.327828",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:53:26.508986",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:55:08.892259",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:53:35.500663",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:55:19.189300",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:53:44.733698",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T05:55:24.740215",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:47:38.716042"
+      "last_visit": "2026-05-09T05:54:08.776054"
     },
     "loyalty": {
       "last_claim": null,
@@ -549,31 +549,31 @@
   },
   "A6DA56D3C46DF31B": {
     "daily": {
-      "last_claim": "2026-05-08T05:56:07.218110",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:54:32.602996",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:56:20.203997",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:54:44.705450",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:56:30.609091",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:54:54.051590",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:56:40.899112",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:55:03.445024",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:56:34.913077",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:48:16.176973"
+      "last_visit": "2026-05-09T05:55:27.400161"
     },
     "loyalty": {
       "last_claim": null,
@@ -584,31 +584,31 @@
   },
   "7E53CF9C948CED45": {
     "daily": {
-      "last_claim": "2026-05-08T05:57:30.442400",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:55:50.693291",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:57:43.100827",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:56:02.741964",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:57:53.270859",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:56:11.731126",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:58:03.930077",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:56:21.126983",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:57:58.031119",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:48:53.113932"
+      "last_visit": "2026-05-09T05:56:44.817001"
     },
     "loyalty": {
       "last_claim": "2026-04-24T09:22:58.732699",
@@ -619,31 +619,31 @@
   },
   "E796C81690AB75C0": {
     "daily": {
-      "last_claim": "2026-05-08T05:58:52.585990",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:57:06.913013",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T05:59:05.797015",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:57:18.855868",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T05:59:16.416024",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:57:27.946172",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T05:59:26.793615",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:57:37.370322",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T05:59:20.185962",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:49:31.331910"
+      "last_visit": "2026-05-09T05:58:00.990490"
     },
     "loyalty": {
       "last_claim": "2026-04-14T06:05:26.460179",
@@ -654,31 +654,31 @@
   },
   "F820398935D2C403": {
     "daily": {
-      "last_claim": "2026-05-08T06:00:14.666977",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:58:23.643631",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:00:27.859984",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:58:35.407256",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:00:38.314341",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:58:44.248098",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:00:48.531437",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:58:53.717490",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T06:00:43.614023",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:50:08.404142"
+      "last_visit": "2026-05-09T05:59:18.046173"
     },
     "loyalty": {
       "last_claim": null,
@@ -689,31 +689,31 @@
   },
   "C3960960443AF932": {
     "daily": {
-      "last_claim": "2026-05-08T06:01:36.566101",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T05:59:40.764725",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:01:49.359291",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T05:59:52.668440",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:01:59.773574",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:00:01.721922",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:02:10.170110",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:00:10.969207",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T06:02:16.602193",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:50:45.894022"
+      "last_visit": "2026-05-09T06:00:34.866841"
     },
     "loyalty": {
       "last_claim": null,
@@ -724,31 +724,31 @@
   },
   "2B50290C73E02027": {
     "daily": {
-      "last_claim": "2026-05-08T06:02:58.367802",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:00:57.844847",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:03:11.328928",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:01:09.558200",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:03:21.605935",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:01:18.960742",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:03:31.969482",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:01:28.230563",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T06:03:39.946981",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:51:23.178966"
+      "last_visit": "2026-05-09T06:01:51.943786"
     },
     "loyalty": {
       "last_claim": null,
@@ -759,31 +759,31 @@
   },
   "188A50EA1ABE0765": {
     "daily": {
-      "last_claim": "2026-05-08T06:04:21.666490",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:02:14.999120",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:04:34.380612",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:02:26.766284",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:04:44.681820",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:02:35.729471",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:04:55.003928",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:02:44.946533",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T06:05:03.830540",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:51:59.379977"
+      "last_visit": "2026-05-09T06:03:08.747038"
     },
     "loyalty": {
       "last_claim": null,
@@ -794,31 +794,31 @@
   },
   "4D1AA8C2C628E73F": {
     "daily": {
-      "last_claim": "2026-05-08T06:05:43.641165",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:03:30.809104",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:05:56.563456",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:03:42.938820",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:06:07.219062",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:03:52.013015",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:06:17.644529",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:04:01.204148",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T06:06:26.977385",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:52:36.742026"
+      "last_visit": "2026-05-09T06:04:24.946820"
     },
     "loyalty": {
       "last_claim": null,
@@ -829,31 +829,31 @@
   },
   "B4BAE5FC4CACA8F7": {
     "daily": {
-      "last_claim": "2026-05-08T06:07:04.182640",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:04:48.069370",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:07:17.174535",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:05:00.013551",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:07:27.772151",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:05:09.116556",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:07:38.177546",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:05:18.448159",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T06:07:40.166063",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:53:13.568134"
+      "last_visit": "2026-05-09T06:05:42.107042"
     },
     "loyalty": {
       "last_claim": null,
@@ -1098,31 +1098,31 @@
   },
   "8FC80EF0CC5B9D39": {
     "daily": {
-      "last_claim": "2026-05-08T06:08:26.263922",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:06:05.148360",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:08:39.278778",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:06:16.896032",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:08:49.824084",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:06:25.950569",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:09:00.214914",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:06:35.213618",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-06T06:09:03.217166",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:53:51.009174"
+      "last_visit": "2026-05-09T06:06:58.859705"
     },
     "loyalty": {
       "last_claim": "2026-04-18T06:07:50.440139",
@@ -1132,31 +1132,31 @@
   },
   "1956988E56026BA7": {
     "daily": {
-      "last_claim": "2026-05-08T06:09:47.952675",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:07:20.804952",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:10:00.630098",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:07:33.034723",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:10:10.961683",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:07:42.269504",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:10:21.471962",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:07:51.652070",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-04-20T06:28:40.343063",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:54:27.993372"
+      "last_visit": "2026-05-09T06:08:15.645454"
     },
     "loyalty": {
       "last_claim": null,
@@ -1166,31 +1166,31 @@
   },
   "631FEB500E5C1EB7": {
     "daily": {
-      "last_claim": "2026-05-08T06:11:09.348727",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:08:39.176352",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:11:22.287144",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:08:51.896465",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:11:32.962229",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:09:01.763343",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:11:43.238009",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:09:11.498131",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-03T06:11:23.788663",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:55:05.873001"
+      "last_visit": "2026-05-09T06:09:35.734040"
     },
     "loyalty": {
       "last_claim": null,
@@ -1200,31 +1200,31 @@
   },
   "6163D9F946C4BD48": {
     "daily": {
-      "last_claim": "2026-05-08T06:12:31.020007",
-      "next_available": "2026-05-09T05:30:00",
+      "last_claim": "2026-05-09T06:09:58.275958",
+      "next_available": "2026-05-10T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-05-08T06:12:44.252983",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:10:10.024250",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-05-08T06:12:55.009674",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:10:19.607251",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-05-08T06:13:05.253103",
-        "next_available": "2026-05-09T05:30:00",
+        "last_claim": "2026-05-09T06:10:29.269285",
+        "next_available": "2026-05-10T05:30:00",
         "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-05-07T06:13:17.643248",
       "last_count": 1,
-      "last_visit": "2026-05-09T03:55:42.904003"
+      "last_visit": "2026-05-09T06:10:54.362090"
     },
     "loyalty": {
       "last_claim": null,
