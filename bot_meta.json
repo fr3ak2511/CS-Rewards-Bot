@@ -42,18 +42,18 @@
     "6163D9F946C4BD48"
   ],
   "last_run": {
-    "timestamp": "2026-06-05T04:27:38.013057",
-    "run_label": "Backup Run",
-    "total_claimed": 0,
+    "timestamp": "2026-06-05T06:10:27.256606",
+    "run_label": "Manual Run",
+    "total_claimed": 139,
     "efficiency": 100.0,
-    "duration_seconds": 1057,
+    "duration_seconds": 2213,
     "per_type": {
-      "daily": 0,
-      "store": 0,
-      "progression": 0,
+      "daily": 28,
+      "store": 84,
+      "progression": 27,
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 35.5
+    "avg_time_per_player": 75.1
   }
 }
