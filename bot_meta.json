@@ -44,11 +44,11 @@
     "4A8D19E91CCE94E6"
   ],
   "last_run": {
-    "timestamp": "2026-06-16T17:19:02.622009",
+    "timestamp": "2026-06-16T23:05:56.356005",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 1177,
+    "duration_seconds": 1166,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -56,6 +56,6 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 37.1
+    "avg_time_per_player": 36.6
   }
 }
