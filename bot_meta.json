@@ -41,21 +41,23 @@
     "631FEB500E5C1EB7",
     "6163D9F946C4BD48",
     "B3ED965EAECB6F7C",
-    "4A8D19E91CCE94E6"
+    "4A8D19E91CCE94E6",
+    "BB382E889AA37C4F",
+    "2D29FA0DEE0A941B"
   ],
   "last_run": {
-    "timestamp": "2026-06-17T10:53:25.002712",
+    "timestamp": "2026-06-17T17:04:14.134226",
     "run_label": "Backup Run",
-    "total_claimed": 0,
-    "efficiency": 100.0,
-    "duration_seconds": 1142,
+    "total_claimed": 4,
+    "efficiency": 80.0,
+    "duration_seconds": 1266,
     "per_type": {
-      "daily": 0,
-      "store": 0,
+      "daily": 1,
+      "store": 3,
       "progression": 0,
       "loyalty": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 35.7
+    "slowest_player": "BB382E889AA37C4F",
+    "avg_time_per_player": 37.3
   }
 }
