@@ -46,11 +46,11 @@
     "2D29FA0DEE0A941B"
   ],
   "last_run": {
-    "timestamp": "2026-06-29T01:30:36.004135",
+    "timestamp": "2026-06-29T03:59:06.195030",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 1140,
+    "duration_seconds": 1139,
     "per_type": {
       "daily": 0,
       "store": 0,
