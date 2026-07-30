@@ -48,11 +48,11 @@
     "DA4C269DB53172C5"
   ],
   "last_run": {
-    "timestamp": "2026-07-30T20:52:05.897375",
+    "timestamp": "2026-07-30T23:09:17.660861",
     "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 3418,
+    "duration_seconds": 3413,
     "per_type": {
       "daily": 0,
       "store": 0,
