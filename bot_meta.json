@@ -48,18 +48,18 @@
     "DA4C269DB53172C5"
   ],
   "last_run": {
-    "timestamp": "2026-08-11T07:27:14.052382",
-    "run_label": "Manual Run",
-    "total_claimed": 140,
+    "timestamp": "2026-08-11T08:47:06.862660",
+    "run_label": "Backup Run",
+    "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 5928,
+    "duration_seconds": 3413,
     "per_type": {
-      "daily": 35,
-      "store": 105,
+      "daily": 0,
+      "store": 0,
       "progression": 0,
       "loyalty": 0
     },
-    "slowest_player": "DA4C269DB53172C5",
-    "avg_time_per_player": 168.5
+    "slowest_player": "3D9A901755C3B2D8",
+    "avg_time_per_player": 96.4
   }
 }
