@@ -25,7 +25,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:33:18.851812",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:38:29.198301"
+      "last_visit": "2026-09-23T10:07:24.595250"
     },
     "loyalty": {
       "last_claim": null,
@@ -59,7 +59,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:36:14.787287",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:41:27.823191"
+      "last_visit": "2026-09-23T10:09:02.652070"
     },
     "loyalty": {
       "last_claim": null,
@@ -93,7 +93,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:39:09.537969",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:44:29.893556"
+      "last_visit": "2026-09-23T10:10:40.553965"
     },
     "loyalty": {
       "last_claim": null,
@@ -127,7 +127,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:42:04.135558",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:47:27.277260"
+      "last_visit": "2026-09-23T10:12:20.521171"
     },
     "loyalty": {
       "last_claim": null,
@@ -161,7 +161,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:44:59.998408",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:50:28.688196"
+      "last_visit": "2026-09-23T10:13:59.022332"
     },
     "loyalty": {
       "last_claim": null,
@@ -195,7 +195,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:47:53.980372",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:53:27.774381"
+      "last_visit": "2026-09-23T10:15:37.277177"
     },
     "loyalty": {
       "last_claim": null,
@@ -229,7 +229,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:50:49.361552",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:56:30.261307"
+      "last_visit": "2026-09-23T10:17:15.225226"
     },
     "loyalty": {
       "last_claim": null,
@@ -263,7 +263,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:53:44.081508",
       "last_count": 1,
-      "last_visit": "2026-09-23T05:59:32.409573"
+      "last_visit": "2026-09-23T10:18:54.702222"
     },
     "loyalty": {
       "last_claim": null,
@@ -274,8 +274,8 @@
   "5429611A24A8F01A": {
     "daily": {
       "last_claim": "2026-09-22T05:55:18.447742",
-      "next_available": "2026-09-23T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-09-24T05:30:00",
+      "status": "cooldown_detected"
     },
     "store": {
       "reward_1": {
@@ -297,7 +297,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:56:39.063529",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:02:16.165422"
+      "last_visit": "2026-09-23T10:20:53.626066"
     },
     "loyalty": {
       "last_claim": null,
@@ -331,7 +331,7 @@
     "progression": {
       "last_claim": "2026-09-22T05:59:35.035407",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:05:17.585423"
+      "last_visit": "2026-09-23T10:22:31.588595"
     },
     "loyalty": {
       "last_claim": null,
@@ -365,7 +365,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:02:29.266297",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:08:15.338325"
+      "last_visit": "2026-09-23T10:24:09.176908"
     },
     "loyalty": {
       "last_claim": null,
@@ -399,7 +399,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:05:23.633013",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:11:16.473635"
+      "last_visit": "2026-09-23T10:25:46.643004"
     },
     "loyalty": {
       "last_claim": null,
@@ -433,7 +433,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:08:19.245680",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:14:16.652294"
+      "last_visit": "2026-09-23T10:27:25.156950"
     },
     "loyalty": {
       "last_claim": null,
@@ -468,7 +468,7 @@
     "progression": {
       "last_claim": "2026-09-19T06:30:29.830181",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:17:14.424311"
+      "last_visit": "2026-09-23T10:29:02.812022"
     },
     "loyalty": {
       "last_claim": null,
@@ -503,7 +503,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:14:07.316629",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:20:11.940358"
+      "last_visit": "2026-09-23T10:30:40.345897"
     },
     "loyalty": {
       "last_claim": null,
@@ -538,7 +538,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:17:01.947574",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:23:09.078172"
+      "last_visit": "2026-09-23T10:32:18.520326"
     },
     "loyalty": {
       "last_claim": null,
@@ -573,7 +573,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:19:56.756433",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:26:07.548112"
+      "last_visit": "2026-09-23T10:33:55.911972"
     },
     "loyalty": {
       "last_claim": null,
@@ -608,7 +608,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:22:52.344037",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:29:06.641376"
+      "last_visit": "2026-09-23T10:35:33.754014"
     },
     "loyalty": {
       "last_claim": "2026-04-24T09:22:58.732699",
@@ -643,7 +643,7 @@
     "progression": {
       "last_claim": "2026-09-23T06:31:39.979905",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:32:05.367135"
+      "last_visit": "2026-09-23T10:37:11.766914"
     },
     "loyalty": {
       "last_claim": "2026-04-14T06:05:26.460179",
@@ -678,7 +678,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:28:42.559356",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:35:02.769125"
+      "last_visit": "2026-09-23T10:38:50.320358"
     },
     "loyalty": {
       "last_claim": null,
@@ -713,7 +713,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:31:37.204315",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:37:59.551256"
+      "last_visit": "2026-09-23T10:40:28.057208"
     },
     "loyalty": {
       "last_claim": null,
@@ -748,7 +748,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:34:31.913608",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:40:56.500268"
+      "last_visit": "2026-09-23T10:42:07.066224"
     },
     "loyalty": {
       "last_claim": null,
@@ -783,7 +783,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:37:26.170460",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:43:52.660164"
+      "last_visit": "2026-09-23T10:43:44.352861"
     },
     "loyalty": {
       "last_claim": null,
@@ -818,7 +818,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:40:20.511454",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:46:48.768155"
+      "last_visit": "2026-09-23T10:45:22.348316"
     },
     "loyalty": {
       "last_claim": null,
@@ -853,7 +853,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:43:14.831701",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:49:44.191276"
+      "last_visit": "2026-09-23T10:47:00.291035"
     },
     "loyalty": {
       "last_claim": null,
@@ -1122,7 +1122,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:46:10.085369",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:52:41.936258"
+      "last_visit": "2026-09-23T10:48:37.977036"
     },
     "loyalty": {
       "last_claim": "2026-08-16T07:04:26.256713",
@@ -1156,7 +1156,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:49:06.031363",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:55:40.916112"
+      "last_visit": "2026-09-23T10:50:15.569245"
     },
     "loyalty": {
       "last_claim": null,
@@ -1190,7 +1190,7 @@
     "progression": {
       "last_claim": "2026-09-23T06:58:15.710768",
       "last_count": 1,
-      "last_visit": "2026-09-23T06:58:41.181253"
+      "last_visit": "2026-09-23T10:51:54.052248"
     },
     "loyalty": {
       "last_claim": "2026-07-21T22:52:27.095898",
@@ -1224,7 +1224,7 @@
     "progression": {
       "last_claim": "2026-09-22T06:54:52.470923",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:01:38.822163"
+      "last_visit": "2026-09-23T10:53:31.485572"
     },
     "loyalty": {
       "last_claim": null,
@@ -1258,7 +1258,7 @@
     "progression": {
       "last_claim": "2026-09-23T07:04:15.705806",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:04:41.075901"
+      "last_visit": "2026-09-23T10:55:09.051993"
     },
     "loyalty": {
       "last_claim": null,
@@ -1292,7 +1292,7 @@
     "progression": {
       "last_claim": "2026-09-22T07:00:41.193458",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:07:38.791151"
+      "last_visit": "2026-09-23T10:56:47.966011"
     },
     "loyalty": {
       "last_claim": null,
@@ -1326,7 +1326,7 @@
     "progression": {
       "last_claim": "2026-09-22T07:03:35.373964",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:10:36.487404"
+      "last_visit": "2026-09-23T10:58:25.600875"
     },
     "loyalty": {
       "last_claim": null,
@@ -1360,7 +1360,7 @@
     "progression": {
       "last_claim": "2026-09-22T07:06:29.833667",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:13:37.891309"
+      "last_visit": "2026-09-23T11:00:03.539969"
     },
     "loyalty": {
       "last_claim": null,
@@ -1394,7 +1394,7 @@
     "progression": {
       "last_claim": "2026-09-22T07:09:24.195654",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:16:35.603967"
+      "last_visit": "2026-09-23T11:01:41.057866"
     },
     "loyalty": {
       "last_claim": null,
@@ -1428,7 +1428,7 @@
     "progression": {
       "last_claim": "2026-09-12T05:41:11.240440",
       "last_count": 1,
-      "last_visit": "2026-09-23T07:19:31.758191"
+      "last_visit": "2026-09-23T11:03:18.610974"
     },
     "loyalty": {
       "last_claim": null,
