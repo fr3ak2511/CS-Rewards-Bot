@@ -48,11 +48,11 @@
     "DA4C269DB53172C5"
   ],
   "last_run": {
-    "timestamp": "2026-10-01T00:23:30.873157",
-    "run_label": "Backup Run #6",
+    "timestamp": "2026-10-01T04:35:03.721536",
+    "run_label": "Backup Run",
     "total_claimed": 0,
     "efficiency": 100.0,
-    "duration_seconds": 3368,
+    "duration_seconds": 3340,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -60,6 +60,6 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 95.2
+    "avg_time_per_player": 94.5
   }
 }
