@@ -1,9 +1,20 @@
-# Python caches
+# Runtime state files: the existing tracked files remain version-controlled for state persistence.
+claim_history.json
+bot_meta.json
+
+# Screenshots, HTML email report, diagnostics and run artifacts
+*.png
+*.html
+login_diagnostics/
+claim_test_artifacts/
+run_artifacts/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Environments and Secrets
+# Environments and secrets
 .env
 .venv/
 env/
@@ -11,15 +22,13 @@ venv/
 ENV/
 secret.json
 
-# WebDriver binaries
+# WebDriver binaries and logs
 chromedriver
 geckodriver
-
-# Logs and local debug files
 *.log
 RawLogs*.txt
 geckodriver.log
 
-# OS generated files
+# OS-generated files
 .DS_Store
 Thumbs.db
