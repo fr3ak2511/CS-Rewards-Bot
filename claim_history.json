@@ -20,12 +20,17 @@
         "last_claim": "2026-10-11T01:09:51.065914",
         "next_available": "2026-10-11T05:30:00",
         "status": "claimed"
+      },
+      "reward_4": {
+        "last_claim": "2026-10-11T01:25:48.108944",
+        "next_available": null,
+        "status": "claimed"
       }
     },
     "progression": {
       "last_claim": "2026-10-06T05:43:06.564953",
       "last_count": 1,
-      "last_visit": "2026-10-11T01:10:44.830193"
+      "last_visit": "2026-10-11T01:26:41.585358"
     },
     "loyalty": {
       "last_claim": null,
