@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.0.0
+# master_claimer.py — CS Rewards Bot v3.0.1
 import csv
 import time
 import os
@@ -24,7 +24,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.0"
+VERSION        = "v3.0.1"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -2073,22 +2073,74 @@ def build_email(results, run_label, run_index, job_start, meta):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _is_cloudflare_interstitial(driver):
-    """Detect a visible challenge/interstitial without interacting with it."""
+    """Detect an actually visible Cloudflare challenge, not incidental page source.
+
+    Normal portal pages can load Cloudflare-related scripts or contain challenge
+    strings in bundled JavaScript. Searching the entire HTML source therefore
+    creates false positives. This check relies on the title, visible page text,
+    and visible challenge-specific UI. It does not interact with or solve a challenge.
+    """
     try:
-        title = (driver.title or "").lower()
-        source = (driver.page_source or "").lower()
-        url = (driver.current_url or "").lower()
-        signals = (
-            "just a moment" in title
-            or "checking your browser" in source
-            or "verify you are human" in source
-            or "verification required" in source
-            or "cf-chl-" in source
-            or ("cloudflare" in source and "challenge" in source)
-        )
-        # The URL is recorded for diagnosis, but host/path alone is not treated as a challenge.
-        return bool(signals)
-    except Exception:
+        signals = driver.execute_script(r"""
+            function visible(el) {
+                if (!el) return false;
+                const s = window.getComputedStyle(el);
+                const r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && s.visibility !== 'hidden'
+                    && s.display !== 'none' && r.width > 0 && r.height > 0);
+            }
+            const title = (document.title || '').trim();
+            const bodyText = (document.body ? document.body.innerText : '')
+                .replace(/\s+/g, ' ').trim().slice(0, 1400).toLowerCase();
+            const challengePhrases = [
+                'checking your browser',
+                'verify you are human',
+                'verification required',
+                'performing security verification',
+                'complete the security check'
+            ];
+            const visibleTextSignals = challengePhrases.filter(p => bodyText.includes(p));
+            const selectors = [
+                '#challenge-form', '#challenge-running', '#challenge-stage',
+                '#cf-challenge-running', '[id^="cf-chl-"]',
+                'iframe[src*="challenges.cloudflare.com"]'
+            ];
+            const visibleElementSignals = [];
+            for (const selector of selectors) {
+                try {
+                    if (Array.from(document.querySelectorAll(selector)).some(visible)) {
+                        visibleElementSignals.push(selector);
+                    }
+                } catch (_) {}
+            }
+            return {
+                title: title,
+                visibleTextSignals: visibleTextSignals,
+                visibleElementSignals: visibleElementSignals
+            };
+        """) or {}
+
+        title = str(signals.get('title', driver.title or '')).strip().lower()
+        title_signal = 'just a moment' in title
+        text_signals = signals.get('visibleTextSignals') or []
+        element_signals = signals.get('visibleElementSignals') or []
+        detected = bool(title_signal or text_signals or element_signals)
+
+        if detected:
+            reasons = []
+            if title_signal:
+                reasons.append('challenge title')
+            if text_signals:
+                reasons.append('visible text: ' + ', '.join(text_signals))
+            if element_signals:
+                reasons.append('visible challenge UI: ' + ', '.join(element_signals))
+            log('🛡️ Visible challenge indicators: ' + '; '.join(reasons))
+        else:
+            log(f"ℹ️ No visible Cloudflare challenge detected (title={signals.get('title', driver.title or '')!r})")
+        return detected
+    except Exception as exc:
+        # A detector error must not be treated as proof that a challenge exists.
+        log(f"⚠️ Challenge detection was inconclusive: {type(exc).__name__}; continuing with read-only UI inspection")
         return False
 
 
