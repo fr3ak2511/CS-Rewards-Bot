@@ -5,6 +5,12 @@ on:
     # Runs every 3 hours, anchored to 05:35 AM IST
     - cron: '5 0/3 * * *'
   workflow_dispatch:
+    inputs:
+      diagnose_login:
+        description: "Run a single login UI diagnostic only (no reward claims)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: rewards-claimer
@@ -42,10 +48,25 @@ jobs:
           SMTP_FROM: ${{ secrets.SENDER_EMAIL }}
           SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Suppresses Node.js deprecation warnings
-        run: python master_claimer.py
+          LOGIN_DIAGNOSTIC_ONLY: ${{ inputs.diagnose_login }}
+        run: |
+          if [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ]; then
+            python master_claimer.py --diagnose-login
+          else
+            python master_claimer.py
+          fi
 
       - name: Commit State Files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "bot: update claim history and meta [skip ci]"
           file_pattern: "claim_history.json bot_meta.json"
+
+      - name: Upload login diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs-hub-login-diagnostics-${{ github.run_id }}
+          path: login_diagnostics/
+          if-no-files-found: ignore
+          retention-days: 3
