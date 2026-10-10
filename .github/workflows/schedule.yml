@@ -2,8 +2,13 @@ name: CS Hub Rewards Claimer
 
 on:
   schedule:
-    # Runs every 3 hours, anchored to 05:35 AM IST
+    # Primary slots: 05:35, 08:35, 11:35, 14:35, 17:35, 20:35, 23:35, 02:35 IST.
+    # Recovery triggers +12m, +22m and +32m after each slot, to recover if scheduled events are delayed/missed.
+    # The schedule guard exits early when a recent run completed, so retries do not claim twice.
     - cron: '5 0/3 * * *'
+    - cron: '17 0/3 * * *'
+    - cron: '27 0/3 * * *'
+    - cron: '37 0/3 * * *'
   workflow_dispatch:
     inputs:
       diagnose_login:
@@ -22,82 +27,146 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: rewards-claimer
+  cancel-in-progress: false
 
 jobs:
   run-claimer:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
-      contents: write # CRITICAL FIX: Ensures the streak state saves successfully
-      
+      contents: write
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4 # Upgraded to v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Guard duplicate scheduled recovery trigger
+        id: schedule_guard
+        env:
+          RUN_EVENT: ${{ github.event_name }}
+        run: |
+          if [[ "$RUN_EVENT" != "schedule" ]]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import json, os
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          skip = False
+          reason = "no recent completed run found"
+          try:
+              with open("bot_meta.json", "r", encoding="utf-8") as f:
+                  meta = json.load(f)
+              last_run = meta.get("last_run") or {}
+              raw = last_run.get("timestamp")
+              if raw:
+                  last = datetime.fromisoformat(raw)
+                  ist = ZoneInfo("Asia/Kolkata")
+                  if last.tzinfo is not None:
+                      last = last.astimezone(ist).replace(tzinfo=None)
+                  now = datetime.now(ist).replace(tzinfo=None)
+                  age = (now - last).total_seconds()
+                  if 0 <= age <= 35 * 60 and last_run.get("email_sent") is True:
+                      skip = True
+                      reason = f"last full run and email delivery completed {age/60:.1f} minutes ago"
+                  elif 0 <= age <= 35 * 60:
+                      # A previous run without confirmed email delivery must not suppress
+                      # recovery: re-running rechecks portal state and retries the report.
+                      reason = f"recent run ({age/60:.1f} minutes ago) has no confirmed successful email; allowing recovery retry"
+          except Exception as exc:
+              reason = f"state guard could not read prior state ({type(exc).__name__}); proceeding"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"skip={'true' if skip else 'false'}\n")
+          print(f"SCHEDULE_GUARD_SKIP={'true' if skip else 'false'}: {reason}")
+          PY
+
       - name: Set up Python
-        uses: actions/setup-python@v5 # Upgraded to v5
+        if: steps.schedule_guard.outputs.skip != 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
+          cache: pip
 
-      - name: Install Dependencies
+      - name: Install pinned dependencies
+        if: steps.schedule_guard.outputs.skip != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run Master Claimer
+        if: steps.schedule_guard.outputs.skip != 'true'
         env:
-          # RESTORED: Your EXACT working secrets from the morning backup
           SMTP_SERVER: smtp.gmail.com
           SMTP_PORT: 465
           SMTP_USERNAME: ${{ secrets.SENDER_EMAIL }}
           SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           SMTP_FROM: ${{ secrets.SENDER_EMAIL }}
           SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Suppresses Node.js deprecation warnings
           LOGIN_DIAGNOSTIC_ONLY: ${{ inputs.diagnose_login }}
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
         run: |
-          if { [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$LOGIN_TEST_ONLY" = "true" ]; } \
-            || { [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$CLAIM_TEST_ONLY" = "true" ]; } \
-            || { [ "$LOGIN_TEST_ONLY" = "true" ] && [ "$CLAIM_TEST_ONLY" = "true" ]; }; then
+          if { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$LOGIN_TEST_ONLY" == "true" ]]; } \
+            || { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; } \
+            || { [[ "$LOGIN_TEST_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; }; then
             echo "Choose only one manual mode: diagnose_login, test_login_only, OR test_claims_one_player."
             exit 2
-          elif [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ]; then
+          elif [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]]; then
             python master_claimer.py --diagnose-login
-          elif [ "$LOGIN_TEST_ONLY" = "true" ]; then
+          elif [[ "$LOGIN_TEST_ONLY" == "true" ]]; then
             python master_claimer.py --test-login-only
-          elif [ "$CLAIM_TEST_ONLY" = "true" ]; then
+          elif [[ "$CLAIM_TEST_ONLY" == "true" ]]; then
             python master_claimer.py --test-claims-one-player
           else
             python master_claimer.py
           fi
 
-      - name: Commit State Files
-        if: always()
+      - name: Commit runtime state
+        if: always() && steps.schedule_guard.outputs.skip != 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "bot: update claim history and meta [skip ci]"
           file_pattern: "claim_history.json bot_meta.json"
 
+      - name: Upload full-run report and summary
+        if: always() && steps.schedule_guard.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs-hub-run-report-${{ github.run_id }}
+          path: |
+            debug_email.html
+            run_artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload login diagnostics
-        if: always()
+        if: always() && steps.schedule_guard.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cs-hub-login-diagnostics-${{ github.run_id }}
           path: login_diagnostics/
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: 7
 
       - name: Upload one-player claim test evidence
-        if: always() && inputs.test_claims_one_player
+        if: always() && steps.schedule_guard.outputs.skip != 'true' && inputs.test_claims_one_player
         uses: actions/upload-artifact@v4
         with:
           name: cs-hub-claim-test-${{ github.run_id }}
           path: claim_test_artifacts/
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
