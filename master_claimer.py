@@ -6,6 +6,7 @@ import json
 import smtplib
 import re
 import subprocess
+import sys
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -28,6 +29,8 @@ PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
 HEADLESS       = True
+LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
+_LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
 DAILY_RESET_MINUTE_IST = 30
@@ -640,6 +643,7 @@ def login_to_hub(driver, pid):
 
         if not login_clicked:
             log("❌ Login button not found")
+            capture_login_diagnostics(driver, "login_button_not_found")
             return False
 
         time.sleep(2)
@@ -670,6 +674,7 @@ def login_to_hub(driver, pid):
 
         if not id_field:
             log("❌ ID input not found")
+            capture_login_diagnostics(driver, "id_input_not_found")
             return False
 
         time.sleep(1)
@@ -708,7 +713,8 @@ def login_to_hub(driver, pid):
         log("⚠️ Login uncertain — proceeding")
         return True
     except Exception as e:
-        log(f"❌ Login error: {e}")
+        log(f"❌ Login error: {type(e).__name__}: {e}")
+        capture_login_diagnostics(driver, "login_exception")
         return False
 
 
@@ -2022,10 +2028,314 @@ def build_email(results, run_label, run_index, job_start, meta):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LOGIN DIAGNOSTICS — read-only snapshots; does not type an ID or claim rewards
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _is_cloudflare_interstitial(driver):
+    """Detect a visible challenge/interstitial without interacting with it."""
+    try:
+        title = (driver.title or "").lower()
+        source = (driver.page_source or "").lower()
+        url = (driver.current_url or "").lower()
+        signals = (
+            "just a moment" in title
+            or "checking your browser" in source
+            or "verify you are human" in source
+            or "verification required" in source
+            or "cf-chl-" in source
+            or ("cloudflare" in source and "challenge" in source)
+        )
+        # The URL is recorded for diagnosis, but host/path alone is not treated as a challenge.
+        return bool(signals)
+    except Exception:
+        return False
+
+
+def _dom_snapshot_current_context(driver):
+    """Collect bounded, non-secret DOM metadata from the current document."""
+    return driver.execute_script(r"""
+        function visible(el) {
+            const s = window.getComputedStyle(el);
+            return !!(el.getClientRects().length && s.visibility !== 'hidden' && s.display !== 'none');
+        }
+        function txt(el) {
+            return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+        }
+        function safePath(raw) {
+            try { const u = new URL(raw, location.href); return u.origin + u.pathname; }
+            catch (_) { return ''; }
+        }
+        const inputs = Array.from(document.querySelectorAll('input, textarea, select')).slice(0, 80).map(el => ({
+            tag: el.tagName.toLowerCase(),
+            type: (el.getAttribute('type') || '').slice(0, 40),
+            placeholder: (el.getAttribute('placeholder') || '').slice(0, 120),
+            name: (el.getAttribute('name') || '').slice(0, 120),
+            id: (el.id || '').slice(0, 120),
+            aria_label: (el.getAttribute('aria-label') || '').slice(0, 120),
+            autocomplete: (el.getAttribute('autocomplete') || '').slice(0, 80),
+            visible: visible(el),
+            disabled: !!el.disabled,
+            value_present: !!(el.value)
+        }));
+        const buttons = Array.from(document.querySelectorAll('button, a, [role="button"]')).slice(0, 100).map(el => ({
+            tag: el.tagName.toLowerCase(),
+            text: txt(el),
+            type: (el.getAttribute('type') || '').slice(0, 40),
+            aria_label: (el.getAttribute('aria-label') || '').slice(0, 120),
+            title: (el.getAttribute('title') || '').slice(0, 120),
+            visible: visible(el),
+            disabled: !!el.disabled
+        }));
+        const iframes = Array.from(document.querySelectorAll('iframe')).slice(0, 30).map(el => ({
+            title: (el.getAttribute('title') || '').slice(0, 120),
+            name: (el.getAttribute('name') || '').slice(0, 120),
+            id: (el.id || '').slice(0, 120),
+            src_path: safePath(el.src || ''),
+            visible: visible(el)
+        }));
+        const bodyText = (document.body ? document.body.innerText : '').replace(/\s+/g, ' ').trim();
+        return {
+            title: document.title || '',
+            url: location.origin + location.pathname,
+            ready_state: document.readyState,
+            body_text_excerpt: bodyText.slice(0, 1800),
+            input_count: document.querySelectorAll('input, textarea, select').length,
+            visible_input_count: inputs.filter(x => x.visible).length,
+            buttons,
+            inputs,
+            iframes
+        };
+    """)
+
+
+def capture_login_diagnostics(driver, stage, force=False):
+    """Write one small screenshot + JSON snapshot; never includes raw player IDs."""
+    global _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED
+    if _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED and not force:
+        return None
+
+    try:
+        os.makedirs(LOGIN_DIAGNOSTICS_DIR, exist_ok=True)
+        timestamp = get_ist_time().strftime('%Y%m%dT%H%M%S')
+        safe_stage = re.sub(r'[^A-Za-z0-9_-]+', '_', stage)[:48]
+        base = os.path.join(LOGIN_DIAGNOSTICS_DIR, f'{timestamp}_{safe_stage}')
+
+        try:
+            driver.switch_to.default_content()
+        except Exception:
+            pass
+
+        snapshot = {
+            'captured_at_ist': get_ist_time().isoformat(),
+            'stage': stage,
+            'window_handle_count': len(getattr(driver, 'window_handles', []) or []),
+            'current_window_handle_present': bool(getattr(driver, 'current_window_handle', None)),
+        }
+        try:
+            snapshot['dom'] = _dom_snapshot_current_context(driver)
+        except Exception as exc:
+            snapshot['dom_error'] = f'{type(exc).__name__}: {str(exc)[:240]}'
+
+        try:
+            screenshot_path = base + '.png'
+            snapshot['screenshot_saved'] = bool(driver.save_screenshot(screenshot_path))
+            if not snapshot['screenshot_saved']:
+                snapshot['screenshot_error'] = 'WebDriver returned false from save_screenshot'
+        except Exception as exc:
+            snapshot['screenshot_saved'] = False
+            snapshot['screenshot_error'] = f'{type(exc).__name__}: {str(exc)[:240]}'
+
+        json_path = base + '.json'
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(snapshot, f, indent=2, ensure_ascii=False)
+
+        _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = True
+        log(f'🧪 Login diagnostic saved: {base}.[png/json]')
+        log('🧪 Diagnostic metadata excludes input values and raw player IDs.')
+        return base
+    except Exception as exc:
+        log(f'⚠️ Could not save login diagnostic: {type(exc).__name__}: {str(exc)[:200]}')
+        return None
+
+
+def _find_visible_login_input(driver):
+    """Return metadata for visible input controls in the current document."""
+    try:
+        return driver.execute_script(r"""
+            const visible = el => {
+                const s = getComputedStyle(el);
+                return !!(el.getClientRects().length && s.visibility !== 'hidden' && s.display !== 'none');
+            };
+            return Array.from(document.querySelectorAll('input, textarea')).filter(visible).map(el => ({
+                tag: el.tagName.toLowerCase(),
+                type: (el.getAttribute('type') || '').toLowerCase(),
+                placeholder: (el.getAttribute('placeholder') || '').trim(),
+                name: (el.getAttribute('name') || '').trim(),
+                id: (el.id || '').trim(),
+                aria_label: (el.getAttribute('aria-label') || '').trim(),
+                disabled: !!el.disabled
+            }));
+        """) or []
+    except Exception:
+        return []
+
+
+def _login_input_is_present(input_metadata):
+    for item in input_metadata:
+        descriptor = ' '.join(str(item.get(k, '')) for k in ('placeholder', 'name', 'id', 'aria_label')).lower()
+        if 'user id' in descriptor or 'player id' in descriptor or item.get('name', '').lower() == 'playerid':
+            return True
+    return False
+
+
+def _wait_for_cloudflare_to_clear_naturally(driver, seconds=12):
+    """Diagnostic mode waits for a challenge to resolve; it never clicks/interacts with it."""
+    if not _is_cloudflare_interstitial(driver):
+        return True
+    log('🛡️ Challenge/interstitial detected. Waiting for it to resolve naturally; no challenge interaction will be attempted.')
+    for _ in range(seconds):
+        time.sleep(1)
+        if not _is_cloudflare_interstitial(driver):
+            log('✅ Interstitial is no longer detected.')
+            return True
+    log('⚠️ Interstitial is still present after the diagnostic wait.')
+    return False
+
+
+def run_login_diagnostic():
+    """Single-player-free diagnostic: inspect login UI only; no ID submission or rewards."""
+    driver = None
+    try:
+        log('=' * 60)
+        log('CS HUB LOGIN DIAGNOSTIC — NO REWARD CLAIMS')
+        log('This mode does not type a player ID, submit the login form, or claim rewards.')
+        log('=' * 60)
+
+        driver = create_driver()
+        driver.get('https://hub.vertigogames.co/daily-rewards')
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: d.execute_script('return document.readyState') in ('interactive', 'complete')
+            )
+        except Exception:
+            pass
+        time.sleep(2)
+        capture_login_diagnostics(driver, 'initial_page', force=True)
+
+        if not _wait_for_cloudflare_to_clear_naturally(driver):
+            capture_login_diagnostics(driver, 'challenge_persisted', force=True)
+            log('DIAGNOSTIC_RESULT=CHALLENGE_PERSISTED')
+            return 2
+
+        accept_cookies(driver)
+        time.sleep(1)
+        inputs = _find_visible_login_input(driver)
+        if _login_input_is_present(inputs):
+            capture_login_diagnostics(driver, 'login_input_present_initially', force=True)
+            log('DIAGNOSTIC_RESULT=LOGIN_INPUT_PRESENT')
+            log('The User ID field is present before clicking any login control.')
+            return 0
+
+        # Only click a clearly labelled login trigger. Do not use generic .btn/.button selectors.
+        clicked = False
+        exact_login_xpaths = [
+            "//button[normalize-space()='Login' or normalize-space()='Log in' or normalize-space()='Sign in']",
+            "//a[normalize-space()='Login' or normalize-space()='Log in' or normalize-space()='Sign in']",
+            "//*[@role='button' and (normalize-space()='Login' or normalize-space()='Log in' or normalize-space()='Sign in')]",
+        ]
+        prior_handles = set(driver.window_handles)
+        for xpath in exact_login_xpaths:
+            try:
+                candidates = driver.find_elements(By.XPATH, xpath)
+            except Exception:
+                candidates = []
+            for element in candidates:
+                try:
+                    if element.is_displayed() and element.is_enabled():
+                        element.click()
+                        clicked = True
+                        log('🧪 Clicked an exact-label Login control to reveal the form.')
+                        break
+                except Exception:
+                    continue
+            if clicked:
+                break
+
+        if clicked:
+            time.sleep(2)
+            new_handles = [h for h in driver.window_handles if h not in prior_handles]
+            if new_handles:
+                driver.switch_to.window(new_handles[0])
+                time.sleep(1)
+
+        # Inspect top-level context and accessible iframe documents; do not type or submit.
+        inputs = _find_visible_login_input(driver)
+        frame_summaries = []
+        try:
+            driver.switch_to.default_content()
+            frames = driver.find_elements(By.TAG_NAME, 'iframe')[:20]
+        except Exception:
+            frames = []
+        for index, frame in enumerate(frames):
+            frame_info = {'index': index, 'visible_inputs': []}
+            try:
+                driver.switch_to.default_content()
+                driver.switch_to.frame(frame)
+                frame_info['visible_inputs'] = _find_visible_login_input(driver)
+            except Exception as exc:
+                frame_info['inspection_error'] = f'{type(exc).__name__}: {str(exc)[:160]}'
+            finally:
+                try:
+                    driver.switch_to.default_content()
+                except Exception:
+                    pass
+            frame_summaries.append(frame_info)
+
+        top_found = _login_input_is_present(inputs)
+        frame_found = any(_login_input_is_present(x.get('visible_inputs', [])) for x in frame_summaries)
+        # Force a final snapshot after the modal/control interaction, if any.
+        base = capture_login_diagnostics(driver, 'after_login_ui_inspection', force=True)
+        if frame_summaries and base:
+            json_path = base + '.json'
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    snapshot = json.load(f)
+                snapshot['frame_input_scan'] = frame_summaries
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(snapshot, f, indent=2, ensure_ascii=False)
+            except Exception as exc:
+                log(f'⚠️ Could not append frame scan: {type(exc).__name__}: {str(exc)[:160]}')
+
+        if top_found or frame_found:
+            log('DIAGNOSTIC_RESULT=LOGIN_INPUT_PRESENT_AFTER_UI_INTERACTION')
+            log(f'Visible top-level inputs: {len(inputs)}; frames inspected: {len(frame_summaries)}; matching input found in frame: {frame_found}')
+            return 0
+
+        log('DIAGNOSTIC_RESULT=LOGIN_INPUT_NOT_FOUND')
+        log(f'Exact-label login trigger clicked: {clicked}; visible top-level inputs: {len(inputs)}; frames inspected: {len(frame_summaries)}')
+        log('Download the login diagnostics artifact and inspect the PNG + JSON snapshots.')
+        return 1
+    except Exception as exc:
+        log(f'❌ Diagnostic failed: {type(exc).__name__}: {str(exc)[:240]}')
+        if driver:
+            capture_login_diagnostics(driver, 'diagnostic_exception', force=True)
+        return 1
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 11 — MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    if "--diagnose-login" in sys.argv[1:]:
+        return run_login_diagnostic()
+
     job_start = get_ist_time()
     log("=" * 60)
     log(f"CS HUB AUTO-CLAIMER {VERSION}")
@@ -2196,4 +2506,4 @@ def send_email(html_body, subject):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main() or 0)
