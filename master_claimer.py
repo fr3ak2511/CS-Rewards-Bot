@@ -615,108 +615,149 @@ def capture_display_name(driver):
     return None
 
 
+def _find_player_id_element(driver):
+    """Find the actual CS Hub player/User ID input, not unrelated text fields."""
+    xpath = (
+        "//input[not(translate(@type,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='hidden') "
+        "and ("
+        "contains(translate(normalize-space(@placeholder), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'user id') "
+        "or contains(translate(normalize-space(@placeholder), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'player id') "
+        "or translate(normalize-space(@name), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='playerid' "
+        "or translate(normalize-space(@id), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')='playerid' "
+        "or contains(translate(normalize-space(@aria-label), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'user id') "
+        "or contains(translate(normalize-space(@aria-label), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'player id')"
+        ")]"
+    )
+    try:
+        for element in driver.find_elements(By.XPATH, xpath):
+            try:
+                if element.is_displayed() and element.is_enabled():
+                    return element
+            except StaleElementReferenceException:
+                continue
+    except Exception:
+        pass
+    return None
+
+
+def _find_exact_login_trigger(driver):
+    """Find a visibly-labelled Login trigger. Never fall back to arbitrary buttons."""
+    xpaths = [
+        "//button[normalize-space(.)='Login' or normalize-space(.)='Log in' or normalize-space(.)='Sign in']",
+        "//a[normalize-space(.)='Login' or normalize-space(.)='Log in' or normalize-space(.)='Sign in']",
+        "//*[@role='button' and (normalize-space(.)='Login' or normalize-space(.)='Log in' or normalize-space(.)='Sign in')]",
+    ]
+    for xpath in xpaths:
+        try:
+            for element in driver.find_elements(By.XPATH, xpath):
+                try:
+                    if element.is_displayed() and element.is_enabled():
+                        return element
+                except StaleElementReferenceException:
+                    continue
+        except Exception:
+            continue
+    return None
+
+
 def login_to_hub(driver, pid):
-    log(f"🔐 Logging in...")
+    """Open the real login UI, enter the supplied player ID, and verify submission."""
+    log("🔐 Opening CS Hub login...")
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
-        time.sleep(1)
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
+            )
+        except TimeoutException:
+            log("⚠️ Page readiness wait timed out; inspecting the current page")
+
         accept_cookies(driver)
 
-        login_clicked = False
-        for sel in [
-            "//button[contains(text(),'Login') or contains(text(),'Log in') "
-            "or contains(text(),'Sign in')]",
-            "//a[contains(text(),'Login') or contains(text(),'Log in')]",
-            "//button[contains(@class,'btn') or contains(@class,'button')]",
-        ]:
+        # Some portal sessions show the User ID modal automatically. Check before clicking.
+        id_field = _find_player_id_element(driver)
+        if id_field is None:
+            login_button = _find_exact_login_trigger(driver)
+            if login_button is None:
+                log("❌ No exact, visible Login control found; refusing to click an unrelated button")
+                capture_login_diagnostics(driver, "exact_login_trigger_not_found", force=True)
+                return False
+
             try:
-                for el in driver.find_elements(By.XPATH, sel):
-                    if el.is_displayed() and el.is_enabled():
-                        el.click()
-                        login_clicked = True
-                        break
-                if login_clicked:
-                    break
-            except:
-                continue
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block:'center', inline:'nearest'});", login_button
+                )
+                login_button.click()
+            except Exception as click_error:
+                log(f"❌ Could not activate the Login control: {type(click_error).__name__}")
+                capture_login_diagnostics(driver, "login_trigger_click_failed", force=True)
+                return False
 
-        if not login_clicked:
-            log("❌ Login button not found")
-            capture_login_diagnostics(driver, "login_button_not_found")
-            return False
-
-        time.sleep(2)
-        orig = driver.current_window_handle
-        if len(driver.window_handles) > 1:
-            for w in driver.window_handles:
-                if w != orig:
-                    driver.switch_to.window(w)
-                    break
-            time.sleep(1)
-
-        id_field = None
-        for sel in [
-            "//input[@placeholder='Player ID' or @name='playerId']",
-            "//input[@type='text']",
-            "//input[contains(@placeholder,'ID')]"
-        ]:
             try:
-                f = driver.find_element(By.XPATH, sel)
-                if f.is_displayed():
-                    f.clear()
-                    f.send_keys(pid)
-                    id_field = f
-                    log(f"✅ ID entered")   # raw ID not logged — privacy
-                    break
-            except:
-                continue
+                id_field = WebDriverWait(driver, 12).until(
+                    lambda d: _find_player_id_element(d) or False
+                )
+            except TimeoutException:
+                log("❌ Login control was clicked, but the User ID form did not appear")
+                capture_login_diagnostics(driver, "login_form_not_opened", force=True)
+                return False
 
-        if not id_field:
-            log("❌ ID input not found")
-            capture_login_diagnostics(driver, "id_input_not_found")
+        try:
+            id_field.clear()
+            id_field.send_keys(pid)
+        except Exception as input_error:
+            log(f"❌ Could not enter the Player ID: {type(input_error).__name__}")
+            capture_login_diagnostics(driver, "player_id_input_failed", force=True)
             return False
+        log("✅ Player ID entered")  # Do not write the raw ID into logs.
 
-        time.sleep(1)
+        submit_xpath = (
+            "//button[normalize-space(.)='Login' or normalize-space(.)='Submit' "
+            "or normalize-space(.)='Continue' or normalize-space(.)='Log in']"
+        )
         submitted = False
-        for sel in [
-            "//button[contains(text(),'Login') or contains(text(),'Submit') "
-            "or contains(text(),'Continue')]",
-            "//button[@type='submit']"
-        ]:
+        try:
+            buttons = driver.find_elements(By.XPATH, submit_xpath)
+        except Exception:
+            buttons = []
+        for button in buttons:
             try:
-                btn = driver.find_element(By.XPATH, sel)
-                if btn.is_displayed() and btn.is_enabled():
-                    btn.click()
+                if button.is_displayed() and button.is_enabled():
+                    button.click()
                     submitted = True
                     break
-            except:
+            except Exception:
                 continue
+
         if not submitted:
             try:
                 id_field.send_keys(Keys.RETURN)
-            except:
-                log("❌ Could not submit login")
+                submitted = True
+            except Exception:
+                log("❌ Could not submit the Player ID form")
+                capture_login_diagnostics(driver, "login_form_submit_failed", force=True)
                 return False
 
-        time.sleep(3)
-        if len(driver.window_handles) > 1:
-            driver.close()
-            driver.switch_to.window(orig)
-            time.sleep(1)
+        # Login should close the ID form and remove the signed-out Login trigger.
+        # Do not infer success merely because a click or form submission was attempted.
+        try:
+            WebDriverWait(driver, 15).until(
+                lambda d: _find_player_id_element(d) is None
+                and _find_exact_login_trigger(d) is None
+            )
+        except TimeoutException:
+            log("❌ Login state did not change after submitting the Player ID")
+            capture_login_diagnostics(driver, "login_not_confirmed", force=True)
+            return False
 
-        time.sleep(2)
-        src = driver.page_source.lower()
-        if "daily-rewards" in driver.current_url or "claim" in src or pid.lower() in src:
-            log("✅ Login successful")
-            return True
-        log("⚠️ Login uncertain — proceeding")
+        log("✅ Login state changed; continuing to the rewards pages")
         return True
-    except Exception as e:
-        log(f"❌ Login error: {type(e).__name__}: {e}")
-        capture_login_diagnostics(driver, "login_exception")
-        return False
 
+    except Exception as exc:
+        log(f"❌ Login error: {type(exc).__name__}: {str(exc)[:180]}")
+        capture_login_diagnostics(driver, "login_exception", force=True)
+        return False
 
 def close_popup(driver):
     try:
