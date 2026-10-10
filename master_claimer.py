@@ -24,7 +24,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.3"
+VERSION        = "v3.0.4"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -235,7 +235,8 @@ def compute_all_ok_today(players):
         if not lc or datetime.fromisoformat(lc) < lr:
             return False
 
-        # Store — all 3 cards claimed since last reset
+        # Store streak requirement intentionally remains the 3 established daily cards.
+        # The fourth Hub First Year offer is temporary/one-time and must not break the streak.
         for i in range(1, 4):
             lc = ph.get("store", {}).get(f"reward_{i}", {}).get("last_claim")
             if not lc or datetime.fromisoformat(lc) < lr:
@@ -273,7 +274,7 @@ def init_player_history(pid):
             "daily":       {"last_claim": None, "next_available": None, "status": "unknown"},
             "store": {
                 f"reward_{i}": {"last_claim": None, "next_available": None, "status": "unknown"}
-                for i in range(1, 4)
+                for i in range(1, 5)
             },
             "progression": {"last_claim": None, "last_count": 0, "last_visit": None},
             "loyalty":     {"last_claim": None, "next_available": None, "status": "unknown"}
@@ -281,15 +282,21 @@ def init_player_history(pid):
         save_claim_history(h)
     else:
         changed = False
+        h[pid].setdefault("store", {})
         if "loyalty" not in h[pid]:
             h[pid]["loyalty"] = {"last_claim": None, "next_available": None, "status": "unknown"}
             changed = True
         if "last_visit" not in h[pid].get("progression", {}):
             h[pid].setdefault("progression", {})["last_visit"] = None
             changed = True
-        for rk in ("reward_1", "reward_2", "reward_3"):
-            if "status" not in h[pid]["store"].get(rk, {}):
-                h[pid]["store"].setdefault(rk, {})["status"] = "unknown"
+        for rk in ("reward_1", "reward_2", "reward_3", "reward_4"):
+            if rk not in h[pid]["store"]:
+                h[pid]["store"][rk] = {
+                    "last_claim": None, "next_available": None, "status": "unknown"
+                }
+                changed = True
+            elif "status" not in h[pid]["store"][rk]:
+                h[pid]["store"][rk]["status"] = "unknown"
                 changed = True
         if changed:
             save_claim_history(h)
@@ -322,24 +329,38 @@ def update_claim_history(pid, reward_type, claimed_count=0,
 
     elif reward_type == "store" and reward_index is not None:
         rk = f"reward_{reward_index}"
-        if claimed_count > 0:
-            h[pid]["store"][rk]["last_claim"]     = ist_now.isoformat()
-            h[pid]["store"][rk]["next_available"] = nr.isoformat()
-            h[pid]["store"][rk]["status"]         = "claimed"
-            log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
-        elif detected_cooldown is not None:
-            h[pid]["store"][rk]["next_available"] = nr.isoformat()
-            h[pid]["store"][rk]["status"]         = "cooldown_detected"
-            log(f"📝 Store {reward_index} cooldown anchored → daily reset")
-        elif attempted:
-            lc = h[pid]["store"][rk].get("last_claim")
-            if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
-                log(f"📝 Store {reward_index} — preserving (claimed since last reset)")
-            else:
-                h[pid]["store"][rk]["status"] = "unavailable"
+        rec = h[pid]["store"].setdefault(
+            rk, {"last_claim": None, "next_available": None, "status": "unknown"}
+        )
+
+        if reward_index == TEMP_STORE_REWARD_INDEX:
+            # The Hub First Year card is a limited-time, one-time reward, not a daily reset reward.
+            if claimed_count > 0:
+                rec["last_claim"] = ist_now.isoformat()
+                rec["next_available"] = None
+                rec["status"] = "claimed"
+                log(f"📝 Temporary Store reward claimed; persisted as one-time reward_4")
+            elif attempted:
+                # Do not permanently mark it unavailable after a failed click. Recheck live UI next run.
+                log("📝 Temporary Store reward claim not confirmed; will recheck next run")
+        else:
+            if claimed_count > 0:
+                rec["last_claim"]     = ist_now.isoformat()
+                rec["next_available"] = nr.isoformat()
+                rec["status"]         = "claimed"
+                log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
+            elif detected_cooldown is not None:
+                rec["next_available"] = nr.isoformat()
+                rec["status"]         = "cooldown_detected"
+                log(f"📝 Store {reward_index} cooldown anchored → daily reset")
+            elif attempted:
+                lc = rec.get("last_claim")
+                if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
+                    log(f"📝 Store {reward_index} — preserving (claimed since last reset)")
+                else:
+                    rec["status"] = "unavailable"
 
     elif reward_type == "progression":
-        # Always update last_visit — records that the page was visited
         h[pid]["progression"]["last_visit"] = ist_now.isoformat()
         if claimed_count > 0:
             h[pid]["progression"]["last_claim"] = ist_now.isoformat()
@@ -370,6 +391,17 @@ def update_claim_history(pid, reward_type, claimed_count=0,
     return h
 
 
+def mark_temp_store_reward_portal_claimed(pid):
+    """Persist a clearly observed claimed/exhausted state from the portal UI."""
+    h = init_player_history(pid)
+    rec = h[pid]["store"].setdefault(
+        "reward_4", {"last_claim": None, "next_available": None, "status": "unknown"}
+    )
+    rec["next_available"] = None
+    rec["status"] = "portal_claimed"
+    save_claim_history(h)
+
+
 def get_reward_status(pid):
     h       = load_claim_history()
     ist_now = get_ist_time()
@@ -378,20 +410,22 @@ def get_reward_status(pid):
 
     if pid not in h:
         return {
-            "daily_available":   True,  "daily_next": None,    "daily_status": "unknown",
-            "store_available":   [True, True, True],
-            "store_next":        [None, None, None],
-            "store_status":      ["unknown", "unknown", "unknown"],
-            "loyalty_available": True,  "loyalty_next": None,  "loyalty_status": "unknown",
+            "daily_available": True, "daily_next": None, "daily_status": "unknown",
+            "store_available": [True, True, True],
+            "store_next": [None, None, None],
+            "store_status": ["unknown", "unknown", "unknown"],
+            "temp_store_available": True,
+            "temp_store_status": "unknown",
+            "loyalty_available": True, "loyalty_next": None, "loyalty_status": "unknown",
         }
 
     ph = h[pid]
 
     # Daily
     d_avail, d_next = True, None
-    d_status = ph["daily"].get("status", "unknown")
-    lc_d = ph["daily"].get("last_claim")
-    na_d = ph["daily"].get("next_available")
+    d_status = ph.get("daily", {}).get("status", "unknown")
+    lc_d = ph.get("daily", {}).get("last_claim")
+    na_d = ph.get("daily", {}).get("next_available")
     if lc_d and datetime.fromisoformat(lc_d) >= lr:
         d_avail, d_next, d_status = False, format_time_until(nr), "claimed"
     elif na_d:
@@ -399,13 +433,14 @@ def get_reward_status(pid):
         if ist_now < nt:
             d_avail, d_next = False, format_time_until(nt)
 
-    # Store
+    # Established daily Store rewards — indices 1..3 reset at 05:30 IST.
     s_avail  = [True, True, True]
     s_next   = [None, None, None]
     s_status = ["unknown", "unknown", "unknown"]
+    store_history = ph.get("store", {})
     for i in range(3):
         rk = f"reward_{i+1}"
-        rd = ph["store"][rk]
+        rd = store_history.get(rk, {})
         s_status[i] = rd.get("status", "unknown")
         lc_s = rd.get("last_claim")
         na_s = rd.get("next_available")
@@ -415,6 +450,14 @@ def get_reward_status(pid):
             nt = datetime.fromisoformat(na_s)
             if ist_now < nt:
                 s_avail[i], s_next[i] = False, format_time_until(nt)
+
+    # Temporary Hub First Year reward — independent from the daily reset.
+    temp_record = store_history.get("reward_4", {})
+    temp_status = temp_record.get("status", "unknown")
+    temp_claimed = bool(temp_record.get("last_claim")) or temp_status in ("claimed", "portal_claimed")
+    temp_available = not temp_claimed
+    if temp_claimed:
+        temp_status = "claimed" if temp_status != "portal_claimed" else "portal_claimed"
 
     # Loyalty (rolling 24h)
     l_avail, l_next = True, None
@@ -432,9 +475,10 @@ def get_reward_status(pid):
             l_avail, l_next = False, format_time_until(nt)
 
     return {
-        "daily_available":   d_avail, "daily_next":    d_next,    "daily_status":   d_status,
-        "store_available":   s_avail, "store_next":    s_next,    "store_status":   s_status,
-        "loyalty_available": l_avail, "loyalty_next":  l_next,    "loyalty_status": l_status,
+        "daily_available": d_avail, "daily_next": d_next, "daily_status": d_status,
+        "store_available": s_avail, "store_next": s_next, "store_status": s_status,
+        "temp_store_available": temp_available, "temp_store_status": temp_status,
+        "loyalty_available": l_avail, "loyalty_next": l_next, "loyalty_status": l_status,
     }
 
 
@@ -447,7 +491,10 @@ def all_claimable_on_cooldown(pid, has_loyalty):
     PROGRESSION_CHECK_WINDOW_HOURS = 4
 
     s = get_reward_status(pid)
-    if not s["daily_available"] and not any(s["store_available"]):
+    # Never smart-skip an ID whose temporary reward has not been claimed; its
+    # availability can only be confirmed by checking that account's live Store card.
+    if (not s["daily_available"] and not any(s["store_available"])
+            and not s.get("temp_store_available", True)):
         h   = load_claim_history()
         ph  = h.get(pid, {})
         ist = get_ist_time()
@@ -1029,13 +1076,16 @@ STORE_DAILY_LABELS = {
     3: "Luckyloon (Daily)",
 }
 
+TEMP_STORE_REWARD_INDEX = 4
+TEMP_STORE_REWARD_NAME = "200 Gold - Hub First Year Reward"
+TEMP_STORE_REWARD_MATCH = "hub first year reward"
+
 
 def _find_store_daily_button(driver, reward_index):
-    """Find a claim button inside one of the three named daily store cards only.
+    """Find a claim button inside one named daily Store card only.
 
-    This intentionally excludes the temporary fourth card. Its title and tracking
-    are not yet integrated, so the baseline claim test cannot misattribute it as
-    Gold/Cash/Luckyloon if one of those rewards is on cooldown.
+    The temporary Hub First Year offer is handled by its own dedicated detector,
+    so it can never be misattributed as Gold, Cash, or Luckyloon.
     Returns (button, status) where status is available/cooldown/label_not_found/
     button_not_found/error.
     """
@@ -1082,29 +1132,142 @@ def _find_store_daily_button(driver, reward_index):
         return None, "error"
 
 
-def claim_store_rewards(driver, pid):
-    """Claim the three established daily store rewards by card label, not button order.
 
-    Returns (number_claimed_this_pass, skip_flags[3]). The temporary fourth card
-    is deliberately excluded until its own availability/history/reporting is added.
+def _inspect_temp_store_reward(driver):
+    """Inspect only the named Hub First Year card; its 3d4h badge is expiry, not cooldown."""
+    try:
+        result = driver.execute_script(r"""
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                if (!el) return false;
+                const st = getComputedStyle(el), r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && st.display !== 'none'
+                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+            };
+            const target = norm(arguments[0] || 'hub first year reward');
+            // Use the smallest matching text containers rather than only leaf nodes;
+            // the portal may split the card title across nested spans.
+            const matches = Array.from(document.querySelectorAll('*')).filter(el => {
+                const t = norm(el.innerText || el.textContent);
+                return t.includes(target) && t.length < 1600;
+            });
+            matches.sort((a,b) => norm(a.innerText || a.textContent).length - norm(b.innerText || b.textContent).length);
+            if (!matches.length) return {status:'not_found'};
+
+            for (const leaf of matches) {
+                let node = leaf;
+                for (let depth = 0; depth < 14 && node && node !== document.body; depth++, node = node.parentElement) {
+                    const text = norm(node.innerText || node.textContent);
+                    if (!text.includes(target) || text.length > 1600) continue;
+                    const buttons = Array.from(node.querySelectorAll('button,[role="button"]')).filter(visible);
+                    const states = buttons.map(b => ({
+                        el:b,
+                        text:norm(b.innerText || b.textContent),
+                        disabled:!!b.disabled || b.getAttribute('aria-disabled') === 'true'
+                    }));
+                    const claimBtn = states.find(x => ['free','claim'].includes(x.text));
+                    const claimedBtn = states.find(x => ['claimed','already claimed','unavailable'].includes(x.text));
+                    const exhausted = /\b0\s*\/\s*1\s*left\b/.test(text)
+                        || /\balready claimed\b/.test(text)
+                        || /\bclaimed\b/.test(text);
+                    const hasCounter = /\b[01]\s*\/\s*1\s*left\b/.test(text);
+
+                    if (claimBtn && !claimBtn.disabled) {
+                        return {status:'available', button:claimBtn.el, button_text:claimBtn.text,
+                                has_counter:hasCounter, card_text:text.slice(0,700)};
+                    }
+                    if (claimedBtn || exhausted) {
+                        return {status:'claimed', button_text:claimedBtn ? claimedBtn.text : '',
+                                has_counter:hasCounter, card_text:text.slice(0,700)};
+                    }
+                    if (claimBtn && claimBtn.disabled) {
+                        return {status:'unavailable', button_text:claimBtn.text,
+                                has_counter:hasCounter, card_text:text.slice(0,700)};
+                    }
+                }
+            }
+            return {status:'unavailable'};
+        """, TEMP_STORE_REWARD_MATCH)
+        if not isinstance(result, dict):
+            return {"status": "error"}
+        return result
+    except Exception as exc:
+        log(f"⚠️ Temporary Store card inspection failed: {type(exc).__name__}")
+        return {"status": "error"}
+
+
+def claim_temporary_store_reward(driver, pid):
+    """Claim the one-time 200 Gold Hub First Year offer only when the card says Free/Claim."""
+    local = get_reward_status(pid)
+    if not local.get("temp_store_available", True):
+        log("⏩ Temporary Store reward already recorded as claimed; skipping one-time card")
+        return 0, True, 0, local.get("temp_store_status", "claimed")
+
+    state = _inspect_temp_store_reward(driver)
+    status = state.get("status", "error")
+    if status == "not_found":
+        log("ℹ️ Temporary reward card not present on this account/page; will check again next run")
+        return 0, True, 0, "not_found"
+    if status == "claimed":
+        mark_temp_store_reward_portal_claimed(pid)
+        log("✅ Temporary reward is already marked claimed/exhausted by CS Hub")
+        return 0, True, 0, "portal_claimed"
+    if status != "available":
+        log(f"ℹ️ Temporary reward not currently claimable (state={status}); will recheck next run")
+        return 0, True, 0, "unavailable"
+
+    # A live Free/Claim button makes this reward an eligible opportunity.
+    # Verify the UI changes before persisting a claim to avoid false claim history.
+    for attempt in range(2):
+        current = _inspect_temp_store_reward(driver)
+        if current.get("status") == "claimed":
+            mark_temp_store_reward_portal_claimed(pid)
+            return 0, True, 0, "portal_claimed"
+        button = current.get("button")
+        if current.get("status") != "available" or button is None:
+            break
+
+        if not physical_click(driver, button):
+            log(f"⚠️ Temporary reward click attempt {attempt+1} failed")
+            time.sleep(1)
+            continue
+
+        log(f"🪙 Temporary reward click dispatched (attempt {attempt+1}); verifying portal state")
+        time.sleep(2.5)
+        close_popup(driver)
+        time.sleep(1)
+        after = _inspect_temp_store_reward(driver)
+        if after.get("status") == "claimed":
+            update_claim_history(pid, "store", claimed_count=1, reward_index=TEMP_STORE_REWARD_INDEX)
+            log(f"✅ Claimed: {TEMP_STORE_REWARD_NAME}")
+            return 1, False, 1, "claimed_this_run"
+
+        if after.get("status") == "available" and attempt == 0:
+            log("⚠️ Temporary reward still appears available; retrying once")
+            continue
+        log(f"⚠️ Temporary reward claim could not be confirmed (post-click state={after.get('status')})")
+        return 0, False, 1, "claim_unconfirmed"
+
+    log("⚠️ Temporary reward was available but no successful click was confirmed")
+    return 0, False, 1, "claim_unconfirmed"
+
+def claim_store_rewards(driver, pid):
+    """Claim the 3 reset-based daily Store rewards plus the separate one-time offer.
+
+    Returns daily_claimed, daily_skip_flags[3], temp_claimed, temp_skipped,
+    temp_possible(0/1), temp_status. Reward 4 is not a daily-reset reward.
     """
     status = get_reward_status(pid)
     skip_flags = [not available for available in status["store_available"]]
-    if not any(status["store_available"]):
-        log("⏩ Gold/Cash/Luckyloon daily store rewards are all on cooldown")
-        return 0, skip_flags
-
-    log("🏪 Claiming named daily Store Rewards (Gold, Cash, Luckyloon)...")
     claimed = 0
     attempted_indices = set()
+
+    log("🏪 Checking Store: Gold, Cash, Luckyloon and the temporary Hub First Year offer")
     try:
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        # Do not run the old page-wide store timer scan here: with a temporary
-        # fourth card present, a broad ancestor scan can associate its timer with
-        # one of the first three rewards. Each card is inspected by exact label below.
 
         for reward_index, label in STORE_DAILY_LABELS.items():
             current = get_reward_status(pid)
@@ -1122,8 +1285,6 @@ def claim_store_rewards(driver, pid):
 
                 button, button_status = _find_store_daily_button(driver, reward_index)
                 if button_status == "cooldown":
-                    # Store cooldowns are reset-anchored. Persist this signal on
-                    # the exact reward index identified by its visible card label.
                     update_claim_history(
                         pid, "store", reward_index=reward_index,
                         detected_cooldown=timedelta(seconds=61)
@@ -1134,6 +1295,8 @@ def claim_store_rewards(driver, pid):
 
                 if button is None:
                     log(f"ℹ️ Store {label}: no exact Free/Claim button found (status={button_status})")
+                    if button_status == "label_not_found":
+                        skip_flags[reward_index - 1] = True
                     if attempt == 0:
                         time.sleep(1)
                         continue
@@ -1141,13 +1304,14 @@ def claim_store_rewards(driver, pid):
 
                 attempted_indices.add(reward_index)
                 if physical_click(driver, button):
-                    time.sleep(3)
+                    time.sleep(2.5)
                     close_popup(driver)
+                    # Existing daily-card behaviour is retained; state is anchored to daily reset.
                     update_claim_history(pid, "store", claimed_count=1, reward_index=reward_index)
                     claimed += 1
                     success_for_card = True
                     skip_flags[reward_index - 1] = False
-                    log(f"✅ Store {label} claimed (mapped to reward_{reward_index})")
+                    log(f"✅ Store {label} claim dispatched (mapped to reward_{reward_index})")
                     break
 
                 log(f"⚠️ Store {label}: click attempt {attempt + 1} failed")
@@ -1155,15 +1319,24 @@ def claim_store_rewards(driver, pid):
 
             if not success_for_card and reward_index not in attempted_indices:
                 latest = get_reward_status(pid)
-                if latest["store_available"][reward_index - 1] and latest["store_status"][reward_index - 1] not in ("cooldown_detected", "claimed"):
+                if (latest["store_available"][reward_index - 1]
+                        and latest["store_status"][reward_index - 1] not in ("cooldown_detected", "claimed")):
                     update_claim_history(pid, "store", reward_index=reward_index, attempted=True)
 
-        log(f"📊 Named daily store rewards: {claimed}/3 claimed this pass")
+        temp_claimed, temp_skipped, temp_possible, temp_status = claim_temporary_store_reward(driver, pid)
+        log(f"📊 Daily Store: {claimed}/3 claimed this pass")
+        log(f"🪙 Temporary Store reward: {temp_status}; claimed this run={temp_claimed}")
         driver.save_screenshot(f"store_{pid}.png")
     except Exception as exc:
         log(f"❌ Store error: {type(exc).__name__}: {str(exc)[:180]}")
+        # If Store processing failed before the temporary card was evaluated,
+        # treat it as unverified rather than as an available/claimed reward.
+        temp_claimed = 0
+        temp_skipped = True
+        temp_possible = 0
+        temp_status = "store_error"
 
-    return claimed, skip_flags
+    return claimed, skip_flags, temp_claimed, temp_skipped, temp_possible, temp_status
 
 
 def claim_progression_program_rewards(driver, pid):
@@ -1330,7 +1503,12 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "is_new":          is_new,
         "has_loyalty":     has_loyalty,
         "daily":           0,
-        "store":           0,
+        "store":           0,          # the 3 established daily Store cards
+        "store_temp":      0,          # the one-time Hub First Year offer
+        "store_possible":  0,
+        "store_temp_possible": 0,
+        "store_temp_skipped": True,
+        "store_temp_status": "unknown",
         "progression":     0,
         "loyalty":         0,
         "daily_skipped":   False,
@@ -1352,6 +1530,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
             "skipped_all":     True,
             "daily_skipped":   True,
             "store_skipped":   [True, True, True],
+            "store_temp_skipped": True,
+            "store_temp_status": get_reward_status(pid).get("temp_store_status", "claimed"),
             "loyalty_skipped": has_loyalty,
             "status":          "All Skipped (Cooldown)",
         })
@@ -1384,12 +1564,18 @@ def process_player(pid, has_loyalty, is_new, run_label):
             stats["possible"] += 1
 
         # Store — each established daily reward is targeted by its visible card label.
-        store_count, store_skips = claim_store_rewards(driver, pid)
+        (store_count, store_skips, temp_count, temp_skipped,
+         temp_possible, temp_status) = claim_store_rewards(driver, pid)
         stats["store"] = store_count
         stats["store_skipped"] = store_skips
-        stats["possible"] += sum(1 for sk in stats["store_skipped"] if not sk)
+        stats["store_temp"] = temp_count
+        stats["store_temp_skipped"] = temp_skipped
+        stats["store_temp_possible"] = temp_possible
+        stats["store_temp_status"] = temp_status
+        stats["store_possible"] = sum(1 for sk in stats["store_skipped"] if not sk)
+        stats["possible"] += stats["store_possible"] + stats["store_temp_possible"]
 
-        if stats["store"] > 0:
+        if stats["store"] > 0 or stats["store_temp"] > 0:
             log("⏳ Waiting for server to process store claims...")
             time.sleep(3)
 
@@ -1419,7 +1605,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
             log("ℹ️  Loyalty not enrolled for this ID")
 
         # Determine status
-        claimed_now = stats["daily"] + stats["store"] + stats.get("loyalty", 0)
+        claimed_now = stats["daily"] + stats["store"] + stats.get("store_temp", 0) + stats.get("loyalty", 0)
         possible    = stats["possible"]
         if possible == 0:
             stats["status"] = "All Skipped (Cooldown)"
@@ -1432,7 +1618,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
         total_inc_prog = claimed_now + stats["progression"]
         log(f"🎉 {pid}: {total_inc_prog} claimed "
-            f"(D:{stats['daily']} S:{stats['store']} "
+            f"(D:{stats['daily']} S:{stats['store']} Temp:{stats['store_temp']} "
             f"P:{stats['progression']} L:{stats['loyalty']})")
 
     except Exception as e:
@@ -1745,6 +1931,9 @@ def build_mobile_cards(results, n):
             f'<span class="mpc-lbl">🎁 Daily &nbsp;🥇 Gold &nbsp;💵 Cash &nbsp;🍀 Lucky</span>'
             f'<span class="mpc-val">{d_ic} &nbsp;{g_ic} &nbsp;{c_ic} &nbsp;{l_ic}</span></div>'
             f'<div class="mpc-row">'
+            f'<span class="mpc-lbl">🏅 200 Gold (Temporary)</span>'
+            f'<span class="mpc-val">{("✅" if r.get("store_temp", 0) > 0 else "☑️" if r.get("store_temp_status") in ("claimed", "portal_claimed", "previously_claimed") else "⚠️" if r.get("store_temp_possible", 0) else "—" if r.get("store_temp_status") in ("not_found", "unavailable", "store_error") else "⏳")}</span></div>'
+            f'<div class="mpc-row">'
             f'<span class="mpc-lbl">🎯 Progression</span>'
             f'<span class="mpc-val">{p_ic}'
             f'{" " + str(r["progression"]) if r["progression"] > 0 else ""}'
@@ -1774,14 +1963,25 @@ def build_email(results, run_label, run_index, job_start, meta):
     dur_str = f"{dur_s // 60}m {dur_s % 60}s"
     n       = len(results)
 
-    td   = sum(r["daily"]          for r in results)
-    ts   = sum(r["store"]          for r in results)
-    tp   = sum(r["progression"]    for r in results)
-    tl   = sum(r.get("loyalty", 0) for r in results)
-    tall = td + ts + tp + tl
+    td       = sum(r["daily"] for r in results)
+    ts_daily = sum(r["store"] for r in results)
+    ts_temp  = sum(r.get("store_temp", 0) for r in results)
+    ts       = ts_daily + ts_temp
+    tp       = sum(r["progression"] for r in results)
+    tl       = sum(r.get("loyalty", 0) for r in results)
+    tall     = td + ts + tp + tl
+    # Preserve the report's existing per-run Store capacity (3 daily cards per ID),
+    # adding one extra slot only for IDs where the temporary card was observed/claimed.
+    temp_slots_tracked = sum(
+        1 for r in results
+        if r.get("store_temp_possible", 0)
+        or r.get("store_temp_status") in ("claimed", "portal_claimed", "previously_claimed", "claimed_this_run")
+    )
+    store_kpi_capacity = n * 3 + temp_slots_tracked
 
     tp_all  = sum(r.get("possible", 0) for r in results)
-    eff     = 100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1)
+    has_run_failure = any(r.get("status") in ("Login Failed", "Error", "Failed") for r in results)
+    eff = 0.0 if tp_all == 0 and has_run_failure else (100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1))
     l_enrl  = sum(1 for r in results if r.get("has_loyalty"))
     skip_ct = sum(1 for r in results if r.get("skipped_all"))
     act_ct  = n - skip_ct
@@ -1791,8 +1991,10 @@ def build_email(results, run_label, run_index, job_start, meta):
     s_best = streak.get("best", 0)
     lr     = meta.get("last_run") or {}
     lr_d   = lr.get("per_type", {}).get("daily")
-    lr_s   = lr.get("per_type", {}).get("store")
-    lr_l   = lr.get("per_type", {}).get("loyalty")
+    _prev_types = lr.get("per_type", {})
+    # Do not compare the first new combined-store KPI against a legacy daily-only value.
+    lr_s = (_prev_types.get("store") if "store_daily" in _prev_types else None)
+    lr_l   = _prev_types.get("loyalty")
     lr_tot = lr.get("total_claimed")
     lr_eff = lr.get("efficiency")
 
@@ -1804,7 +2006,7 @@ def build_email(results, run_label, run_index, job_start, meta):
     bi  = {"Primary Run": "🟢", "Manual Run": "🔧"}.get(run_label, "🔵")
 
     d_pct = min(round(td / n * 100) if n else 0, 100)
-    s_pct = min(round(ts / (n * 3) * 100) if n else 0, 100)
+    s_pct = min(round(ts / store_kpi_capacity * 100) if store_kpi_capacity else 0, 100)
     l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
 
     dlt_d   = _delta_html(td,   lr_d)
@@ -1864,6 +2066,22 @@ def build_email(results, run_label, run_index, job_start, meta):
                 cell = '<span class="ic-pd">⏳</span>'
             sc_html += f'<td{sep}>{cell}</td>'
 
+        # One-time temporary Store reward column — tracked separately from daily reset rewards.
+        temp_state = r.get("store_temp_status", "unknown")
+        if r.get("store_temp", 0) > 0:
+            temp_cell = '<span class="ic-ok" title="Temporary reward claimed this run">✅</span>'
+        elif temp_state in ("claimed", "portal_claimed", "previously_claimed"):
+            temp_cell = '<span class="ic-ok" title="Temporary reward already claimed">☑️</span>'
+        elif r.get("store_temp_possible", 0) > 0:
+            temp_cell = ('<span class="ic-fl" title="Temporary reward was available but claim was not confirmed">⚠️</span>'
+                         if status not in ("Login Failed", "Error", "Failed") else '<span class="ic-fl">❌</span>')
+        elif temp_state in ("not_found", "unavailable", "store_error"):
+            temp_cell = '<span class="ic-na" title="Temporary card not available/found">—</span>'
+        elif status in ("Login Failed", "Error", "Failed"):
+            temp_cell = '<span class="ic-fl" title="Login or browser failed">❌</span>'
+        else:
+            temp_cell = '<span class="ic-pd" title="Temporary card not checked/confirmed">⏳</span>'
+
         # Progression cell
         pc = ('<span class="ic-ok">✅</span>' if r["progression"] > 0
               else '<span class="ic-fl">❌</span>'
@@ -1893,6 +2111,7 @@ def build_email(results, run_label, run_index, job_start, meta):
             f'<td class="idc">{display_lbl}{new_mark}</td>'
             f'<td style="border-left:1px solid #e5e7eb;">{dc}</td>'
             f'{sc_html}'
+            f'<td>{temp_cell}</td>'
             f'<td style="border-left:1px solid #e5e7eb;">{pc}</td>'
             f'<td style="border-left:1px solid #e5e7eb;">{lc}</td>'
             f'<td style="border-left:1px solid #e5e7eb;">{tm}</td>'
@@ -1911,17 +2130,30 @@ def build_email(results, run_label, run_index, job_start, meta):
                      else f'⏰ {r.get("daily_next") or "On cooldown"}' if r["daily_skipped"]
                      else "⏳ Not claimed")
 
-            SNAMES = ["🥇 Gold", "💵 Cash", "🍀 Luckyloon"]
+            SNAMES = ["🥇 Gold (Daily)", "💵 Cash (Daily)", "🍀 Luckyloon (Daily)"]
             s_rows = ""
             for i in range(3):
                 if claimed_cards[i]:
-                    sv = "✅ Claimed"
+                    sv = "✅ Claimed this run"
                 elif sk[i]:
                     nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "On cooldown"
                     sv  = f"⏰ {nxt}"
                 else:
                     sv = "⏳ Not claimed"
                 s_rows += _drow(SNAMES[i], sv)
+
+            temp_state = r.get("store_temp_status", "unknown")
+            if r.get("store_temp", 0) > 0:
+                temp_val = "✅ Claimed this run"
+            elif temp_state in ("claimed", "portal_claimed", "previously_claimed"):
+                temp_val = "☑️ Previously claimed"
+            elif r.get("store_temp_possible", 0) > 0:
+                temp_val = "⚠️ Available; claim not confirmed"
+            elif temp_state in ("not_found", "unavailable", "store_error"):
+                temp_val = "— Not available/found"
+            else:
+                temp_val = "⏳ Not confirmed"
+            s_rows += _drow("🏅 200 Gold — Hub First Year (Temporary)", temp_val)
 
             pg = (f"✅ {r['progression']} claimed" if r["progression"] > 0
                   else "⏳ Awaiting grenade/bullet threshold")
@@ -2001,9 +2233,9 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<div class='kv'>{td}<span>/{n}</span></div>"
         f"<div class='ks'>{dlt_d}</div>{_pbar(d_pct,'pg')}</div>"
 
-        f"<div class='kpi'><div class='kl'>🏪 Store</div>"
-        f"<div class='kv'>{ts}<span>/{n*3}</span></div>"
-        f"<div class='ks'>{dlt_s}</div>{_pbar(s_pct,'pb2')}</div>"
+        f"<div class='kpi'><div class='kl'>🏪 Store (incl. temporary)</div>"
+        f"<div class='kv'>{ts}<span>/{store_kpi_capacity}</span></div>"
+        f"<div class='ks'>{dlt_s} · 🏅 Temp claimed: {ts_temp}</div>{_pbar(s_pct,'pb2')}</div>"
 
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
         f"<div class='kv'>{tp}<span> items</span></div>"
@@ -2035,6 +2267,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<th style='border-left:1px solid #e5e7eb;'>🎁 Daily</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>🥇 Gold</th>"
         f"<th>💵 Cash</th><th>🍀 Lucky</th>"
+        f"<th>🏅 200 Gold (Temp.)</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>🎯 Prog</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>🏆 Loyal</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>⏱️ Time</th>"
@@ -2063,7 +2296,8 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<span>🆕 New ID (first run)</span>"
         f"</div>"
         f"<div class='leg' style='margin-top:8px;'>"
-        f"<span>📌 Daily &amp; Store reset at 5:30 AM IST</span>"
+        f"<span>📌 Daily rewards &amp; the 3 standard Store cards reset at 5:30 AM IST</span>"
+        f"<span>📌 Hub First Year 200 Gold reward: one-time temporary card, independent of daily reset</span>"
         f"<span>📌 Progression: monthly reset, grenade-dependent</span>"
         f"<span>📌 Loyalty: 24h rolling, LP-dependent</span>"
         f"</div>"
@@ -2489,7 +2723,7 @@ def run_claim_test_one_player():
     log("CS HUB ONE-PLAYER CLAIM TEST — REAL CLAIMS, NO FULL ROSTER RUN")
     log("Only the first configured player ID will be processed.")
     log("Claim history will be updated for rewards actually processed.")
-    log("The temporary fourth store card is excluded from this baseline test.")
+    log("The temporary Hub First Year reward is included when its own card is available.")
     log("=" * 68)
 
     try:
@@ -2522,14 +2756,16 @@ def run_claim_test_one_player():
     total_claimed = (
         int(result.get("daily", 0) or 0)
         + int(result.get("store", 0) or 0)
+        + int(result.get("store_temp", 0) or 0)
         + int(result.get("progression", 0) or 0)
         + int(result.get("loyalty", 0) or 0)
     )
     test_status = str(result.get("status", "Unknown"))
     end = get_ist_time()
 
-    # Move only this run's three reward screenshots into a downloadable artifact
-    # and rename them so the raw player ID is not exposed in artifact filenames.
+    # Move this run's screenshots into a downloadable artifact and rename them
+    # so the raw player ID is not exposed in artifact filenames. The Store shot
+    # includes the temporary reward card's post-claim state.
     os.makedirs(CLAIM_TEST_ARTIFACTS_DIR, exist_ok=True)
     screenshot_map = {
         f"daily_{pid}.png": "daily.png",
@@ -2557,15 +2793,19 @@ def run_claim_test_one_player():
         "status": test_status,
         "daily_claimed": int(result.get("daily", 0) or 0),
         "store_daily_rewards_claimed": int(result.get("store", 0) or 0),
+        "store_temp_reward_claimed": int(result.get("store_temp", 0) or 0),
+        "store_temp_reward_status": result.get("store_temp_status", "unknown"),
+        "store_temp_reward_possible": int(result.get("store_temp_possible", 0) or 0),
         "progression_claimed": int(result.get("progression", 0) or 0),
         "loyalty_claimed": int(result.get("loyalty", 0) or 0),
         "total_claimed": total_claimed,
         "duration_seconds": int(result.get("duration_s", 0) or (end - start).total_seconds()),
         "daily_skipped": bool(result.get("daily_skipped", False)),
         "store_skipped": result.get("store_skipped", [False, False, False]),
+        "store_temp_skipped": bool(result.get("store_temp_skipped", True)),
         "loyalty_skipped": bool(result.get("loyalty_skipped", False)),
-        "temporary_fourth_store_reward_enabled": False,
-        "note": "Only the three named daily store cards (Gold, Cash, Luckyloon) are in this baseline test. Per-player claim history is preserved.",
+        "temporary_fourth_store_reward_enabled": True,
+        "note": "The one-time Hub First Year 200 Gold card is checked independently of the three daily Store cards; per-player reward_4 history is preserved and the card is marked claimed only after portal confirmation.",
     }
     summary_path = os.path.join(CLAIM_TEST_ARTIFACTS_DIR, "claim_test_summary.json")
     with open(summary_path, "w", encoding="utf-8") as handle:
@@ -2573,7 +2813,7 @@ def run_claim_test_one_player():
 
     log("=" * 68)
     log(f"CLAIM_TEST_STATUS={test_status}")
-    log(f"CLAIM_TEST_COUNTS=daily:{summary['daily_claimed']},store:{summary['store_daily_rewards_claimed']},progression:{summary['progression_claimed']},loyalty:{summary['loyalty_claimed']}")
+    log(f"CLAIM_TEST_COUNTS=daily:{summary['daily_claimed']},store_daily:{summary['store_daily_rewards_claimed']},store_temp:{summary['store_temp_reward_claimed']},progression:{summary['progression_claimed']},loyalty:{summary['loyalty_claimed']}")
     log(f"CLAIM_TEST_TOTAL={total_claimed}")
     log("CLAIM_TEST_RESULT=SUCCESS" if total_claimed > 0 and test_status not in ("Login Failed", "Error", "Failed") else "CLAIM_TEST_RESULT=NO_CLAIMS_OBSERVED")
     log("Claim history will be committed by the workflow if it changed.")
@@ -2636,13 +2876,16 @@ def main():
     # Metrics
     job_end = get_ist_time()
     dur_s   = int((job_end - job_start).total_seconds())
-    td      = sum(r["daily"]          for r in results)
-    ts      = sum(r["store"]          for r in results)
-    tp      = sum(r["progression"]    for r in results)
-    tl      = sum(r.get("loyalty", 0) for r in results)
-    tall    = td + ts + tp + tl
+    td       = sum(r["daily"] for r in results)
+    ts_daily = sum(r["store"] for r in results)
+    ts_temp  = sum(r.get("store_temp", 0) for r in results)
+    ts       = ts_daily + ts_temp
+    tp       = sum(r["progression"] for r in results)
+    tl       = sum(r.get("loyalty", 0) for r in results)
+    tall     = td + ts + tp + tl
     tp_all  = sum(r.get("possible", 0) for r in results)
-    eff     = 100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1)
+    has_run_failure = any(r.get("status") in ("Login Failed", "Error", "Failed") for r in results)
+    eff = 0.0 if tp_all == 0 and has_run_failure else (100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1))
 
     timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
@@ -2650,7 +2893,7 @@ def main():
 
     log(f"\n{'='*60}")
     log(f"Run complete: {tall} claimed | {eff:.1f}% efficiency | {dur_s}s total")
-    log(f"  Daily:{td}  Store:{ts}  Prog:{tp}  Loyalty:{tl}")
+    log(f"  Daily:{td}  Store Daily:{ts_daily}  Store Temp:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
     log(f"{'='*60}")
 
     # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
@@ -2666,7 +2909,8 @@ def main():
         "total_claimed":       tall,
         "efficiency":          eff,
         "duration_seconds":    dur_s,
-        "per_type":            {"daily": td, "store": ts, "progression": tp, "loyalty": tl},
+        "per_type":            {"daily": td, "store": ts, "store_daily": ts_daily,
+                                 "store_temp": ts_temp, "progression": tp, "loyalty": tl},
         "slowest_player":      slowest[0] if slowest else None,
         "avg_time_per_player": avg_t,
     }
