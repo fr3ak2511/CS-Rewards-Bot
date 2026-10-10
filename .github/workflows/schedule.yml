@@ -7,7 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       diagnose_login:
-        description: "Run a single login UI diagnostic only (no reward claims)"
+        description: "Inspect login UI only (no ID submission or reward claims)"
+        required: false
+        type: boolean
+        default: false
+      test_login_only:
+        description: "Submit the first configured player ID and verify login only (no reward claims)"
         required: false
         type: boolean
         default: false
@@ -49,9 +54,15 @@ jobs:
           SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Suppresses Node.js deprecation warnings
           LOGIN_DIAGNOSTIC_ONLY: ${{ inputs.diagnose_login }}
+          LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
         run: |
-          if [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ]; then
+          if [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$LOGIN_TEST_ONLY" = "true" ]; then
+            echo "Choose only one manual mode: diagnose_login OR test_login_only."
+            exit 2
+          elif [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ]; then
             python master_claimer.py --diagnose-login
+          elif [ "$LOGIN_TEST_ONLY" = "true" ]; then
+            python master_claimer.py --test-login-only
           else
             python master_claimer.py
           fi
