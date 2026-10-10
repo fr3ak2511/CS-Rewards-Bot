@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.0.1
+# master_claimer.py — CS Rewards Bot v3.0.2
 import csv
 import time
 import os
@@ -24,7 +24,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.1"
+VERSION        = "v3.0.2"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -2421,6 +2421,49 @@ def run_login_diagnostic():
                 pass
 
 
+def run_login_only_test():
+    """Submit one configured player ID and verify login; never claim rewards."""
+    driver = None
+    try:
+        players = []
+        with open(PLAYER_ID_FILE, "r", newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                pid = (row.get("player_id") or "").strip()
+                if pid:
+                    players.append(pid)
+
+        if not players:
+            log(f"❌ LOGIN_ONLY_RESULT=FAILED — no player_id entries in {PLAYER_ID_FILE}")
+            return 2
+
+        pid = players[0]
+        log("=" * 60)
+        log("CS HUB LOGIN-ONLY TEST — NO REWARD CLAIMS")
+        log("One configured player ID will be submitted; the ID itself will not be logged.")
+        log("This mode does not call any reward-claiming functions or update claim history.")
+        log("=" * 60)
+
+        driver = create_driver()
+        success = login_to_hub(driver, pid)
+        if success:
+            log("✅ LOGIN_ONLY_RESULT=SUCCESS")
+            log("Authentication state changed as expected. No rewards were claimed.")
+            return 0
+
+        log("❌ LOGIN_ONLY_RESULT=FAILED")
+        log("Login could not be confirmed. No rewards were claimed.")
+        return 1
+    except Exception as exc:
+        log(f"❌ LOGIN_ONLY_RESULT=ERROR — {type(exc).__name__}: {str(exc)[:200]}")
+        return 1
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 11 — MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2428,6 +2471,8 @@ def run_login_diagnostic():
 def main():
     if "--diagnose-login" in sys.argv[1:]:
         return run_login_diagnostic()
+    if "--test-login-only" in sys.argv[1:]:
+        return run_login_only_test()
 
     job_start = get_ist_time()
     log("=" * 60)
