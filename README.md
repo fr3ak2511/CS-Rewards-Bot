@@ -1,85 +1,81 @@
-# CS-Rewards-Bot
+# CS Rewards Bot
 
-[![CS Hub Rewards Claimer](https://github.com/fr3ak2511/CS-Rewards-Bot/actions/workflows/schedule.yml/badge.svg)](https://github.com/fr3ak2511/CS-Rewards-Bot/actions/workflows/schedule.yml)
-[![Delete Old Workflow Runs](https://github.com/fr3ak2511/CS-Rewards-Bot/actions/workflows/cleanup.yml/badge.svg)](https://github.com/fr3ak2511/CS-Rewards-Bot/actions/workflows/cleanup.yml)
+Automated CS Hub rewards claimer using Python, Selenium, and GitHub Actions.
 
-Automated reward claimer for CS Hub using **GitHub Actions** and **Python**.
+**Release:** v3.0.5 · **Configured roster:** 35 player IDs (loaded dynamically from `players.csv`).
 
-Runs 8 times per day (every 3 hours), claims all available rewards across 25 player IDs, and sends a premium dark-themed HTML dashboard email after every run.
+## Reward model
 
----
+| Reward | State and availability handling |
+|---|---|
+| Daily reward | Daily reset at 05:30 IST. A live cooldown/timer is reconciled into history. |
+| Gold (Daily) | Daily reset at 05:30 IST; detected on its named card. |
+| Cash (Daily) | Daily reset at 05:30 IST; detected on its named card. |
+| Luckyloon (Daily) | Daily reset at 05:30 IST; detected on its named card. |
+| **200 Gold – Hub First Year Reward** | Temporary one-time card tracked independently as `store.reward_4`. Claimed only after the portal card confirms the claimed state. |
+| Progression Program | Claimable items depend on the portal's progression state and account thresholds. |
+| Loyalty Program | Rolling 24-hour cooldown, subject to LP eligibility. |
 
-## 🗓️ Run Schedule (IST)
+The temporary card is **not** attached to the three daily Store indices and is **not** a daily-streak requirement. If the card is absent or its state is ambiguous, the bot reports it as unverified and checks it again later. It is never counted as claimed just because a click was dispatched.
 
-| Run | Time (IST) | Purpose |
-|-----|-----------|---------|
-| Primary | 05:35 AM | Main daily claim — all reward types |
-| Backup #1 | 08:35 AM | Catch any IDs missed at 05:35 |
-| Backup #2 | 11:35 AM | Mid-day retry + progression/loyalty |
-| Backup #3 | 02:35 PM | Afternoon retry |
-| Backup #4 | 05:35 PM | Evening retry |
-| Backup #5 | 08:35 PM | Night retry |
-| Backup #6 | 11:35 PM | Late-night retry |
-| Backup #7 | 02:35 AM | Pre-dawn retry |
+## Existing/manual claims and history migration
 
-Backup runs **smart-skip** any ID where all rewards are already on cooldown — no wasted browser time.
+On the first run after deployment, each ID is inspected live. If Daily or any of the three standard Store cards shows a timer or a `Claimed` state, the bot records a **portal-observed claim/cooldown** with an observation timestamp and suppresses another attempt until the daily reset. It does not falsify that event as a claim made by the bot. If the temporary reward card is already claimed, `store.reward_4.status` is recorded as `portal_claimed` and remains one-time across daily resets.
 
----
+The existing `claim_history.json` is migrated lazily per player; do not replace it with a fresh empty file. `bot_meta.json` is also preserved and updated by the workflow. The four Store entries remain distinct: `reward_1`–`reward_3` are reset-based; `reward_4` is a one-time temporary card.
 
-## 🎮 Rewards Claimed
+## Email and report artifacts
 
-| Reward | Reset | Notes |
-|--------|-------|-------|
-| 🎁 Daily | 5:30 AM IST daily | 1 per ID |
-| 🏪 Store (Gold, Cash, Luckyloon) | 5:30 AM IST daily | 3 per ID |
-| 🎯 Progression Program | Monthly | Depends on grenades/bullets from Store |
-| 🏆 Loyalty Program | Rolling 24h | Depends on LP from purchases |
+Every normal full-roster run builds and sends the HTML email after processing the entire configured player list. The subject and report use the actual count read from `players.csv` (currently 35), not a hard-coded 25. Email sending retries up to three times; if delivery still fails, the workflow is marked failed and retains `debug_email.html` plus `run_artifacts/run_summary.json` for review.
 
----
+The HTML report includes all player rows, the fourth reward as a separate column/mobile row/detail, total daily Store claims versus temporary claims, efficiency, failure counts, run timing, and status observed from the portal. The uploaded JSON summary masks player IDs to their last four characters.
 
-## 📦 Repository Structure
+## Schedule and recovery
+
+The main schedule retains eight daily claim windows:
+
+| Window | Main trigger (IST) |
+|---|---:|
+| Primary | 05:35 |
+| Backup #1 | 08:35 |
+| Backup #2 | 11:35 |
+| Backup #3 | 14:35 |
+| Backup #4 | 17:35 |
+| Backup #5 | 20:35 |
+| Backup #6 | 23:35 |
+| Backup #7 | 02:35 |
+
+The workflow also has recovery triggers 12, 22 and 32 minutes after each main trigger. A guard reads the last committed `bot_meta.json`; it skips an offset retry only when a full run completed within the last 35 minutes **and** its email delivery was confirmed successful. If the prior run failed or email delivery was not confirmed, the recovery trigger retries the full workflow; live portal checks and claim history are used to avoid duplicating rewards. Overlapping runs are serialized by a workflow concurrency group.
+
+**Important platform limit:** GitHub documents scheduled workflows as best-effort: high load can delay or drop scheduled events. These offset triggers reduce the likelihood that a single missed event causes a missed run, but they cannot guarantee exact-time execution or recover if GitHub drops every trigger in that window. Scheduled workflows must remain enabled and the workflow file must be on the repository's default branch. If runs still do not appear at all, verify the Actions workflow is enabled and the account that last modified the cron remains active. For stricter timing, an external scheduler that dispatches this workflow is needed.
+
+## Manual workflow options
+
+Open **Actions → CS Hub Rewards Claimer → Run workflow**. Select only one mode:
+
+- `diagnose_login`: read-only login UI inspection; no ID submission, no claims.
+- `test_login_only`: submits the first configured ID and checks the login state; no claims.
+- `test_claims_one_player`: performs real claims for the first configured ID only; saves claim-test artifacts and persists the resulting history.
+- Leave all three false for the normal full-roster run (all 35 configured IDs), including the email report.
+
+For a one-player claim test, temporarily disable the scheduled cron entries first to prevent a test/scheduled overlap, then restore them after reviewing the artifact.
+
+## Repository files
 
 | File | Purpose |
-|------|---------|
-| `master_claimer.py` | Core bot logic v3.0.0 |
-| `players.csv` | Player ID database with loyalty flags |
-| `claim_history.json` | Per-player claim state (auto-committed by bot) |
-| `bot_meta.json` | Streak, efficiency delta, new-ID tracking (auto-committed) |
-| `requirements.txt` | Python dependencies |
-| `.github/workflows/schedule.yml` | 3-hourly run schedule with commit-back |
-| `.github/workflows/cleanup.yml` | Deletes old workflow run logs every 3 days |
+|---|---|
+| `master_claimer.py` | Core claiming, portal-state reconciliation, email generation, test modes (v3.0.5) |
+| `.github/workflows/schedule.yml` | Main schedule, offset recovery triggers, de-dup guard, state commit-back, artifacts |
+| `players.csv` | Current 35 player IDs; unchanged |
+| `requirements.txt` | Pinned Selenium / undetected-chromedriver versions for reproducible installation |
+| `claim_history.json` | Per-player claim and portal-observation state; preserve existing data |
+| `bot_meta.json` | Streak, last run and email-delivery status; preserve existing data |
+| `.github/workflows/cleanup.yml` | Existing old-run cleanup workflow; unchanged |
 
----
+## Required Actions secrets
 
-## 📧 Email Report Features
+- `SENDER_EMAIL`
+- `GMAIL_APP_PASSWORD`
+- `RECIPIENT_EMAIL`
 
-- **Dark-themed HTML dashboard** — readable on desktop and mobile
-- **Run badge** — Primary / Backup #N / Manual Run
-- **Hero section** — total claimed, efficiency %, day streak 🔥
-- **4 KPI cards** — Daily, Store, Progression, Loyalty with progress bars and vs-last-run deltas
-- **Run strip** — total time, avg per player, slowest ID, best streak
-- **Full player table** — one row per ID, all reward columns, colour-coded by status
-- **Detail cards** — expanded info shown only for failed or partial IDs
-- **Scheduled runs footer** — all 8 daily run times at a glance
-- **🆕 badge** — highlights new IDs on their first run
-
----
-
-## ⚙️ GitHub Secrets Required
-
-| Secret | Description |
-|--------|-------------|
-| `SENDER_EMAIL` / `SMTP_FROM` | Gmail address to send from |
-| `GMAIL_APP_PASSWORD` / `SMTP_PASSWORD` | Gmail App Password |
-| `RECIPIENT_EMAIL` / `SMTP_TO` | Address to receive reports |
-| `SMTP_SERVER` | *(optional)* Defaults to `smtp.gmail.com` |
-| `SMTP_PORT` | *(optional)* Defaults to `465` (SSL) |
-
----
-
-## 🗑️ Files Safe to Delete
-
-These legacy files are no longer referenced and can be removed from the repo:
-
-- `send_email_with_log.py` — references a script that no longer exists
-- `store_claims_log.csv` — superseded by `claim_history.json`
+The workflow passes these as SMTP settings. Do not put credentials in the repository.
