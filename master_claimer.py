@@ -24,12 +24,13 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.2"
+VERSION        = "v3.0.3"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
 HEADLESS       = True
 LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
+CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
@@ -1022,127 +1023,145 @@ def claim_daily_rewards(driver, pid):
     return claimed, False
 
 
-def claim_store_rewards(driver, pid):
-    """Returns (count_claimed, skip_flags[3])."""
-    s = get_reward_status(pid)
-    skip_flags = [not a for a in s["store_available"]]
+STORE_DAILY_LABELS = {
+    1: "Gold (Daily)",
+    2: "Cash (Daily)",
+    3: "Luckyloon (Daily)",
+}
 
-    if not any(s["store_available"]):
-        log("⏩ All store rewards on cooldown")
+
+def _find_store_daily_button(driver, reward_index):
+    """Find a claim button inside one of the three named daily store cards only.
+
+    This intentionally excludes the temporary fourth card. Its title and tracking
+    are not yet integrated, so the baseline claim test cannot misattribute it as
+    Gold/Cash/Luckyloon if one of those rewards is on cooldown.
+    Returns (button, status) where status is available/cooldown/label_not_found/
+    button_not_found/error.
+    """
+    target = STORE_DAILY_LABELS[reward_index].lower()
+    others = [label.lower() for idx, label in STORE_DAILY_LABELS.items() if idx != reward_index]
+    try:
+        result = driver.execute_script(r"""
+            const target = (arguments[0] || '').toLowerCase();
+            const others = arguments[1] || [];
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                const st = window.getComputedStyle(el);
+                return !!(el.getClientRects().length && st.visibility !== 'hidden' && st.display !== 'none');
+            };
+            const leaves = Array.from(document.querySelectorAll('*')).filter(el =>
+                el.children.length === 0 && norm(el.innerText || el.textContent).includes(target)
+            );
+            leaves.sort((a, b) => norm(a.innerText || a.textContent).length - norm(b.innerText || b.textContent).length);
+            if (!leaves.length) return {status: 'label_not_found'};
+
+            let node = leaves[0];
+            for (let depth = 0; depth < 12 && node && node !== document.body; depth++, node = node.parentElement) {
+                const text = norm(node.innerText || node.textContent);
+                if (!text.includes(target)) continue;
+                // Do not climb into a parent holding multiple daily reward cards.
+                if (others.some(label => text.includes(label))) continue;
+                if (/\bnext in\b/.test(text)) return {status: 'cooldown'};
+
+                const buttons = Array.from(node.querySelectorAll('button, [role="button"]'));
+                const btn = buttons.find(b => {
+                    const t = norm(b.innerText || b.textContent);
+                    return (t === 'free' || t === 'claim') && visible(b) && !b.disabled
+                        && b.getAttribute('aria-disabled') !== 'true';
+                });
+                if (btn) return {status: 'available', button: btn};
+            }
+            return {status: 'button_not_found'};
+        """, target, others)
+        if not result:
+            return None, "error"
+        return result.get("button"), result.get("status", "error")
+    except Exception as exc:
+        log(f"⚠️ Store card lookup failed for {STORE_DAILY_LABELS[reward_index]}: {type(exc).__name__}")
+        return None, "error"
+
+
+def claim_store_rewards(driver, pid):
+    """Claim the three established daily store rewards by card label, not button order.
+
+    Returns (number_claimed_this_pass, skip_flags[3]). The temporary fourth card
+    is deliberately excluded until its own availability/history/reporting is added.
+    """
+    status = get_reward_status(pid)
+    skip_flags = [not available for available in status["store_available"]]
+    if not any(status["store_available"]):
+        log("⏩ Gold/Cash/Luckyloon daily store rewards are all on cooldown")
         return 0, skip_flags
 
-    log("🏪 Claiming Store Rewards...")
+    log("🏪 Claiming named daily Store Rewards (Gold, Cash, Luckyloon)...")
     claimed = 0
+    attempted_indices = set()
     try:
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        detect_page_cooldowns(driver, pid, "store")
+        # Do not run the old page-wide store timer scan here: with a temporary
+        # fourth card present, a broad ancestor scan can associate its timer with
+        # one of the first three rewards. Each card is inspected by exact label below.
 
-        s2 = get_reward_status(pid)
-        skip_flags = [not a for a in s2["store_available"]]
-        if not any(s2["store_available"]):
-            log("⏩ All store rewards on cooldown (confirmed by page)")
-            return 0, skip_flags
+        for reward_index, label in STORE_DAILY_LABELS.items():
+            current = get_reward_status(pid)
+            if not current["store_available"][reward_index - 1]:
+                skip_flags[reward_index - 1] = True
+                log(f"⏩ Store {label}: already claimed/on cooldown ({current['store_next'][reward_index - 1]})")
+                continue
 
-        log(f"🎯 {sum(s2['store_available'])}/3 store rewards available")
-
-        def _find_free_btn():
-            try:
-                for btn in driver.find_elements(By.TAG_NAME, "button"):
-                    try:
-                        if (btn.text.strip().lower() == "free"
-                                and btn.is_displayed() and btn.is_enabled()):
-                            par = btn.find_element(By.XPATH, "./..")
-                            if "next in" in par.text.lower():
-                                continue
-                            return btn
-                    except:
-                        continue
-            except:
-                pass
-            return None
-
-        # Phase 1: physical clicks (claims 1-2)
-        for attempt in range(3):
-            if claimed >= 2:
-                break
-            if "store" not in driver.current_url:
-                driver.get("https://hub.vertigogames.co/store")
-                bypass_cloudflare(driver)
-                time.sleep(2)
-            time.sleep(1)
-            btn = _find_free_btn()
-            if btn:
-                if physical_click(driver, btn):
-                    time.sleep(4)
-                    close_popup(driver)
-                    claimed += 1
-                    log(f"✅ Store Claim #{claimed}")
-                    update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
-                    time.sleep(1)
-            elif attempt >= 1:
-                break
-            else:
-                time.sleep(1)
-
-        # Phase 2: 3rd claim — physical + JS fallback
-        if claimed < 3:
-            for attempt in range(4):
-                if claimed >= 3:
-                    break
+            success_for_card = False
+            for attempt in range(2):
                 if "store" not in driver.current_url:
                     driver.get("https://hub.vertigogames.co/store")
                     bypass_cloudflare(driver)
                     time.sleep(2)
-                time.sleep(1.5)
-                btn = _find_free_btn()
-                if btn:
-                    if physical_click(driver, btn):
-                        time.sleep(4)
-                        close_popup(driver)
-                        claimed += 1
-                        log(f"✅ Store Claim #{claimed}")
-                        update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
-                        break
-                ok = driver.execute_script("""
-                    let cards=document.querySelectorAll('[class*="StoreBonus"]');
-                    if(!cards.length)cards=document.querySelectorAll('div');
-                    for(let card of cards){
-                        let ct=card.innerText||'';
-                        if(ct.includes('Next in')||ct.match(/\\d+h\\s+\\d+m/))continue;
-                        for(let btn of card.querySelectorAll('button')){
-                            let t=btn.innerText.trim().toLowerCase();
-                            if((t==='free'||t==='claim')&&btn.offsetParent!==null&&!btn.disabled){
-                                btn.scrollIntoView({behavior:'smooth',block:'center'});
-                                btn.click(); return true;
-                            }
-                        }
-                    }
-                    return false;
-                """)
-                if ok:
-                    claimed += 1
-                    log(f"✅ Store Claim #{claimed} (JS)")
-                    time.sleep(4)
-                    close_popup(driver)
-                    update_claim_history(pid, "store", claimed_count=1, reward_index=claimed)
+
+                button, button_status = _find_store_daily_button(driver, reward_index)
+                if button_status == "cooldown":
+                    # Store cooldowns are reset-anchored. Persist this signal on
+                    # the exact reward index identified by its visible card label.
+                    update_claim_history(
+                        pid, "store", reward_index=reward_index,
+                        detected_cooldown=timedelta(seconds=61)
+                    )
+                    skip_flags[reward_index - 1] = True
+                    log(f"⏩ Store {label}: cooldown confirmed from its own card")
                     break
-                elif attempt < 3:
-                    log(f"ℹ️  Both methods failed, retry {attempt+1}/4")
-                    time.sleep(2)
 
-        s3 = get_reward_status(pid)
-        for i in range(claimed + 1, 4):
-            if (s3["store_available"][i-1]
-                    and s3["store_status"][i-1] not in ("cooldown_detected","claimed")):
-                update_claim_history(pid, "store", reward_index=i, attempted=True)
+                if button is None:
+                    log(f"ℹ️ Store {label}: no exact Free/Claim button found (status={button_status})")
+                    if attempt == 0:
+                        time.sleep(1)
+                        continue
+                    break
 
-        log(f"📊 Store: {claimed}/3")
+                attempted_indices.add(reward_index)
+                if physical_click(driver, button):
+                    time.sleep(3)
+                    close_popup(driver)
+                    update_claim_history(pid, "store", claimed_count=1, reward_index=reward_index)
+                    claimed += 1
+                    success_for_card = True
+                    skip_flags[reward_index - 1] = False
+                    log(f"✅ Store {label} claimed (mapped to reward_{reward_index})")
+                    break
+
+                log(f"⚠️ Store {label}: click attempt {attempt + 1} failed")
+                time.sleep(1)
+
+            if not success_for_card and reward_index not in attempted_indices:
+                latest = get_reward_status(pid)
+                if latest["store_available"][reward_index - 1] and latest["store_status"][reward_index - 1] not in ("cooldown_detected", "claimed"):
+                    update_claim_history(pid, "store", reward_index=reward_index, attempted=True)
+
+        log(f"📊 Named daily store rewards: {claimed}/3 claimed this pass")
         driver.save_screenshot(f"store_{pid}.png")
-    except Exception as e:
-        log(f"❌ Store error: {e}")
+    except Exception as exc:
+        log(f"❌ Store error: {type(exc).__name__}: {str(exc)[:180]}")
 
     return claimed, skip_flags
 
@@ -1364,19 +1383,10 @@ def process_player(pid, has_loyalty, is_new, run_label):
         if not d_skip:
             stats["possible"] += 1
 
-        # Store
-        for retry in range(2):
-            s, s_skips = claim_store_rewards(driver, pid)
-            stats["store"]         = s
-            stats["store_skipped"] = s_skips
-            if s >= 3:
-                break
-            elif s > 0 and retry < 1:
-                log(f"⚠️ Got {s}/3 store. Retrying...")
-                time.sleep(2)
-            elif s == 0:
-                break
-
+        # Store — each established daily reward is targeted by its visible card label.
+        store_count, store_skips = claim_store_rewards(driver, pid)
+        stats["store"] = store_count
+        stats["store_skipped"] = store_skips
         stats["possible"] += sum(1 for sk in stats["store_skipped"] if not sk)
 
         if stats["store"] > 0:
@@ -2465,7 +2475,120 @@ def run_login_only_test():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECTION 11 — MAIN
+# SECTION 11 — ONE-PLAYER CLAIM TEST
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def run_claim_test_one_player():
+    """Run the normal claim flow for only the first CSV player, then stop.
+
+    This intentionally writes real per-reward claim history so GitHub Actions can
+    commit it back; otherwise a successful test claim could be repeated later.
+    It does not run the all-player loop, streak update, or aggregate email.
+    """
+    log("=" * 68)
+    log("CS HUB ONE-PLAYER CLAIM TEST — REAL CLAIMS, NO FULL ROSTER RUN")
+    log("Only the first configured player ID will be processed.")
+    log("Claim history will be updated for rewards actually processed.")
+    log("The temporary fourth store card is excluded from this baseline test.")
+    log("=" * 68)
+
+    try:
+        with open(PLAYER_ID_FILE, "r", newline="", encoding="utf-8-sig") as handle:
+            players = []
+            for row in csv.DictReader(handle):
+                pid = (row.get("player_id") or "").strip()
+                if pid:
+                    loyalty = (row.get("has_loyalty") or "").strip().lower() in ("true", "yes", "1")
+                    players.append((pid, loyalty))
+                    break
+    except Exception as exc:
+        log(f"❌ CLAIM_TEST_RESULT=ERROR — cannot read {PLAYER_ID_FILE}: {type(exc).__name__}")
+        return 1
+
+    if not players:
+        log(f"❌ CLAIM_TEST_RESULT=ERROR — no player_id rows found in {PLAYER_ID_FILE}")
+        return 1
+
+    pid, has_loyalty = players[0]
+    meta = load_bot_meta()
+    is_new = is_new_id(pid, meta)
+    start = get_ist_time()
+    try:
+        result = process_player(pid, has_loyalty, is_new, "ONE-PLAYER CLAIM TEST")
+    except Exception as exc:
+        log(f"❌ CLAIM_TEST_RESULT=ERROR — {type(exc).__name__}: {str(exc)[:180]}")
+        return 1
+
+    total_claimed = (
+        int(result.get("daily", 0) or 0)
+        + int(result.get("store", 0) or 0)
+        + int(result.get("progression", 0) or 0)
+        + int(result.get("loyalty", 0) or 0)
+    )
+    test_status = str(result.get("status", "Unknown"))
+    end = get_ist_time()
+
+    # Move only this run's three reward screenshots into a downloadable artifact
+    # and rename them so the raw player ID is not exposed in artifact filenames.
+    os.makedirs(CLAIM_TEST_ARTIFACTS_DIR, exist_ok=True)
+    screenshot_map = {
+        f"daily_{pid}.png": "daily.png",
+        f"store_{pid}.png": "store.png",
+        f"loyalty_{pid}.png": "loyalty.png",
+    }
+    for source_name, target_name in screenshot_map.items():
+        if os.path.isfile(source_name):
+            target_path = os.path.join(CLAIM_TEST_ARTIFACTS_DIR, target_name)
+            try:
+                if os.path.exists(target_path):
+                    os.remove(target_path)
+                os.replace(source_name, target_path)
+                log(f"🧪 Saved claim-test screenshot: {target_path}")
+            except Exception as exc:
+                log(f"⚠️ Could not move {source_name} into test artifacts: {type(exc).__name__}")
+
+    summary = {
+        "version": VERSION,
+        "run_type": "one_player_claim_test",
+        "started_at_ist": start.isoformat(),
+        "finished_at_ist": end.isoformat(),
+        "player_id_last4": pid[-4:],
+        "has_loyalty": has_loyalty,
+        "status": test_status,
+        "daily_claimed": int(result.get("daily", 0) or 0),
+        "store_daily_rewards_claimed": int(result.get("store", 0) or 0),
+        "progression_claimed": int(result.get("progression", 0) or 0),
+        "loyalty_claimed": int(result.get("loyalty", 0) or 0),
+        "total_claimed": total_claimed,
+        "duration_seconds": int(result.get("duration_s", 0) or (end - start).total_seconds()),
+        "daily_skipped": bool(result.get("daily_skipped", False)),
+        "store_skipped": result.get("store_skipped", [False, False, False]),
+        "loyalty_skipped": bool(result.get("loyalty_skipped", False)),
+        "temporary_fourth_store_reward_enabled": False,
+        "note": "Only the three named daily store cards (Gold, Cash, Luckyloon) are in this baseline test. Per-player claim history is preserved.",
+    }
+    summary_path = os.path.join(CLAIM_TEST_ARTIFACTS_DIR, "claim_test_summary.json")
+    with open(summary_path, "w", encoding="utf-8") as handle:
+        json.dump(summary, handle, indent=2, ensure_ascii=False)
+
+    log("=" * 68)
+    log(f"CLAIM_TEST_STATUS={test_status}")
+    log(f"CLAIM_TEST_COUNTS=daily:{summary['daily_claimed']},store:{summary['store_daily_rewards_claimed']},progression:{summary['progression_claimed']},loyalty:{summary['loyalty_claimed']}")
+    log(f"CLAIM_TEST_TOTAL={total_claimed}")
+    log("CLAIM_TEST_RESULT=SUCCESS" if total_claimed > 0 and test_status not in ("Login Failed", "Error", "Failed") else "CLAIM_TEST_RESULT=NO_CLAIMS_OBSERVED")
+    log("Claim history will be committed by the workflow if it changed.")
+    log("No other player IDs were processed; no aggregate email was sent.")
+    log("=" * 68)
+
+    if test_status in ("Login Failed", "Error", "Failed"):
+        return 1
+    # No claimable rewards may be available for this player now. That is not a
+    # script exception, but the summary marker makes it clear claims were untested.
+    return 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 12 — MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
@@ -2473,6 +2596,8 @@ def main():
         return run_login_diagnostic()
     if "--test-login-only" in sys.argv[1:]:
         return run_login_only_test()
+    if "--test-claims-one-player" in sys.argv[1:]:
+        return run_claim_test_one_player()
 
     job_start = get_ist_time()
     log("=" * 60)
