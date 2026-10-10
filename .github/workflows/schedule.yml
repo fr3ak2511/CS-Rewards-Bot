@@ -16,6 +16,11 @@ on:
         required: false
         type: boolean
         default: false
+      test_claims_one_player:
+        description: "Run real reward claims for the first configured player only"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: rewards-claimer
@@ -55,19 +60,25 @@ jobs:
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Suppresses Node.js deprecation warnings
           LOGIN_DIAGNOSTIC_ONLY: ${{ inputs.diagnose_login }}
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
+          CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
         run: |
-          if [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$LOGIN_TEST_ONLY" = "true" ]; then
-            echo "Choose only one manual mode: diagnose_login OR test_login_only."
+          if { [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$LOGIN_TEST_ONLY" = "true" ]; } \
+            || { [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ] && [ "$CLAIM_TEST_ONLY" = "true" ]; } \
+            || { [ "$LOGIN_TEST_ONLY" = "true" ] && [ "$CLAIM_TEST_ONLY" = "true" ]; }; then
+            echo "Choose only one manual mode: diagnose_login, test_login_only, OR test_claims_one_player."
             exit 2
           elif [ "$LOGIN_DIAGNOSTIC_ONLY" = "true" ]; then
             python master_claimer.py --diagnose-login
           elif [ "$LOGIN_TEST_ONLY" = "true" ]; then
             python master_claimer.py --test-login-only
+          elif [ "$CLAIM_TEST_ONLY" = "true" ]; then
+            python master_claimer.py --test-claims-one-player
           else
             python master_claimer.py
           fi
 
       - name: Commit State Files
+        if: always()
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "bot: update claim history and meta [skip ci]"
@@ -81,3 +92,12 @@ jobs:
           path: login_diagnostics/
           if-no-files-found: ignore
           retention-days: 3
+
+      - name: Upload one-player claim test evidence
+        if: always() && inputs.test_claims_one_player
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs-hub-claim-test-${{ github.run_id }}
+          path: claim_test_artifacts/
+          if-no-files-found: warn
+          retention-days: 7
