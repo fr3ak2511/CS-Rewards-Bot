@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.0.2
+# master_claimer.py — CS Rewards Bot v3.0.5
 import csv
 import time
 import os
@@ -24,13 +24,14 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.4"
+VERSION        = "v3.0.5"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
 HEADLESS       = True
 LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
 CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
+RUN_ARTIFACTS_DIR = "run_artifacts"
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
@@ -111,7 +112,7 @@ def determine_run_context():
     ist = get_ist_time()
     for i, (slot_h, slot_m) in enumerate(_RUN_SLOTS):
         slot_dt = ist.replace(hour=slot_h, minute=slot_m, second=0, microsecond=0)
-        if abs((ist - slot_dt).total_seconds()) <= 600:
+        if abs((ist - slot_dt).total_seconds()) <= 34 * 60:
             label = "Primary Run" if i == 0 else f"Backup Run #{i}"
             return label, i
     return "Backup Run", 1
@@ -122,6 +123,36 @@ def next_scheduled_runs_ist():
         ("Primary Run" if i == 0 else f"Backup #{i}", f"{h:02d}:{m:02d} IST")
         for i, (h, m) in enumerate(_RUN_SLOTS)
     ]
+
+
+def should_skip_duplicate_scheduled_retry(meta, window_minutes=35):
+    """Skip offset cron retries if a full run completed recently.
+
+    GitHub scheduled events are best-effort. The workflow fires a primary trigger
+    plus two offset recovery triggers per three-hour slot. State committed by a
+    completed run lets later retry events exit before installing Selenium.
+    Manual workflow_dispatch runs are never skipped by this guard.
+    """
+    if os.getenv("GITHUB_EVENT_NAME") != "schedule":
+        return False
+    last_run = meta.get("last_run") or {}
+    raw = last_run.get("timestamp")
+    if not raw:
+        return False
+    try:
+        last = datetime.fromisoformat(raw)
+        if last.tzinfo is not None:
+            # All current stored timestamps are naive IST; support offsets safely too.
+            from datetime import timezone
+            last = last.astimezone(timezone(timedelta(hours=5, minutes=30))).replace(tzinfo=None)
+        age_seconds = (get_ist_time() - last).total_seconds()
+        recent = 0 <= age_seconds <= window_minutes * 60
+        # A recent run suppresses a scheduled recovery only when email delivery
+        # was explicitly confirmed. Otherwise the retry should re-check live state
+        # and try to deliver the report again.
+        return recent and last_run.get("email_sent") is True
+    except Exception:
+        return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -231,15 +262,20 @@ def compute_all_ok_today(players):
         ph = h[pid]
 
         # Daily — claimed since last 05:30 IST reset
-        lc = ph.get("daily", {}).get("last_claim")
-        if not lc or datetime.fromisoformat(lc) < lr:
+        daily = ph.get("daily", {})
+        lc = daily.get("last_claim")
+        observed = daily.get("portal_observed_at") if daily.get("status") == "portal_claimed" else None
+        recent = any(value and datetime.fromisoformat(value) >= lr for value in (lc, observed))
+        if not recent:
             return False
 
-        # Store streak requirement intentionally remains the 3 established daily cards.
-        # The fourth Hub First Year offer is temporary/one-time and must not break the streak.
+        # The one-time Hub First Year offer is temporary and does not affect the streak.
         for i in range(1, 4):
-            lc = ph.get("store", {}).get(f"reward_{i}", {}).get("last_claim")
-            if not lc or datetime.fromisoformat(lc) < lr:
+            rec = ph.get("store", {}).get(f"reward_{i}", {})
+            lc = rec.get("last_claim")
+            observed = rec.get("portal_observed_at") if rec.get("status") == "portal_claimed" else None
+            recent = any(value and datetime.fromisoformat(value) >= lr for value in (lc, observed))
+            if not recent:
                 return False
 
     return True
@@ -316,9 +352,12 @@ def update_claim_history(pid, reward_type, claimed_count=0,
             h[pid]["daily"]["status"]         = "claimed"
             log(f"📝 Daily claimed → next reset {nr.strftime('%I:%M %p IST')}")
         elif detected_cooldown is not None:
+            # A live Daily page timer confirms the reward is on cooldown,
+            # whether claimed manually or by the bot.
             h[pid]["daily"]["next_available"] = nr.isoformat()
-            h[pid]["daily"]["status"]         = "cooldown_detected"
-            log(f"📝 Daily cooldown anchored → {nr.strftime('%I:%M %p IST')}")
+            h[pid]["daily"]["status"]         = "portal_claimed"
+            h[pid]["daily"]["portal_observed_at"] = ist_now.isoformat()
+            log(f"📝 Daily portal state observed; suppressed until {nr.strftime('%I:%M %p IST')}")
         elif attempted:
             lc = h[pid]["daily"].get("last_claim")
             if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
@@ -350,9 +389,11 @@ def update_claim_history(pid, reward_type, claimed_count=0,
                 rec["status"]         = "claimed"
                 log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
             elif detected_cooldown is not None:
+                # Portal-observed state is not falsely represented as a bot claim.
                 rec["next_available"] = nr.isoformat()
-                rec["status"]         = "cooldown_detected"
-                log(f"📝 Store {reward_index} cooldown anchored → daily reset")
+                rec["status"]         = "portal_claimed"
+                rec["portal_observed_at"] = ist_now.isoformat()
+                log(f"📝 Store {reward_index} portal state observed; suppressed until daily reset")
             elif attempted:
                 lc = rec.get("last_claim")
                 if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
@@ -399,6 +440,7 @@ def mark_temp_store_reward_portal_claimed(pid):
     )
     rec["next_available"] = None
     rec["status"] = "portal_claimed"
+    rec["portal_observed_at"] = get_ist_time().isoformat()
     save_claim_history(h)
 
 
@@ -1020,6 +1062,35 @@ def detect_page_cooldowns(driver, pid, page_type):
 # SECTION 8 — CLAIMING FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _daily_claim_is_already_visible_as_claimed(driver):
+    """Recognize a manually-claimed Daily card even if its timer is unavailable."""
+    try:
+        return bool(driver.execute_script(r"""
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                if (!el) return false;
+                const st = getComputedStyle(el), r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && st.display !== 'none'
+                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+            };
+            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
+            for (const button of buttons) {
+                const label = norm(button.innerText || button.textContent);
+                if (!visible(button) || !['claimed', 'already claimed'].includes(label)) continue;
+                let node = button;
+                for (let depth = 0; depth < 6 && node; depth++, node = node.parentElement) {
+                    const text = norm(node.innerText || node.textContent);
+                    if (text.length > 900) continue;
+                    if (text.includes('daily reward') || text.includes('next reward in')) return true;
+                }
+            }
+            return false;
+        """))
+    except Exception as exc:
+        log(f"⚠️ Could not inspect Daily Claimed button: {type(exc).__name__}")
+        return False
+
+
 def claim_daily_rewards(driver, pid):
     """Returns (count_claimed, was_skipped)."""
     s = get_reward_status(pid)
@@ -1035,6 +1106,13 @@ def claim_daily_rewards(driver, pid):
         time.sleep(2)
         close_popup(driver)
         detect_page_cooldowns(driver, pid, "daily")
+        if _daily_claim_is_already_visible_as_claimed(driver):
+            update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+        portal_status = get_reward_status(pid)
+        if not portal_status["daily_available"]:
+            log(f"⏩ Daily already claimed/on cooldown in live portal; state reconciled ({portal_status['daily_next']})")
+            driver.save_screenshot(f"daily_{pid}.png")
+            return 0, True
 
         for attempt in range(3):
             ok = driver.execute_script("""
@@ -1112,15 +1190,16 @@ def _find_store_daily_button(driver, reward_index):
                 if (!text.includes(target)) continue;
                 // Do not climb into a parent holding multiple daily reward cards.
                 if (others.some(label => text.includes(label))) continue;
-                if (/\bnext in\b/.test(text)) return {status: 'cooldown'};
-
                 const buttons = Array.from(node.querySelectorAll('button, [role="button"]'));
-                const btn = buttons.find(b => {
-                    const t = norm(b.innerText || b.textContent);
-                    return (t === 'free' || t === 'claim') && visible(b) && !b.disabled
-                        && b.getAttribute('aria-disabled') !== 'true';
-                });
-                if (btn) return {status: 'available', button: btn};
+                const states = buttons.filter(visible).map(b => ({
+                    el: b, text: norm(b.innerText || b.textContent),
+                    disabled: !!b.disabled || b.getAttribute('aria-disabled') === 'true'
+                }));
+                if (states.some(x => ['claimed', 'already claimed'].includes(x.text)))
+                    return {status: 'claimed'};
+                if (/next in/.test(text)) return {status: 'cooldown'};
+                const btn = states.find(x => ['free', 'claim'].includes(x.text) && !x.disabled);
+                if (btn) return {status: 'available', button: btn.el};
             }
             return {status: 'button_not_found'};
         """, target, others)
@@ -1284,13 +1363,13 @@ def claim_store_rewards(driver, pid):
                     time.sleep(2)
 
                 button, button_status = _find_store_daily_button(driver, reward_index)
-                if button_status == "cooldown":
+                if button_status in ("cooldown", "claimed"):
                     update_claim_history(
                         pid, "store", reward_index=reward_index,
                         detected_cooldown=timedelta(seconds=61)
                     )
                     skip_flags[reward_index - 1] = True
-                    log(f"⏩ Store {label}: cooldown confirmed from its own card")
+                    log(f"⏩ Store {label}: live portal shows claimed/on cooldown; state reconciled")
                     break
 
                 if button is None:
@@ -1519,6 +1598,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "fail_reason":     None,
         "duration_s":      0,
         "possible":        0,
+        "daily_portal_status": "unknown",
+        "store_portal_status": ["unknown", "unknown", "unknown"],
     }
 
     init_player_history(pid)
@@ -1540,6 +1621,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
         stats["store_next"]   = snap["store_next"]
         stats["daily_next"]   = snap["daily_next"]
         stats["loyalty_next"] = snap.get("loyalty_next")
+        stats["daily_portal_status"] = snap.get("daily_status", "unknown")
+        stats["store_portal_status"] = snap.get("store_status", ["unknown", "unknown", "unknown"])
         stats["duration_s"]   = int((get_ist_time() - start).total_seconds())
         return stats
 
@@ -1638,6 +1721,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
     stats["store_next"]   = snap["store_next"]
     stats["daily_next"]   = snap["daily_next"]
     stats["loyalty_next"] = snap.get("loyalty_next")
+    stats["daily_portal_status"] = snap.get("daily_status", "unknown")
+    stats["store_portal_status"] = snap.get("store_status", ["unknown", "unknown", "unknown"])
 
     return stats
 
@@ -1972,6 +2057,10 @@ def build_email(results, run_label, run_index, job_start, meta):
     tall     = td + ts + tp + tl
     # Preserve the report's existing per-run Store capacity (3 daily cards per ID),
     # adding one extra slot only for IDs where the temporary card was observed/claimed.
+    temp_already_claimed_count = sum(
+        1 for r in results
+        if r.get("store_temp_status") in ("claimed", "portal_claimed", "previously_claimed")
+    )
     temp_slots_tracked = sum(
         1 for r in results
         if r.get("store_temp_possible", 0)
@@ -2033,7 +2122,9 @@ def build_email(results, run_label, run_index, job_start, meta):
         # Daily cell
         if r["daily_skipped"]:
             dn = r.get("daily_next") or "next reset"
-            dc = f'<span class="ic-cd" title="Next: {dn}">⏰</span>'
+            d_status = r.get("daily_portal_status", "unknown")
+            d_tip = "Portal observed: already claimed/on cooldown" if d_status == "portal_claimed" else f"Next: {dn}"
+            dc = f'<span class="ic-cd" title="{d_tip}">⏰</span>'
         elif r["daily"] > 0:
             dc = '<span class="ic-ok">✅</span>'
         elif status in ("Login Failed", "Error", "Failed"):
@@ -2057,7 +2148,10 @@ def build_email(results, run_label, run_index, job_start, meta):
             sep = ' style="border-left:1px solid #e5e7eb;"' if i == 0 else ''
             if sk[i]:
                 nxt  = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
-                cell = f'<span class="ic-cd" title="Next: {nxt}">⏰</span>'
+                live_store_states = r.get("store_portal_status", [])
+                portal_state = live_store_states[i] if isinstance(live_store_states, list) and len(live_store_states) > i else "unknown"
+                tip = "Portal observed: already claimed/on cooldown" if portal_state == "portal_claimed" else f"Next: {nxt}"
+                cell = f'<span class="ic-cd" title="{tip}">⏰</span>'
             elif claimed_cards[i]:
                 cell = '<span class="ic-ok">✅</span>'
             elif status in ("Login Failed", "Error", "Failed"):
@@ -2229,13 +2323,13 @@ def build_email(results, run_label, run_index, job_start, meta):
 
         # KPI Row
         f"<div class='kpi-row'>"
-        f"<div class='kpi'><div class='kl'>🎁 Daily</div>"
+        f"<div class='kpi'><div class='kl'>🎁 Daily claimed this run</div>"
         f"<div class='kv'>{td}<span>/{n}</span></div>"
         f"<div class='ks'>{dlt_d}</div>{_pbar(d_pct,'pg')}</div>"
 
-        f"<div class='kpi'><div class='kl'>🏪 Store (incl. temporary)</div>"
+        f"<div class='kpi'><div class='kl'>🏪 Store claimed this run</div>"
         f"<div class='kv'>{ts}<span>/{store_kpi_capacity}</span></div>"
-        f"<div class='ks'>{dlt_s} · 🏅 Temp claimed: {ts_temp}</div>{_pbar(s_pct,'pb2')}</div>"
+        f"<div class='ks'>{dlt_s} · 🏅 Temp new claims: {ts_temp} · already portal-claimed: {temp_already_claimed_count}</div>{_pbar(s_pct,'pb2')}</div>"
 
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
         f"<div class='kv'>{tp}<span> items</span></div>"
@@ -2827,6 +2921,62 @@ def run_claim_test_one_player():
     return 0
 
 
+def write_run_summary(results, run_label, started_at, finished_at, email_sent):
+    """Write a privacy-minimized full-roster summary for workflow artifacts."""
+    os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
+    daily = sum(int(r.get("daily", 0) or 0) for r in results)
+    store_daily = sum(int(r.get("store", 0) or 0) for r in results)
+    store_temp = sum(int(r.get("store_temp", 0) or 0) for r in results)
+    progression = sum(int(r.get("progression", 0) or 0) for r in results)
+    loyalty = sum(int(r.get("loyalty", 0) or 0) for r in results)
+    already_claimed_temp = sum(
+        1 for r in results
+        if r.get("store_temp_status") in ("claimed", "portal_claimed", "previously_claimed")
+    )
+    summary = {
+        "version": VERSION,
+        "run_label": run_label,
+        "started_at_ist": started_at.isoformat(),
+        "finished_at_ist": finished_at.isoformat(),
+        "configured_player_count": len(results),
+        "success_count": sum(1 for r in results if r.get("status") == "Success"),
+        "partial_count": sum(1 for r in results if r.get("status") == "Partial"),
+        "login_failed_count": sum(1 for r in results if r.get("status") == "Login Failed"),
+        "error_count": sum(1 for r in results if r.get("status") in ("Error", "Failed")),
+        "totals": {
+            "daily_claimed_this_run": daily,
+            "store_daily_claimed_this_run": store_daily,
+            "store_temporary_claimed_this_run": store_temp,
+            "store_temporary_previously_or_portal_claimed": already_claimed_temp,
+            "progression_claimed_this_run": progression,
+            "loyalty_claimed_this_run": loyalty,
+            "all_claims_this_run": daily + store_daily + store_temp + progression + loyalty,
+        },
+        "email_sent": bool(email_sent),
+        "player_results": [
+            {
+                "player_id_last4": str(r.get("pid", ""))[-4:],
+                "display_name": r.get("display_name"),
+                "status": r.get("status"),
+                "daily_claimed_this_run": int(r.get("daily", 0) or 0),
+                "daily_portal_status": r.get("daily_portal_status", "unknown"),
+                "store_daily_claimed_this_run": int(r.get("store", 0) or 0),
+                "store_daily_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
+                "temporary_reward_claimed_this_run": int(r.get("store_temp", 0) or 0),
+                "temporary_reward_portal_status": r.get("store_temp_status", "unknown"),
+                "progression_claimed_this_run": int(r.get("progression", 0) or 0),
+                "loyalty_claimed_this_run": int(r.get("loyalty", 0) or 0),
+                "duration_seconds": int(r.get("duration_s", 0) or 0),
+            } for r in results
+        ],
+    }
+    path = os.path.join(RUN_ARTIFACTS_DIR, "run_summary.json")
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(summary, handle, indent=2, ensure_ascii=False)
+    log(f"📦 Run summary saved: {path}")
+    return path
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 12 — MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2849,6 +2999,10 @@ def main():
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
 
     meta = load_bot_meta()
+    if should_skip_duplicate_scheduled_retry(meta):
+        log("⏭️ SCHEDULE_RETRY_SKIPPED=recent_run_completed")
+        log("An earlier run in this three-hour slot completed recently; this offset trigger is a recovery fallback.")
+        return 0
 
     players = []
     try:
@@ -2859,8 +3013,16 @@ def main():
                     hl = row.get("has_loyalty", "").strip().lower() in ("true", "yes", "1")
                     players.append((pid, hl))
     except Exception as e:
-        log(f"❌ Failed to read {PLAYER_ID_FILE}: {e}")
-        return
+        log(f"❌ Failed to read {PLAYER_ID_FILE}: {type(e).__name__}: {str(e)[:180]}")
+        return 1
+
+    if not players:
+        log(f"❌ {PLAYER_ID_FILE} contains no non-empty player_id entries; refusing a misleading empty run.")
+        return 1
+    player_ids = [pid for pid, _ in players]
+    if len(player_ids) != len(set(player_ids)):
+        log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
+        return 1
 
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
@@ -2922,18 +3084,29 @@ def main():
     html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
 
     n_players = len(players)
-    ok_count  = sum(1 for r in results if r["status"] == "Success")
+    failure_count = sum(1 for r in results if r.get("status") in ("Login Failed", "Error", "Failed"))
+    success_count = sum(1 for r in results if r.get("status") == "Success")
     ist_label = job_start.strftime('%d-%b %I:%M %p')
     streak_d  = meta["streak"].get("current", 0)
     subject = (
-        f"🎮 CS Hub | {ist_label} IST | {ok_count}/{n_players} IDs ✅ "
-        f"| {eff:.1f}% Efficiency | Day {streak_d} 🔥"
+        f"🎮 CS Hub | {ist_label} IST | {success_count}/{n_players} IDs fully OK "
+        f"| {failure_count} failures | {eff:.1f}% Efficiency | Day {streak_d} 🔥"
     )
 
     log(f"📧 Sending email: {subject}")
-    send_email(html_body, subject)
+    email_sent = send_email(html_body, subject)
+    meta["last_run"]["email_sent"] = bool(email_sent)
+    meta["last_run"]["player_count"] = n_players
+    save_bot_meta(meta)
+    write_run_summary(results, run_label, job_start, job_end, email_sent)
+    log("EMAIL_DELIVERY_RESULT=SUCCESS" if email_sent else "EMAIL_DELIVERY_RESULT=FAILED")
 
-    # ── Replace everything from line 2139 to end of file ──────────────────────────
+    if not email_sent:
+        log("❌ Aggregate report could not be delivered. debug_email.html and run_summary.json are retained as workflow artifacts.")
+        return 1
+    return 0
+
+    # ── Legacy email helpers follow at module scope ─────────────────────────────
 # These two functions must live at MODULE level (no indent), not inside main().
 # The original IndentationError was caused by _resolve_email_config being
 # nested inside main() with its docstring at the same indent as the def line.
@@ -2978,36 +3151,36 @@ def _resolve_email_config():
 
 
 def send_email(html_body, subject):
-    # 1. THE FAILSAFE: Save a local copy of the email. 
-    # Your schedule.yml will automatically upload this to GitHub Artifacts!
+    """Save the exact report HTML and retry SMTP delivery up to three times."""
     try:
-        with open("debug_email.html", "w", encoding="utf-8") as f:
-            f.write(html_body)
-    except Exception as e:
-        pass
+        with open("debug_email.html", "w", encoding="utf-8") as handle:
+            handle.write(html_body)
+    except Exception as exc:
+        log(f"⚠️ Could not save email HTML artifact: {type(exc).__name__}")
 
     if not (SMTP_SERVER and SMTP_USERNAME and SMTP_PASSWORD and SMTP_FROM and SMTP_TO):
-        log("⚠️ Email env vars missing — skipping email")
-        return
+        log("❌ Email configuration is incomplete; check SENDER_EMAIL, GMAIL_APP_PASSWORD, RECIPIENT_EMAIL secrets.")
+        return False
 
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = SMTP_FROM
-        msg["To"]      = SMTP_TO
-        
-        # 2. THE CRITICAL FIX: Explicitly forcing UTF-8 encoding for the emojis
-        msg.attach(MIMEText(html_body, "html", "utf-8"))
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = SMTP_TO
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
-            
-        log("📧 Email sent successfully")
-    except smtplib.SMTPAuthenticationError as e:
-        log(f"⚠️ Email auth failed: {e.smtp_code} {e.smtp_error}")
-    except Exception as e:
-        log(f"⚠️ Email failed: {type(e).__name__}: {e}")
+    for attempt in range(1, 4):
+        try:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(SMTP_FROM, [SMTP_TO], msg.as_string())
+            log(f"📧 Email sent successfully (attempt {attempt}/3)")
+            return True
+        except smtplib.SMTPAuthenticationError as exc:
+            log(f"❌ Email authentication failed (attempt {attempt}/3): SMTP {exc.smtp_code}")
+        except Exception as exc:
+            log(f"⚠️ Email delivery failed (attempt {attempt}/3): {type(exc).__name__}: {str(exc)[:160]}")
+        if attempt < 3:
+            time.sleep(4 * attempt)
 
     return False
 
