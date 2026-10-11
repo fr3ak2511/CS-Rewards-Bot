@@ -24,7 +24,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.0.5"
+VERSION        = "v3.0.6"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -32,6 +32,7 @@ HEADLESS       = True
 LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
 CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
 RUN_ARTIFACTS_DIR = "run_artifacts"
+RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
@@ -101,28 +102,25 @@ def parse_timer_text(text):
     return None
 
 
-# 8 run slots — Primary at 05:35 IST (00:05 UTC), then every 3h
-_RUN_SLOTS = [(5,35),(8,35),(11,35),(14,35),(17,35),(20,35),(23,35),(2,35)]
+# Schedule timings are defined in .github/workflows/schedule.yml.
+_RUN_SLOTS = [(5,35),(7,35)]
 
 
 def determine_run_context():
+    if RECOVERY_ONLY_FAILED:
+        return "Morning Recovery", 1
     event = os.getenv("GITHUB_EVENT_NAME", "schedule")
     if event == "workflow_dispatch":
         return "Manual Run", -1
-    ist = get_ist_time()
-    for i, (slot_h, slot_m) in enumerate(_RUN_SLOTS):
-        slot_dt = ist.replace(hour=slot_h, minute=slot_m, second=0, microsecond=0)
-        if abs((ist - slot_dt).total_seconds()) <= 34 * 60:
-            label = "Primary Run" if i == 0 else f"Backup Run #{i}"
-            return label, i
-    return "Backup Run", 1
+    if event == "schedule":
+        # Scheduled primary runs can be delayed by GitHub; classify by event,
+        # not by the actual start minute. Recovery has its own explicit flag.
+        return "Primary Run", 0
+    return "Manual Run", -1
 
 
 def next_scheduled_runs_ist():
-    return [
-        ("Primary Run" if i == 0 else f"Backup #{i}", f"{h:02d}:{m:02d} IST")
-        for i, (h, m) in enumerate(_RUN_SLOTS)
-    ]
+    return [("Primary Run", "05:35 IST"), ("Morning Recovery", "07:35 IST")]
 
 
 def should_skip_duplicate_scheduled_retry(meta, window_minutes=35):
@@ -2999,7 +2997,7 @@ def main():
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
 
     meta = load_bot_meta()
-    if should_skip_duplicate_scheduled_retry(meta):
+    if not RECOVERY_ONLY_FAILED and should_skip_duplicate_scheduled_retry(meta):
         log("⏭️ SCHEDULE_RETRY_SKIPPED=recent_run_completed")
         log("An earlier run in this three-hour slot completed recently; this offset trigger is a recovery fallback.")
         return 0
@@ -3023,6 +3021,48 @@ def main():
     if len(player_ids) != len(set(player_ids)):
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
+
+    if RECOVERY_ONLY_FAILED:
+        # Never reuse a stale failure list: recovery must follow today's completed
+        # primary run, with a fresh timestamp and explicit recorded failure IDs.
+        prior = meta.get("last_run") or {}
+        if prior.get("run_label") != "Primary Run":
+            log("⏭️ Recovery skipped: latest saved run is not today's Primary Run.")
+            return 0
+        raw_timestamp = prior.get("timestamp")
+        try:
+            prior_time = datetime.fromisoformat(raw_timestamp)
+            if prior_time.tzinfo is not None:
+                from datetime import timezone
+                prior_time = prior_time.astimezone(
+                    timezone(timedelta(hours=5, minutes=30))
+                ).replace(tzinfo=None)
+            now_ist = get_ist_time()
+            age_seconds = (now_ist - prior_time).total_seconds()
+            if prior_time.date() != now_ist.date() or age_seconds < 0 or age_seconds > 4 * 3600:
+                log("⏭️ Recovery skipped: saved Primary Run timestamp is stale or outside today's recovery window.")
+                return 0
+        except Exception as exc:
+            log(f"⏭️ Recovery skipped: invalid Primary Run timestamp ({type(exc).__name__}).")
+            return 0
+
+        failed_ids = prior.get("failed_player_ids")
+        if not isinstance(failed_ids, list):
+            log("⏭️ Recovery skipped: Primary Run did not record failed_player_ids; update baseline run first.")
+            return 0
+        failed_ids = list(dict.fromkeys(str(pid).strip() for pid in failed_ids if str(pid).strip()))
+        if not failed_ids:
+            log("✅ Recovery not needed: Primary Run recorded no hard-failed players.")
+            return 0
+
+        roster_ids = {pid for pid, _ in players}
+        unknown_ids = [pid for pid in failed_ids if pid not in roster_ids]
+        if unknown_ids:
+            log(f"❌ Recovery aborted: {len(unknown_ids)} failed ID(s) are not present in players.csv.")
+            return 1
+        failed_set = set(failed_ids)
+        players = [(pid, loyalty) for pid, loyalty in players if pid in failed_set]
+        log(f"🔁 Recovery mode: retrying {len(players)} failed player(s) from today's Primary Run.")
 
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
@@ -3058,16 +3098,22 @@ def main():
     log(f"  Daily:{td}  Store Daily:{ts_daily}  Store Temp:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
     log(f"{'='*60}")
 
-    # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
-    all_ok = compute_all_ok_today(players)
-    if all_ok:
-        log("✅ All daily+store claimed today — streak eligible")
-    update_streak_day_level(meta, all_ok)
+    # A recovery run processes only a subset of the roster, so it must never
+    # update the daily streak based on incomplete coverage.
+    if not RECOVERY_ONLY_FAILED:
+        all_ok = compute_all_ok_today(players)
+        if all_ok:
+            log("✅ All daily+store claimed today — streak eligible")
+        update_streak_day_level(meta, all_ok)
+    else:
+        log("ℹ️ Recovery run: daily streak left unchanged (partial roster).")
 
     prev_run = meta.get("last_run")
     meta["last_run"] = {
         "timestamp":           job_end.isoformat(),
         "run_label":           run_label,
+        "failed_player_ids":   [r.get("pid") for r in results if r.get("status") in ("Login Failed", "Error", "Failed") and r.get("pid")],
+        "failed_player_count": sum(1 for r in results if r.get("status") in ("Login Failed", "Error", "Failed")),
         "total_claimed":       tall,
         "efficiency":          eff,
         "duration_seconds":    dur_s,
