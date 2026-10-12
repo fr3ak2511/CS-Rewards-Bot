@@ -1,0 +1,120 @@
+name: CS Hub Immediate Failed-ID Recovery
+
+on:
+  workflow_run:
+    workflows: ["CS Hub Rewards Claimer"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  recover-failed-ids:
+    name: Dispatch recovery when a scheduled full run recorded failures
+    if: github.event.workflow_run.event == 'schedule' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Confirm the claimer actually ran and inspect the latest result
+        id: decision
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const source = context.payload.workflow_run;
+            const out = (dispatch, reason) => {
+              core.setOutput('dispatch', dispatch ? 'true' : 'false');
+              core.info(`${dispatch ? 'RECOVERY NEEDED' : 'NO RECOVERY'}: ${reason}`);
+            };
+
+            // Ignore no-op schedule checks and any run where the actual claimer
+            // step was skipped. This prevents recovery loops from workflow_run.
+            const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
+              owner,
+              repo,
+              run_id: source.id,
+              per_page: 100
+            });
+            const claimJob = jobsResponse.data.jobs.find(job => job.name === 'run-claimer');
+            if (!claimJob || claimJob.status !== 'completed') {
+              out(false, 'no completed claim job found');
+              return;
+            }
+            const claimStep = (claimJob.steps || []).find(step => step.name === 'Run Master Claimer');
+            if (!claimStep || !['success', 'failure'].includes(claimStep.conclusion)) {
+              out(false, 'the actual Master Claimer step did not execute');
+              return;
+            }
+
+            // Read the latest persisted state after the main workflow's commit step.
+            const fileResponse = await github.rest.repos.getContent({
+              owner,
+              repo,
+              path: 'bot_meta.json',
+              ref: 'main'
+            });
+            if (Array.isArray(fileResponse.data) || !fileResponse.data.content) {
+              out(false, 'bot_meta.json was not readable');
+              return;
+            }
+            const meta = JSON.parse(Buffer.from(fileResponse.data.content, 'base64').toString('utf8'));
+            const last = meta.last_run || {};
+            const failedIds = Array.isArray(last.failed_player_ids)
+              ? [...new Set(last.failed_player_ids.map(x => String(x).trim()).filter(Boolean))]
+              : [];
+
+            // A stale last_run can survive diagnostic/manual runs. Correlate the
+            // persisted timestamp with this completed scheduled run before acting.
+            const stamp = String(last.timestamp || '');
+            const lastEpoch = stamp
+              ? Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(stamp) ? stamp : `${stamp}+05:30`)
+              : NaN;
+            const sourceEpoch = Date.parse(source.updated_at || source.run_started_at || source.created_at);
+            const sameRun = Number.isFinite(lastEpoch) && Number.isFinite(sourceEpoch)
+              && Math.abs(sourceEpoch - lastEpoch) <= 15 * 60 * 1000;
+
+            const nowIst = new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 19);
+            const nowClock = nowIst.slice(11, 19);
+            let resetDate = nowIst.slice(0, 10);
+            if (nowClock < '05:30:00') {
+              resetDate = new Date(Date.now() + 330 * 60 * 1000 - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            }
+            const sinceReset = stamp.slice(0, 19) >= `${resetDate}T05:30:00` && stamp.slice(0, 19) <= nowIst;
+            const ageMs = Date.now() - lastEpoch;
+            const recent = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 4 * 60 * 60 * 1000;
+
+            if (last.run_label !== 'Primary Run') {
+              out(false, `latest saved run is '${last.run_label || 'unknown'}', not a full Primary Run`);
+              return;
+            }
+            if (!sameRun || !sinceReset || !recent) {
+              out(false, 'saved result is stale or does not match this completed run/current daily reset');
+              return;
+            }
+            if (failedIds.length === 0) {
+              out(false, 'no hard-failed player IDs were recorded');
+              return;
+            }
+
+            core.setOutput('failed_count', String(failedIds.length));
+            out(true, `${failedIds.length} hard-failed player ID(s) recorded; dispatch failed-ID-only recovery`);
+
+      - name: Dispatch the main workflow in failed-ID recovery mode
+        if: steps.decision.outputs.dispatch == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'claim-recovery',
+              client_payload: {
+                source_run_id: context.payload.workflow_run.id,
+                failed_count: Number('${{ steps.decision.outputs.failed_count }}')
+              }
+            });
+            core.info('Dispatched claim-recovery. The main workflow will re-check bot_meta.json after acquiring the claim-job concurrency slot.');
