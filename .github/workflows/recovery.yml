@@ -39,7 +39,7 @@ jobs:
               run_id: source.id,
               per_page: 100
             });
-            const claimJob = jobsResponse.data.jobs.find(job => job.name === 'run-claimer');
+            const claimJob = jobsResponse.data.jobs.find(job => job.name === 'Run Master Claimer');
             if (!claimJob || claimJob.status !== 'completed') {
               out(false, 'no completed claim job found');
               return;
