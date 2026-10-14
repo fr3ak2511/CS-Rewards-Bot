@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.1.0
+# master_claimer.py — CS Rewards Bot v3.1.1
 import csv
 import time
 import os
@@ -25,7 +25,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.1.0"
+VERSION        = "v3.1.1"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -1160,6 +1160,60 @@ STORE_DAILY_LABELS = {
 }
 
 LEGACY_TEMP_STORE_REWARD_INDEX = 4  # Legacy state is preserved, never used to suppress live discovery.
+
+
+def _find_store_daily_button(driver, reward_index):
+    """Find a claim button inside one named daily Store card only.
+
+    Returns (button, status) where status is available, cooldown,
+    label_not_found, button_not_found, or error. The daily Store cards are
+    resolved independently so a promotional card cannot be mistaken for one.
+    """
+    target = STORE_DAILY_LABELS[reward_index].lower()
+    others = [label.lower() for idx, label in STORE_DAILY_LABELS.items() if idx != reward_index]
+    try:
+        result = driver.execute_script(r"""
+            const target = (arguments[0] || '').toLowerCase();
+            const others = arguments[1] || [];
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                if (!el) return false;
+                const st = window.getComputedStyle(el), r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && st.visibility !== 'hidden'
+                    && st.display !== 'none' && r.width > 0 && r.height > 0);
+            };
+            const leaves = Array.from(document.querySelectorAll('*')).filter(el =>
+                el.children.length === 0 && norm(el.innerText || el.textContent).includes(target)
+            );
+            leaves.sort((a, b) => norm(a.innerText || a.textContent).length - norm(b.innerText || b.textContent).length);
+            if (!leaves.length) return {status: 'label_not_found'};
+
+            let node = leaves[0];
+            for (let depth = 0; depth < 12 && node && node !== document.body; depth++, node = node.parentElement) {
+                const text = norm(node.innerText || node.textContent);
+                if (!text.includes(target)) continue;
+                // Do not climb into a parent containing another daily reward card.
+                if (others.some(label => text.includes(label))) continue;
+                const buttons = Array.from(node.querySelectorAll('button, [role="button"]')).filter(visible);
+                const states = buttons.map(b => ({
+                    el: b,
+                    text: norm(b.innerText || b.textContent || b.getAttribute('aria-label')),
+                    disabled: !!b.disabled || b.getAttribute('aria-disabled') === 'true'
+                }));
+                if (states.some(x => ['claimed', 'already claimed'].includes(x.text)))
+                    return {status: 'claimed'};
+                if (/\bnext in\b/.test(text)) return {status: 'cooldown'};
+                const btn = states.find(x => ['free', 'claim'].includes(x.text) && !x.disabled);
+                if (btn) return {status: 'available', button: btn.el};
+            }
+            return {status: 'button_not_found'};
+        """, target, others)
+        if not result:
+            return None, "error"
+        return result.get("button"), result.get("status", "error")
+    except Exception as exc:
+        log(f"⚠️ Store card lookup failed for {STORE_DAILY_LABELS[reward_index]}: {type(exc).__name__}")
+        return None, "error"
 
 
 def _normalize_promotion_text(value):
