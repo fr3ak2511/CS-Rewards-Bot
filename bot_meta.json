@@ -49,8 +49,8 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-14T18:37:48.538241",
-    "run_label": "Manual Run",
+    "timestamp": "2026-10-14T18:56:44.244642",
+    "run_label": "Recovery Run",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [
@@ -68,7 +68,7 @@
     "retry_player_count": 10,
     "total_claimed": 0,
     "efficiency": 0.0,
-    "duration_seconds": 4096,
+    "duration_seconds": 1083,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -79,9 +79,9 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 112.8,
+    "avg_time_per_player": 107.3,
     "email_sent": true,
-    "player_count": 36
+    "player_count": 10
   },
   "last_full_run": {
     "timestamp": "2026-10-14T18:37:48.538241",
