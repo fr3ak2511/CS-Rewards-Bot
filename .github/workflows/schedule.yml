@@ -2,17 +2,14 @@ name: CS Hub Rewards Claimer
 
 on:
   schedule:
-    # Daily launcher starts its waiting job at 03:00 IST (21:30 UTC).
-    # The actual claimer is released at a shared, date-seeded target between 05:35 and 06:00 IST.
+    # Dispatcher starts at 03:00 IST and sleeps until a shared randomized target between 05:35 and 06:00 IST.
     - cron: '30 21 * * *'
 
-    # 5-minute fallback checks from 05:30 through 06:00 IST.
-    # Checks before the daily randomized target are no-ops.
+    # Five-minute reset-window fallbacks; these do nothing before the same randomized target.
     - cron: '0-30/5 0 * * *'
 
-    # Full-roster backups every 4 hours during the day, after the reset window:
-    # 09:35, 13:35, 17:35, 21:35 IST.
-    # The 01:35 IST slot is intentionally omitted so no scheduled claim cycle runs before 05:30.
+    # Four-hour full-roster backups: 09:35, 13:35, 17:35 and 21:35 IST.
+    # The 01:35 IST cycle is omitted to avoid pre-reset claims.
     - cron: '5 4,8,12,16 * * *'
 
   repository_dispatch:
@@ -73,7 +70,6 @@ jobs:
               core.info(`${run ? 'CONTINUE' : 'SKIP'}: ${reason}`);
             };
 
-            // Manual runs and recovery dispatches are intentional requests.
             if (context.eventName !== 'schedule') {
               out(true, `${context.eventName} request`);
               return;
@@ -85,78 +81,59 @@ jobs:
               return;
             }
 
-            // The launcher must be allowed to create its wait job even if another
-            // claim cycle is just finishing. Its claim job will re-check state later.
+            // Let the daily dispatcher run its wait job. It cannot claim until the target time.
             if (cron === launcherCron) {
-              out(true, 'daily primary launcher; randomized wait is handled separately');
+              out(true, 'daily primary dispatcher; wait job enforces the randomized target');
               return;
             }
 
-            // All morning retries use the same deterministic pseudo-random target
-            // as the launcher, so different workflow runs cannot choose different times.
+            // Compute today's target in IST consistently with the Python wait/run-mode steps.
             if (cron === retryCron) {
               const istNow = new Date(Date.now() + 330 * 60 * 1000);
               const year = istNow.getUTCFullYear();
               const month = istNow.getUTCMonth();
               const day = istNow.getUTCDate();
-              const pad = n => String(n).padStart(2, '0');
-              const dateKey = `${year}-${pad(month + 1)}-${pad(day)}`;
-              const offsetSeconds = parseInt(
-                crypto.createHash('sha256').update(dateKey).digest('hex').slice(0, 8), 16
-              ) % 1501;
-              const targetMs = Date.UTC(year, month, day, 5, 35, 0) + offsetSeconds * 1000;
-              if (istNow.getTime() < targetMs) {
-                const hh = String(Math.floor((5 * 3600 + 35 * 60 + offsetSeconds) / 3600)).padStart(2, '0');
-                const mm = String(Math.floor(((5 * 3600 + 35 * 60 + offsetSeconds) % 3600) / 60)).padStart(2, '0');
-                const ss = String(offsetSeconds % 60).padStart(2, '0');
-                out(false, `before today's randomized primary target (${hh}:${mm}:${ss} IST)`);
+              const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const offsetSeconds = parseInt(crypto.createHash('sha256').update(dateKey).digest('hex').slice(0, 8), 16) % 1501;
+              const targetIstClock = Date.UTC(year, month, day, 5, 35, 0) + offsetSeconds * 1000;
+              if (istNow.getTime() < targetIstClock) {
+                const target = new Date(targetIstClock);
+                out(false, `before randomized target (${String(target.getUTCHours()).padStart(2, '0')}:${String(target.getUTCMinutes()).padStart(2, '0')}:${String(target.getUTCSeconds()).padStart(2, '0')} IST)`);
                 return;
               }
             }
 
-            // Suppress duplicate claim jobs. A dependent claim job belonging to
-            // the 03:00 launcher is not treated as started while its delay job is active.
+            // Avoid queuing duplicate claims while a previous claim job is queued/running.
+            // The three-hour waiting dispatcher is harmless; only its claim job matters here.
             const response = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              branch: 'main',
-              per_page: 100
+              owner, repo, branch: 'main', per_page: 100
             });
             const activeRuns = response.data.workflow_runs.filter(run =>
               String(run.id) !== String(context.runId) &&
               run.path === '.github/workflows/schedule.yml' &&
+              run.head_branch === 'main' &&
               ['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(run.status)
             );
 
             for (const run of activeRuns) {
-              const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
-                owner,
-                repo,
-                run_id: run.id,
-                per_page: 100
+              const jobResponse = await github.rest.actions.listJobsForWorkflowRun({
+                owner, repo, run_id: run.id, per_page: 100
               });
-              const jobs = jobsResponse.data.jobs || [];
-              const delayJob = jobs.find(job => job.name === 'Wait for randomized primary window');
-              const delayActive = delayJob && ['queued', 'in_progress'].includes(delayJob.status);
-              const claimJob = jobs.find(job => job.name === 'Run Master Claimer');
+              const claimJob = (jobResponse.data.jobs || []).find(job => job.name === 'Run Master Claimer');
               if (claimJob && ['queued', 'in_progress'].includes(claimJob.status)) {
-                if (delayActive) {
-                  core.info(`Run #${run.run_number} is waiting for the randomized target; it has not started its claim cycle yet.`);
-                  continue;
-                }
-                out(false, `claim job in workflow run #${run.run_number} is already ${claimJob.status}`);
+                out(false, `claim job in run #${run.run_number} is already ${claimJob.status}`);
                 return;
               }
             }
 
-            out(true, 'no other active claim job; proceed to the state check');
+            out(true, 'no other queued/running claim job; proceed to state validation');
 
   primary_delay:
     name: Wait for randomized primary window
     needs: preflight
     if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * *' && needs.preflight.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 190
+    timeout-minutes: 210
     steps:
       - name: Sleep until today's randomized target (05:35–06:00 IST)
         run: |
@@ -165,20 +142,20 @@ jobs:
           import time
           from datetime import datetime, timedelta, timezone
 
-          ist = timezone(timedelta(hours=5, minutes=30))
-          now = datetime.now(ist)
+          ist_tz = timezone(timedelta(hours=5, minutes=30))
+          now = datetime.now(ist_tz)
           date_key = now.strftime('%Y-%m-%d')
           offset_seconds = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
           target = now.replace(hour=5, minute=35, second=0, microsecond=0) + timedelta(seconds=offset_seconds)
 
           print(f'Current IST time: {now:%Y-%m-%d %H:%M:%S}')
-          print(f'Today\'s shared randomized primary target: {target:%Y-%m-%d %H:%M:%S} IST')
+          print(f'Shared randomized primary target: {target:%Y-%m-%d %H:%M:%S} IST')
           if now < target:
               delay = (target - now).total_seconds()
-              print(f'Sleeping {int(delay)} seconds; the claim script will not start before 05:30 IST.')
+              print(f'Sleeping for {int(delay)} seconds. The claim script will not start before 05:30 IST.')
               time.sleep(delay)
           else:
-              print('The scheduled event arrived after the target; proceeding now (never before the target).')
+              print('Launcher arrived after the target; proceeding now, never before the target.')
           PY
 
   run-claimer:
@@ -202,6 +179,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
       - name: Re-check reset coverage and determine run mode
         id: run_mode
@@ -218,26 +196,25 @@ jobs:
           from datetime import datetime, timedelta, time as dt_time, timezone
 
           event = os.environ.get('RUN_EVENT', '')
-          cron = os.environ.get('SCHEDULE_CRON', '')
+          cron = os.environ.get('SCHEDULE_CRON', '').strip()
           dispatch_type = os.environ.get('DISPATCH_TYPE', '')
           out_path = os.environ['GITHUB_OUTPUT']
-
           launcher_cron = '30 21 * * *'
           retry_cron = '0-30/5 0 * * *'
           backup_cron = '5 4,8,12,16 * * *'
           ist_tz = timezone(timedelta(hours=5, minutes=30))
 
           def emit(execute, recovery, reason):
-              with open(out_path, 'a', encoding='utf-8') as f:
-                  f.write(f"execute={'true' if execute else 'false'}\n")
-                  f.write(f"recovery={'true' if recovery else 'false'}\n")
-                  f.write(f'reason={reason}\n')
+              with open(out_path, 'a', encoding='utf-8') as handle:
+                  handle.write(f"execute={'true' if execute else 'false'}\n")
+                  handle.write(f"recovery={'true' if recovery else 'false'}\n")
+                  handle.write(f'reason={reason}\n')
               print(f"{'RUN' if execute else 'SKIP'}: {reason}")
 
           def load_json(path, default):
               try:
-                  with open(path, 'r', encoding='utf-8-sig') as f:
-                      return json.load(f)
+                  with open(path, 'r', encoding='utf-8-sig') as handle:
+                      return json.load(handle)
               except Exception as exc:
                   print(f'WARN: could not read {path}: {type(exc).__name__}')
                   return default
@@ -251,18 +228,25 @@ jobs:
               except Exception:
                   return None
 
-          def failure_ids(last):
-              ids = last.get('failed_player_ids')
-              if not isinstance(ids, list):
-                  ids = []
-              return list(dict.fromkeys(str(pid).strip() for pid in ids if str(pid).strip()))
+          def dedupe_ids(value):
+              if not isinstance(value, list):
+                  return []
+              return list(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+          def daily_target(day):
+              date_key = day.strftime('%Y-%m-%d')
+              offset = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
+              return datetime.combine(day, dt_time(5, 35)) + timedelta(seconds=offset)
+
+          if event == 'workflow_dispatch':
+              emit(True, False, 'manual workflow_dispatch request; run the selected manual mode')
+              raise SystemExit(0)
 
           meta = load_json('bot_meta.json', {})
           last = meta.get('last_run') or {}
           last_end = parse_ist(last.get('timestamp'))
-          duration_raw = last.get('duration_seconds', 0)
           try:
-              duration_seconds = max(0, int(duration_raw or 0))
+              duration_seconds = max(0, int(last.get('duration_seconds', 0) or 0))
           except Exception:
               duration_seconds = 0
           last_start = last_end - timedelta(seconds=duration_seconds) if last_end else None
@@ -273,91 +257,89 @@ jobs:
               reset_date -= timedelta(days=1)
           reset_at = datetime.combine(reset_date, dt_time(5, 30))
 
-          valid_labels = {'Primary Run', 'Manual Run', 'Morning Recovery'}
-          covered_since_reset = bool(
-              last_end and last_start and
-              last_start >= reset_at and last_end <= now and
-              last.get('run_label') in valid_labels and
-              duration_seconds > 0
-          )
-          failed_ids = failure_ids(last)
-          try:
-              last_age_hours = (now - last_end).total_seconds() / 3600 if last_end else None
-          except Exception:
-              last_age_hours = None
-
-          def daily_target(day):
-              date_key = day.strftime('%Y-%m-%d')
-              offset_seconds = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
-              return datetime.combine(day, dt_time(5, 35)) + timedelta(seconds=offset_seconds)
-
-          if event == 'workflow_dispatch':
-              emit(True, False, 'manual workflow_dispatch request; run configured manual mode')
-              raise SystemExit(0)
-
           if event == 'repository_dispatch':
               if dispatch_type and dispatch_type != 'claim-recovery':
-                  emit(False, False, f'unsupported repository_dispatch type {dispatch_type!r}; fail closed')
+                  emit(False, False, f'unsupported repository dispatch {dispatch_type!r}; fail closed')
                   raise SystemExit(0)
-              if last.get('run_label') == 'Primary Run' and failed_ids and last_end and last_start:
-                  age_hours = (now - last_end).total_seconds() / 3600
-                  if last_start >= reset_at and 0 <= age_hours <= 4:
-                      emit(True, True, f'event-driven recovery for {len(failed_ids)} failed ID(s) from the recent post-reset run')
-                  else:
-                      emit(False, False, 'no eligible post-reset Primary Run failures remain; dispatch is stale')
+              retry_ids = dedupe_ids(last.get('retry_player_ids'))
+              if not retry_ids:
+                  retry_ids = dedupe_ids(last.get('failed_player_ids'))
+              allowed_labels = {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'}
+              age = (now - last_end).total_seconds() if last_end else None
+              if (last.get('run_label') in allowed_labels and retry_ids and last_end and last_start
+                      and last_start >= reset_at and age is not None and 0 <= age <= 4 * 3600):
+                  emit(True, True, f'immediate recovery dispatch for {len(retry_ids)} unresolved player ID(s)')
               else:
-                  emit(False, False, 'no eligible Primary Run failures remain; recovery dispatch is stale or already handled')
+                  emit(False, False, 'no eligible recent full-roster retry candidates; recovery dispatch is stale or already handled')
               raise SystemExit(0)
 
-          if event != 'schedule':
-              emit(False, False, 'unsupported event; fail closed')
+          if event != 'schedule' or cron not in {launcher_cron, retry_cron, backup_cron}:
+              emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
 
-          if cron not in {launcher_cron, retry_cron, backup_cron}:
-              emit(False, False, f'unrecognised schedule expression {cron!r}; fail closed')
-              raise SystemExit(0)
-
-          # Validate roster before any scheduled browser work.
+          # Validate the configured roster before any browser work.
           try:
-              with open('players.csv', 'r', newline='', encoding='utf-8-sig') as f:
-                  player_ids = [
-                      (row.get('player_id') or '').strip()
-                      for row in csv.DictReader(f)
-                      if (row.get('player_id') or '').strip()
-                  ]
+              with open('players.csv', 'r', newline='', encoding='utf-8-sig') as handle:
+                  player_ids = [(row.get('player_id') or '').strip()
+                                for row in csv.DictReader(handle)
+                                if (row.get('player_id') or '').strip()]
           except Exception as exc:
               emit(False, False, f'players.csv could not be read ({type(exc).__name__}); fail closed')
               raise SystemExit(0)
-
           if not player_ids or len(player_ids) != len(set(player_ids)):
               emit(False, False, 'players.csv is empty or contains duplicate IDs; fail closed')
               raise SystemExit(0)
 
+          # A recovery subset must not erase today's last full-roster coverage record.
+          full = meta.get('last_full_run') or {}
+          if not full and last.get('run_label') != 'Recovery Run':
+              full = last
+          full_end = parse_ist(full.get('timestamp'))
+          try:
+              full_duration = max(0, int(full.get('duration_seconds', 0) or 0))
+          except Exception:
+              full_duration = 0
+          full_start = full_end - timedelta(seconds=full_duration) if full_end else None
+          full_count = int(full.get('player_count', 0) or 0)
+          full_label = str(full.get('run_label') or '')
+          allowed_full_labels = {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'}
+          covered_since_reset = bool(
+              full_end and full_start and full_start >= reset_at and full_end <= now
+              and full_count == len(player_ids) and full_label in allowed_full_labels
+          )
+
+          retry_ids = dedupe_ids(last.get('retry_player_ids'))
+          if not retry_ids:
+              retry_ids = dedupe_ids(last.get('failed_player_ids'))
+          last_age_hours = (now - last_end).total_seconds() / 3600 if last_end else None
+          eligible_recent_recovery = bool(
+              last.get('run_label') in {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
+              and retry_ids and last_end and last_start and last_start >= reset_at
+              and last_age_hours is not None and 0 <= last_age_hours <= 4
+          )
+
           if cron == launcher_cron:
+              target = daily_target(now.date())
               if covered_since_reset:
-                  emit(False, False, 'a claim cycle already started after today\'s 05:30 reset; delayed primary is no longer needed')
+                  emit(False, False, 'a complete roster cycle already started after today\'s 05:30 reset')
+              elif now < target:
+                  emit(False, False, f'launcher reached state check before randomized target {target:%H:%M:%S} IST; fail closed')
               else:
-                  target = daily_target(now.date())
-                  if now < target:
-                      emit(False, False, f'launcher reached state check before randomized target {target:%H:%M:%S} IST; fail closed')
-                  else:
-                      emit(True, False, f'first full-roster Primary Run after reset; randomized target was {target:%H:%M:%S} IST')
+                  emit(True, False, f'run full-roster primary; randomized target was {target:%H:%M:%S} IST')
 
           elif cron == retry_cron:
               target = daily_target(now.date())
               if now < target:
                   emit(False, False, f'before randomized target {target:%H:%M:%S} IST; no claim before target')
               elif not covered_since_reset:
-                  emit(True, False, 'fallback Primary Run: no claim cycle has started after the 05:30 IST reset')
-              elif last.get('run_label') == 'Primary Run' and failed_ids and last_age_hours is not None and 0 <= last_age_hours <= 4:
-                  emit(True, True, f'safety-net recovery for {len(failed_ids)} failed ID(s) from the recent Primary Run')
+                  emit(True, False, 'fallback primary: no complete full-roster cycle has started after 05:30 IST')
+              elif eligible_recent_recovery:
+                  emit(True, True, f'safety-net recovery for {len(retry_ids)} unresolved ID(s) from the latest full run')
               else:
-                  emit(False, False, 'post-reset claim cycle already ran with no eligible hard-failed IDs; wait for next full-roster backup')
+                  emit(False, False, 'post-reset full-roster cycle already ran; no eligible first recovery remains')
 
           elif cron == backup_cron:
-              # Backups always run the full configured roster. The claimer's live portal
-              # checks and claim history prevent repeats for rewards already claimed/on cooldown.
-              emit(True, False, f'scheduled 4-hour full-roster backup for {len(player_ids)} IDs')
+              emit(True, False, f'scheduled four-hour full-roster check for all {len(player_ids)} configured IDs')
           PY
 
       - name: Set up Python
@@ -386,6 +368,7 @@ jobs:
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           if { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$LOGIN_TEST_ONLY" == "true" ]]; } \
             || { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; } \
@@ -402,12 +385,39 @@ jobs:
             python master_claimer.py
           fi
 
-      - name: Commit runtime state
+      - name: Commit runtime state safely
         if: always() && steps.run_mode.outputs.execute == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "bot: update claim history and meta [skip ci]"
-          file_pattern: "claim_history.json bot_meta.json"
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TARGET_BRANCH="${TARGET_BRANCH:-main}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- claim_history.json bot_meta.json
+
+          if git diff --cached --quiet; then
+            echo "No claim-history/meta changes to commit."
+            exit 0
+          fi
+
+          git commit -m "bot: update claim history and meta [skip ci]"
+          for attempt in 1 2 3; do
+            echo "State push attempt ${attempt}/3"
+            git fetch origin "${TARGET_BRANCH}"
+            if ! git rebase "origin/${TARGET_BRANCH}"; then
+              echo "Rebase conflict while saving runtime state; aborting rebase and reporting a visible failure."
+              git rebase --abort || true
+              exit 1
+            fi
+            if git push origin "HEAD:${TARGET_BRANCH}"; then
+              echo "Runtime state committed to ${TARGET_BRANCH}."
+              exit 0
+            fi
+            echo "Push failed; refreshing remote branch before the next retry."
+          done
+          echo "Could not save runtime state after three attempts."
+          exit 1
 
       - name: Upload full-run report and summary
         if: always() && steps.run_mode.outputs.execute == 'true'
