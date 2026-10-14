@@ -11,15 +11,15 @@ permissions:
 
 jobs:
   recover-failed-ids:
-    name: Dispatch recovery when a scheduled full run recorded failures
-    if: github.event.workflow_run.event == 'schedule' && github.event.workflow_run.head_branch == 'main'
+    name: Dispatch recovery for unresolved eligible claims
+    if: (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch') && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       actions: read
       contents: write
     steps:
-      - name: Verify a real post-reset claim run and inspect failed IDs
+      - name: Verify the completed full-roster cycle and inspect retry candidates
         id: decision
         uses: actions/github-script@v7
         with:
@@ -31,17 +31,13 @@ jobs:
               core.info(`${dispatch ? 'RECOVERY NEEDED' : 'NO RECOVERY'}: ${reason}`);
             };
 
-            // Ignore no-op gate checks, the 03:00 waiting job by itself, and any
-            // workflow run where the actual Python claim step did not execute.
+            // Ignore lightweight/no-op runs where the Python claim step never executed.
             const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
-              owner,
-              repo,
-              run_id: source.id,
-              per_page: 100
+              owner, repo, run_id: source.id, per_page: 100
             });
             const claimJob = (jobsResponse.data.jobs || []).find(job => job.name === 'Run Master Claimer');
             if (!claimJob || claimJob.status !== 'completed') {
-              out(false, 'no completed Master Claimer job found');
+              out(false, 'no completed claim job found');
               return;
             }
             const claimStep = (claimJob.steps || []).find(step => step.name === 'Run Master Claimer');
@@ -50,24 +46,20 @@ jobs:
               return;
             }
 
-            // Read persisted state only after the main workflow's state-commit step.
             const fileResponse = await github.rest.repos.getContent({
-              owner,
-              repo,
-              path: 'bot_meta.json',
-              ref: 'main'
+              owner, repo, path: 'bot_meta.json', ref: 'main'
             });
             if (Array.isArray(fileResponse.data) || !fileResponse.data.content) {
-              out(false, 'bot_meta.json was not readable');
+              out(false, 'bot_meta.json was not readable after the run');
               return;
             }
             const meta = JSON.parse(Buffer.from(fileResponse.data.content, 'base64').toString('utf8'));
             const last = meta.last_run || {};
-            const failedIds = Array.isArray(last.failed_player_ids)
-              ? [...new Set(last.failed_player_ids.map(x => String(x).trim()).filter(Boolean))]
+            const candidateSource = Array.isArray(last.retry_player_ids) ? last.retry_player_ids : last.failed_player_ids;
+            const retryIds = Array.isArray(candidateSource)
+              ? [...new Set(candidateSource.map(x => String(x).trim()).filter(Boolean))]
               : [];
 
-            // Confirm this saved record corresponds to the workflow that just ended.
             const stamp = String(last.timestamp || '');
             const lastEpoch = stamp
               ? Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(stamp) ? stamp : `${stamp}+05:30`)
@@ -77,44 +69,39 @@ jobs:
               && Math.abs(sourceEpoch - lastEpoch) <= 15 * 60 * 1000;
 
             const durationSeconds = Math.max(0, Number(last.duration_seconds) || 0);
-            const runStartEpoch = Number.isFinite(lastEpoch)
-              ? lastEpoch - durationSeconds * 1000
-              : NaN;
-
+            const runStartEpoch = Number.isFinite(lastEpoch) ? lastEpoch - durationSeconds * 1000 : NaN;
             const nowIstDate = new Date(Date.now() + 330 * 60 * 1000);
             const year = nowIstDate.getUTCFullYear();
             const month = nowIstDate.getUTCMonth();
             const day = nowIstDate.getUTCDate();
             const pad = n => String(n).padStart(2, '0');
-            const nowIstText = `${year}-${pad(month + 1)}-${pad(day)}T${pad(nowIstDate.getUTCHours())}:${pad(nowIstDate.getUTCMinutes())}:${pad(nowIstDate.getUTCSeconds())}`;
+            const nowIst = `${year}-${pad(month + 1)}-${pad(day)}T${pad(nowIstDate.getUTCHours())}:${pad(nowIstDate.getUTCMinutes())}:${pad(nowIstDate.getUTCSeconds())}`;
             let resetDate = `${year}-${pad(month + 1)}-${pad(day)}`;
-            if (nowIstText.slice(11, 19) < '05:30:00') {
+            if (nowIst.slice(11, 19) < '05:30:00') {
               const previous = new Date(Date.UTC(year, month, day) - 24 * 60 * 60 * 1000);
               resetDate = `${previous.getUTCFullYear()}-${pad(previous.getUTCMonth() + 1)}-${pad(previous.getUTCDate())}`;
             }
             const resetEpoch = Date.parse(`${resetDate}T05:30:00+05:30`);
-            const sinceReset = Number.isFinite(lastEpoch)
-              && lastEpoch >= resetEpoch
-              && lastEpoch <= Date.now();
-            const startedAfterReset = Number.isFinite(runStartEpoch) && runStartEpoch >= resetEpoch;
             const ageMs = Date.now() - lastEpoch;
-            const recent = Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 4 * 60 * 60 * 1000;
+            const validLabel = ['Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'].includes(last.run_label);
+            const validWindow = Number.isFinite(lastEpoch) && lastEpoch >= resetEpoch && lastEpoch <= Date.now()
+              && Number.isFinite(runStartEpoch) && runStartEpoch >= resetEpoch
+              && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 4 * 60 * 60 * 1000;
 
-            if (last.run_label !== 'Primary Run') {
-              out(false, `latest saved run is '${last.run_label || 'unknown'}', not a scheduled full-roster run`);
+            if (!validLabel || !sameRun || !validWindow) {
+              out(false, 'saved result is stale, does not match this workflow, or the run began before the 05:30 IST reset');
               return;
             }
-            if (!sameRun || !sinceReset || !startedAfterReset || !recent) {
-              out(false, 'saved result is stale, does not match this workflow, or the claim cycle started before the daily reset');
-              return;
-            }
-            if (failedIds.length === 0) {
-              out(false, 'no hard-failed player IDs were recorded');
+            if (!retryIds.length) {
+              out(false, 'no hard failures or incomplete eligible claims were recorded');
               return;
             }
 
-            core.setOutput('failed_count', String(failedIds.length));
-            out(true, `${failedIds.length} hard-failed player ID(s) recorded; dispatch one immediate failed-ID-only recovery`);
+            // One dispatch per completed scheduled source run. The receiving workflow
+            // re-checks bot_meta.json after acquiring its concurrency slot; Recovery Run
+            // labels cannot trigger another workflow_run recovery loop.
+            core.setOutput('retry_count', String(retryIds.length));
+            out(true, `${retryIds.length} unresolved eligible player ID(s); dispatch one bounded recovery pass`);
 
       - name: Dispatch the main workflow in failed-ID recovery mode
         if: steps.decision.outputs.dispatch == 'true'
@@ -127,7 +114,7 @@ jobs:
               event_type: 'claim-recovery',
               client_payload: {
                 source_run_id: context.payload.workflow_run.id,
-                failed_count: Number('${{ steps.decision.outputs.failed_count }}')
+                retry_count: Number('${{ steps.decision.outputs.retry_count }}')
               }
             });
-            core.info('Dispatched claim-recovery. The main workflow will re-check bot_meta.json after acquiring the claim-job concurrency slot.');
+            core.info('Recovery dispatched; the receiver revalidates freshness and retry candidates before starting the browser.')
