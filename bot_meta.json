@@ -49,26 +49,15 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-14T18:56:44.244642",
-    "run_label": "Recovery Run",
+    "timestamp": "2026-10-14T23:39:29.123282",
+    "run_label": "Backup Run #1",
     "failed_player_ids": [],
     "failed_player_count": 0,
-    "retry_player_ids": [
-      "E1E9729A4885E6D9",
-      "4DC0E2AA7130D7E6",
-      "FBF717E3BFDF5E94",
-      "46C57810F646B91F",
-      "8EE5A8F3D8CAD1F3",
-      "E72DC1D6C5301F47",
-      "5899855DAA167B36",
-      "5D14D66D5B6C7B8F",
-      "5429611A24A8F01A",
-      "F251D3D226496061"
-    ],
-    "retry_player_count": 10,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
     "total_claimed": 0,
-    "efficiency": 0.0,
-    "duration_seconds": 1083,
+    "efficiency": 100.0,
+    "duration_seconds": 3992,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -79,31 +68,20 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 107.3,
+    "avg_time_per_player": 109.9,
     "email_sent": true,
-    "player_count": 10
+    "player_count": 36
   },
   "last_full_run": {
-    "timestamp": "2026-10-14T18:37:48.538241",
-    "run_label": "Manual Run",
+    "timestamp": "2026-10-14T23:39:29.123282",
+    "run_label": "Backup Run #1",
     "failed_player_ids": [],
     "failed_player_count": 0,
-    "retry_player_ids": [
-      "E1E9729A4885E6D9",
-      "4DC0E2AA7130D7E6",
-      "FBF717E3BFDF5E94",
-      "46C57810F646B91F",
-      "8EE5A8F3D8CAD1F3",
-      "E72DC1D6C5301F47",
-      "5899855DAA167B36",
-      "5D14D66D5B6C7B8F",
-      "5429611A24A8F01A",
-      "F251D3D226496061"
-    ],
-    "retry_player_count": 10,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
     "total_claimed": 0,
-    "efficiency": 0.0,
-    "duration_seconds": 4096,
+    "efficiency": 100.0,
+    "duration_seconds": 3992,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -114,7 +92,7 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 112.8,
+    "avg_time_per_player": 109.9,
     "email_sent": true,
     "player_count": 36
   }
