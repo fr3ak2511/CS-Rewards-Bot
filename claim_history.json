@@ -2,8 +2,9 @@
   "E1E9729A4885E6D9": {
     "daily": {
       "last_claim": "2026-10-13T05:58:59.397886",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:30:12.190114"
     },
     "store": {
       "reward_1": {
@@ -30,20 +31,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:43:06.564953",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:15:04.510045"
+      "last_visit": "2026-10-14T17:31:21.684989"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "4DC0E2AA7130D7E6": {
     "daily": {
       "last_claim": "2026-10-13T06:01:20.398382",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed",
-      "portal_observed_at": "2026-10-11T01:57:08.225386"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:32:18.862962"
     },
     "store": {
       "reward_1": {
@@ -74,19 +76,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:46:04.302015",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:16:56.334025"
+      "last_visit": "2026-10-14T17:33:28.496205"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "FBF717E3BFDF5E94": {
     "daily": {
       "last_claim": "2026-10-13T06:03:43.117806",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:34:26.390895"
     },
     "store": {
       "reward_1": {
@@ -113,19 +117,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:49:02.536487",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:18:47.374805"
+      "last_visit": "2026-10-14T17:35:35.786944"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "46C57810F646B91F": {
     "daily": {
       "last_claim": "2026-10-13T06:06:04.831012",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:36:33.234165"
     },
     "store": {
       "reward_1": {
@@ -152,19 +158,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:52:00.909746",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:20:38.271111"
+      "last_visit": "2026-10-14T17:37:42.679594"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "8EE5A8F3D8CAD1F3": {
     "daily": {
       "last_claim": "2026-10-13T06:08:25.959274",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:38:40.496398"
     },
     "store": {
       "reward_1": {
@@ -191,19 +199,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:54:59.752503",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:22:29.346014"
+      "last_visit": "2026-10-14T17:39:49.992979"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "E72DC1D6C5301F47": {
     "daily": {
       "last_claim": "2026-10-13T06:10:47.678424",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:40:48.410425"
     },
     "store": {
       "reward_1": {
@@ -230,19 +240,21 @@
     "progression": {
       "last_claim": "2026-10-06T05:57:57.227446",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:24:20.305926"
+      "last_visit": "2026-10-14T17:41:58.079852"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "5899855DAA167B36": {
     "daily": {
       "last_claim": "2026-10-13T06:13:09.289440",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:42:55.907532"
     },
     "store": {
       "reward_1": {
@@ -269,19 +281,21 @@
     "progression": {
       "last_claim": "2026-10-06T06:00:56.717452",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:26:11.475997"
+      "last_visit": "2026-10-14T17:44:05.327509"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "5D14D66D5B6C7B8F": {
     "daily": {
       "last_claim": "2026-10-13T06:15:30.755829",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:45:03.121739"
     },
     "store": {
       "reward_1": {
@@ -308,19 +322,21 @@
     "progression": {
       "last_claim": "2026-10-06T06:03:57.563330",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:28:02.286003"
+      "last_visit": "2026-10-14T17:46:12.383564"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "5429611A24A8F01A": {
     "daily": {
       "last_claim": "2026-10-13T06:17:51.644454",
-      "next_available": "2026-10-14T05:30:00",
-      "status": "claimed"
+      "next_available": "2026-10-15T05:30:00",
+      "status": "portal_claimed",
+      "portal_observed_at": "2026-10-14T17:47:10.140615"
     },
     "store": {
       "reward_1": {
@@ -347,13 +363,14 @@
     "progression": {
       "last_claim": "2026-10-06T06:06:55.781094",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:29:53.051048"
+      "last_visit": "2026-10-14T17:48:19.525097"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "856EB1365FA9D02E": {
     "daily": {
@@ -386,12 +403,63 @@
     "progression": {
       "last_claim": "2026-10-06T06:09:53.794838",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:32:25.789573"
+      "last_visit": "2026-10-14T17:50:08.370939"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.002119"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.007364"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.009892"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.011885"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.014050"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.016018"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:49:18.018002"
+      }
     }
   },
   "F251D3D226496061": {
@@ -425,13 +493,14 @@
     "progression": {
       "last_claim": "2026-10-06T06:12:54.085128",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:34:59.567458"
+      "last_visit": "2026-10-14T17:51:57.527913"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
-    }
+    },
+    "promotions": {}
   },
   "3D9A901755C3B2D8": {
     "daily": {
@@ -464,12 +533,63 @@
     "progression": {
       "last_claim": "2026-10-06T06:15:52.506618",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:37:26.750058"
+      "last_visit": "2026-10-14T17:53:46.595197"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.133886"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.136549"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.138802"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.140896"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.143213"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.145853"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:52:56.147991"
+      }
     }
   },
   "86CD85689FAE9549": {
@@ -503,13 +623,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:18:50.938856",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:39:54.352065"
+      "last_visit": "2026-10-14T17:55:37.578945"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.319542"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.321822"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.324714"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.327381"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.337436"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.339832"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:54:45.342464"
+      }
     }
   },
   "A32124B011061E03": {
@@ -547,13 +718,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:21:49.507344",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:42:23.032868"
+      "last_visit": "2026-10-14T17:57:26.489954"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.023707"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.026206"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.028373"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.043270"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.045476"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.047620"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:56:36.049722"
+      }
     }
   },
   "63989CEF5D15F053": {
@@ -587,13 +809,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:24:44.773668",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:44:49.400157"
+      "last_visit": "2026-10-14T17:59:15.412125"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.068476"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.071346"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.073455"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.075645"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.077764"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.079886"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T17:58:25.082290"
+      }
     }
   },
   "B0036841F0183A12": {
@@ -627,13 +900,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:27:41.669140",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:47:16.912169"
+      "last_visit": "2026-10-14T18:01:04.377955"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:13.973914"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.001945"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.004276"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.006600"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.008843"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.012130"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:00:14.014731"
+      }
     }
   },
   "A6DA56D3C46DF31B": {
@@ -668,13 +992,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:30:38.334631",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:49:44.500136"
+      "last_visit": "2026-10-14T18:02:54.343316"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.974372"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.976997"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.979392"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.981837"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.984225"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.986428"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:02:03.989148"
+      }
     }
   },
   "7E53CF9C948CED45": {
@@ -708,13 +1083,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:33:35.381433",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:52:12.230042"
+      "last_visit": "2026-10-14T18:04:43.264183"
     },
     "loyalty": {
       "last_claim": "2026-04-24T09:22:58.732699",
       "last_count": 0,
       "next_available": "2026-04-25T09:22:58.732699",
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.786135"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.788732"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.791217"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.793555"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.895351"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.897716"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:03:52.900104"
+      }
     }
   },
   "E796C81690AB75C0": {
@@ -748,13 +1174,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:36:33.261581",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:54:39.590073"
+      "last_visit": "2026-10-14T18:06:32.149970"
     },
     "loyalty": {
       "last_claim": "2026-04-14T06:05:26.460179",
       "last_count": 0,
       "next_available": "2026-04-15T06:05:26.460179",
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.787674"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.790341"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.792889"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.795378"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.799099"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.802686"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:05:41.805155"
+      }
     }
   },
   "F820398935D2C403": {
@@ -788,13 +1265,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:39:30.925097",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:57:07.351553"
+      "last_visit": "2026-10-14T18:08:22.348006"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.605924"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.609482"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.612707"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.615105"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.617454"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.619917"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:07:31.622409"
+      }
     }
   },
   "C3960960443AF932": {
@@ -828,13 +1356,64 @@
     "progression": {
       "last_claim": "2026-10-06T06:42:28.957345",
       "last_count": 1,
-      "last_visit": "2026-10-14T05:59:34.409125"
+      "last_visit": "2026-10-14T18:10:12.194200"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.502968"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.565533"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.568426"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.582976"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.585795"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.588697"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:09:21.591955"
+      }
     }
   },
   "2B50290C73E02027": {
@@ -868,13 +1447,71 @@
     "progression": {
       "last_claim": "2026-10-06T06:45:28.102290",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:02:01.683063"
+      "last_visit": "2026-10-14T18:12:01.288387"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.894009"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.896774"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.899274"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.903382"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.906271"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.908900"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.911600"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:11:10.914217"
+      }
     }
   },
   "188A50EA1ABE0765": {
@@ -908,13 +1545,71 @@
     "progression": {
       "last_claim": "2026-10-06T06:48:25.302435",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:04:28.968233"
+      "last_visit": "2026-10-14T18:13:50.497232"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.013553"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.016401"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.018993"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.021631"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.024303"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.026842"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.029939"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:13:00.032629"
+      }
     }
   },
   "4D1AA8C2C628E73F": {
@@ -948,13 +1643,71 @@
     "progression": {
       "last_claim": "2026-10-06T06:51:24.003657",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:06:55.844297"
+      "last_visit": "2026-10-14T18:15:39.276161"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.913205"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.916047"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.918764"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.921437"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.924106"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.927364"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.930366"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:14:48.933027"
+      }
     }
   },
   "B4BAE5FC4CACA8F7": {
@@ -988,13 +1741,71 @@
     "progression": {
       "last_claim": "2026-10-06T06:54:21.609731",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:09:23.937244"
+      "last_visit": "2026-10-14T18:17:27.725751"
     },
     "loyalty": {
       "last_claim": null,
       "last_count": 0,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.284218"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.287754"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.291673"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.294443"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.297190"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.299814"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.302435"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:16:37.305705"
+      }
     }
   },
   "55CE80118E81AE87": {
@@ -1268,12 +2079,63 @@
     "progression": {
       "last_claim": "2026-10-06T06:57:21.624622",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:11:50.613167"
+      "last_visit": "2026-10-14T18:19:16.580301"
     },
     "loyalty": {
       "last_claim": "2026-08-16T07:04:26.256713",
       "next_available": "2026-08-17T07:04:26.256713",
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.256579"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.259627"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.262489"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.265366"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.270288"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.273211"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:18:26.276040"
+      }
     }
   },
   "1956988E56026BA7": {
@@ -1307,12 +2169,63 @@
     "progression": {
       "last_claim": "2026-10-06T07:00:19.891694",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:14:18.523070"
+      "last_visit": "2026-10-14T18:21:05.343404"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.866047"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.869199"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.872014"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.874797"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.877596"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.881224"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:20:14.883958"
+      }
     }
   },
   "631FEB500E5C1EB7": {
@@ -1346,12 +2259,63 @@
     "progression": {
       "last_claim": "2026-10-14T06:16:24.497566",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:16:49.478248"
+      "last_visit": "2026-10-14T18:22:53.975172"
     },
     "loyalty": {
       "last_claim": "2026-07-21T22:52:27.095898",
       "next_available": "2026-07-22T22:52:27.095898",
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.461432"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.464556"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.467445"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.470306"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.473179"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.477194"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:22:03.480027"
+      }
     }
   },
   "6163D9F946C4BD48": {
@@ -1385,12 +2349,70 @@
     "progression": {
       "last_claim": "2026-10-06T07:06:13.362579",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:19:17.741047"
+      "last_visit": "2026-10-14T18:24:43.187375"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.856191"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.860029"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.863504"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.866706"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.869883"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.873030"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.876005"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:23:52.878939"
+      }
     }
   },
   "B3ED965EAECB6F7C": {
@@ -1424,12 +2446,63 @@
     "progression": {
       "last_claim": "2026-10-12T07:29:26.880036",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:21:43.490123"
+      "last_visit": "2026-10-14T18:26:32.632863"
     },
     "loyalty": {
       "last_claim": "2026-10-06T04:16:35.947696",
       "next_available": "2026-10-07T04:16:35.947696",
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.195266"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.198786"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.202146"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.205147"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.208035"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.210941"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:25:42.214191"
+      }
     }
   },
   "4A8D19E91CCE94E6": {
@@ -1463,12 +2536,63 @@
     "progression": {
       "last_claim": "2026-10-06T07:11:50.803492",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:24:10.755143"
+      "last_visit": "2026-10-14T18:28:23.594768"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.853366"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.856594"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.859596"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.863568"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.866626"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.869592"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:27:31.872519"
+      }
     }
   },
   "BB382E889AA37C4F": {
@@ -1503,12 +2627,63 @@
     "progression": {
       "last_claim": "2026-10-06T07:14:51.503282",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:26:39.373148"
+      "last_visit": "2026-10-14T18:30:12.188381"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.762263"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.765615"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.768728"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.771797"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.777640"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.781962"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:29:21.785086"
+      }
     }
   },
   "2D29FA0DEE0A941B": {
@@ -1542,12 +2717,70 @@
     "progression": {
       "last_claim": "2026-10-06T07:17:49.835830",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:29:06.242368"
+      "last_visit": "2026-10-14T18:32:01.982348"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_33f5658b38e37f0b3ef5": {
+        "title": "First Purchaser Pack",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.330501"
+      },
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.333851"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.337770"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.340863"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.344013"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.350322"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.354461"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:31:11.357540"
+      }
     }
   },
   "3C98D98D14FC8155": {
@@ -1581,12 +2814,63 @@
     "progression": {
       "last_claim": "2026-10-06T07:20:46.741924",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:31:34.194271"
+      "last_visit": "2026-10-14T18:33:51.135286"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.853198"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.856836"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.860128"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.863191"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.867194"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.871159"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:33:00.874394"
+      }
     }
   },
   "DA4C269DB53172C5": {
@@ -1621,12 +2905,63 @@
     "progression": {
       "last_claim": "2026-10-12T07:41:40.994773",
       "last_count": 1,
-      "last_visit": "2026-10-14T06:34:01.685175"
+      "last_visit": "2026-10-14T18:35:39.966363"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.540817"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.544851"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.548092"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.579576"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.583198"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.586425"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:34:49.589650"
+      }
     }
   },
   "51001A5D6014F2DD": {
@@ -1665,12 +3000,63 @@
     "progression": {
       "last_claim": null,
       "last_count": 0,
-      "last_visit": "2026-10-14T06:36:30.091118"
+      "last_visit": "2026-10-14T18:37:29.983337"
     },
     "loyalty": {
       "last_claim": null,
       "next_available": null,
       "status": "unavailable"
+    },
+    "promotions": {
+      "promo_fc4bebe1fb9b140f5a89": {
+        "title": "Death Character Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.393981"
+      },
+      "promo_96a148d930185122b907": {
+        "title": "50,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.397630"
+      },
+      "promo_8924e66672433d676375": {
+        "title": "500",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.400873"
+      },
+      "promo_0660c4d08e55fbad77dd": {
+        "title": "Super Chest",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.404338"
+      },
+      "promo_e22b4cb643f6644b4c1d": {
+        "title": "Dual Uzi Card",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.408330"
+      },
+      "promo_795dff3b650580453d1b": {
+        "title": "100,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.411503"
+      },
+      "promo_7032d017b82589e15d2b": {
+        "title": "1,000",
+        "campaign_id": null,
+        "href": null,
+        "status": "unavailable",
+        "last_seen_at": "2026-10-14T18:36:39.414695"
+      }
     }
   }
 }
