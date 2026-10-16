@@ -83,7 +83,7 @@ jobs:
             }
             const resetEpoch = Date.parse(`${resetDate}T05:30:00+05:30`);
             const ageMs = Date.now() - lastEpoch;
-            const validLabel = ['Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'].includes(last.run_label);
+            const validLabel = ['Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'].includes(last.run_label);
             const validWindow = Number.isFinite(lastEpoch) && lastEpoch >= resetEpoch && lastEpoch <= Date.now()
               && Number.isFinite(runStartEpoch) && runStartEpoch >= resetEpoch
               && Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 4 * 60 * 60 * 1000;
