@@ -8,9 +8,12 @@ on:
     # Five-minute reset-window fallbacks; these do nothing before the same randomized target.
     - cron: '0-30/5 0 * * *'
 
-    # Four-hour full-roster backups: 09:35, 13:35, 17:35 and 21:35 IST.
-    # The 01:35 IST cycle is omitted to avoid pre-reset claims.
-    - cron: '5 4,8,12,16 * * *'
+    # Four hourly promotional-check slots: 09:35, 13:35, 17:35 and 21:35 IST.
+    # Uncovered/new IDs still receive the full claim path at the next backup.
+    - cron: '5 4 * * *'
+    - cron: '5 8 * * *'
+    - cron: '5 12 * * *'
+    - cron: '5 16 * * *'
 
   repository_dispatch:
     types: [claim-recovery]
@@ -62,7 +65,7 @@ jobs:
             const crypto = require('crypto');
             const launcherCron = '30 21 * * *';
             const retryCron = '0-30/5 0 * * *';
-            const backupCron = '5 4,8,12,16 * * *';
+            const backupCrons = ['5 4 * * *', '5 8 * * *', '5 12 * * *', '5 16 * * *'];
 
             const out = (run, reason) => {
               core.setOutput('should_run', run ? 'true' : 'false');
@@ -76,7 +79,7 @@ jobs:
             }
 
             const cron = context.payload.schedule || '';
-            if (![launcherCron, retryCron, backupCron].includes(cron)) {
+            if (![launcherCron, retryCron, ...backupCrons].includes(cron)) {
               out(false, `unrecognised schedule '${cron}'; fail closed`);
               return;
             }
@@ -201,7 +204,12 @@ jobs:
           out_path = os.environ['GITHUB_OUTPUT']
           launcher_cron = '30 21 * * *'
           retry_cron = '0-30/5 0 * * *'
-          backup_cron = '5 4,8,12,16 * * *'
+          backup_crons = {
+              '5 4 * * *': 1,
+              '5 8 * * *': 2,
+              '5 12 * * *': 3,
+              '5 16 * * *': 4,
+          }
           ist_tz = timezone(timedelta(hours=5, minutes=30))
 
           def emit(execute, recovery, reason):
@@ -264,7 +272,7 @@ jobs:
               retry_ids = dedupe_ids(last.get('retry_player_ids'))
               if not retry_ids:
                   retry_ids = dedupe_ids(last.get('failed_player_ids'))
-              allowed_labels = {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'}
+              allowed_labels = {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
               age = (now - last_end).total_seconds() if last_end else None
               if (last.get('run_label') in allowed_labels and retry_ids and last_end and last_start
                       and last_start >= reset_at and age is not None and 0 <= age <= 4 * 3600):
@@ -273,7 +281,7 @@ jobs:
                   emit(False, False, 'no eligible recent full-roster retry candidates; recovery dispatch is stale or already handled')
               raise SystemExit(0)
 
-          if event != 'schedule' or cron not in {launcher_cron, retry_cron, backup_cron}:
+          if event != 'schedule' or cron not in ({launcher_cron, retry_cron} | set(backup_crons)):
               emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
 
@@ -301,11 +309,13 @@ jobs:
               full_duration = 0
           full_start = full_end - timedelta(seconds=full_duration) if full_end else None
           full_count = int(full.get('player_count', 0) or 0)
+          full_claim_count = int(full.get('full_claim_accounts', full_count) or 0)
           full_label = str(full.get('run_label') or '')
-          allowed_full_labels = {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4', 'Manual Run'}
+          allowed_full_labels = {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
           covered_since_reset = bool(
               full_end and full_start and full_start >= reset_at and full_end <= now
-              and full_count == len(player_ids) and full_label in allowed_full_labels
+              and full_count == len(player_ids) and full_claim_count == len(player_ids)
+              and full_label in allowed_full_labels
           )
 
           retry_ids = dedupe_ids(last.get('retry_player_ids'))
@@ -313,7 +323,7 @@ jobs:
               retry_ids = dedupe_ids(last.get('failed_player_ids'))
           last_age_hours = (now - last_end).total_seconds() / 3600 if last_end else None
           eligible_recent_recovery = bool(
-              last.get('run_label') in {'Primary Run', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
+              last.get('run_label') in {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
               and retry_ids and last_end and last_start and last_start >= reset_at
               and last_age_hours is not None and 0 <= last_age_hours <= 4
           )
@@ -338,8 +348,9 @@ jobs:
               else:
                   emit(False, False, 'post-reset full-roster cycle already ran; no eligible first recovery remains')
 
-          elif cron == backup_cron:
-              emit(True, False, f'scheduled four-hour full-roster check for all {len(player_ids)} configured IDs')
+          elif cron in backup_crons:
+              slot = backup_crons[cron]
+              emit(True, False, f'scheduled promotional check slot #{slot}; uncovered/new IDs use the full claim path')
           PY
 
       - name: Set up Python
