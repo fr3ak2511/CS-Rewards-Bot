@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.1.1
+# master_claimer.py — CS Rewards Bot v3.2.0
 import csv
 import time
 import os
@@ -25,7 +25,7 @@ from selenium.common.exceptions import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.1.1"
+VERSION        = "v3.2.0"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -58,6 +58,22 @@ def log(msg):
 
 def get_ist_time():
     return datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+
+def enforce_claim_reset_guard():
+    """Fail closed before the 05:30 IST reset for every claim-capable entry point.
+
+    Read-only login diagnostics and login-only tests are exempt in main(); this
+    guard protects scheduled/full/manual claims, recovery passes, and one-player
+    claim tests from accidental pre-reset execution.
+    """
+    now = get_ist_time()
+    reset = now.replace(hour=DAILY_RESET_HOUR_IST, minute=DAILY_RESET_MINUTE_IST,
+                        second=0, microsecond=0)
+    if now < reset:
+        log(f"⛔ CLAIM_GUARD_BLOCKED: claim-capable run refused before 05:30 IST (now {now:%Y-%m-%d %H:%M:%S} IST).")
+        return False
+    return True
 
 
 def get_next_daily_reset():
@@ -104,14 +120,21 @@ def parse_timer_text(text):
 
 
 # Scheduled claim windows are defined in .github/workflows/schedule.yml.
-# The primary release is date-seeded within 05:35–06:00 IST; backups are four-hourly.
+# The primary release remains date-seeded within 05:35–06:00 IST. Backup labels
+# are mapped from their unique cron expressions, never from actual start time.
 _RUN_SLOTS = [(5, 35), (9, 35), (13, 35), (17, 35), (21, 35)]
+_PROMOTIONAL_BACKUP_CRONS = {
+    "5 4 * * *": ("Promotional Check #1", 1),
+    "5 8 * * *": ("Promotional Check #2", 2),
+    "5 12 * * *": ("Promotional Check #3", 3),
+    "5 16 * * *": ("Promotional Check #4", 4),
+}
 
 
 def determine_run_context():
     if RECOVERY_ONLY_FAILED:
         return "Recovery Run", -2
-    event = os.getenv("GITHUB_EVENT_NAME", "schedule")
+    event = os.getenv("GITHUB_EVENT_NAME") or "local"
     if event == "workflow_dispatch":
         return "Manual Run", -1
     if event == "repository_dispatch":
@@ -120,29 +143,28 @@ def determine_run_context():
         cron = os.getenv("SCHEDULE_CRON", "").strip()
         if cron in ("30 21 * * *", "0-30/5 0 * * *"):
             return "Primary Run", 0
-        # The same cron expression fires at four UTC hours; derive the matching IST backup.
-        ist_hour = get_ist_time().hour
-        backup_index = {9: 1, 13: 2, 17: 3, 21: 4}.get(ist_hour, 1)
-        return f"Backup Run #{backup_index}", backup_index
+        if cron in _PROMOTIONAL_BACKUP_CRONS:
+            return _PROMOTIONAL_BACKUP_CRONS[cron]
+        return "Unknown Scheduled Run", -3
     return "Manual Run", -1
 
 
 def next_scheduled_runs_ist():
     return [
         ("Primary Run", "05:35–06:00 IST (randomized)"),
-        ("Backup Run #1", "09:35 IST"),
-        ("Backup Run #2", "13:35 IST"),
-        ("Backup Run #3", "17:35 IST"),
-        ("Backup Run #4", "21:35 IST"),
+        ("Promotional Check #1", "09:35 IST"),
+        ("Promotional Check #2", "13:35 IST"),
+        ("Promotional Check #3", "17:35 IST"),
+        ("Promotional Check #4", "21:35 IST"),
     ]
 
 
 def should_skip_duplicate_scheduled_retry(meta, window_minutes=35):
     """Skip offset cron retries if a full run completed recently.
 
-    GitHub scheduled events are best-effort. The workflow fires a primary trigger
-    plus two offset recovery triggers per three-hour slot. State committed by a
-    completed run lets later retry events exit before installing Selenium.
+    GitHub scheduled events are best-effort. The primary dispatcher retains its
+    randomized post-reset wait, and five-minute fallback events run during the
+    05:30–06:00 IST window. Committed run state suppresses redundant fallbacks.
     Manual workflow_dispatch runs are never skipped by this guard.
     """
     if os.getenv("GITHUB_EVENT_NAME") != "schedule":
@@ -221,7 +243,108 @@ def is_new_id(pid, meta):
 
 def mark_id_seen(pid, meta):
     if pid not in meta.get("new_ids_seen", []):
-        meta["new_ids_seen"].append(pid)
+        meta.setdefault("new_ids_seen", []).append(pid)
+
+
+def _current_reset_date():
+    return get_last_daily_reset().strftime("%Y-%m-%d")
+
+
+def has_complete_full_claim_coverage(pid, meta):
+    """True only after this ID's full claim path completed cleanly after today's reset."""
+    coverage = meta.get("full_claim_coverage", {})
+    entry = coverage.get(pid, {}) if isinstance(coverage, dict) else {}
+    return bool(
+        isinstance(entry, dict)
+        and entry.get("reset_date") == _current_reset_date()
+        and entry.get("status") == "complete"
+        and not entry.get("retry_required", False)
+    )
+
+
+def _result_needs_recovery(result):
+    status = str(result.get("status") or "")
+    if status in ("Login Failed", "Error", "Failed"):
+        return True
+    if result.get("retry_required") or result.get("promotion_detection_failed"):
+        return True
+    if status in ("Partial", "No Rewards"):
+        return True
+    possible = max(0, int(result.get("possible", 0) or 0))
+    confirmed = (
+        int(result.get("daily", 0) or 0)
+        + int(result.get("store", 0) or 0)
+        + int(result.get("store_temp", 0) or 0)
+        + int(result.get("progression", 0) or 0)
+        + int(result.get("loyalty", 0) or 0)
+    )
+    return possible > confirmed
+
+
+def _record_full_claim_coverage(meta, pid, result, run_label):
+    """Persist actual full-path outcome separately from the legacy 'seen' list."""
+    retry_required = _result_needs_recovery(result)
+    reason = result.get("fail_reason")
+    if not reason and retry_required:
+        reason = "One or more claim attempts were incomplete or unconfirmed"
+    meta.setdefault("full_claim_coverage", {})[pid] = {
+        "reset_date": _current_reset_date(),
+        "status": "pending" if retry_required else "complete",
+        "last_full_attempt_at": get_ist_time().isoformat(),
+        "last_run_label": run_label,
+        "last_status": str(result.get("status") or "Unknown"),
+        "retry_required": bool(retry_required),
+        "unresolved_reason": reason,
+    }
+
+
+def _summary_counts(results):
+    """Shared report counters, excluding unexamined rewards in promo-only rows."""
+    hard_failure_statuses = {"Login Failed", "Error", "Failed"}
+    unavailable = 0
+    unconfirmed = 0
+    promotion_detection_failures = 0
+    partial = 0
+    actual_failures = 0
+    for result in results:
+        status = str(result.get("status") or "")
+        is_promo_only = result.get("processing_mode") == "promotional_only"
+        actual_failures += int(status in hard_failure_statuses)
+        partial += int(status in ("Partial", "No Rewards") or (bool(result.get("retry_required")) and status not in hard_failure_statuses))
+        for promo in (result.get("promotions_observed", []) or []):
+            promo_status = str(promo.get("status") or "unknown")
+            unavailable += int(promo_status == "unavailable")
+            unconfirmed += int(
+                promo_status in ("claim_unconfirmed", "click_failed", "available")
+                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable")
+            )
+        if not is_promo_only and status not in hard_failure_statuses:
+            unavailable += int(bool(result.get("daily_skipped", False)))
+            store_skipped = result.get("store_skipped", [False, False, False])
+            if isinstance(store_skipped, list):
+                unavailable += sum(1 for item in store_skipped[:3] if item)
+            if result.get("has_loyalty"):
+                unavailable += int(bool(result.get("loyalty_skipped", False)))
+        promotion_detection_failures += int(bool(result.get("promotion_detection_failed")))
+    claims_made = sum(
+        int(result.get("daily", 0) or 0)
+        + int(result.get("store", 0) or 0)
+        + int(result.get("store_temp", 0) or 0)
+        + int(result.get("progression", 0) or 0)
+        + int(result.get("loyalty", 0) or 0)
+        for result in results
+    )
+    return {
+        "accounts_processed": len(results),
+        "claims_made": claims_made,
+        "unavailable_rewards": unavailable,
+        "partial_results": partial,
+        "actual_failures": actual_failures,
+        "unconfirmed_claims": unconfirmed,
+        "promotion_detection_failures": promotion_detection_failures,
+        "promotional_only_accounts": sum(1 for result in results if result.get("processing_mode") == "promotional_only"),
+        "full_claim_accounts": sum(1 for result in results if result.get("processing_mode", "full_claim") == "full_claim"),
+    }
 
 
 def update_streak_day_level(meta, all_ok_today):
@@ -1350,6 +1473,10 @@ def discover_promotional_cards(driver):
     try:
         raw = driver.execute_script(script) or []
     except Exception as exc:
+        try:
+            driver._promotion_discovery_failed = True
+        except Exception:
+            pass
         log(f"⚠️ Dynamic promotion discovery failed: {type(exc).__name__}")
         return []
 
@@ -1576,6 +1703,10 @@ def claim_store_rewards(driver, pid):
     except Exception as exc:
         log(f"❌ Store error: {type(exc).__name__}: {str(exc)[:180]}")
         # A Store navigation/browser failure is not evidence that a promotion was absent.
+        try:
+            driver._promotion_discovery_failed = True
+        except Exception:
+            pass
         promotions = []
 
     return claimed, skip_flags, promotions
@@ -1752,6 +1883,9 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_temp_skipped": True,
         "store_temp_status": "not_found",
         "promotions_observed": [],
+        "processing_mode": "full_claim",
+        "promotion_detection_failed": False,
+        "retry_required": False,
         "progression":     0,
         "loyalty":         0,
         "daily_skipped":   False,
@@ -1779,6 +1913,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
         if not login_to_hub(driver, pid):
             stats["status"]      = "Login Failed"
             stats["fail_reason"] = "Could not authenticate"
+            stats["duration_s"] = int((get_ist_time() - start).total_seconds())
             return stats
 
         # Capture display name right after login — used in email instead of raw player ID
@@ -1792,10 +1927,14 @@ def process_player(pid, has_loyalty, is_new, run_label):
             stats["possible"] += 1
 
         # Store — each established daily reward is targeted by its visible card label.
+        # Reset the live-detection flag for this account; the dynamic scanner sets it
+        # when the live Store DOM could not be inspected reliably.
+        driver._promotion_discovery_failed = False
         (store_count, store_skips, promotions) = claim_store_rewards(driver, pid)
         stats["store"] = store_count
         stats["store_skipped"] = store_skips
         stats["promotions_observed"] = promotions
+        stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
         stats["store_temp_skipped"] = not bool(promotions)
         stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
@@ -1844,6 +1983,21 @@ def process_player(pid, has_loyalty, is_new, run_label):
         else:
             stats["status"] = "No Rewards"
 
+        promotion_unconfirmed = any(
+            promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
+            for promo in promotions
+        )
+        if stats["promotion_detection_failed"] or promotion_unconfirmed:
+            stats["retry_required"] = True
+            if stats["status"] not in ("Login Failed", "Error", "Failed"):
+                stats["status"] = "Partial"
+            if not stats.get("fail_reason"):
+                stats["fail_reason"] = (
+                    "Dynamic promotional-card detection was inconclusive"
+                    if stats["promotion_detection_failed"]
+                    else "At least one promotional claim was not confirmed by the portal"
+                )
+
         total_inc_prog = claimed_now + stats["progression"]
         log(f"🎉 {pid}: {total_inc_prog} claimed "
             f"(D:{stats['daily']} S:{stats['store']} Promotions:{stats['store_temp']} "
@@ -1869,6 +2023,98 @@ def process_player(pid, has_loyalty, is_new, run_label):
     stats["daily_portal_status"] = snap.get("daily_status", "unknown")
     stats["store_portal_status"] = snap.get("store_status", ["unknown", "unknown", "unknown"])
 
+    return stats
+
+
+def process_player_promotions_only(pid, is_new, run_label):
+    """Check live promotional cards only; do not touch daily/store/progression/loyalty claims."""
+    start = get_ist_time()
+    stats = {
+        "pid": pid,
+        "display_name": None,
+        "is_new": is_new,
+        "has_loyalty": False,
+        "processing_mode": "promotional_only",
+        "daily": 0,
+        "store": 0,
+        "store_temp": 0,
+        "store_possible": 0,
+        "store_temp_possible": 0,
+        "store_temp_skipped": True,
+        "store_temp_status": "not_found",
+        "promotions_observed": [],
+        "promotion_detection_failed": False,
+        "retry_required": False,
+        "progression": 0,
+        "loyalty": 0,
+        "daily_skipped": False,
+        "store_skipped": [False, False, False],
+        "loyalty_skipped": False,
+        "skipped_all": False,
+        "status": "Error",
+        "fail_reason": None,
+        "duration_s": 0,
+        "possible": 0,
+        "daily_portal_status": "not_checked",
+        "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+    }
+    init_player_history(pid)
+    driver = None
+    try:
+        log(f"\n🎁 Promotional-only check: {pid}" + (" 🆕 NEW ID" if is_new else "") + f"  [{run_label}]")
+        driver = create_driver()
+        driver._promotion_discovery_failed = False
+        if not login_to_hub(driver, pid):
+            stats["status"] = "Login Failed"
+            stats["fail_reason"] = "Could not authenticate for the promotional check"
+            stats["duration_s"] = int((get_ist_time() - start).total_seconds())
+            return stats
+
+        stats["display_name"] = capture_display_name(driver)
+        driver.get("https://hub.vertigogames.co/store")
+        bypass_cloudflare(driver)
+        time.sleep(2)
+        close_popup(driver)
+        promotions = discover_and_claim_promotions(driver, pid)
+        stats["promotions_observed"] = promotions
+        stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
+        stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
+        stats["possible"] = stats["store_temp_possible"]
+        stats["store_temp_skipped"] = not bool(promotions)
+        stats["store_temp_status"] = "not_found" if not promotions else "observed"
+        stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
+        unconfirmed = any(
+            promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
+            for promo in promotions
+        )
+        if stats["promotion_detection_failed"] or unconfirmed or stats["store_temp"] < stats["possible"]:
+            stats["status"] = "Partial"
+            stats["retry_required"] = True
+            stats["fail_reason"] = (
+                "Dynamic promotional-card detection was inconclusive"
+                if stats["promotion_detection_failed"]
+                else "At least one observed promotional claim was not confirmed by the portal"
+            )
+        elif stats["store_temp"] > 0:
+            stats["status"] = "Promotional Claims Made"
+        else:
+            # No available offer is a completed check, not a failure.
+            stats["status"] = "Promotional Check Complete"
+        try:
+            driver.save_screenshot(f"store_{pid}.png")
+        except Exception:
+            pass
+    except Exception as exc:
+        stats["status"] = "Error"
+        stats["fail_reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+        log(f"❌ Promotional-only check failed: {type(exc).__name__}: {str(exc)[:160]}")
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+    stats["duration_s"] = int((get_ist_time() - start).total_seconds())
     return stats
 
 
@@ -2065,13 +2311,15 @@ def _display_label(r):
 
 
 def _row_cls(status):
-    return {"Success":"rs","Partial":"rp","Login Failed":"rf",
-            "Error":"rf","Failed":"rf"}.get(status, "rk")
+    return {"Success":"rs", "Promotional Claims Made":"rs", "Partial":"rp", "Login Failed":"rf",
+            "Error":"rf", "Failed":"rf"}.get(status, "rk")
 
 
 def _sb_html(status):
     m = {
         "Success":               ("ss", "✅ Success"),
+        "Promotional Claims Made": ("ss", "🎁 Promotions Claimed"),
+        "Promotional Check Complete": ("sk", "🔎 Promo Check Complete"),
         "Partial":               ("sp", "⚠️ Partial"),
         "All Skipped (Cooldown)":("sk", "⏩ Skipped"),
         "No Rewards":            ("sn", "⏳ No Rewards"),
@@ -2163,6 +2411,23 @@ def build_mobile_cards(results, n):
         status      = r["status"]
         rc          = _row_cls(status)
         new_mark    = " 🆕" if r.get("is_new") else ""
+        if r.get("processing_mode") == "promotional_only":
+            promotion_rows = "".join(
+                f'<div class="mpc-row"><span class="mpc-lbl">🎁 {html.escape(str(promo.get("title") or "Promotion"))}</span>'
+                f'<span class="mpc-val">{html.escape(_promotion_status_label(promo.get("status")))}</span></div>'
+                for promo in (r.get("promotions_observed", []) or [])
+            )
+            d_s2 = r.get("duration_s", 0)
+            tm2 = f"{d_s2//60}m{d_s2%60}s" if d_s2 else "—"
+            mob_html += (
+                f'<div class="mpc {_row_cls(status)}">'
+                f'<div class="mpc-id">{display_lbl}{new_mark}<span class="mpc-st">{_sb_html(status)}</span></div>'
+                f'<div class="mpc-row"><span class="mpc-lbl">Mode</span><span class="mpc-val">Promotional-only; other rewards not checked</span></div>'
+                f'{promotion_rows}'
+                f'<div class="mpc-row"><span class="mpc-lbl">⏱️ Time</span><span class="mpc-val" style="color:#6b7280 !important;">{tm2}</span></div>'
+                f'</div>'
+            )
+            continue
         d_s2        = r.get("duration_s", 0)
         tm2         = f"{d_s2//60}m{d_s2%60}s" if d_s2 else "—"
 
@@ -2232,7 +2497,7 @@ def build_mobile_cards(results, n):
     return (
         f"<div class='mob-cards'>"
         f"<div class='mc-head'>"
-        f"<span>👥 All {n} Players</span>"
+        f"<span>👥 {n} Accounts Processed</span>"
         f"<small>🆕 = new ID this run</small></div>"
         f"{mob_html}"
         f"</div>"
@@ -2253,14 +2518,20 @@ def build_email(results, run_label, run_index, job_start, meta):
     tl       = sum(r.get("loyalty", 0) for r in results)
     promo_claims = ts_temp
     tall     = td + ts + promo_claims + tp + tl
-    store_kpi_capacity = n * 3
+    counts = _summary_counts(results)
+    unavailable_count = counts["unavailable_rewards"]
+    partial_count = counts["partial_results"]
+    failure_count = counts["actual_failures"]
+    unconfirmed_count = counts["unconfirmed_claims"]
+    full_claim_count = counts["full_claim_accounts"]
+    store_kpi_capacity = full_claim_count * 3
     promo_section_html = build_promotional_section(results)
     promos_observed = sum(len(r.get("promotions_observed", []) or []) for r in results)
 
     tp_all  = sum(r.get("possible", 0) for r in results)
-    has_run_failure = any(r.get("status") in ("Login Failed", "Error", "Failed") for r in results)
+    has_unresolved_result = any(_result_needs_recovery(r) for r in results)
     eligible_claims = td + ts + promo_claims + tl
-    eff = 0.0 if tp_all == 0 and has_run_failure else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
+    eff = 0.0 if tp_all == 0 and has_unresolved_result else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
     l_enrl  = sum(1 for r in results if r.get("has_loyalty"))
     skip_ct = sum(1 for r in results if r.get("skipped_all"))
     act_ct  = n - skip_ct
@@ -2276,6 +2547,9 @@ def build_email(results, run_label, run_index, job_start, meta):
     lr_l   = _prev_types.get("loyalty")
     lr_tot = lr.get("total_claimed")
     lr_eff = lr.get("efficiency")
+    current_full_roster = full_claim_count == n
+    previous_full_count = int(lr.get("full_claim_accounts", lr.get("player_count", 0)) or 0)
+    comparable_full_runs = current_full_roster and previous_full_count == n
 
     timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
@@ -2284,18 +2558,26 @@ def build_email(results, run_label, run_index, job_start, meta):
     bc  = _badge_cls(run_label)
     bi  = {"Primary Run": "🟢", "Manual Run": "🔧"}.get(run_label, "🔵")
 
-    d_pct = min(round(td / n * 100) if n else 0, 100)
+    d_pct = min(round(td / full_claim_count * 100) if full_claim_count else 0, 100)
     s_pct = min(round(ts / store_kpi_capacity * 100) if store_kpi_capacity else 0, 100)
+    daily_kpi_value = f"{td}<span>/{full_claim_count}</span>" if full_claim_count else "—"
+    store_kpi_value = f"{ts}<span>/{store_kpi_capacity}</span>" if full_claim_count else "—"
     l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
 
-    dlt_d   = _delta_html(td,   lr_d)
-    dlt_s   = _delta_html(ts,   lr_s)
-    dlt_l   = _delta_html(tl,   lr_l)
-    dlt_tot = _delta_html(tall, lr_tot)
-    dlt_eff = _delta_html(
-        round(eff, 1),
-        round(lr_eff, 1) if lr_eff is not None else None, "%"
-    )
+    if comparable_full_runs:
+        dlt_d   = _delta_html(td, lr_d)
+        dlt_s   = _delta_html(ts, lr_s)
+        dlt_l   = _delta_html(tl, lr_l)
+        dlt_tot = _delta_html(tall, lr_tot)
+        dlt_eff = _delta_html(
+            round(eff, 1),
+            round(lr_eff, 1) if lr_eff is not None else None, "%"
+        )
+    elif not lr and current_full_roster:
+        dlt_d = dlt_s = dlt_l = dlt_tot = dlt_eff = '<span class="de">first full-claim run</span>'
+    else:
+        not_comparable = '<span class="de">not comparable across run modes</span>'
+        dlt_d = dlt_s = dlt_l = dlt_tot = dlt_eff = not_comparable
 
     # ── Build table rows ──────────────────────────────────────────────────────
     table_rows   = ""
@@ -2309,8 +2591,13 @@ def build_email(results, run_label, run_index, job_start, meta):
         rc          = _row_cls(status)
         new_mark    = " 🆕" if r.get("is_new") else ""
 
+        # Reward-type cells are intentionally blank on promotional-only checks;
+        # those rewards were not inspected and must not look like cooldowns/failures.
+        promo_only_row = r.get("processing_mode") == "promotional_only"
         # Daily cell
-        if r["daily_skipped"]:
+        if promo_only_row:
+            dc = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
+        elif r["daily_skipped"]:
             dn = r.get("daily_next") or "next reset"
             d_status = r.get("daily_portal_status", "unknown")
             d_tip = "Portal observed: already claimed/on cooldown" if d_status == "portal_claimed" else f"Next: {dn}"
@@ -2336,7 +2623,9 @@ def build_email(results, run_label, run_index, job_start, meta):
         sc_html = ""
         for i in range(3):
             sep = ' style="border-left:1px solid #e5e7eb;"' if i == 0 else ''
-            if sk[i]:
+            if promo_only_row:
+                cell = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
+            elif sk[i]:
                 nxt  = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
                 live_store_states = r.get("store_portal_status", [])
                 portal_state = live_store_states[i] if isinstance(live_store_states, list) and len(live_store_states) > i else "unknown"
@@ -2351,13 +2640,16 @@ def build_email(results, run_label, run_index, job_start, meta):
             sc_html += f'<td{sep}>{cell}</td>'
 
         # Progression cell
-        pc = ('<span class="ic-ok">✅</span>' if r["progression"] > 0
+        pc = ('<span class="ic-na" title="Not checked in promotional-only mode">—</span>' if promo_only_row else
+              '<span class="ic-ok">✅</span>' if r["progression"] > 0
               else '<span class="ic-fl">❌</span>'
               if status in ("Login Failed", "Error", "Failed")
               else '<span class="ic-lk" title="Awaiting grenades/bullets">⏳</span>')
 
         # Loyalty cell
-        if not r.get("has_loyalty"):
+        if promo_only_row:
+            lc = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
+        elif not r.get("has_loyalty"):
             lc = '<span class="ic-na">—</span>'
         elif r.get("loyalty_skipped"):
             ln = r.get("loyalty_next") or "24h"
@@ -2374,9 +2666,11 @@ def build_email(results, run_label, run_index, job_start, meta):
         tm  = (f'<span style="color:#6b7280;">{d_s//60}m{d_s%60}s</span>'
                if d_s else '<span class="ic-na">—</span>')
 
+        mode_cell = "🎁 Promotional-only" if promo_only_row else "Full claim"
         table_rows += (
             f'<tr class="{rc}">'
             f'<td class="idc">{display_lbl}{new_mark}</td>'
+            f'<td>{mode_cell}</td>'
             f'<td style="border-left:1px solid #e5e7eb;">{dc}</td>'
             f'{sc_html}'
             f'<td style="border-left:1px solid #e5e7eb;">{pc}</td>'
@@ -2390,8 +2684,22 @@ def build_email(results, run_label, run_index, job_start, meta):
         if status in ("Failed", "Partial", "Login Failed", "Error", "No Rewards"):
             has_details = True
             dc_cls   = "dcf" if status in ("Error", "Failed", "Login Failed") else "dcp"
-            err_html = (f'<div class="dce">⚠️ {r["fail_reason"]}</div>'
+            err_html = (f'<div class="dce">⚠️ {html.escape(str(r["fail_reason"]))}</div>'
                         if r.get("fail_reason") else "")
+
+            if promo_only_row:
+                promo_details = "".join(
+                    _drow(html.escape(str(promo.get("title") or "Promotion")),
+                          html.escape(_promotion_status_label(promo.get("status"))))
+                    for promo in (r.get("promotions_observed", []) or [])
+                )
+                detail_cards += (
+                    f'<div class="dc {dc_cls}"><div class="dcid">{display_lbl}{new_mark}</div>{err_html}'
+                    f'{_drow("Processing mode", "Promotional-only check; other reward types not checked")}'
+                    f'{promo_details or _drow("Promotions", "No promotional card confirmed by the live detector")}'
+                    f'{_drow("Time", str(d_s) + "s") if d_s else ""}</div>'
+                )
+                continue
 
             d_val = ("✅ Claimed" if r["daily"] > 0
                      else f'⏰ {r.get("daily_next") or "On cooldown"}' if r["daily_skipped"]
@@ -2470,7 +2778,8 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<h1>CS Hub Rewards Dashboard</h1>"
         f"<p>📅 {ist_now.strftime('%d %b %Y, %I:%M %p IST')}"
         f" &nbsp;·&nbsp; ⏱️ {dur_str}"
-        f" &nbsp;·&nbsp; 👥 {n} IDs checked for live Store promotions</p>"
+        f" &nbsp;·&nbsp; 👥 {counts['accounts_processed']} IDs processed"
+        f" &nbsp;·&nbsp; 🎁 Live promotional scan attempted where login succeeded</p>"
         f"</div>"
         f"<div class='hero-nums'>"
         f"<div class='hnum'><span class='hv g'>{tall}</span>"
@@ -2484,12 +2793,12 @@ def build_email(results, run_label, run_index, job_start, meta):
         # KPI Row
         f"<div class='kpi-row'>"
         f"<div class='kpi'><div class='kl'>🎁 Daily claimed this run</div>"
-        f"<div class='kv'>{td}<span>/{n}</span></div>"
-        f"<div class='ks'>{dlt_d}</div>{_pbar(d_pct,'pg')}</div>"
+        f"<div class='kv'>{daily_kpi_value}</div>"
+        f"<div class='ks'>{dlt_d} · full-claim accounts only</div>{_pbar(d_pct,'pg')}</div>"
 
         f"<div class='kpi'><div class='kl'>🏪 Daily Store claimed this run</div>"
-        f"<div class='kv'>{ts}<span>/{store_kpi_capacity}</span></div>"
-        f"<div class='ks'>{dlt_s} · 3 standard Store cards per ID</div>{_pbar(s_pct,'pb2')}</div>"
+        f"<div class='kv'>{store_kpi_value}</div>"
+        f"<div class='ks'>{dlt_s} · 3 standard Store cards per full-claim account</div>{_pbar(s_pct,'pb2')}</div>"
 
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
         f"<div class='kv'>{tp}<span> items</span></div>"
@@ -2508,16 +2817,23 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<span class='si'>🐢 Slowest: <strong>{slowest_str}</strong></span>"
         f"<span class='si'>🔥 Best streak: <strong>{s_best} days</strong></span>"
         f"<span class='si'>📊 Efficiency: <strong>{eff:.1f}%</strong> {dlt_eff}</span>"
-        f"<span class='si'>📦 This run: <strong>{tall}</strong> claimed {dlt_tot}</span>"
+        f"<span class='si'>📦 Claims made: <strong>{tall}</strong> {dlt_tot}</span>"
+        f"<span class='si'>👥 Accounts processed: <strong>{counts['accounts_processed']}</strong></span>"
+        f"<span class='si'>⏸ Unavailable/on cooldown: <strong>{unavailable_count}</strong></span>"
+        f"<span class='si'>⚠️ Partial / unresolved results: <strong>{partial_count}</strong></span>"
+        f"<span class='si'>❌ Actual failures: <strong>{failure_count}</strong></span>"
+        f"<span class='si'>❔ Unconfirmed promo claims: <strong>{unconfirmed_count}</strong></span>"
+        f"<span class='si'>🔎 Promo scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
         f"</div>"
 
         # Desktop table
         f"<div class='tbx'>"
-        f"<div class='tbh'><span>👥 All {n} Players</span>"
+        f"<div class='tbh'><span>👥 {n} Accounts Processed</span>"
         f"<small>⏩ = already claimed &nbsp;|&nbsp; 🆕 = new ID this run</small></div>"
         f"<div class='tsc'><table>"
         f"<tr>"
         f"<th class='idh'>Player</th>"
+        f"<th>Mode</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>🎁 Daily</th>"
         f"<th style='border-left:1px solid #e5e7eb;'>🥇 Gold</th>"
         f"<th>💵 Cash</th><th>🍀 Lucky</th>"
@@ -2558,7 +2874,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"</div>"
         f"<div class='ver'>CS Rewards Bot {VERSION} &nbsp;·&nbsp; "
         f"Automated via GitHub Actions &nbsp;·&nbsp; "
-        f"Run #{run_index+1 if run_index >= 0 else '(manual)'} of scheduled slots</div>"
+        f"Slot label derived from the scheduled cron; actual start time may be delayed</div>"
         f"</div>"
         f"</div></body></html>"
     )
@@ -3082,7 +3398,7 @@ def run_claim_test_one_player():
     return 0
 
 
-def write_run_summary(results, run_label, started_at, finished_at, email_sent):
+def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
     daily = sum(int(r.get("daily", 0) or 0) for r in results)
@@ -3106,21 +3422,19 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent):
     hard_failed_ids = []
     for r in results:
         status = r.get("status")
-        possible = max(0, int(r.get("possible", 0) or 0))
-        confirmed = (int(r.get("daily", 0) or 0) + int(r.get("store", 0) or 0)
-                     + int(r.get("store_temp", 0) or 0) + int(r.get("loyalty", 0) or 0))
         if status in ("Login Failed", "Error", "Failed") and r.get("pid"):
             hard_failed_ids.append(str(r["pid"]))
-        if r.get("pid") and (status in ("Login Failed", "Error", "Failed")
-                              or (status in ("Partial", "No Rewards") and possible > confirmed)):
+        if r.get("pid") and _result_needs_recovery(r):
             retry_ids.append(str(r["pid"]))
 
+    counters = _summary_counts(results)
     summary = {
         "version": VERSION,
         "run_label": run_label,
         "started_at_ist": started_at.isoformat(),
         "finished_at_ist": finished_at.isoformat(),
-        "configured_player_count": len(results),
+        "configured_player_count": len(results) if configured_player_count is None else int(configured_player_count),
+        **counters,
         "success_count": sum(1 for r in results if r.get("status") == "Success"),
         "partial_count": sum(1 for r in results if r.get("status") == "Partial"),
         "no_rewards_count": sum(1 for r in results if r.get("status") == "No Rewards"),
@@ -3143,6 +3457,9 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent):
                 "player_id_last4": str(r.get("pid", ""))[-4:],
                 "display_name": r.get("display_name"),
                 "status": r.get("status"),
+                "processing_mode": r.get("processing_mode", "full_claim"),
+                "retry_required": bool(_result_needs_recovery(r)),
+                "fail_reason": r.get("fail_reason"),
                 "daily_claimed_this_run": int(r.get("daily", 0) or 0),
                 "daily_portal_status": r.get("daily_portal_status", "unknown"),
                 "standard_store_claimed_this_run": int(r.get("store", 0) or 0),
@@ -3166,10 +3483,17 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    # These paths are read-only with respect to rewards and are deliberately exempt.
     if "--diagnose-login" in sys.argv[1:]:
         return run_login_diagnostic()
     if "--test-login-only" in sys.argv[1:]:
         return run_login_only_test()
+
+    # Central fail-closed guard protects every claim-capable invocation, including
+    # workflow_dispatch full runs, one-player real-claim tests, scheduled jobs, and recovery.
+    if not enforce_claim_reset_guard():
+        return 2
+
     if "--test-claims-one-player" in sys.argv[1:]:
         return run_claim_test_one_player()
 
@@ -3179,6 +3503,9 @@ def main():
     log("=" * 60)
 
     run_label, run_index = determine_run_context()
+    if os.getenv("GITHUB_EVENT_NAME") == "schedule" and run_label == "Unknown Scheduled Run":
+        log(f"⛔ UNKNOWN_SCHEDULE_BLOCKED: unrecognized SCHEDULE_CRON={os.getenv('SCHEDULE_CRON', '')!r}; refusing claim execution.")
+        return 2
     ist_now = get_ist_time()
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
 
@@ -3204,13 +3531,18 @@ def main():
         log(f"❌ {PLAYER_ID_FILE} contains no non-empty player_id entries; refusing a misleading empty run.")
         return 1
     player_ids = [pid for pid, _ in players]
+    configured_player_count = len(player_ids)
     if len(player_ids) != len(set(player_ids)):
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
 
     if RECOVERY_ONLY_FAILED:
         prior = meta.get("last_run") or {}
-        allowed_source_labels = {"Primary Run", "Backup Run #1", "Backup Run #2", "Backup Run #3", "Backup Run #4", "Manual Run"}
+        allowed_source_labels = {
+            "Primary Run", "Manual Run",
+            "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4",
+            "Backup Run #1", "Backup Run #2", "Backup Run #3", "Backup Run #4",
+        }
         if prior.get("run_label") not in allowed_source_labels:
             log("⏭️ Recovery skipped: latest saved run is not an eligible full-roster run.")
             return 0
@@ -3253,10 +3585,24 @@ def main():
         f"({sum(1 for _, h in players if h)} with loyalty)")
 
     results = []
+    is_promotional_backup = run_label in {
+        "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"
+    } and not RECOVERY_ONLY_FAILED
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
+        if is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
+            r = process_player_promotions_only(pid, new_id, run_label)
+        else:
+            if is_promotional_backup:
+                if new_id:
+                    log(f"🆕 {pid}: new ID has no complete full-claim coverage; using full claim path at this backup.")
+                else:
+                    log(f"🔁 {pid}: no complete full-claim coverage for today's reset; retrying full claim path.")
+            r = process_player(pid, has_loyalty, new_id, run_label)
+            _record_full_claim_coverage(meta, pid, r, run_label)
+        # The legacy seen list is bookkeeping only. Full-claim coverage above records
+        # the actual outcome and remains pending for failures/partial/unconfirmed claims.
         mark_id_seen(pid, meta)
-        r = process_player(pid, has_loyalty, new_id, run_label)
         results.append(r)
         time.sleep(0.5)
 
@@ -3271,8 +3617,8 @@ def main():
     tl       = sum(r.get("loyalty", 0) for r in results)
     tall     = td + ts + tp + tl
     tp_all  = sum(r.get("possible", 0) for r in results)
-    has_run_failure = any(r.get("status") in ("Login Failed", "Error", "Failed") for r in results)
-    eff = 0.0 if tp_all == 0 and has_run_failure else (100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1))
+    has_unresolved_result = any(_result_needs_recovery(r) for r in results)
+    eff = 0.0 if tp_all == 0 and has_unresolved_result else (100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1))
 
     timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
@@ -3280,7 +3626,8 @@ def main():
 
     log(f"\n{'='*60}")
     log(f"Run complete: {tall} claimed | {eff:.1f}% efficiency | {dur_s}s total")
-    log(f"  Daily:{td}  Store Daily:{ts_daily}  Store Temp:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
+    log(f"  Daily:{td}  Store Daily:{ts_daily}  Promotions:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
+    log(f"  Accounts:{len(results)} ({sum(1 for r in results if r.get('processing_mode', 'full_claim') == 'full_claim')} full / {sum(1 for r in results if r.get('processing_mode') == 'promotional_only')} promo-only) | Unavailable:{_summary_counts(results)['unavailable_rewards']} | Partial:{_summary_counts(results)['partial_results']} | Failures:{_summary_counts(results)['actual_failures']} | Unconfirmed promotions:{_summary_counts(results)['unconfirmed_claims']} | Promo scan failures:{_summary_counts(results)['promotion_detection_failures']}")
     log(f"{'='*60}")
 
     # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
@@ -3295,17 +3642,11 @@ def main():
     prev_run = meta.get("last_run")
     hard_failed_ids = [r.get("pid") for r in results
                        if r.get("status") in ("Login Failed", "Error", "Failed") and r.get("pid")]
-    retryable_ids = []
-    for result in results:
-        status = result.get("status")
-        possible = max(0, int(result.get("possible", 0) or 0))
-        confirmed = (int(result.get("daily", 0) or 0) + int(result.get("store", 0) or 0)
-                     + int(result.get("store_temp", 0) or 0) + int(result.get("loyalty", 0) or 0))
-        if result.get("pid") and (
-            status in ("Login Failed", "Error", "Failed")
-            or (status in ("Partial", "No Rewards") and possible > confirmed)
-        ):
-            retryable_ids.append(result["pid"])
+    retryable_ids = [
+        result["pid"] for result in results
+        if result.get("pid") and _result_needs_recovery(result)
+    ]
+    counts = _summary_counts(results)
 
     meta["last_run"] = {
         "timestamp":           job_end.isoformat(),
@@ -3322,6 +3663,16 @@ def main():
                                  "progression": tp, "loyalty": tl},
         "slowest_player":      slowest[0] if slowest else None,
         "avg_time_per_player": avg_t,
+        "accounts_processed": counts["accounts_processed"],
+        "claims_made": counts["claims_made"],
+        "unavailable_rewards": counts["unavailable_rewards"],
+        "partial_results": counts["partial_results"],
+        "actual_failures": counts["actual_failures"],
+        "unconfirmed_claims": counts["unconfirmed_claims"],
+        "promotion_detection_failures": counts["promotion_detection_failures"],
+        "promotional_only_accounts": counts["promotional_only_accounts"],
+        "full_claim_accounts": counts["full_claim_accounts"],
+        "configured_player_count": configured_player_count,
     }
     meta_for_email = dict(meta)
     meta_for_email["last_run"] = prev_run   # email delta uses previous run
@@ -3330,14 +3681,14 @@ def main():
 
     html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
 
-    n_players = len(players)
-    failure_count = sum(1 for r in results if r.get("status") in ("Login Failed", "Error", "Failed"))
-    success_count = sum(1 for r in results if r.get("status") == "Success")
+    n_players = len(results)
+    failure_count = counts["actual_failures"]
     ist_label = job_start.strftime('%d-%b %I:%M %p')
     streak_d  = meta["streak"].get("current", 0)
     subject = (
-        f"🎮 CS Hub | {ist_label} IST | {success_count}/{n_players} IDs fully OK "
-        f"| {failure_count} failures | {eff:.1f}% Efficiency | Day {streak_d} 🔥"
+        f"🎮 CS Hub | {ist_label} IST | {counts['accounts_processed']} accounts "
+        f"| {counts['claims_made']} claims | {counts['unavailable_rewards']} unavailable "
+        f"| {counts['partial_results']} partial | {failure_count} failures"
     )
 
     log(f"📧 Sending email: {subject}")
@@ -3346,11 +3697,15 @@ def main():
     meta["last_run"]["player_count"] = n_players
     # Keep the latest full-roster coverage separately so a subset recovery run
     # cannot erase the record that today's post-reset full cycle already ran.
-    if (not RECOVERY_ONLY_FAILED and len(results) == n_players
-            and run_label in {"Primary Run", "Backup Run #1", "Backup Run #2", "Backup Run #3", "Backup Run #4", "Manual Run"}):
+    if (not RECOVERY_ONLY_FAILED
+            and len(results) == configured_player_count
+            and all(result.get("processing_mode", "full_claim") == "full_claim" for result in results)
+            and run_label in {"Primary Run", "Manual Run", "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"}):
+        # Only genuine full-roster full-claim cycles may replace this checkpoint.
+        # Mixed promotional backups and subset recovery never erase it.
         meta["last_full_run"] = dict(meta["last_run"])
     save_bot_meta(meta)
-    write_run_summary(results, run_label, job_start, job_end, email_sent)
+    write_run_summary(results, run_label, job_start, job_end, email_sent, configured_player_count=configured_player_count)
     log("EMAIL_DELIVERY_RESULT=SUCCESS" if email_sent else "EMAIL_DELIVERY_RESULT=FAILED")
 
     if not email_sent:
