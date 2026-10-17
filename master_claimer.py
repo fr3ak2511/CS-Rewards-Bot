@@ -298,10 +298,26 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
     }
 
 
+def _promotion_detail_worthy(promo):
+    """Keep routine unavailable/already-claimed observations out of the email body."""
+    status = str(promo.get("status") or "unknown")
+    return status not in ("unavailable", "portal_claimed")
+
+
+def _promotion_offer_type_key(promo):
+    """Use the normalized visible title for a human-facing distinct-offer count."""
+    title = str(promo.get("title") or "").strip()
+    return re.sub(r"\s+", " ", title).casefold() if title else ""
+
+
 def _summary_counts(results):
-    """Shared report counters, excluding unexamined rewards in promo-only rows."""
+    """Shared report counters; routine promotional unavailability is tracked separately."""
     hard_failure_statuses = {"Login Failed", "Error", "Failed"}
-    unavailable = 0
+    standard_unavailable = 0
+    promotional_unavailable = 0
+    distinct_offer_types = set()
+    promotional_claims_made = 0
+    actionable_promotion_results = 0
     unconfirmed = 0
     promotion_detection_failures = 0
     partial = 0
@@ -313,18 +329,26 @@ def _summary_counts(results):
         partial += int(status in ("Partial", "No Rewards") or (bool(result.get("retry_required")) and status not in hard_failure_statuses))
         for promo in (result.get("promotions_observed", []) or []):
             promo_status = str(promo.get("status") or "unknown")
-            unavailable += int(promo_status == "unavailable")
+            offer_type_key = _promotion_offer_type_key(promo)
+            if offer_type_key:
+                distinct_offer_types.add(offer_type_key)
+            if promo_status == "unavailable":
+                promotional_unavailable += 1
+            elif promo_status == "claimed_this_run":
+                promotional_claims_made += max(1, int(promo.get("claim_count", 0) or 0))
+            elif _promotion_detail_worthy(promo):
+                actionable_promotion_results += 1
             unconfirmed += int(
                 promo_status in ("claim_unconfirmed", "click_failed", "available")
-                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable")
+                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available")
             )
         if not is_promo_only and status not in hard_failure_statuses:
-            unavailable += int(bool(result.get("daily_skipped", False)))
+            standard_unavailable += int(bool(result.get("daily_skipped", False)))
             store_skipped = result.get("store_skipped", [False, False, False])
             if isinstance(store_skipped, list):
-                unavailable += sum(1 for item in store_skipped[:3] if item)
+                standard_unavailable += sum(1 for item in store_skipped[:3] if item)
             if result.get("has_loyalty"):
-                unavailable += int(bool(result.get("loyalty_skipped", False)))
+                standard_unavailable += int(bool(result.get("loyalty_skipped", False)))
         promotion_detection_failures += int(bool(result.get("promotion_detection_failed")))
     claims_made = sum(
         int(result.get("daily", 0) or 0)
@@ -334,16 +358,25 @@ def _summary_counts(results):
         + int(result.get("loyalty", 0) or 0)
         for result in results
     )
+    full_claim_accounts = sum(1 for result in results if result.get("processing_mode", "full_claim") == "full_claim")
+    promotional_only_accounts = sum(1 for result in results if result.get("processing_mode") == "promotional_only")
     return {
         "accounts_processed": len(results),
         "claims_made": claims_made,
-        "unavailable_rewards": unavailable,
+        # Preserve the legacy total-observation counter for state/report compatibility.
+        # The email uses standard_rewards_on_cooldown so promotional noise cannot dominate it.
+        "unavailable_rewards": standard_unavailable + promotional_unavailable,
+        "standard_rewards_on_cooldown": standard_unavailable,
+        "promotional_unavailable_observations": promotional_unavailable,
+        "distinct_promotional_offer_types": len(distinct_offer_types),
+        "promotional_claims_made": promotional_claims_made,
+        "actionable_promotion_results": actionable_promotion_results,
         "partial_results": partial,
         "actual_failures": actual_failures,
         "unconfirmed_claims": unconfirmed,
         "promotion_detection_failures": promotion_detection_failures,
-        "promotional_only_accounts": sum(1 for result in results if result.get("processing_mode") == "promotional_only"),
-        "full_claim_accounts": sum(1 for result in results if result.get("processing_mode", "full_claim") == "full_claim"),
+        "promotional_only_accounts": promotional_only_accounts,
+        "full_claim_accounts": full_claim_accounts,
     }
 
 
@@ -2363,38 +2396,44 @@ def _promotion_status_label(status):
 
 
 def build_promotional_section(results):
-    """HTML section containing only promotions detected on live pages this run."""
-    groups = {}
-    for result in results:
-        for promo in result.get("promotions_observed", []) or []:
-            key = str(promo.get("key") or promo.get("title") or "").strip()
-            title = str(promo.get("title") or "Promotion detected").strip()
-            if not key or not title:
-                continue
-            group = groups.setdefault(key, {"title": title, "entries": []})
-            if title and not group["title"]:
-                group["title"] = title
-            group["entries"].append((result, promo))
-
-    if not groups:
-        return ""
-
+    """Render a compact promotion summary; list only claims and exceptions."""
+    counts = _summary_counts(results)
     rows = []
-    for group in groups.values():
-        title = html.escape(group["title"])
-        for result, promo in group["entries"]:
-            player = html.escape(_display_label(result))
+    for result in results:
+        player = html.escape(_display_label(result))
+        for promo in result.get("promotions_observed", []) or []:
+            if not _promotion_detail_worthy(promo):
+                continue
+            title = html.escape(str(promo.get("title") or "Promotion detected"))
             status = html.escape(_promotion_status_label(promo.get("status")))
+            rows.append(f"<tr><td>{title}</td><td>{player}</td><td>{status}</td></tr>")
+        if result.get("promotion_detection_failed"):
+            reason = str(result.get("fail_reason") or "See workflow log for detector exception")
             rows.append(
-                f"<tr><td>{title}</td><td>{player}</td><td>{status}</td></tr>"
+                f"<tr><td>Dynamic promotional scan</td><td>{player}</td>"
+                f"<td>⚠️ Scan failed: {html.escape(reason)}</td></tr>"
             )
+
+    items_requiring_attention = counts["actionable_promotion_results"] + counts["promotion_detection_failures"]
+    summary_html = (
+        "<div class='strip promo-summary'>"
+        f"<span class='si'>🎁 Distinct offer types observed: <strong>{counts['distinct_promotional_offer_types']}</strong></span>"
+        f"<span class='si'>✅ Promotional claims confirmed: <strong>{counts['promotional_claims_made']}</strong></span>"
+        f"<span class='si'>⚠️ Items requiring attention: <strong>{items_requiring_attention}</strong></span>"
+        f"<span class='si'>🔎 Scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
+        "</div>"
+    )
+    details_html = (
+        "<div class='tsc'><table><tr><th>Promotion / issue</th><th>Player</th><th>Result</th></tr>"
+        + "".join(rows) + "</table></div>"
+        if rows else
+        "<p style='margin:0 0 10px;color:#6b7280;font-size:12px;'>"
+        "No promotional claims or issues requiring attention were recorded. Routine unavailable/already-claimed offers are omitted.</p>"
+    )
     return (
         "<div class='dcs promo-sec'>"
-        "<div class='dct'>🎁 Promotional rewards detected on the Store page this run</div>"
-        "<p style='margin:0 0 10px;color:#6b7280;font-size:12px;'>"
-        "Only cards actually detected on a player's live page are listed here. An absent card is omitted.</p>"
-        "<div class='tsc'><table><tr><th>Detected reward title</th><th>Player</th><th>Observed result</th></tr>"
-        + "".join(rows) + "</table></div></div>"
+        "<div class='dct'>🎁 Promotional check summary</div>"
+        + summary_html + details_html + "</div>"
     )
 
 
@@ -2416,6 +2455,7 @@ def build_mobile_cards(results, n):
                 f'<div class="mpc-row"><span class="mpc-lbl">🎁 {html.escape(str(promo.get("title") or "Promotion"))}</span>'
                 f'<span class="mpc-val">{html.escape(_promotion_status_label(promo.get("status")))}</span></div>'
                 for promo in (r.get("promotions_observed", []) or [])
+                if _promotion_detail_worthy(promo)
             )
             d_s2 = r.get("duration_s", 0)
             tm2 = f"{d_s2//60}m{d_s2%60}s" if d_s2 else "—"
@@ -2470,6 +2510,7 @@ def build_mobile_cards(results, n):
             f'<span class="mpc-lbl">🎁 {html.escape(str(promo.get("title") or "Promotion"))}</span>'
             f'<span class="mpc-val">{html.escape(_promotion_status_label(promo.get("status")))}</span></div>'
             for promo in (r.get("promotions_observed", []) or [])
+            if _promotion_detail_worthy(promo)
         )
 
         mob_html += (
@@ -2519,7 +2560,7 @@ def build_email(results, run_label, run_index, job_start, meta):
     promo_claims = ts_temp
     tall     = td + ts + promo_claims + tp + tl
     counts = _summary_counts(results)
-    unavailable_count = counts["unavailable_rewards"]
+    unavailable_count = counts["standard_rewards_on_cooldown"]
     partial_count = counts["partial_results"]
     failure_count = counts["actual_failures"]
     unconfirmed_count = counts["unconfirmed_claims"]
@@ -2528,11 +2569,20 @@ def build_email(results, run_label, run_index, job_start, meta):
     promo_section_html = build_promotional_section(results)
     promos_observed = sum(len(r.get("promotions_observed", []) or []) for r in results)
 
-    tp_all  = sum(r.get("possible", 0) for r in results)
-    has_unresolved_result = any(_result_needs_recovery(r) for r in results)
-    eligible_claims = td + ts + promo_claims + tl
-    eff = 0.0 if tp_all == 0 and has_unresolved_result else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
-    l_enrl  = sum(1 for r in results if r.get("has_loyalty"))
+    full_claim_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
+    tp_all = sum(r.get("possible", 0) for r in full_claim_results)
+    has_unresolved_result = any(_result_needs_recovery(r) for r in full_claim_results)
+    eligible_claims = sum(
+        int(r.get("daily", 0) or 0) + int(r.get("store", 0) or 0)
+        + int(r.get("store_temp", 0) or 0) + int(r.get("loyalty", 0) or 0)
+        for r in full_claim_results
+    )
+    eff = None if not full_claim_results else (
+        0.0 if tp_all == 0 and has_unresolved_result
+        else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
+    )
+    eff_display = f"{eff:.1f}%" if eff is not None else "N/A (promotional-only)"
+    l_enrl  = sum(1 for r in full_claim_results if r.get("has_loyalty"))
     skip_ct = sum(1 for r in results if r.get("skipped_all"))
     act_ct  = n - skip_ct
 
@@ -2563,8 +2613,20 @@ def build_email(results, run_label, run_index, job_start, meta):
     daily_kpi_value = f"{td}<span>/{full_claim_count}</span>" if full_claim_count else "—"
     store_kpi_value = f"{ts}<span>/{store_kpi_capacity}</span>" if full_claim_count else "—"
     l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
+    daily_bar = _pbar(d_pct, "pg") if full_claim_count else ""
+    store_bar = _pbar(s_pct, "pb2") if full_claim_count else ""
+    progression_kpi_value = f"{tp}<span> items</span>" if full_claim_count else "N/A"
+    progression_kpi_subtitle = "Variable — grenade dependent" if full_claim_count else "Not checked in promotional-only mode"
+    progression_bar = _pbar(min(tp * 10, 100), "pp") if full_claim_count else ""
+    loyalty_kpi_value = f"{tl}<span>/{l_enrl}</span>" if full_claim_count else "N/A"
+    loyalty_kpi_subtitle = "Not checked in promotional-only mode"
+    loyalty_bar = _pbar(l_pct, "pa") if full_claim_count else ""
+    standard_cooldown_display = str(unavailable_count) if full_claim_count else "N/A (promotional-only)"
 
-    if comparable_full_runs:
+    if not full_claim_count:
+        dlt_d = dlt_s = dlt_l = dlt_tot = '<span class="de">not applicable for promotional-only</span>'
+        dlt_eff = '<span class="de">N/A for promotional-only</span>'
+    elif comparable_full_runs:
         dlt_d   = _delta_html(td, lr_d)
         dlt_s   = _delta_html(ts, lr_s)
         dlt_l   = _delta_html(tl, lr_l)
@@ -2578,6 +2640,9 @@ def build_email(results, run_label, run_index, job_start, meta):
     else:
         not_comparable = '<span class="de">not comparable across run modes</span>'
         dlt_d = dlt_s = dlt_l = dlt_tot = dlt_eff = not_comparable
+
+    if full_claim_count:
+        loyalty_kpi_subtitle = dlt_l
 
     # ── Build table rows ──────────────────────────────────────────────────────
     table_rows   = ""
@@ -2692,11 +2757,12 @@ def build_email(results, run_label, run_index, job_start, meta):
                     _drow(html.escape(str(promo.get("title") or "Promotion")),
                           html.escape(_promotion_status_label(promo.get("status"))))
                     for promo in (r.get("promotions_observed", []) or [])
+                    if _promotion_detail_worthy(promo)
                 )
                 detail_cards += (
                     f'<div class="dc {dc_cls}"><div class="dcid">{display_lbl}{new_mark}</div>{err_html}'
                     f'{_drow("Processing mode", "Promotional-only check; other reward types not checked")}'
-                    f'{promo_details or _drow("Promotions", "No promotional card confirmed by the live detector")}'
+                    f'{promo_details or _drow("Promotion details", "See the promotional summary; routine unavailable offers are omitted")}'
                     f'{_drow("Time", str(d_s) + "s") if d_s else ""}</div>'
                 )
                 continue
@@ -2784,7 +2850,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<div class='hero-nums'>"
         f"<div class='hnum'><span class='hv g'>{tall}</span>"
         f"<span class='hl'>Total Claimed</span></div>"
-        f"<div class='hnum'><span class='hv b'>{eff:.1f}%</span>"
+        f"<div class='hnum'><span class='hv b'>{eff_display}</span>"
         f"<span class='hl'>Efficiency</span></div>"
         f"<div class='hnum'><span class='hv a'>🔥 {s_cur}</span>"
         f"<span class='hl'>Day Streak</span></div>"
@@ -2794,20 +2860,20 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<div class='kpi-row'>"
         f"<div class='kpi'><div class='kl'>🎁 Daily claimed this run</div>"
         f"<div class='kv'>{daily_kpi_value}</div>"
-        f"<div class='ks'>{dlt_d} · full-claim accounts only</div>{_pbar(d_pct,'pg')}</div>"
+        f"<div class='ks'>{dlt_d} · full-claim accounts only</div>{daily_bar}</div>"
 
         f"<div class='kpi'><div class='kl'>🏪 Daily Store claimed this run</div>"
         f"<div class='kv'>{store_kpi_value}</div>"
-        f"<div class='ks'>{dlt_s} · 3 standard Store cards per full-claim account</div>{_pbar(s_pct,'pb2')}</div>"
+        f"<div class='ks'>{dlt_s} · 3 standard Store cards per full-claim account</div>{store_bar}</div>"
 
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
-        f"<div class='kv'>{tp}<span> items</span></div>"
-        f"<div class='ks'>Variable — grenade dependent</div>"
-        f"{_pbar(min(tp*10,100),'pp')}</div>"
+        f"<div class='kv'>{progression_kpi_value}</div>"
+        f"<div class='ks'>{progression_kpi_subtitle}</div>"
+        f"{progression_bar}</div>"
 
         f"<div class='kpi'><div class='kl'>🏆 Loyalty</div>"
-        f"<div class='kv'>{tl}<span>/{l_enrl}</span></div>"
-        f"<div class='ks'>{dlt_l}</div>{_pbar(l_pct,'pa')}</div>"
+        f"<div class='kv'>{loyalty_kpi_value}</div>"
+        f"<div class='ks'>{loyalty_kpi_subtitle}</div>{loyalty_bar}</div>"
         f"</div>"
 
         # Strip
@@ -2816,14 +2882,12 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<span class='si'>👤 Avg <strong>{avg_t}s</strong>/ID</span>"
         f"<span class='si'>🐢 Slowest: <strong>{slowest_str}</strong></span>"
         f"<span class='si'>🔥 Best streak: <strong>{s_best} days</strong></span>"
-        f"<span class='si'>📊 Efficiency: <strong>{eff:.1f}%</strong> {dlt_eff}</span>"
+        f"<span class='si'>📊 Efficiency: <strong>{eff_display}</strong> {dlt_eff}</span>"
         f"<span class='si'>📦 Claims made: <strong>{tall}</strong> {dlt_tot}</span>"
         f"<span class='si'>👥 Accounts processed: <strong>{counts['accounts_processed']}</strong></span>"
-        f"<span class='si'>⏸ Unavailable/on cooldown: <strong>{unavailable_count}</strong></span>"
+        f"<span class='si'>⏸ Standard rewards on cooldown: <strong>{standard_cooldown_display}</strong></span>"
         f"<span class='si'>⚠️ Partial / unresolved results: <strong>{partial_count}</strong></span>"
         f"<span class='si'>❌ Actual failures: <strong>{failure_count}</strong></span>"
-        f"<span class='si'>❔ Unconfirmed promo claims: <strong>{unconfirmed_count}</strong></span>"
-        f"<span class='si'>🔎 Promo scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
         f"</div>"
 
         # Desktop table
@@ -3398,6 +3462,23 @@ def run_claim_test_one_player():
     return 0
 
 
+def _full_claim_efficiency(results):
+    """Efficiency for full-claim accounts only; N/A when a run is promotional-only."""
+    full_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
+    if not full_results:
+        return None
+    possible = sum(max(0, int(r.get("possible", 0) or 0)) for r in full_results)
+    unresolved = any(_result_needs_recovery(r) for r in full_results)
+    confirmed = sum(
+        int(r.get("daily", 0) or 0) + int(r.get("store", 0) or 0)
+        + int(r.get("store_temp", 0) or 0) + int(r.get("loyalty", 0) or 0)
+        for r in full_results
+    )
+    if possible == 0:
+        return 0.0 if unresolved else 100.0
+    return round(confirmed / possible * 100, 1)
+
+
 def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
@@ -3451,6 +3532,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
             "all_claims_this_run": daily + store_daily + promotion_claims + progression + loyalty,
         },
         "promotions_observed_this_run": list(promotions_seen.values()),
+        "full_claim_efficiency": _full_claim_efficiency(results),
         "email_sent": bool(email_sent),
         "player_results": [
             {
@@ -3616,18 +3698,29 @@ def main():
     tp       = sum(r["progression"] for r in results)
     tl       = sum(r.get("loyalty", 0) for r in results)
     tall     = td + ts + tp + tl
-    tp_all  = sum(r.get("possible", 0) for r in results)
-    has_unresolved_result = any(_result_needs_recovery(r) for r in results)
-    eff = 0.0 if tp_all == 0 and has_unresolved_result else (100.0 if tp_all == 0 else round((td + ts + tl) / tp_all * 100, 1))
+    full_claim_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
+    tp_all = sum(r.get("possible", 0) for r in full_claim_results)
+    has_unresolved_result = any(_result_needs_recovery(r) for r in full_claim_results)
+    full_claim_confirmed = sum(
+        int(r.get("daily", 0) or 0) + int(r.get("store", 0) or 0)
+        + int(r.get("store_temp", 0) or 0) + int(r.get("loyalty", 0) or 0)
+        for r in full_claim_results
+    )
+    eff = None if not full_claim_results else (
+        0.0 if tp_all == 0 and has_unresolved_result
+        else (100.0 if tp_all == 0 else round(full_claim_confirmed / tp_all * 100, 1))
+    )
+    eff_log = f"{eff:.1f}%" if eff is not None else "N/A (promotional-only)"
 
     timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
     slowest = max(timed, key=lambda x: x[1]) if timed else None
 
     log(f"\n{'='*60}")
-    log(f"Run complete: {tall} claimed | {eff:.1f}% efficiency | {dur_s}s total")
+    log(f"Run complete: {tall} claimed | {eff_log} efficiency | {dur_s}s total")
+    run_counts = _summary_counts(results)
     log(f"  Daily:{td}  Store Daily:{ts_daily}  Promotions:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
-    log(f"  Accounts:{len(results)} ({sum(1 for r in results if r.get('processing_mode', 'full_claim') == 'full_claim')} full / {sum(1 for r in results if r.get('processing_mode') == 'promotional_only')} promo-only) | Unavailable:{_summary_counts(results)['unavailable_rewards']} | Partial:{_summary_counts(results)['partial_results']} | Failures:{_summary_counts(results)['actual_failures']} | Unconfirmed promotions:{_summary_counts(results)['unconfirmed_claims']} | Promo scan failures:{_summary_counts(results)['promotion_detection_failures']}")
+    log(f"  Accounts:{len(results)} ({run_counts['full_claim_accounts']} full / {run_counts['promotional_only_accounts']} promo-only) | Standard cooldowns:{run_counts['standard_rewards_on_cooldown']} | Distinct promo types:{run_counts['distinct_promotional_offer_types']} | Promo claims:{run_counts['promotional_claims_made']} | Partial:{run_counts['partial_results']} | Failures:{run_counts['actual_failures']} | Unconfirmed promotions:{run_counts['unconfirmed_claims']} | Promo scan failures:{run_counts['promotion_detection_failures']}")
     log(f"{'='*60}")
 
     # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
@@ -3657,6 +3750,7 @@ def main():
         "retry_player_count":  len(set(retryable_ids)),
         "total_claimed":       tall,
         "efficiency":          eff,
+        "efficiency_scope":     "full_claim_accounts_only" if eff is not None else "not_applicable_promotional_only",
         "duration_seconds":    dur_s,
         "per_type":            {"daily": td, "store": ts, "store_daily": ts_daily,
                                  "store_temp": ts_temp, "promotions": ts_temp,
@@ -3666,6 +3760,11 @@ def main():
         "accounts_processed": counts["accounts_processed"],
         "claims_made": counts["claims_made"],
         "unavailable_rewards": counts["unavailable_rewards"],
+        "standard_rewards_on_cooldown": counts["standard_rewards_on_cooldown"],
+        "promotional_unavailable_observations": counts["promotional_unavailable_observations"],
+        "distinct_promotional_offer_types": counts["distinct_promotional_offer_types"],
+        "promotional_claims_made": counts["promotional_claims_made"],
+        "actionable_promotion_results": counts["actionable_promotion_results"],
         "partial_results": counts["partial_results"],
         "actual_failures": counts["actual_failures"],
         "unconfirmed_claims": counts["unconfirmed_claims"],
@@ -3685,10 +3784,12 @@ def main():
     failure_count = counts["actual_failures"]
     ist_label = job_start.strftime('%d-%b %I:%M %p')
     streak_d  = meta["streak"].get("current", 0)
+    cooldown_subject = str(counts["standard_rewards_on_cooldown"]) if counts["full_claim_accounts"] else "N/A promo-only"
     subject = (
         f"🎮 CS Hub | {ist_label} IST | {counts['accounts_processed']} accounts "
-        f"| {counts['claims_made']} claims | {counts['unavailable_rewards']} unavailable "
-        f"| {counts['partial_results']} partial | {failure_count} failures"
+        f"| {counts['claims_made']} claims | {cooldown_subject} standard cooldowns "
+        f"| {counts['promotional_claims_made']} promo claims | {counts['partial_results']} partial "
+        f"| {failure_count} failures"
     )
 
     log(f"📧 Sending email: {subject}")
