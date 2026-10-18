@@ -49,8 +49,8 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-18T18:30:42.397783",
-    "run_label": "Promotional Check #2",
+    "timestamp": "2026-10-18T21:24:21.905092",
+    "run_label": "Promotional Check #3",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [],
@@ -58,7 +58,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1547,
+    "duration_seconds": 1538,
     "per_type": {
       "daily": 0,
       "store": 0,
