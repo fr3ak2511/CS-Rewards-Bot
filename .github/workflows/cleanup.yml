@@ -2,25 +2,37 @@ name: Delete Old Workflow Runs
 
 on:
   schedule:
-    # Runs every 3 days at 12:00 AM IST (6:30 PM UTC previous day)
-    # IST = UTC+5:30, so 12:00 AM IST = 6:30 PM UTC (previous day)
+    # Runs every 3 days at 12:00 AM IST (6:30 PM UTC on the previous day).
     - cron: '30 18 */3 * *'
-  
-  workflow_dispatch: # Manual trigger from Actions tab
+
+  workflow_dispatch: # Manual trigger from the Actions tab.
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   delete-runs:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     permissions:
       actions: write
       contents: read
-    
+
     steps:
-      - name: Delete workflow runs
+      - name: Preview eligible workflow-run deletions (dry run only)
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
-          retain_days: 0
-          keep_minimum_runs: 0
+
+          # Keep a recent troubleshooting window and a minimum history per workflow.
+          retain_days: 14
+          keep_minimum_runs: 20
+
+          # Limit cleanup to the Claimer and Recovery workflows; do not target other workflows.
+          delete_workflow_pattern: 'CS Hub Rewards Claimer|CS Hub Immediate Failed-ID Recovery'
+
+          # SAFETY: This preview cannot delete runs. Review its logs before enabling deletion.
+          dry_run: true
