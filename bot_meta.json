@@ -2,10 +2,10 @@
   "current_streak": 0,
   "last_run_date": "2026-03-30",
   "streak": {
-    "current": 9,
+    "current": 10,
     "best": 70,
-    "last_success_date": "2026-10-19",
-    "last_checked_date": "2026-10-19"
+    "last_success_date": "2026-10-20",
+    "last_checked_date": "2026-10-20"
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
@@ -49,8 +49,8 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-19T21:28:16.226879",
-    "run_label": "Promotional Check #2",
+    "timestamp": "2026-10-20T00:21:15.172397",
+    "run_label": "Promotional Check #3",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [],
@@ -58,7 +58,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1558,
+    "duration_seconds": 1565,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -69,7 +69,7 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 42.4,
+    "avg_time_per_player": 42.5,
     "accounts_processed": 36,
     "claims_made": 0,
     "unavailable_rewards": 259,
