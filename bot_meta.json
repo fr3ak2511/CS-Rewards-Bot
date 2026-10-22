@@ -49,8 +49,8 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-22T19:37:43.169367",
-    "run_label": "Promotional Check #2",
+    "timestamp": "2026-10-22T22:36:11.273308",
+    "run_label": "Promotional Check #3",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [],
@@ -58,7 +58,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1453,
+    "duration_seconds": 1297,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -69,12 +69,12 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 39.4,
-    "accounts_processed": 36,
+    "avg_time_per_player": 40.7,
+    "accounts_processed": 31,
     "claims_made": 0,
-    "unavailable_rewards": 295,
+    "unavailable_rewards": 254,
     "standard_rewards_on_cooldown": 0,
-    "promotional_unavailable_observations": 295,
+    "promotional_unavailable_observations": 254,
     "distinct_promotional_offer_types": 10,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
@@ -82,11 +82,11 @@
     "actual_failures": 0,
     "unconfirmed_claims": 0,
     "promotion_detection_failures": 0,
-    "promotional_only_accounts": 36,
+    "promotional_only_accounts": 31,
     "full_claim_accounts": 0,
-    "configured_player_count": 36,
+    "configured_player_count": 31,
     "email_sent": true,
-    "player_count": 36
+    "player_count": 31
   },
   "last_full_run": {
     "timestamp": "2026-10-22T07:21:33.417686",
