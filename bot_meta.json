@@ -49,8 +49,8 @@
     "51001A5D6014F2DD"
   ],
   "last_run": {
-    "timestamp": "2026-10-25T19:00:11.809047",
-    "run_label": "Promotional Check #2",
+    "timestamp": "2026-10-25T21:30:14.042107",
+    "run_label": "Promotional Check #3",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [],
@@ -58,7 +58,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1267,
+    "duration_seconds": 1231,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -69,7 +69,7 @@
       "loyalty": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 39.8,
+    "avg_time_per_player": 38.7,
     "accounts_processed": 31,
     "claims_made": 0,
     "unavailable_rewards": 192,
