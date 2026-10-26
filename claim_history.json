@@ -4258,7 +4258,7 @@
     "progression": {
       "last_claim": "2026-10-26T09:47:57.299146",
       "last_count": 1,
-      "last_visit": "2026-10-26T09:48:22.913262"
+      "last_visit": "2026-10-26T09:51:18.646417"
     },
     "loyalty": {
       "last_claim": null,
@@ -4271,28 +4271,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:14.366335"
+        "last_seen_at": "2026-10-26T09:50:28.503501"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:14.375420"
+        "last_seen_at": "2026-10-26T09:50:28.508360"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:14.383548"
+        "last_seen_at": "2026-10-26T09:50:28.513011"
       },
       "promo_33f5658b38e37f0b3ef5": {
         "title": "First Purchaser Pack",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:14.390913"
+        "last_seen_at": "2026-10-26T09:50:28.518992"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -4305,30 +4305,31 @@
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-26T09:47:28.270977",
-        "last_claim": "2026-10-26T09:47:28.270977"
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-26T09:50:28.523692",
+        "last_claim": "2026-10-26T09:47:28.270977",
+        "portal_observed_at": "2026-10-26T09:50:28.523692"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:28.278311"
+        "last_seen_at": "2026-10-26T09:50:28.528461"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:28.287163"
+        "last_seen_at": "2026-10-26T09:50:28.542813"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-26T09:47:28.292876"
+        "last_seen_at": "2026-10-26T09:50:28.547596"
       }
     }
   }
