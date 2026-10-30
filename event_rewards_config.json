@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "enabled": true,
+  "programs": [
+    {
+      "enabled": true,
+      "name": "Lost Soul Rewards",
+      "slug": "halloween-2026",
+      "program_id": "pgp_eLiQHDMchen",
+      "start_at": 1792598400,
+      "end_at": 1793826000,
+      "max_claims_per_run": 20,
+      "points_label": "Lost Souls",
+      "cycle": 0
+    }
+  ]
+}
