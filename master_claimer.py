@@ -2829,7 +2829,7 @@ def build_email(results, run_label, run_index, job_start, meta):
     # Mobile stacked cards
     mob_section = build_mobile_cards(results, n)
 
-    html = (
+    email_html = (
         "<!DOCTYPE html><html lang='en'>"
         "<head><meta charset='UTF-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
@@ -2942,7 +2942,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"</div>"
         f"</div></body></html>"
     )
-    return html
+    return email_html
 
 
 
