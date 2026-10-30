@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.2.0
+# master_claimer.py — CS Rewards Bot v3.3.1
 import csv
 import time
 import os
