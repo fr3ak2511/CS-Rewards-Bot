@@ -21,11 +21,18 @@ from selenium.common.exceptions import (
     TimeoutException, NoSuchElementException, StaleElementReferenceException
 )
 
+from event_rewards import (
+    claim_configured_event_rewards,
+    event_claim_count,
+    event_retry_required,
+    merge_claim_ledger,
+)
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.2.0"
+VERSION        = "v3.3.1"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -266,7 +273,8 @@ def _result_needs_recovery(result):
     status = str(result.get("status") or "")
     if status in ("Login Failed", "Error", "Failed"):
         return True
-    if result.get("retry_required") or result.get("promotion_detection_failed"):
+    if (result.get("retry_required") or result.get("promotion_detection_failed")
+            or event_retry_required(result.get("event_rewards"))):
         return True
     if status in ("Partial", "No Rewards"):
         return True
@@ -320,6 +328,8 @@ def _summary_counts(results):
     actionable_promotion_results = 0
     unconfirmed = 0
     promotion_detection_failures = 0
+    event_reward_claims_made = 0
+    event_reward_failures = 0
     partial = 0
     actual_failures = 0
     for result in results:
@@ -342,6 +352,10 @@ def _summary_counts(results):
                 promo_status in ("claim_unconfirmed", "click_failed", "available")
                 or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available")
             )
+        event_results = result.get("event_rewards", []) or []
+        event_reward_claims_made += event_claim_count(event_results)
+        event_reward_failures += sum(1 for item in event_results if item.get("retry_required"))
+        unconfirmed += sum(1 for item in event_results if item.get("retry_required"))
         if not is_promo_only and status not in hard_failure_statuses:
             standard_unavailable += int(bool(result.get("daily_skipped", False)))
             store_skipped = result.get("store_skipped", [False, False, False])
@@ -356,6 +370,7 @@ def _summary_counts(results):
         + int(result.get("store_temp", 0) or 0)
         + int(result.get("progression", 0) or 0)
         + int(result.get("loyalty", 0) or 0)
+        + event_claim_count(result.get("event_rewards"))
         for result in results
     )
     full_claim_accounts = sum(1 for result in results if result.get("processing_mode", "full_claim") == "full_claim")
@@ -375,6 +390,8 @@ def _summary_counts(results):
         "actual_failures": actual_failures,
         "unconfirmed_claims": unconfirmed,
         "promotion_detection_failures": promotion_detection_failures,
+        "event_reward_claims_made": event_reward_claims_made,
+        "event_reward_failures": event_reward_failures,
         "promotional_only_accounts": promotional_only_accounts,
         "full_claim_accounts": full_claim_accounts,
     }
@@ -482,7 +499,8 @@ def init_player_history(pid):
             },
             "progression": {"last_claim": None, "last_count": 0, "last_visit": None},
             "loyalty":     {"last_claim": None, "next_available": None, "status": "unknown"},
-            "promotions":  {}
+            "promotions":  {},
+            "event_rewards": {}
         }
         save_claim_history(h)
     else:
@@ -490,6 +508,9 @@ def init_player_history(pid):
         h[pid].setdefault("store", {})
         if "promotions" not in h[pid]:
             h[pid]["promotions"] = {}
+            changed = True
+        if "event_rewards" not in h[pid]:
+            h[pid]["event_rewards"] = {}
             changed = True
         if "loyalty" not in h[pid]:
             h[pid]["loyalty"] = {"last_claim": None, "next_available": None, "status": "unknown"}
@@ -1794,6 +1815,76 @@ def claim_progression_program_rewards(driver, pid):
     return claimed
 
 
+
+def run_event_reward_checks(driver, pid):
+    """Check active temporary point programmes for the currently logged-in ID."""
+    try:
+        event_results = claim_configured_event_rewards(
+            driver,
+            pid,
+            log=log,
+            physical_click=physical_click,
+            bypass_cloudflare=bypass_cloudflare,
+            close_popup=close_popup,
+        )
+    except Exception as exc:
+        error = f"{type(exc).__name__}: {str(exc)[:180]}"
+        log(f"❌ Event reward configuration/check failed for {pid}: {error}")
+        event_results = [{
+            "program_id": "event-config",
+            "name": "Event rewards configuration",
+            "slug": "",
+            "status": "error",
+            "balance": None,
+            "next_threshold": None,
+            "tiers_total": 0,
+            "tiers_delivered": 0,
+            "claims_this_run": [],
+            "tiers": [],
+            "retry_required": True,
+            "error": error,
+            "end_at": None,
+        }]
+
+    if event_results:
+        history = init_player_history(pid)
+        event_history = history[pid].setdefault("event_rewards", {})
+        for event in event_results:
+            program_id = str(event.get("program_id") or "unknown")
+            previous = event_history.get(program_id, {})
+            previous = previous if isinstance(previous, dict) else {}
+            cycle = int(event.get("cycle", 0) or 0)
+            now_iso = get_ist_time().isoformat()
+            claim_ledger = merge_claim_ledger(
+                previous.get("claim_ledger", []),
+                event.get("claims_this_run", []),
+                cycle=cycle,
+                claimed_at=now_iso,
+            )
+
+            event_history[program_id] = {
+                **previous,
+                "name": event.get("name"),
+                "slug": event.get("slug"),
+                "points_label": event.get("points_label") or previous.get("points_label") or "points",
+                "cycle": cycle,
+                "checked_at": now_iso,
+                "balance": event.get("balance"),
+                "next_threshold": event.get("next_threshold"),
+                "tiers_total": event.get("tiers_total", 0),
+                "tiers_delivered": event.get("tiers_delivered", 0),
+                "tiers": event.get("tiers", []),
+                "claims_this_run": event.get("claims_this_run", []),
+                "claim_ledger": claim_ledger,
+                "status": event.get("status"),
+                "retry_required": bool(event.get("retry_required")),
+                "error": event.get("error"),
+                "end_at": event.get("end_at"),
+            }
+        save_claim_history(history)
+    return event_results
+
+
 def claim_loyalty_program(driver, pid):
     """Returns (count_claimed, was_skipped)."""
     h    = load_claim_history()
@@ -1916,6 +2007,9 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_temp_skipped": True,
         "store_temp_status": "not_found",
         "promotions_observed": [],
+        "event_rewards": [],
+        "event_reward_claims": 0,
+        "event_rewards_retry_required": False,
         "processing_mode": "full_claim",
         "promotion_detection_failed": False,
         "retry_required": False,
@@ -1979,6 +2073,14 @@ def process_player(pid, has_loyalty, is_new, run_label):
             log("⏳ Waiting for server to process Store/promotion claims...")
             time.sleep(3)
 
+        # Limited-time point programmes (e.g. Lost Soul Rewards).
+        stats["event_rewards"] = run_event_reward_checks(driver, pid)
+        stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
+        stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
+        if stats["event_rewards_retry_required"]:
+            stats["retry_required"] = True
+            stats["fail_reason"] = "One or more limited-time event reward claims could not be confirmed"
+
         # Progression
         for retry in range(2):
             p = claim_progression_program_rewards(driver, pid)
@@ -2008,7 +2110,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
         claimed_now = stats["daily"] + stats["store"] + stats.get("store_temp", 0) + stats.get("loyalty", 0)
         possible    = stats["possible"]
         if possible == 0:
-            stats["status"] = "All Skipped (Cooldown)"
+            stats["status"] = "Success" if stats["event_reward_claims"] > 0 else "All Skipped (Cooldown)"
         elif claimed_now >= possible:
             stats["status"] = "Success"
         elif claimed_now > 0:
@@ -2020,7 +2122,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
             promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
             for promo in promotions
         )
-        if stats["promotion_detection_failed"] or promotion_unconfirmed:
+        if (stats["promotion_detection_failed"] or promotion_unconfirmed
+                or stats["event_rewards_retry_required"]):
             stats["retry_required"] = True
             if stats["status"] not in ("Login Failed", "Error", "Failed"):
                 stats["status"] = "Partial"
@@ -2028,13 +2131,14 @@ def process_player(pid, has_loyalty, is_new, run_label):
                 stats["fail_reason"] = (
                     "Dynamic promotional-card detection was inconclusive"
                     if stats["promotion_detection_failed"]
-                    else "At least one promotional claim was not confirmed by the portal"
+                    else ("At least one promotional claim was not confirmed by the portal"
+                          if promotion_unconfirmed else "One or more event reward claims could not be confirmed")
                 )
 
-        total_inc_prog = claimed_now + stats["progression"]
+        total_inc_prog = claimed_now + stats["progression"] + stats["event_reward_claims"]
         log(f"🎉 {pid}: {total_inc_prog} claimed "
             f"(D:{stats['daily']} S:{stats['store']} Promotions:{stats['store_temp']} "
-            f"P:{stats['progression']} L:{stats['loyalty']})")
+            f"P:{stats['progression']} L:{stats['loyalty']} Event:{stats['event_reward_claims']})")
 
     except Exception as e:
         log(f"❌ Error: {e}")
@@ -2060,7 +2164,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
 
 def process_player_promotions_only(pid, is_new, run_label):
-    """Check live promotional cards only; do not touch daily/store/progression/loyalty claims."""
+    """Check live Store offers and configured event rewards; skip daily/standard Store/progression/loyalty claims."""
     start = get_ist_time()
     stats = {
         "pid": pid,
@@ -2076,6 +2180,9 @@ def process_player_promotions_only(pid, is_new, run_label):
         "store_temp_skipped": True,
         "store_temp_status": "not_found",
         "promotions_observed": [],
+        "event_rewards": [],
+        "event_reward_claims": 0,
+        "event_rewards_retry_required": False,
         "promotion_detection_failed": False,
         "retry_required": False,
         "progression": 0,
@@ -2110,6 +2217,12 @@ def process_player_promotions_only(pid, is_new, run_label):
         close_popup(driver)
         promotions = discover_and_claim_promotions(driver, pid)
         stats["promotions_observed"] = promotions
+        if any(promo.get("status") == "claimed_this_run" for promo in promotions):
+            log("⏳ Waiting for Trick & Treat points to settle before checking event tiers...")
+            time.sleep(3)
+        stats["event_rewards"] = run_event_reward_checks(driver, pid)
+        stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
+        stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
         stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
         stats["possible"] = stats["store_temp_possible"]
@@ -2120,16 +2233,19 @@ def process_player_promotions_only(pid, is_new, run_label):
             promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
             for promo in promotions
         )
-        if stats["promotion_detection_failed"] or unconfirmed or stats["store_temp"] < stats["possible"]:
+        if (stats["promotion_detection_failed"] or unconfirmed
+                or stats["store_temp"] < stats["possible"] or stats["event_rewards_retry_required"]):
             stats["status"] = "Partial"
             stats["retry_required"] = True
             stats["fail_reason"] = (
                 "Dynamic promotional-card detection was inconclusive"
                 if stats["promotion_detection_failed"]
-                else "At least one observed promotional claim was not confirmed by the portal"
+                else ("At least one observed promotional claim was not confirmed by the portal"
+                      if unconfirmed or stats["store_temp"] < stats["possible"]
+                      else "One or more limited-time event reward claims could not be confirmed")
             )
-        elif stats["store_temp"] > 0:
-            stats["status"] = "Promotional Claims Made"
+        elif stats["store_temp"] > 0 or stats["event_reward_claims"] > 0:
+            stats["status"] = "Promotional / Event Claims Made"
         else:
             # No available offer is a completed check, not a failure.
             stats["status"] = "Promotional Check Complete"
@@ -2396,9 +2512,14 @@ def _promotion_status_label(status):
 
 
 def build_promotional_section(results):
-    """Render a compact promotion summary; list only claims and exceptions."""
+    """Combine Store Trick & Treat observations with active limited-time rewards."""
     counts = _summary_counts(results)
     rows = []
+    event_checks = 0
+    event_claims = 0
+    event_failures = 0
+    active_event_reporting = any(bool(result.get("event_rewards")) for result in results)
+
     for result in results:
         player = html.escape(_display_label(result))
         for promo in result.get("promotions_observed", []) or []:
@@ -2414,25 +2535,70 @@ def build_promotional_section(results):
                 f"<td>⚠️ Scan failed: {html.escape(reason)}</td></tr>"
             )
 
-    items_requiring_attention = counts["actionable_promotion_results"] + counts["promotion_detection_failures"]
+        for event in result.get("event_rewards", []) or []:
+            event_checks += 1
+            claims = event.get("claims_this_run", []) or []
+            event_claims += len(claims)
+            event_failures += int(bool(event.get("retry_required")))
+            event_name = html.escape(str(event.get("name") or "Limited-time event"))
+            balance = event.get("balance")
+            points_label = html.escape(str(event.get("points_label") or "points"))
+            balance_text = f"{int(balance):,} {points_label}" if isinstance(balance, (int, float)) else "Points unavailable"
+            next_threshold = event.get("next_threshold")
+            next_text = f"next tier: {int(next_threshold):,}" if isinstance(next_threshold, (int, float)) else "no next tier shown"
+            delivered = int(event.get("tiers_delivered", 0) or 0)
+            total = int(event.get("tiers_total", 0) or 0)
+            rows.append(
+                f"<tr><td>{event_name} — progress</td><td>{player}</td>"
+                f"<td>{html.escape(balance_text)} · {html.escape(next_text)} · {delivered}/{total} delivered</td></tr>"
+            )
+            for claim in claims:
+                threshold = int(claim.get("threshold", 0) or 0)
+                rewards = ", ".join(str(item) for item in (claim.get("reward", []) or [])) or "Reward tier"
+                rows.append(
+                    f"<tr><td>{event_name} — {threshold:,} points</td><td>{player}</td>"
+                    f"<td>✅ Claimed this run: {html.escape(rewards)}</td></tr>"
+                )
+            if event.get("retry_required"):
+                reason = html.escape(str(event.get("error") or "Claim state could not be confirmed"))
+                rows.append(
+                    f"<tr><td>{event_name} — attention required</td><td>{player}</td>"
+                    f"<td>⚠️ {reason}</td></tr>"
+                )
+
+    items_requiring_attention = counts["actionable_promotion_results"] + counts["promotion_detection_failures"] + event_failures
+    event_metrics_html = (
+        f"<span class='si'>🎃 Event accounts checked: <strong>{event_checks}</strong></span>"
+        f"<span class='si'>🏆 Event tiers claimed: <strong>{event_claims}</strong></span>"
+        if active_event_reporting else ""
+    )
     summary_html = (
         "<div class='strip promo-summary'>"
-        f"<span class='si'>🎁 Distinct offer types observed: <strong>{counts['distinct_promotional_offer_types']}</strong></span>"
-        f"<span class='si'>✅ Promotional claims confirmed: <strong>{counts['promotional_claims_made']}</strong></span>"
+        f"<span class='si'>🎁 Trick &amp; Treat offer types: <strong>{counts['distinct_promotional_offer_types']}</strong></span>"
+        f"<span class='si'>✅ Trick &amp; Treat claims: <strong>{counts['promotional_claims_made']}</strong></span>"
+        f"{event_metrics_html}"
         f"<span class='si'>⚠️ Items requiring attention: <strong>{items_requiring_attention}</strong></span>"
-        f"<span class='si'>🔎 Scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
+        f"<span class='si'>🔎 Store scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
         "</div>"
     )
+    empty_message = (
+        "No Trick &amp; Treat claims or active limited-time event updates were recorded. Locked tiers and routine unavailable offers are omitted."
+        if active_event_reporting else
+        "No Trick &amp; Treat claims were recorded. Routine unavailable offers are omitted."
+    )
     details_html = (
-        "<div class='tsc'><table><tr><th>Promotion / issue</th><th>Player</th><th>Result</th></tr>"
+        "<div class='tsc'><table><tr><th>Event / reward</th><th>Player</th><th>Result / progress</th></tr>"
         + "".join(rows) + "</table></div>"
         if rows else
-        "<p style='margin:0 0 10px;color:#6b7280;font-size:12px;'>"
-        "No promotional claims or issues requiring attention were recorded. Routine unavailable/already-claimed offers are omitted.</p>"
+        "<p style='margin:0 0 10px;color:#6b7280;font-size:12px;'>" + empty_message + "</p>"
+    )
+    section_title = (
+        "🎁 Trick &amp; Treat + Limited-Time Event Rewards"
+        if active_event_reporting else "🎁 Trick &amp; Treat Rewards"
     )
     return (
         "<div class='dcs promo-sec'>"
-        "<div class='dct'>🎁 Promotional check summary</div>"
+        f"<div class='dct'>{section_title}</div>"
         + summary_html + details_html + "</div>"
     )
 
@@ -2558,7 +2724,8 @@ def build_email(results, run_label, run_index, job_start, meta):
     tp       = sum(r["progression"] for r in results)
     tl       = sum(r.get("loyalty", 0) for r in results)
     promo_claims = ts_temp
-    tall     = td + ts + promo_claims + tp + tl
+    event_reward_claims = sum(event_claim_count(r.get("event_rewards")) for r in results)
+    tall     = td + ts + promo_claims + tp + tl + event_reward_claims
     counts = _summary_counts(results)
     unavailable_count = counts["standard_rewards_on_cooldown"]
     partial_count = counts["partial_results"]
@@ -3485,6 +3652,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
     daily = sum(int(r.get("daily", 0) or 0) for r in results)
     store_daily = sum(int(r.get("store", 0) or 0) for r in results)
     promotion_claims = sum(int(r.get("store_temp", 0) or 0) for r in results)
+    event_reward_claims = sum(event_claim_count(r.get("event_rewards")) for r in results)
     promotions_seen = {}
     for r in results:
         for promo in (r.get("promotions_observed", []) or []):
@@ -3527,9 +3695,10 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
             "daily_claimed_this_run": daily,
             "standard_store_claimed_this_run": store_daily,
             "promotional_claims_this_run": promotion_claims,
+            "event_reward_claims_this_run": event_reward_claims,
             "progression_claimed_this_run": progression,
             "loyalty_claimed_this_run": loyalty,
-            "all_claims_this_run": daily + store_daily + promotion_claims + progression + loyalty,
+            "all_claims_this_run": daily + store_daily + promotion_claims + progression + loyalty + event_reward_claims,
         },
         "promotions_observed_this_run": list(promotions_seen.values()),
         "full_claim_efficiency": _full_claim_efficiency(results),
@@ -3547,6 +3716,8 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "standard_store_claimed_this_run": int(r.get("store", 0) or 0),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
+                "event_rewards": r.get("event_rewards", []),
+                "event_reward_claims_this_run": event_claim_count(r.get("event_rewards")),
                 "progression_claimed_this_run": int(r.get("progression", 0) or 0),
                 "loyalty_claimed_this_run": int(r.get("loyalty", 0) or 0),
                 "duration_seconds": int(r.get("duration_s", 0) or 0),
@@ -3697,7 +3868,8 @@ def main():
     ts       = ts_daily + ts_temp
     tp       = sum(r["progression"] for r in results)
     tl       = sum(r.get("loyalty", 0) for r in results)
-    tall     = td + ts + tp + tl
+    event_reward_claims = sum(event_claim_count(r.get("event_rewards")) for r in results)
+    tall     = td + ts + tp + tl + event_reward_claims
     full_claim_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
     tp_all = sum(r.get("possible", 0) for r in full_claim_results)
     has_unresolved_result = any(_result_needs_recovery(r) for r in full_claim_results)
@@ -3719,7 +3891,7 @@ def main():
     log(f"\n{'='*60}")
     log(f"Run complete: {tall} claimed | {eff_log} efficiency | {dur_s}s total")
     run_counts = _summary_counts(results)
-    log(f"  Daily:{td}  Store Daily:{ts_daily}  Promotions:{ts_temp}  Prog:{tp}  Loyalty:{tl}")
+    log(f"  Daily:{td}  Store Daily:{ts_daily}  Promotions:{ts_temp}  Prog:{tp}  Loyalty:{tl}  Event Rewards:{event_reward_claims}")
     log(f"  Accounts:{len(results)} ({run_counts['full_claim_accounts']} full / {run_counts['promotional_only_accounts']} promo-only) | Standard cooldowns:{run_counts['standard_rewards_on_cooldown']} | Distinct promo types:{run_counts['distinct_promotional_offer_types']} | Promo claims:{run_counts['promotional_claims_made']} | Partial:{run_counts['partial_results']} | Failures:{run_counts['actual_failures']} | Unconfirmed promotions:{run_counts['unconfirmed_claims']} | Promo scan failures:{run_counts['promotion_detection_failures']}")
     log(f"{'='*60}")
 
@@ -3754,7 +3926,8 @@ def main():
         "duration_seconds":    dur_s,
         "per_type":            {"daily": td, "store": ts, "store_daily": ts_daily,
                                  "store_temp": ts_temp, "promotions": ts_temp,
-                                 "progression": tp, "loyalty": tl},
+                                 "progression": tp, "loyalty": tl,
+                                 "event_rewards": event_reward_claims},
         "slowest_player":      slowest[0] if slowest else None,
         "avg_time_per_player": avg_t,
         "accounts_processed": counts["accounts_processed"],
