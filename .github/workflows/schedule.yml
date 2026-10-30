@@ -350,7 +350,19 @@ jobs:
 
           elif cron in backup_crons:
               slot = backup_crons[cron]
-              emit(True, False, f'scheduled promotional check slot #{slot}; uncovered/new IDs use the full claim path')
+
+              if now.time() < dt_time(5, 30):
+                  emit(
+                      False,
+                      False,
+                      f'delayed promotional-check slot #{slot} arrived before 05:30 IST; skipping stale event'
+                  )
+              else:
+                  emit(
+                      True,
+                      False,
+                      f'scheduled promotional check slot #{slot}; uncovered/new IDs use the full claim path'
+                  )
           PY
 
       - name: Set up Python
