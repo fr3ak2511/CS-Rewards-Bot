@@ -2107,7 +2107,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
             stats["fail_reason"] = "One or more limited-time event reward claims could not be confirmed"
 
         # Determine status
-        claimed_now = stats["daily"] + stats["store"] + stats.get("store_temp", 0) + stats.get("loyalty", 0)
+        claimed_now = (stats["daily"] + stats["store"] + stats.get("store_temp", 0)
+                       + stats.get("loyalty", 0) + stats.get("event_reward_claims", 0))
         possible    = stats["possible"]
         if possible == 0:
             stats["status"] = "Success" if stats["event_reward_claims"] > 0 else "All Skipped (Cooldown)"
@@ -3555,12 +3556,14 @@ def run_claim_test_one_player():
         log(f"❌ CLAIM_TEST_RESULT=ERROR — {type(exc).__name__}: {str(exc)[:180]}")
         return 1
 
+    event_reward_claims = event_claim_count(result.get("event_rewards"))
     total_claimed = (
         int(result.get("daily", 0) or 0)
         + int(result.get("store", 0) or 0)
         + int(result.get("store_temp", 0) or 0)
         + int(result.get("progression", 0) or 0)
         + int(result.get("loyalty", 0) or 0)
+        + event_reward_claims
     )
     test_status = str(result.get("status", "Unknown"))
     end = get_ist_time()
@@ -3600,6 +3603,8 @@ def run_claim_test_one_player():
         "promotional_claimable_cards_seen": int(result.get("store_temp_possible", 0) or 0),
         "progression_claimed": int(result.get("progression", 0) or 0),
         "loyalty_claimed": int(result.get("loyalty", 0) or 0),
+        "event_reward_claims": event_reward_claims,
+        "event_rewards": result.get("event_rewards", []),
         "total_claimed": total_claimed,
         "duration_seconds": int(result.get("duration_s", 0) or (end - start).total_seconds()),
         "daily_skipped": bool(result.get("daily_skipped", False)),
@@ -3615,7 +3620,7 @@ def run_claim_test_one_player():
 
     log("=" * 68)
     log(f"CLAIM_TEST_STATUS={test_status}")
-    log(f"CLAIM_TEST_COUNTS=daily:{summary['daily_claimed']},store_daily:{summary['store_daily_rewards_claimed']},promotions:{summary['promotional_claims_this_run']},progression:{summary['progression_claimed']},loyalty:{summary['loyalty_claimed']}")
+    log(f"CLAIM_TEST_COUNTS=daily:{summary['daily_claimed']},store_daily:{summary['store_daily_rewards_claimed']},promotions:{summary['promotional_claims_this_run']},progression:{summary['progression_claimed']},loyalty:{summary['loyalty_claimed']},event_rewards:{summary['event_reward_claims']}")
     log(f"CLAIM_TEST_TOTAL={total_claimed}")
     log("CLAIM_TEST_RESULT=SUCCESS" if total_claimed > 0 and test_status not in ("Login Failed", "Error", "Failed") else "CLAIM_TEST_RESULT=NO_CLAIMS_OBSERVED")
     log("Claim history will be committed by the workflow if it changed.")
