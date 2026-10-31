@@ -59,6 +59,18 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
+def _player_claim_total(result):
+    # Count each confirmed reward category exactly once for one player.
+    return (
+        int(result.get("daily", 0) or 0)
+        + int(result.get("store", 0) or 0)
+        + int(result.get("store_temp", 0) or 0)
+        + int(result.get("progression", 0) or 0)
+        + int(result.get("loyalty", 0) or 0)
+        + event_claim_count(result.get("event_rewards"))
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 2 — TIME HELPERS & RUN CLASSIFICATION
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2136,7 +2148,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
                           if promotion_unconfirmed else "One or more event reward claims could not be confirmed")
                 )
 
-        total_inc_prog = claimed_now + stats["progression"] + stats["event_reward_claims"]
+        total_inc_prog = _player_claim_total(stats)
         log(f"🎉 {pid}: {total_inc_prog} claimed "
             f"(D:{stats['daily']} S:{stats['store']} Promotions:{stats['store_temp']} "
             f"P:{stats['progression']} L:{stats['loyalty']} Event:{stats['event_reward_claims']})")
@@ -2555,7 +2567,7 @@ def build_promotional_section(results):
             )
             for claim in claims:
                 threshold = int(claim.get("threshold", 0) or 0)
-                rewards = ", ".join(str(item) for item in (claim.get("reward", []) or [])) or "Reward tier"
+                rewards = ", ".join(str(item) for item in (claim.get("reward", []) or [])) or "Reward details unavailable"
                 rows.append(
                     f"<tr><td>{event_name} — {threshold:,} points</td><td>{player}</td>"
                     f"<td>✅ Claimed this run: {html.escape(rewards)}</td></tr>"
@@ -3557,14 +3569,7 @@ def run_claim_test_one_player():
         return 1
 
     event_reward_claims = event_claim_count(result.get("event_rewards"))
-    total_claimed = (
-        int(result.get("daily", 0) or 0)
-        + int(result.get("store", 0) or 0)
-        + int(result.get("store_temp", 0) or 0)
-        + int(result.get("progression", 0) or 0)
-        + int(result.get("loyalty", 0) or 0)
-        + event_reward_claims
-    )
+    total_claimed = _player_claim_total(result)
     test_status = str(result.get("status", "Unknown"))
     end = get_ist_time()
 
