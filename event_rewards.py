@@ -330,11 +330,12 @@ def _validate_claim_button(driver, button, expected_threshold: int) -> tuple[boo
             const buttonText = norm(button.innerText || button.textContent || button.getAttribute('aria-label'));
             const disabled = !!button.disabled || button.getAttribute('aria-disabled') === 'true';
             const card = button.closest('div.relative.rounded-lp-card');
-            const thresholdElement = card && Array.from(card.querySelectorAll('span'))
-              .find(el => /^\d[\d,]*$/.test((el.textContent || '').trim()));
-            const threshold = thresholdElement
-              ? Number(thresholdElement.textContent.trim().replace(/,/g, '')) : null;
             const cardText = card ? (card.innerText || card.textContent || '').trim() : '';
+            // Match the scanner: thresholds may be concatenated with quantities, e.g. "5,200x20".
+            const firstLine = (cardText.split(/\n+/)[0] || '').trim();
+            const thresholdMatch = firstLine.match(/^(\d[\d,]*)(?=\s*(?:x|\s|$))/i);
+            const threshold = thresholdMatch
+              ? Number(thresholdMatch[1].replace(/,/g, '')) : null;
             return {ok: visible && !disabled && ['claim', 'claim all'].includes(buttonText),
               visible, disabled, buttonText, threshold, cardText};
         """, button)
