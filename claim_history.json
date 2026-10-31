@@ -47,28 +47,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.233716"
+        "last_seen_at": "2026-10-31T16:36:55.119792"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.243510"
+        "last_seen_at": "2026-10-31T16:36:55.125517"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.489603"
+        "last_seen_at": "2026-10-31T16:36:55.091964"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.251016"
+        "last_seen_at": "2026-10-31T16:36:55.133006"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -89,23 +89,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.544549"
+        "last_seen_at": "2026-10-31T16:36:55.101657"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.557956"
+        "last_seen_at": "2026-10-31T16:36:55.107656"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:30:15.224029",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:36:55.113968",
         "last_claim": "2026-10-31T06:30:15.224029",
-        "portal_observed_at": "2026-10-30T23:18:16.074797"
+        "portal_observed_at": "2026-10-31T16:36:55.113968"
       }
     }
   },
@@ -158,28 +158,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:52.691828"
+        "last_seen_at": "2026-10-31T16:37:36.214139"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:52.698283"
+        "last_seen_at": "2026-10-31T16:37:36.232711"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:47.948720"
+        "last_seen_at": "2026-10-31T16:37:36.166369"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:52.704239"
+        "last_seen_at": "2026-10-31T16:37:36.246528"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -200,22 +200,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:47.971023"
+        "last_seen_at": "2026-10-31T16:37:36.172175"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:32:47.995173"
+        "last_seen_at": "2026-10-31T16:37:36.187696"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:32:52.685544",
-        "portal_observed_at": "2026-10-30T23:18:56.946239",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:37:36.197567",
+        "portal_observed_at": "2026-10-31T16:37:36.197567",
         "last_claim": "2026-10-31T06:32:52.685544"
       }
     }
@@ -378,28 +378,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:29.739629"
+        "last_seen_at": "2026-10-31T16:38:16.940662"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:29.745626"
+        "last_seen_at": "2026-10-31T16:38:16.948978"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:24.926153"
+        "last_seen_at": "2026-10-31T16:38:16.917822"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:29.756020"
+        "last_seen_at": "2026-10-31T16:38:16.954549"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -420,23 +420,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:24.932086"
+        "last_seen_at": "2026-10-31T16:38:16.923562"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:35:24.938067"
+        "last_seen_at": "2026-10-31T16:38:16.929872"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:35:29.733505",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:38:16.935292",
         "last_claim": "2026-10-31T06:35:29.733505",
-        "portal_observed_at": "2026-10-30T23:19:38.294392"
+        "portal_observed_at": "2026-10-31T16:38:16.935292"
       }
     }
   },
@@ -488,28 +488,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:05.775012"
+        "last_seen_at": "2026-10-31T16:38:58.267511"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:05.780915"
+        "last_seen_at": "2026-10-31T16:38:58.273226"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:01.012084"
+        "last_seen_at": "2026-10-31T16:38:58.245183"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:05.786927"
+        "last_seen_at": "2026-10-31T16:38:58.280802"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -530,23 +530,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:01.021074"
+        "last_seen_at": "2026-10-31T16:38:58.250887"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:38:01.030701"
+        "last_seen_at": "2026-10-31T16:38:58.256447"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:38:05.768365",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:38:58.262231",
         "last_claim": "2026-10-31T06:38:05.768365",
-        "portal_observed_at": "2026-10-30T23:20:19.564833"
+        "portal_observed_at": "2026-10-31T16:38:58.262231"
       }
     }
   },
@@ -708,28 +708,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:42.494326"
+        "last_seen_at": "2026-10-31T16:39:39.394532"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:42.500749"
+        "last_seen_at": "2026-10-31T16:39:39.399917"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:37.819426"
+        "last_seen_at": "2026-10-31T16:39:39.371350"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:42.510996"
+        "last_seen_at": "2026-10-31T16:39:39.405793"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -750,23 +750,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:37.825636"
+        "last_seen_at": "2026-10-31T16:39:39.377684"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:40:37.831571"
+        "last_seen_at": "2026-10-31T16:39:39.383276"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:40:42.488299",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:39:39.389122",
         "last_claim": "2026-10-31T06:40:42.488299",
-        "portal_observed_at": "2026-10-30T23:21:00.592616"
+        "portal_observed_at": "2026-10-31T16:39:39.389122"
       }
     }
   },
@@ -818,28 +818,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:19.403453"
+        "last_seen_at": "2026-10-31T16:40:20.124521"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:19.410381"
+        "last_seen_at": "2026-10-31T16:40:20.129783"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:14.765076"
+        "last_seen_at": "2026-10-31T16:40:20.101740"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:19.420779"
+        "last_seen_at": "2026-10-31T16:40:20.134978"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -860,23 +860,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:14.771017"
+        "last_seen_at": "2026-10-31T16:40:20.107522"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:43:14.777875"
+        "last_seen_at": "2026-10-31T16:40:20.113108"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:43:19.397337",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:40:20.118554",
         "last_claim": "2026-10-31T06:43:19.397337",
-        "portal_observed_at": "2026-10-30T23:21:42.235885"
+        "portal_observed_at": "2026-10-31T16:40:20.118554"
       }
     }
   },
@@ -928,35 +928,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:51.768690"
+        "last_seen_at": "2026-10-31T16:41:00.707081"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:56.387311"
+        "last_seen_at": "2026-10-31T16:41:00.718200"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:56.393390"
+        "last_seen_at": "2026-10-31T16:41:00.724211"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:51.730218"
+        "last_seen_at": "2026-10-31T16:41:00.690036"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:56.399322"
+        "last_seen_at": "2026-10-31T16:41:00.730337"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -977,23 +977,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:51.743956"
+        "last_seen_at": "2026-10-31T16:41:00.695935"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:45:51.755941"
+        "last_seen_at": "2026-10-31T16:41:00.701519"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:45:56.380431",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:41:00.712588",
         "last_claim": "2026-10-31T06:45:56.380431",
-        "portal_observed_at": "2026-10-30T23:22:23.680082"
+        "portal_observed_at": "2026-10-31T16:41:00.712588"
       }
     }
   },
@@ -1041,28 +1041,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:34.269969"
+        "last_seen_at": "2026-10-31T16:41:42.943162"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:34.278925"
+        "last_seen_at": "2026-10-31T16:41:42.948581"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:29.509743"
+        "last_seen_at": "2026-10-31T16:41:42.918170"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:34.285516"
+        "last_seen_at": "2026-10-31T16:41:42.957142"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1083,23 +1083,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:29.530636"
+        "last_seen_at": "2026-10-31T16:41:42.925254"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:48:29.555769"
+        "last_seen_at": "2026-10-31T16:41:42.930679"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:48:34.260077",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:41:42.937614",
         "last_claim": "2026-10-31T06:48:34.260077",
-        "portal_observed_at": "2026-10-30T23:23:05.083083"
+        "portal_observed_at": "2026-10-31T16:41:42.937614"
       }
     }
   },
@@ -1150,28 +1150,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:07.586060"
+        "last_seen_at": "2026-10-31T16:42:24.035494"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:07.593650"
+        "last_seen_at": "2026-10-31T16:42:24.041009"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:02.862399"
+        "last_seen_at": "2026-10-31T16:42:24.009106"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:07.599686"
+        "last_seen_at": "2026-10-31T16:42:24.046412"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1192,23 +1192,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:02.868754"
+        "last_seen_at": "2026-10-31T16:42:24.015577"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:51:02.876521"
+        "last_seen_at": "2026-10-31T16:42:24.023225"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:51:07.578060",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:42:24.028785",
         "last_claim": "2026-10-31T06:51:07.578060",
-        "portal_observed_at": "2026-10-30T23:23:48.449007"
+        "portal_observed_at": "2026-10-31T16:42:24.028785"
       }
     }
   },
@@ -1256,28 +1256,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:46.409233"
+        "last_seen_at": "2026-10-31T16:43:05.002826"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:46.415242"
+        "last_seen_at": "2026-10-31T16:43:05.008178"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:41.682428"
+        "last_seen_at": "2026-10-31T16:43:04.977609"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:46.421767"
+        "last_seen_at": "2026-10-31T16:43:05.014263"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1298,23 +1298,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:41.688391"
+        "last_seen_at": "2026-10-31T16:43:04.985959"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:53:41.694751"
+        "last_seen_at": "2026-10-31T16:43:04.991501"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:53:46.402739",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:43:04.997420",
         "last_claim": "2026-10-31T06:53:46.402739",
-        "portal_observed_at": "2026-10-30T23:24:30.548217"
+        "portal_observed_at": "2026-10-31T16:43:04.997420"
       }
     }
   },
@@ -1363,28 +1363,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:19.123666"
+        "last_seen_at": "2026-10-31T16:43:46.053856"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:19.133313"
+        "last_seen_at": "2026-10-31T16:43:46.059402"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:14.445830"
+        "last_seen_at": "2026-10-31T16:43:46.026172"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:19.142926"
+        "last_seen_at": "2026-10-31T16:43:46.065383"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1405,23 +1405,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:14.451862"
+        "last_seen_at": "2026-10-31T16:43:46.034667"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:56:14.457833"
+        "last_seen_at": "2026-10-31T16:43:46.040205"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:56:19.113640",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:43:46.046699",
         "last_claim": "2026-10-31T06:56:19.113640",
-        "portal_observed_at": "2026-10-30T23:25:11.550795"
+        "portal_observed_at": "2026-10-31T16:43:46.046699"
       }
     }
   },
@@ -1474,28 +1474,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:53.628790"
+        "last_seen_at": "2026-10-31T16:44:26.764963"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:53.639021"
+        "last_seen_at": "2026-10-31T16:44:26.770512"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:48.923219"
+        "last_seen_at": "2026-10-31T16:44:26.738717"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:53.645971"
+        "last_seen_at": "2026-10-31T16:44:26.776024"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1516,23 +1516,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:48.931094"
+        "last_seen_at": "2026-10-31T16:44:26.746148"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:58:48.936991"
+        "last_seen_at": "2026-10-31T16:44:26.752648"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:58:53.620392",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:44:26.758420",
         "last_claim": "2026-10-31T06:58:53.620392",
-        "portal_observed_at": "2026-10-30T23:25:52.771720"
+        "portal_observed_at": "2026-10-31T16:44:26.758420"
       }
     }
   },
@@ -1581,28 +1581,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:31.998016"
+        "last_seen_at": "2026-10-31T16:45:07.753339"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:32.007076"
+        "last_seen_at": "2026-10-31T16:45:07.759401"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:27.237019"
+        "last_seen_at": "2026-10-31T16:45:07.728746"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:32.014300"
+        "last_seen_at": "2026-10-31T16:45:07.765418"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1623,23 +1623,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:27.245614"
+        "last_seen_at": "2026-10-31T16:45:07.734530"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:01:27.252790"
+        "last_seen_at": "2026-10-31T16:45:07.740135"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:01:31.988220",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:45:07.747661",
         "last_claim": "2026-10-31T07:01:31.988220",
-        "portal_observed_at": "2026-10-30T23:26:34.162811"
+        "portal_observed_at": "2026-10-31T16:45:07.747661"
       }
     }
   },
@@ -1688,28 +1688,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.900028"
+        "last_seen_at": "2026-10-31T16:45:50.841239"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.907732"
+        "last_seen_at": "2026-10-31T16:45:50.847322"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.874978"
+        "last_seen_at": "2026-10-31T16:45:50.817173"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.927432"
+        "last_seen_at": "2026-10-31T16:45:50.853706"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1730,23 +1730,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.881073"
+        "last_seen_at": "2026-10-31T16:45:50.823300"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:58:51.887701"
+        "last_seen_at": "2026-10-31T16:45:50.829879"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-10-31T07:58:51.893847",
+        "last_seen_at": "2026-10-31T16:45:50.835417",
         "last_claim": "2026-10-30T07:03:08.071345",
-        "portal_observed_at": "2026-10-31T07:58:51.893847"
+        "portal_observed_at": "2026-10-31T16:45:50.835417"
       }
     }
   },
@@ -1796,28 +1796,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:51.627625"
+        "last_seen_at": "2026-10-31T16:46:31.848112"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:51.633475"
+        "last_seen_at": "2026-10-31T16:46:31.853711"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:46.967981"
+        "last_seen_at": "2026-10-31T16:46:31.820048"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:51.639729"
+        "last_seen_at": "2026-10-31T16:46:31.860021"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1838,22 +1838,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:46.978457"
+        "last_seen_at": "2026-10-31T16:46:31.828804"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:06:46.988250"
+        "last_seen_at": "2026-10-31T16:46:31.834346"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:06:51.621315",
-        "portal_observed_at": "2026-10-30T23:27:56.436100",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:46:31.842002",
+        "portal_observed_at": "2026-10-31T16:46:31.842002",
         "last_claim": "2026-10-31T07:06:51.621315"
       }
     }
@@ -1903,28 +1903,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:37.333991"
+        "last_seen_at": "2026-10-31T16:47:12.933181"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:37.339968"
+        "last_seen_at": "2026-10-31T16:47:12.939320"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:32.671451"
+        "last_seen_at": "2026-10-31T16:47:12.908869"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:37.347343"
+        "last_seen_at": "2026-10-31T16:47:12.944657"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1945,23 +1945,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:32.677780"
+        "last_seen_at": "2026-10-31T16:47:12.914657"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:09:32.683543"
+        "last_seen_at": "2026-10-31T16:47:12.920433"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:09:37.327402",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:47:12.927687",
         "last_claim": "2026-10-31T07:09:37.327402",
-        "portal_observed_at": "2026-10-30T23:28:37.859437"
+        "portal_observed_at": "2026-10-31T16:47:12.927687"
       }
     }
   },
@@ -2010,28 +2010,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:17.365070"
+        "last_seen_at": "2026-10-31T16:47:54.255533"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:17.373587"
+        "last_seen_at": "2026-10-31T16:47:54.261529"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:12.686591"
+        "last_seen_at": "2026-10-31T16:47:54.230550"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:17.379581"
+        "last_seen_at": "2026-10-31T16:47:54.266945"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2052,23 +2052,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:12.692525"
+        "last_seen_at": "2026-10-31T16:47:54.237095"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:12:12.698268"
+        "last_seen_at": "2026-10-31T16:47:54.242689"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:12:17.358643",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:47:54.248044",
         "last_claim": "2026-10-31T07:12:17.358643",
-        "portal_observed_at": "2026-10-30T23:29:19.128066"
+        "portal_observed_at": "2026-10-31T16:47:54.248044"
       }
     }
   },
@@ -2117,28 +2117,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:15:02.110307"
+        "last_seen_at": "2026-10-31T16:48:35.910102"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:15:02.119525"
+        "last_seen_at": "2026-10-31T16:48:35.915562"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:14:57.492057"
+        "last_seen_at": "2026-10-31T16:48:35.884661"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:15:02.127550"
+        "last_seen_at": "2026-10-31T16:48:35.923557"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2159,23 +2159,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:14:57.498920"
+        "last_seen_at": "2026-10-31T16:48:35.890488"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:14:57.509641"
+        "last_seen_at": "2026-10-31T16:48:35.895946"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:15:02.099120",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:48:35.903717",
         "last_claim": "2026-10-31T07:15:02.099120",
-        "portal_observed_at": "2026-10-30T23:30:00.459472"
+        "portal_observed_at": "2026-10-31T16:48:35.903717"
       }
     }
   },
@@ -2224,28 +2224,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:41.607077"
+        "last_seen_at": "2026-10-31T16:49:16.905934"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:41.613387"
+        "last_seen_at": "2026-10-31T16:49:16.911556"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:36.870843"
+        "last_seen_at": "2026-10-31T16:49:16.883053"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:41.623693"
+        "last_seen_at": "2026-10-31T16:49:16.919262"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2266,23 +2266,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:36.890233"
+        "last_seen_at": "2026-10-31T16:49:16.888818"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:17:36.912884"
+        "last_seen_at": "2026-10-31T16:49:16.894320"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:17:41.600801",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:49:16.900313",
         "last_claim": "2026-10-31T07:17:41.600801",
-        "portal_observed_at": "2026-10-30T23:30:42.108974"
+        "portal_observed_at": "2026-10-31T16:49:16.900313"
       }
     }
   },
@@ -2331,35 +2331,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:17.241745"
+        "last_seen_at": "2026-10-31T16:49:57.685517"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:22.051450"
+        "last_seen_at": "2026-10-31T16:49:57.696347"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:22.057671"
+        "last_seen_at": "2026-10-31T16:49:57.701809"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:17.224624"
+        "last_seen_at": "2026-10-31T16:49:57.666949"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:22.063681"
+        "last_seen_at": "2026-10-31T16:49:57.707295"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2380,23 +2380,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:17.230538"
+        "last_seen_at": "2026-10-31T16:49:57.672836"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:20:17.236122"
+        "last_seen_at": "2026-10-31T16:49:57.678282"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:20:22.044924",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:49:57.690916",
         "last_claim": "2026-10-31T07:20:22.044924",
-        "portal_observed_at": "2026-10-30T23:31:23.478245"
+        "portal_observed_at": "2026-10-31T16:49:57.690916"
       }
     }
   },
@@ -2445,35 +2445,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:55.213149"
+        "last_seen_at": "2026-10-31T16:50:38.472458"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:59.873196"
+        "last_seen_at": "2026-10-31T16:50:38.484743"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:59.881963"
+        "last_seen_at": "2026-10-31T16:50:38.490323"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:55.192349"
+        "last_seen_at": "2026-10-31T16:50:38.454597"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:59.890042"
+        "last_seen_at": "2026-10-31T16:50:38.496385"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2494,23 +2494,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:55.198391"
+        "last_seen_at": "2026-10-31T16:50:38.460399"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:22:55.205550"
+        "last_seen_at": "2026-10-31T16:50:38.467111"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:22:59.865617",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:50:38.477880",
         "last_claim": "2026-10-31T07:22:59.865617",
-        "portal_observed_at": "2026-10-30T23:32:04.605345"
+        "portal_observed_at": "2026-10-31T16:50:38.477880"
       }
     }
   },
@@ -2559,35 +2559,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:33.171709"
+        "last_seen_at": "2026-10-31T16:51:19.309132"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:37.884925"
+        "last_seen_at": "2026-10-31T16:51:19.323082"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:37.891434"
+        "last_seen_at": "2026-10-31T16:51:19.329678"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:33.152084"
+        "last_seen_at": "2026-10-31T16:51:19.291323"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:37.897846"
+        "last_seen_at": "2026-10-31T16:51:19.335193"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2608,23 +2608,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:33.157995"
+        "last_seen_at": "2026-10-31T16:51:19.297966"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:25:33.163830"
+        "last_seen_at": "2026-10-31T16:51:19.303610"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:25:37.878708",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:51:19.317494",
         "last_claim": "2026-10-31T07:25:37.878708",
-        "portal_observed_at": "2026-10-30T23:32:45.821207"
+        "portal_observed_at": "2026-10-31T16:51:19.317494"
       }
     }
   },
@@ -2673,35 +2673,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:11.745564"
+        "last_seen_at": "2026-10-31T16:52:00.119321"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:16.519392"
+        "last_seen_at": "2026-10-31T16:52:00.133901"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:16.526960"
+        "last_seen_at": "2026-10-31T16:52:00.139571"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:11.708890"
+        "last_seen_at": "2026-10-31T16:52:00.099584"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:16.536568"
+        "last_seen_at": "2026-10-31T16:52:00.147226"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2722,23 +2722,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:11.722668"
+        "last_seen_at": "2026-10-31T16:52:00.105834"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:28:11.734800"
+        "last_seen_at": "2026-10-31T16:52:00.113750"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:28:16.512676",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:52:00.124956",
         "last_claim": "2026-10-31T07:28:16.512676",
-        "portal_observed_at": "2026-10-30T23:33:26.770736"
+        "portal_observed_at": "2026-10-31T16:52:00.124956"
       }
     }
   },
@@ -3084,28 +3084,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:55.823089"
+        "last_seen_at": "2026-10-31T16:52:40.867045"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:55.829532"
+        "last_seen_at": "2026-10-31T16:52:40.872604"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:51.100840"
+        "last_seen_at": "2026-10-31T16:52:40.842962"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:55.840251"
+        "last_seen_at": "2026-10-31T16:52:40.880807"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3126,23 +3126,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:51.121664"
+        "last_seen_at": "2026-10-31T16:52:40.849529"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:30:51.136823"
+        "last_seen_at": "2026-10-31T16:52:40.855112"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:30:55.816851",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:52:40.861152",
         "last_claim": "2026-10-31T07:30:55.816851",
-        "portal_observed_at": "2026-10-30T23:34:07.762799"
+        "portal_observed_at": "2026-10-31T16:52:40.861152"
       }
     }
   },
@@ -3190,28 +3190,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:30.035233"
+        "last_seen_at": "2026-10-31T16:53:21.561368"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:30.041745"
+        "last_seen_at": "2026-10-31T16:53:21.566909"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:25.234098"
+        "last_seen_at": "2026-10-31T16:53:21.535530"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:30.048432"
+        "last_seen_at": "2026-10-31T16:53:21.572800"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3232,23 +3232,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:25.244574"
+        "last_seen_at": "2026-10-31T16:53:21.542254"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:33:25.254129"
+        "last_seen_at": "2026-10-31T16:53:21.547797"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:33:30.027988",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:53:21.553199",
         "last_claim": "2026-10-31T07:33:30.027988",
-        "portal_observed_at": "2026-10-30T23:34:48.764286"
+        "portal_observed_at": "2026-10-31T16:53:21.553199"
       }
     }
   },
@@ -3296,28 +3296,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:15.883116"
+        "last_seen_at": "2026-10-31T16:54:02.486377"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:15.891510"
+        "last_seen_at": "2026-10-31T16:54:02.492516"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:11.195307"
+        "last_seen_at": "2026-10-31T16:54:02.463714"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:15.901986"
+        "last_seen_at": "2026-10-31T16:54:02.497957"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3338,23 +3338,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:11.206101"
+        "last_seen_at": "2026-10-31T16:54:02.469454"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:36:11.215974"
+        "last_seen_at": "2026-10-31T16:54:02.475464"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:36:15.876673",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:54:02.480941",
         "last_claim": "2026-10-31T07:36:15.876673",
-        "portal_observed_at": "2026-10-30T23:35:30.125230"
+        "portal_observed_at": "2026-10-31T16:54:02.480941"
       }
     }
   },
@@ -3402,35 +3402,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:42.470642"
+        "last_seen_at": "2026-10-31T16:54:44.103565"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:47.149113"
+        "last_seen_at": "2026-10-31T16:54:44.114466"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:47.155537"
+        "last_seen_at": "2026-10-31T16:54:44.120573"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:42.453248"
+        "last_seen_at": "2026-10-31T16:54:44.083937"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:47.161830"
+        "last_seen_at": "2026-10-31T16:54:44.126184"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3451,23 +3451,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:42.459225"
+        "last_seen_at": "2026-10-31T16:54:44.091727"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:38:42.464999"
+        "last_seen_at": "2026-10-31T16:54:44.097328"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:38:47.142555",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:54:44.109123",
         "last_claim": "2026-10-31T07:38:47.142555",
-        "portal_observed_at": "2026-10-30T23:36:11.511593"
+        "portal_observed_at": "2026-10-31T16:54:44.109123"
       }
     }
   },
@@ -3515,28 +3515,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:22.895652"
+        "last_seen_at": "2026-10-31T16:55:25.003787"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:22.904636"
+        "last_seen_at": "2026-10-31T16:55:25.009374"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:18.017878"
+        "last_seen_at": "2026-10-31T16:55:24.979411"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:22.914269"
+        "last_seen_at": "2026-10-31T16:55:25.014879"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3557,23 +3557,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:18.024177"
+        "last_seen_at": "2026-10-31T16:55:24.986580"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:41:18.030315"
+        "last_seen_at": "2026-10-31T16:55:24.992365"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:41:22.885574",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:55:24.997848",
         "last_claim": "2026-10-31T07:41:22.885574",
-        "portal_observed_at": "2026-10-30T23:36:53.008968"
+        "portal_observed_at": "2026-10-31T16:55:24.997848"
       }
     }
   },
@@ -3728,28 +3728,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:12.571725"
+        "last_seen_at": "2026-10-31T16:56:05.778005"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:12.580275"
+        "last_seen_at": "2026-10-31T16:56:05.785078"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:07.862009"
+        "last_seen_at": "2026-10-31T16:56:05.753612"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:12.589383"
+        "last_seen_at": "2026-10-31T16:56:05.791264"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3770,23 +3770,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:07.868290"
+        "last_seen_at": "2026-10-31T16:56:05.759334"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:44:07.874137"
+        "last_seen_at": "2026-10-31T16:56:05.764657"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:44:12.561509",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:56:05.772676",
         "last_claim": "2026-10-31T07:44:12.561509",
-        "portal_observed_at": "2026-10-30T23:37:34.887993"
+        "portal_observed_at": "2026-10-31T16:56:05.772676"
       }
     }
   },
@@ -4054,28 +4054,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:54.408324"
+        "last_seen_at": "2026-10-31T16:56:46.575123"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:54.414747"
+        "last_seen_at": "2026-10-31T16:56:46.581040"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:49.741096"
+        "last_seen_at": "2026-10-31T16:56:46.550884"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:54.421416"
+        "last_seen_at": "2026-10-31T16:56:46.587103"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4096,23 +4096,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:49.750746"
+        "last_seen_at": "2026-10-31T16:56:46.556830"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:47:49.760172"
+        "last_seen_at": "2026-10-31T16:56:46.562399"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:47:54.400938",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:56:46.569411",
         "last_claim": "2026-10-31T07:47:54.400938",
-        "portal_observed_at": "2026-10-30T23:38:16.028655"
+        "portal_observed_at": "2026-10-31T16:56:46.569411"
       }
     }
   },
@@ -4165,28 +4165,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:39.369648"
+        "last_seen_at": "2026-10-31T16:57:27.395398"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:39.375744"
+        "last_seen_at": "2026-10-31T16:57:27.403855"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:34.654932"
+        "last_seen_at": "2026-10-31T16:57:27.370387"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:39.382105"
+        "last_seen_at": "2026-10-31T16:57:27.409429"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4207,22 +4207,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:34.669607"
+        "last_seen_at": "2026-10-31T16:57:27.376187"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:50:34.684728"
+        "last_seen_at": "2026-10-31T16:57:27.384207"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:50:39.363468",
-        "portal_observed_at": "2026-10-30T23:38:57.390955",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:57:27.389638",
+        "portal_observed_at": "2026-10-31T16:57:27.389638",
         "last_claim": "2026-10-31T07:50:39.363468"
       }
     }
@@ -4271,28 +4271,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:07.007047"
+        "last_seen_at": "2026-10-31T16:58:08.106389"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:07.023509"
+        "last_seen_at": "2026-10-31T16:58:08.113221"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:07.034047"
+        "last_seen_at": "2026-10-31T16:58:08.118786"
       },
       "promo_33f5658b38e37f0b3ef5": {
         "title": "First Purchaser Pack",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:07.043525"
+        "last_seen_at": "2026-10-31T16:58:08.124253"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -4305,31 +4305,31 @@
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:53:11.746370",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:58:08.131050",
         "last_claim": "2026-10-31T07:53:11.746370",
-        "portal_observed_at": "2026-10-30T23:39:39.057767"
+        "portal_observed_at": "2026-10-31T16:58:08.131050"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:11.752464"
+        "last_seen_at": "2026-10-31T16:58:08.136574"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:11.758829"
+        "last_seen_at": "2026-10-31T16:58:08.142084"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:53:11.768626"
+        "last_seen_at": "2026-10-31T16:58:08.148499"
       }
     }
   },
@@ -4381,29 +4381,29 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:47.747657"
+        "last_seen_at": "2026-10-31T16:58:49.143764"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:47.761302"
+        "last_seen_at": "2026-10-31T16:58:49.150495"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:47.776829"
+        "last_seen_at": "2026-10-31T16:58:49.155960"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T07:55:52.399144",
-        "portal_observed_at": "2026-10-30T23:40:20.070496",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T16:58:49.162137",
+        "portal_observed_at": "2026-10-31T16:58:49.162137",
         "last_claim": "2026-10-31T07:55:52.399144"
       },
       "promo_fc4bebe1fb9b140f5a89": {
@@ -4411,21 +4411,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:52.409380"
+        "last_seen_at": "2026-10-31T16:58:49.167607"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:52.419098"
+        "last_seen_at": "2026-10-31T16:58:49.173023"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:55:52.425200"
+        "last_seen_at": "2026-10-31T16:58:49.178958"
       }
     }
   }
