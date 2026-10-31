@@ -390,7 +390,8 @@ def _claim_one_event_tier(
     if not clicked:
         return "click_failed", tier
 
-    log(f"🎃 Event reward click sent: {tier['threshold']} points — {'; '.join(tier['reward'])}")
+    reward_description = "; ".join(tier.get("reward", []) or []) or "reward details unavailable"
+    log(f"🎃 Event reward click sent: {tier['threshold']} points — {reward_description}")
     time.sleep(2.5)
     try:
         close_popup(driver)
@@ -488,15 +489,6 @@ def claim_event_program(
                 f"Detected {detected_count}/{expected_tier_count} expected reward tiers; "
                 "refusing to claim from an incomplete or ambiguous page snapshot"
             )
-
-    missing_reward_labels = [
-        tier["threshold"] for tier in state["tiers"]
-        if tier["status"] == "available" and not tier.get("reward")
-    ]
-    if missing_reward_labels:
-        raise EventRewardsError(
-            "Reward names could not be read for tier(s): " + ", ".join(str(x) for x in missing_reward_labels)
-        )
 
     inconsistent = next((tier for tier in state["tiers"]
                          if tier["status"] == "inconsistent_balance"), None)
