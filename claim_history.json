@@ -34,7 +34,7 @@
     "progression": {
       "last_claim": "2026-10-22T05:51:30.183610",
       "last_count": 1,
-      "last_visit": "2026-10-31T06:31:08.393651"
+      "last_visit": "2026-10-31T09:57:35.148028"
     },
     "loyalty": {
       "last_claim": null,
@@ -47,28 +47,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.233716"
+        "last_seen_at": "2026-10-31T09:56:44.830702"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.243510"
+        "last_seen_at": "2026-10-31T09:56:44.845460"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.489603"
+        "last_seen_at": "2026-10-31T09:56:44.805920"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:15.251016"
+        "last_seen_at": "2026-10-31T09:56:44.851452"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -89,23 +89,43 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.544549"
+        "last_seen_at": "2026-10-31T09:56:44.811589"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T06:30:10.557956"
+        "last_seen_at": "2026-10-31T09:56:44.817258"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claimed",
-        "last_seen_at": "2026-10-31T06:30:15.224029",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T09:56:44.824721",
         "last_claim": "2026-10-31T06:30:15.224029",
-        "portal_observed_at": "2026-10-30T23:18:16.074797"
+        "portal_observed_at": "2026-10-31T09:56:44.824721"
+      }
+    },
+    "event_rewards": {
+      "pgp_eLiQHDMchen": {
+        "name": "Lost Soul Rewards",
+        "slug": "halloween-2026",
+        "points_label": "points",
+        "cycle": 0,
+        "checked_at": "2026-10-31T09:58:12.593575",
+        "balance": null,
+        "next_threshold": null,
+        "tiers_total": 0,
+        "tiers_delivered": 0,
+        "tiers": [],
+        "claims_this_run": [],
+        "claim_ledger": [],
+        "status": "error",
+        "retry_required": true,
+        "error": "EventRewardsError: Reward names could not be read for tier(s): 400, 900",
+        "end_at": 1793826000
       }
     }
   },
