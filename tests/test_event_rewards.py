@@ -105,6 +105,53 @@ class EventRewardParsingTests(unittest.TestCase):
         self.assertEqual(snapshot["tiers"][1]["threshold"], 10200)
         self.assertEqual(snapshot["tiers"][1]["reward"], [])
         self.assertEqual(snapshot["tiers"][1]["status"], "locked")
+    def test_halloween_available_cards_extract_reward_names_best_effort(self):
+        snapshot = _normalise_snapshot({
+            "title": "Halloween 2026",
+            "url": "https://hub.vertigogames.co/halloween-2026",
+            "bodyText": "Lost Soul Rewards\n1,100 / 1,300",
+            "cards": [
+                {
+                    "thresholdText": "400",
+                    "rewardItems": [
+                        {"name": "Orb of Calamity", "quantity": "x10"},
+                        {"name": "Aether Extract", "quantity": "x10"},
+                    ],
+                    "claimButtonEnabled": True,
+                    "buttonIndex": 2,
+                    "buttonText": "Claim",
+                    "disabled": False,
+                    "visible": True,
+                    "cardText": "400\nx10\nOrb of Calamity\nx10\nAether Extract\nClaim",
+                },
+                {
+                    "thresholdText": "900",
+                    "rewardItems": [{"name": "Abyss", "quantity": ""}],
+                    "claimButtonEnabled": True,
+                    "buttonIndex": 3,
+                    "buttonText": "Claim",
+                    "disabled": False,
+                    "visible": True,
+                    "cardText": "900\nAbyss\nClaim",
+                },
+                {
+                    "thresholdText": "1,300",
+                    "rewardItems": [],
+                    "claimButtonEnabled": False,
+                    "buttonIndex": 4,
+                    "buttonText": "",
+                    "disabled": True,
+                    "visible": True,
+                    "cardText": "1,300\nx150\nLuckyloon",
+                },
+            ],
+        })
+        tiers = snapshot["tiers"]
+        self.assertEqual([tier["threshold"] for tier in tiers], [400, 900, 1300])
+        self.assertEqual(tiers[0]["reward"], ["Orb of Calamity ×10", "Aether Extract ×10"])
+        self.assertEqual(tiers[1]["reward"], ["Abyss"])
+        self.assertEqual([tier["status"] for tier in tiers], ["available", "available", "locked"])
+
     def test_active_program_config_and_expiry(self):
         config = {"enabled": True, "programs": [{
             "enabled": True, "name": "Test", "slug": "test", "program_id": "pgp_test",
@@ -253,21 +300,32 @@ class EventRewardExecutionTests(unittest.TestCase):
         self.assertEqual(clicks, [])
 
     @patch("event_rewards.time.sleep", return_value=None)
-    def test_available_claim_without_reward_name_fails_before_click(self, _sleep):
+    def test_available_claim_without_reward_name_is_allowed_and_verified(self, _sleep):
         driver = _FakeDriver()
         driver.missing_reward_names = True
         clicks = []
-        with self.assertRaises(EventRewardsError):
-            claim_event_program(
-                driver,
-                {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-                 "end_at_epoch": 9999999999, "max_claims_per_run": 20},
-                physical_click=lambda _driver, _button: clicks.append(True) or True,
-                bypass_cloudflare=lambda _driver: None,
-                close_popup=lambda _driver: None,
-                log=lambda _message: None,
-            )
-        self.assertEqual(clicks, [])
+        logs = []
+
+        def physical_click(_driver, _button):
+            clicks.append(True)
+            driver.delivered = True
+            return True
+
+        result = claim_event_program(
+            driver,
+            {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
+             "end_at_epoch": 9999999999, "max_claims_per_run": 20},
+            physical_click=physical_click,
+            bypass_cloudflare=lambda _driver: None,
+            close_popup=lambda _driver: None,
+            log=logs.append,
+        )
+        self.assertEqual(len(clicks), 1)
+        self.assertEqual(result["tiers_delivered"], 1)
+        self.assertEqual(result["claims_this_run"][0]["threshold"], 900)
+        self.assertEqual(result["claims_this_run"][0]["reward"], [])
+        self.assertFalse(result["retry_required"])
+        self.assertIn("reward details unavailable", "\n".join(logs))
 
     @patch("event_rewards.time.sleep", return_value=None)
     def test_claims_enabled_tier_and_verifies_delivered(self, _sleep):
