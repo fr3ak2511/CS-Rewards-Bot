@@ -109,12 +109,12 @@ jobs:
             // Avoid queuing duplicate claims while a previous claim job is queued/running.
             // The three-hour waiting dispatcher is harmless; only its claim job matters here.
             const response = await github.rest.actions.listWorkflowRunsForRepo({
-              owner, repo, branch: 'main', per_page: 100
+              owner, repo, branch: context.ref.replace(/^refs\/heads\//, ''), per_page: 100
             });
             const activeRuns = response.data.workflow_runs.filter(run =>
               String(run.id) !== String(context.runId) &&
               run.path === '.github/workflows/schedule.yml' &&
-              run.head_branch === 'main' &&
+              run.head_branch === context.ref.replace(/^refs\/heads\//, '') &&
               ['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(run.status)
             );
 
@@ -414,7 +414,7 @@ jobs:
           TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          TARGET_BRANCH="${TARGET_BRANCH:-main}"
+          : "${TARGET_BRANCH:?TARGET_BRANCH environment variable is required}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- claim_history.json bot_meta.json
