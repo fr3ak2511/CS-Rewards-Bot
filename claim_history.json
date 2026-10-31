@@ -1674,7 +1674,7 @@
     "progression": {
       "last_claim": "2026-10-22T06:29:46.628158",
       "last_count": 1,
-      "last_visit": "2026-10-31T07:05:06.707664"
+      "last_visit": "2026-10-31T07:59:42.393063"
     },
     "loyalty": {
       "last_claim": null,
@@ -1688,28 +1688,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:13.566126"
+        "last_seen_at": "2026-10-31T07:58:51.900028"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:13.572746"
+        "last_seen_at": "2026-10-31T07:58:51.907732"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:09.168136"
+        "last_seen_at": "2026-10-31T07:58:51.874978"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:13.581132"
+        "last_seen_at": "2026-10-31T07:58:51.927432"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1730,23 +1730,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:09.177602"
+        "last_seen_at": "2026-10-31T07:58:51.881073"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T07:04:09.184659"
+        "last_seen_at": "2026-10-31T07:58:51.887701"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "claim_unconfirmed",
-        "last_seen_at": "2026-10-31T07:04:13.560320",
+        "status": "portal_claimed",
+        "last_seen_at": "2026-10-31T07:58:51.893847",
         "last_claim": "2026-10-30T07:03:08.071345",
-        "portal_observed_at": "2026-10-30T23:27:15.580922"
+        "portal_observed_at": "2026-10-31T07:58:51.893847"
       }
     }
   },
