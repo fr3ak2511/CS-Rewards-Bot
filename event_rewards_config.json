@@ -11,7 +11,8 @@
       "end_at": 1793826000,
       "max_claims_per_run": 20,
       "points_label": "Lost Souls",
-      "cycle": 0
+      "cycle": 0,
+      "expected_tier_count": 14
     }
   ]
 }

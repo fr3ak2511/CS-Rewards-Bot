@@ -24,45 +24,76 @@ DEFAULT_CONFIG_PATH = Path(__file__).with_name("event_rewards_config.json")
 
 # Keep the selector narrow: the Halloween cards inspected in DevTools use this
 # card wrapper. A guarded ancestor fallback is included in the browser script.
-_SNAPSHOT_SCRIPT = r"""
-const buttons = Array.from(document.querySelectorAll('button'));
+_SNAPSHOT_SCRIPT = r"""const buttons = Array.from(document.querySelectorAll('button'));
+const cardElements = Array.from(document.querySelectorAll('div.relative.rounded-lp-card'));
 const cards = [];
-for (let i = 0; i < buttons.length; i++) {
-  const button = buttons[i];
-  const buttonText = (button.innerText || button.textContent || '').trim();
-  let card = button.closest('div.relative.rounded-lp-card');
-  if (!card) {
-    let parent = button.parentElement;
-    for (let depth = 0; depth < 7 && parent; depth++, parent = parent.parentElement) {
-      const text = (parent.innerText || '').trim();
-      const firstLine = (text.split(/\n+/)[0] || '').trim();
-      if (/^\d[\d,]*$/.test(firstLine) && parent.querySelector('button')) {
-        card = parent;
-        break;
-      }
-    }
+
+const norm = value => (value || '').replace(/\s+/g, ' ').trim();
+
+for (const card of cardElements) {
+  // Read only the leading threshold token. In some headless DOM layouts the
+  // threshold and reward quantity are concatenated, e.g. "5,200x20".
+  const rawCardText = (card.innerText || card.textContent || '').trim();
+  const firstLine = (rawCardText.split(/\n+/)[0] || '').trim();
+  const thresholdMatch = firstLine.match(/^(\d[\d,]*)(?=\s*(?:x|\s|$))/i);
+  const thresholdText = thresholdMatch ? thresholdMatch[1] : null;
+  if (!thresholdText) continue;
+
+  // Inspect the card's own Claim button before reading any reward labels.
+  const button = card.querySelector('button');
+  const buttonIndex = button ? buttons.indexOf(button) : -1;
+  const buttonText = button
+    ? norm(button.innerText || button.textContent || button.getAttribute('aria-label')).toLowerCase()
+    : '';
+  const disabled = !button || !!button.disabled
+    || button.getAttribute('aria-disabled') === 'true';
+  const rect = button ? button.getBoundingClientRect() : null;
+  const visible = !!(button && button.getClientRects().length && rect
+    && rect.width > 0 && rect.height > 0
+    && getComputedStyle(button).display !== 'none'
+    && getComputedStyle(button).visibility !== 'hidden');
+  const claimButtonEnabled = visible && !disabled
+    && (buttonText === 'claim' || buttonText === 'claim all');
+
+  // Only enabled Claim / Claim all cards get names and quantities extracted.
+  let rewardItems = [];
+  if (claimButtonEnabled) {
+    const rewardRows = Array.from(card.querySelectorAll('div.flex.flex-row.items-center.gap-3'));
+    rewardItems = rewardRows.map(row => {
+      const nameElement = row.querySelector('span[class*="line-clamp-1"]');
+      const quantityElement = row.querySelector('[class*="text-store-card-sku-img-quantity"]');
+      return {
+        name: norm(nameElement ? nameElement.textContent : ''),
+        quantity: norm(quantityElement ? quantityElement.textContent : '')
+      };
+    }).filter(item => item.name);
   }
-  if (!card) continue;
-  const cardText = (card.innerText || card.textContent || '').trim();
-  const firstLine = (cardText.split(/\n+/)[0] || '').trim();
-  if (!/^\d[\d,]*$/.test(firstLine)) continue;
+
+  const lines = [thresholdText];
+  for (const item of rewardItems) {
+    if (item.quantity) lines.push(item.quantity);
+    lines.push(item.name);
+  }
+  if (buttonText) lines.push(buttonText);
+
   cards.push({
-    buttonIndex: i,
+    thresholdText,
+    rewardItems,
+    claimButtonEnabled,
+    buttonIndex,
     buttonText,
-    disabled: !!button.disabled || button.getAttribute('aria-disabled') === 'true',
-    visible: !!(button.getClientRects().length
-      && getComputedStyle(button).visibility !== 'hidden'
-      && getComputedStyle(button).display !== 'none'),
-    cardText
+    disabled,
+    visible,
+    cardText: lines.join('\n')
   });
 }
+
 return {
   title: document.title || '',
   url: location.href,
   bodyText: (document.body && document.body.innerText) || '',
   cards
-};
-"""
+};"""
 
 
 class EventRewardsError(RuntimeError):
@@ -176,23 +207,50 @@ def _parse_reward_names(card_text: str) -> list[str]:
     return names
 
 
+def _normalise_reward_items(card: dict[str, Any], card_text: str) -> list[str]:
+    """Normalize structured DOM reward items; an explicit empty list stays empty."""
+    raw_items = card.get("rewardItems")
+    if isinstance(raw_items, list):
+        parsed: list[str] = []
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            name = re.sub(r"\s+", " ", str(item.get("name") or "")).strip()
+            quantity = re.sub(r"\s+", "", str(item.get("quantity") or "").strip())
+            if not name:
+                continue
+            if quantity[:1].casefold() == "x":
+                quantity = quantity[1:]
+            parsed.append(f"{name} ×{quantity}" if quantity else name)
+        return parsed
+    # Compatibility for older snapshots that predate the structured DOM fields.
+    return _parse_reward_names(card_text)
+
+
 def _tier_status(card: dict[str, Any], balance: int | None) -> str:
     button_text = str(card.get("buttonText") or "").strip().casefold()
     card_text = str(card.get("cardText") or "")
     if button_text == "delivered" or re.search(r"(?im)^\s*delivered\s*$", card_text):
         return "delivered"
-    threshold = _parse_threshold(card_text)
-    if (button_text in {"claim", "claim all"}
-            and not card.get("disabled", True)
-            and threshold is not None
-            and balance is not None
-            and balance >= threshold):
+    if not bool(card.get("visible", True)):
+        return "locked"
+
+    threshold_text = str(card.get("thresholdText") or "").strip()
+    threshold = _parse_threshold(threshold_text) if threshold_text else _parse_threshold(card_text)
+
+    if "claimButtonEnabled" in card:
+        claim_enabled = bool(card.get("claimButtonEnabled"))
+    else:
+        claim_enabled = (
+            button_text in {"claim", "claim all"}
+            and not bool(card.get("disabled", True))
+        )
+
+    if not claim_enabled:
+        return "locked"
+    if threshold is not None and balance is not None and balance >= threshold:
         return "available"
-    if button_text in {"claim", "claim all"} and not card.get("disabled", True):
-        # Do not click a visually enabled tier unless the displayed point balance
-        # independently confirms the threshold.
-        return "inconsistent_balance"
-    return "locked"
+    return "inconsistent_balance"
 
 
 def _normalise_snapshot(raw: Any) -> dict[str, Any]:
@@ -201,20 +259,35 @@ def _normalise_snapshot(raw: Any) -> dict[str, Any]:
     body = str(raw.get("bodyText") or "")
     balance, next_displayed = _parse_balance(body)
     tiers = []
+    seen_thresholds = set()
     for card in raw.get("cards", []) or []:
         if not isinstance(card, dict):
             continue
         text = str(card.get("cardText") or "")
-        threshold = _parse_threshold(text)
+        threshold_text = str(card.get("thresholdText") or "").strip()
+        threshold = _parse_threshold(threshold_text) if threshold_text else _parse_threshold(text)
         if threshold is None:
             continue
+        if threshold in seen_thresholds:
+            raise EventRewardsError(f"Duplicate event tier threshold detected: {threshold}; refusing an ambiguous snapshot")
+        seen_thresholds.add(threshold)
+
+        status = _tier_status(card, balance)
+        if "claimButtonEnabled" in card:
+            should_read_rewards = bool(card.get("claimButtonEnabled"))
+        else:
+            should_read_rewards = status in {"available", "inconsistent_balance"}
+        reward = _normalise_reward_items(card, text) if should_read_rewards else []
+
         tiers.append({
             "threshold": threshold,
-            "reward": _parse_reward_names(text),
+            "reward": reward,
             "button_text": str(card.get("buttonText") or "").strip(),
             "button_index": int(card.get("buttonIndex", -1)),
             "disabled": bool(card.get("disabled", True)),
-            "status": _tier_status(card, balance),
+            "visible": bool(card.get("visible", True)),
+            "claim_button_enabled": should_read_rewards,
+            "status": status,
         })
     tiers.sort(key=lambda item: item["threshold"])
     next_threshold = min(
@@ -256,18 +329,12 @@ def _validate_claim_button(driver, button, expected_threshold: int) -> tuple[boo
               && style.display !== 'none' && style.visibility !== 'hidden');
             const buttonText = norm(button.innerText || button.textContent || button.getAttribute('aria-label'));
             const disabled = !!button.disabled || button.getAttribute('aria-disabled') === 'true';
-            let node = button;
-            let cardText = '';
-            let threshold = null;
-            for (let depth = 0; depth < 10 && node; depth++, node = node.parentElement) {
-              const text = (node.innerText || node.textContent || '').trim();
-              const first = (text.split(/\n+/)[0] || '').trim();
-              if (/^\d[\d,]*$/.test(first)) {
-                cardText = text;
-                threshold = Number(first.replace(/,/g, ''));
-                break;
-              }
-            }
+            const card = button.closest('div.relative.rounded-lp-card');
+            const thresholdElement = card && Array.from(card.querySelectorAll('span'))
+              .find(el => /^\d[\d,]*$/.test((el.textContent || '').trim()));
+            const threshold = thresholdElement
+              ? Number(thresholdElement.textContent.trim().replace(/,/g, '')) : null;
+            const cardText = card ? (card.innerText || card.textContent || '').trim() : '';
             return {ok: visible && !disabled && ['claim', 'claim all'].includes(buttonText),
               visible, disabled, buttonText, threshold, cardText};
         """, button)
@@ -407,6 +474,28 @@ def claim_event_program(
     result["balance"] = state["balance"]
     result["next_threshold"] = state["next_threshold"]
     result["tiers_total"] = len(state["tiers"])
+
+    expected_tier_count = program.get("expected_tier_count")
+    if expected_tier_count is not None:
+        try:
+            expected_tier_count = int(expected_tier_count)
+        except (TypeError, ValueError) as exc:
+            raise EventRewardsError("Configured expected_tier_count is not an integer") from exc
+        if len(state["tiers"]) != expected_tier_count:
+            detected_count = len(state["tiers"])
+            raise EventRewardsError(
+                f"Detected {detected_count}/{expected_tier_count} expected reward tiers; "
+                "refusing to claim from an incomplete or ambiguous page snapshot"
+            )
+
+    missing_reward_labels = [
+        tier["threshold"] for tier in state["tiers"]
+        if tier["status"] == "available" and not tier.get("reward")
+    ]
+    if missing_reward_labels:
+        raise EventRewardsError(
+            "Reward names could not be read for tier(s): " + ", ".join(str(x) for x in missing_reward_labels)
+        )
 
     inconsistent = next((tier for tier in state["tiers"]
                          if tier["status"] == "inconsistent_balance"), None)

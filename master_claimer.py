@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.3.1
+# master_claimer.py — CS Rewards Bot v3.2.0
 import csv
 import time
 import os
@@ -2073,14 +2073,6 @@ def process_player(pid, has_loyalty, is_new, run_label):
             log("⏳ Waiting for server to process Store/promotion claims...")
             time.sleep(3)
 
-        # Limited-time point programmes (e.g. Lost Soul Rewards).
-        stats["event_rewards"] = run_event_reward_checks(driver, pid)
-        stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
-        stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
-        if stats["event_rewards_retry_required"]:
-            stats["retry_required"] = True
-            stats["fail_reason"] = "One or more limited-time event reward claims could not be confirmed"
-
         # Progression
         for retry in range(2):
             p = claim_progression_program_rewards(driver, pid)
@@ -2105,6 +2097,14 @@ def process_player(pid, has_loyalty, is_new, run_label):
         else:
             stats["loyalty_skipped"] = True
             log("ℹ️  Loyalty not enrolled for this ID")
+
+        # Limited-time point programmes run last, using the existing authenticated browser session.
+        stats["event_rewards"] = run_event_reward_checks(driver, pid)
+        stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
+        stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
+        if stats["event_rewards_retry_required"]:
+            stats["retry_required"] = True
+            stats["fail_reason"] = "One or more limited-time event reward claims could not be confirmed"
 
         # Determine status
         claimed_now = stats["daily"] + stats["store"] + stats.get("store_temp", 0) + stats.get("loyalty", 0)
