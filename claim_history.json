@@ -34,7 +34,7 @@
     "progression": {
       "last_claim": "2026-10-22T05:51:30.183610",
       "last_count": 1,
-      "last_visit": "2026-10-31T09:57:35.148028"
+      "last_visit": "2026-10-31T11:04:10.022618"
     },
     "loyalty": {
       "last_claim": null,
@@ -47,28 +47,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.830702"
+        "last_seen_at": "2026-10-31T11:03:19.776112"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.845460"
+        "last_seen_at": "2026-10-31T11:03:19.794741"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.805920"
+        "last_seen_at": "2026-10-31T11:03:19.751362"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.851452"
+        "last_seen_at": "2026-10-31T11:03:19.800527"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -89,42 +89,209 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.811589"
+        "last_seen_at": "2026-10-31T11:03:19.757339"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-10-31T09:56:44.817258"
+        "last_seen_at": "2026-10-31T11:03:19.762919"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-10-31T09:56:44.824721",
+        "last_seen_at": "2026-10-31T11:03:19.769187",
         "last_claim": "2026-10-31T06:30:15.224029",
-        "portal_observed_at": "2026-10-31T09:56:44.824721"
+        "portal_observed_at": "2026-10-31T11:03:19.769187"
       }
     },
     "event_rewards": {
       "pgp_eLiQHDMchen": {
         "name": "Lost Soul Rewards",
         "slug": "halloween-2026",
-        "points_label": "points",
+        "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-10-31T09:58:12.593575",
-        "balance": null,
-        "next_threshold": null,
-        "tiers_total": 0,
-        "tiers_delivered": 0,
-        "tiers": [],
-        "claims_this_run": [],
-        "claim_ledger": [],
-        "status": "error",
-        "retry_required": true,
-        "error": "EventRewardsError: Reward names could not be read for tier(s): 400, 900",
+        "checked_at": "2026-10-31T11:04:53.246600",
+        "balance": 1100,
+        "next_threshold": 1300,
+        "tiers_total": 14,
+        "tiers_delivered": 2,
+        "tiers": [
+          {
+            "threshold": 400,
+            "reward": [],
+            "button_text": "delivered",
+            "button_index": 2,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "delivered"
+          },
+          {
+            "threshold": 900,
+            "reward": [],
+            "button_text": "delivered",
+            "button_index": 3,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "delivered"
+          },
+          {
+            "threshold": 1300,
+            "reward": [],
+            "button_text": "",
+            "button_index": 4,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 2000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 5,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 3200,
+            "reward": [],
+            "button_text": "",
+            "button_index": 6,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 3300,
+            "reward": [],
+            "button_text": "",
+            "button_index": 7,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 5000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 8,
+            "disabled": true,
+            "visible": true,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 5200,
+            "reward": [],
+            "button_text": "",
+            "button_index": 9,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 10200,
+            "reward": [],
+            "button_text": "",
+            "button_index": 10,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 11000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 11,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 12000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 12,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 20000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 13,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 27000,
+            "reward": [],
+            "button_text": "",
+            "button_index": 14,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          },
+          {
+            "threshold": 31400,
+            "reward": [],
+            "button_text": "",
+            "button_index": 15,
+            "disabled": true,
+            "visible": false,
+            "claim_button_enabled": false,
+            "status": "locked"
+          }
+        ],
+        "claims_this_run": [
+          {
+            "threshold": 400,
+            "reward": [],
+            "status": "claimed_this_run"
+          },
+          {
+            "threshold": 900,
+            "reward": [],
+            "status": "claimed_this_run"
+          }
+        ],
+        "claim_ledger": [
+          {
+            "cycle": 0,
+            "threshold": 400,
+            "reward": [],
+            "claimed_at": "2026-10-31T11:04:53.246600",
+            "verification": "delivered"
+          },
+          {
+            "cycle": 0,
+            "threshold": 900,
+            "reward": [],
+            "claimed_at": "2026-10-31T11:04:53.246600",
+            "verification": "delivered"
+          }
+        ],
+        "status": "checked",
+        "retry_required": false,
+        "error": null,
         "end_at": 1793826000
       }
     }
