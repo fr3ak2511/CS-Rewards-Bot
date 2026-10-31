@@ -162,6 +162,7 @@ class _FakeDriver:
 
     def execute_script(self, script, *args):
         if "EVENT_CLAIM_BUTTON_CHECK" in script:
+            self.validation_script = script
             return {
                 "ok": True, "visible": True, "disabled": False,
                 "buttonText": "claim", "threshold": getattr(self, "validation_threshold", 900),
@@ -222,6 +223,16 @@ class EventRewardButtonGuardTests(unittest.TestCase):
         valid, reason = _validate_claim_button(driver, button, 900)
         self.assertTrue(valid)
         self.assertEqual(reason, "validated")
+
+    def test_validator_parses_threshold_concatenated_with_quantity(self):
+        driver = _FakeDriver()
+        button = _FakeButton()
+        driver.validation_threshold = 5200
+        valid, reason = _validate_claim_button(driver, button, 5200)
+        self.assertTrue(valid, reason)
+        self.assertIn("const thresholdMatch = firstLine.match", driver.validation_script)
+        self.assertIn(r"(?=\s*(?:x|\s|$))", driver.validation_script)
+        self.assertNotIn("thresholdElement = card", driver.validation_script)
 
 
 class EventRewardExecutionTests(unittest.TestCase):
