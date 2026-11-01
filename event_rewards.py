@@ -25,12 +25,17 @@ from typing import Any, Callable
 
 DEFAULT_CONFIG_PATH = Path(__file__).with_name("event_rewards_config.json")
 EVENT_CARD_SELECTOR = "div.relative.rounded-lp-card"
-EVENT_POPUP_SELECTOR = '[role="dialog"], [aria-modal="true"]'
+# The captured Vertigo Games promotion exposes all three close markers below.
+# The purchase control in the same dialog is data-testid="buy-button" and
+# data-variant="component-buy"; it must never be considered a close control.
+EVENT_POPUP_SELECTOR = '[role="dialog"], [aria-modal="true"], [class*="modal"]'
 EVENT_POPUP_CLOSE_SELECTOR = (
     'button[data-testid="close"], '
+    'button[data-variant="close"], '
     'button[aria-label="Close dialog"], '
     'button[aria-label="Close"], '
-    'button[title="Close"]'
+    'button[title="Close"], '
+    'button[class*="button-close"]'
 )
 EVENT_POPUP_WAIT_SECONDS = 3.0
 EVENT_CLAIM_VERIFY_SECONDS = 8.0
@@ -84,29 +89,77 @@ return {
 };"""
 
 
-_POPUP_INSPECT_SCRIPT = r"""/* EVENT_POPUP_INSPECT_V1 */
-const visible = el => {
+_POPUP_INSPECT_SCRIPT = r"""/* EVENT_POPUP_INSPECT_V2 */
+const isVisible = el => {
   if (!el) return false;
   const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  const opacity = Number(s.opacity || '1');
   return !!(el.getClientRects().length && r.width > 0 && r.height > 0
-    && s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0);
+    && s.display !== 'none' && s.visibility !== 'hidden' && opacity > 0);
 };
-const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]'))
-  .filter(visible);
+const normalise = value => (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const dialogs = Array.from(document.querySelectorAll(
+  '[role="dialog"], [aria-modal="true"], [class*="modal"]'
+)).filter(isVisible);
 const describe = el => ({
-  text: (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 700),
-  ariaModal: el.getAttribute('aria-modal'), role: el.getAttribute('role')
+  text: normalise(el.innerText || el.textContent || '').slice(0, 700),
+  ariaModal: el.getAttribute('aria-modal'), role: el.getAttribute('role'),
+  className: String(el.className || '').slice(0, 300)
 });
 const promotional = dialogs.find(el => {
-  const t = (el.innerText || el.textContent || '').toLowerCase();
+  const t = normalise(el.innerText || el.textContent || '');
   return t.includes('exclusive discount activated') || t.includes('purchase or lose it');
 });
+// The captured page has a fixed, viewport-sized z-900 overlay outside the
+// dialog node. Count only viewport-covering overlays, not small Store-card
+// image overlays (which are also present elsewhere on this page).
+const fullScreenBlockers = Array.from(document.querySelectorAll('[class*="overlay"], [class*="Overlay"]'))
+  .filter(el => {
+    if (!isVisible(el)) return false;
+    const r = el.getBoundingClientRect(), st = getComputedStyle(el);
+    if (st.pointerEvents === 'none') return false;
+    return r.width >= window.innerWidth * 0.8
+      && r.height >= window.innerHeight * 0.8
+      && (st.position === 'fixed' || (r.left <= 2 && r.top <= 2));
+  });
 return {
   visibleDialogCount: dialogs.length,
   dialogDescriptions: dialogs.map(describe),
   promotionalDialogVisible: !!promotional,
   promotionalDialogText: promotional ? describe(promotional).text : '',
+  fullScreenBlockingOverlayCount: fullScreenBlockers.length,
+  fullScreenBlockingOverlayClasses: fullScreenBlockers.map(el => String(el.className || '').slice(0, 300)),
   url: location.href
+};"""
+
+
+_POPUP_CLOSE_BUTTON_CHECK_SCRIPT = r"""/* EVENT_POPUP_CLOSE_BUTTON_CHECK_V1 */
+const button = arguments[0];
+if (!button) return {ok:false, reason:'button_missing'};
+const style = getComputedStyle(button), rect = button.getBoundingClientRect();
+const visible = !!(button.getClientRects().length && rect.width > 0 && rect.height > 0
+  && style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0);
+const testid = (button.getAttribute('data-testid') || '').toLowerCase();
+const variant = (button.getAttribute('data-variant') || '').toLowerCase();
+const aria = (button.getAttribute('aria-label') || '').toLowerCase();
+const title = (button.getAttribute('title') || '').toLowerCase();
+const cls = String(button.className || '').toLowerCase();
+const type = (button.getAttribute('type') || 'submit').toLowerCase();
+const isPurchase = testid === 'buy-button' || variant === 'component-buy'
+  || button.matches('[data-testid="buy-button"], [data-variant="component-buy"]');
+const hasCloseEvidence = testid === 'close' || variant === 'close'
+  || aria === 'close dialog' || aria === 'close' || title === 'close'
+  || cls.includes('button-close');
+const disabled = !!button.disabled || button.getAttribute('aria-disabled') === 'true';
+const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+const top = visible ? document.elementFromPoint(x, y) : null;
+const topmost = !!(top && (top === button || button.contains(top)));
+return {
+  ok: visible && !disabled && !isPurchase && hasCloseEvidence && type === 'button' && topmost,
+  visible, disabled, isPurchase, hasCloseEvidence, type, topmost,
+  testid, variant, aria, title, className:cls.slice(0,300),
+  topElementTag: top ? top.tagName : null,
+  topElementClass: top ? String(top.className || '').slice(0,240) : ''
 };"""
 
 
@@ -358,17 +411,24 @@ def _inspect_promotion_popup(driver) -> dict[str, Any]:
 
 def _dismiss_event_promotion_popup(driver, log: Callable[[str], None],
                                    timeout: float = EVENT_POPUP_WAIT_SECONDS) -> tuple[bool, str]:
-    """Dismiss only the known promotional dialog via its explicit close control.
+    """Safely dismiss the captured Store promotion and verify its overlay is gone.
 
-    This deliberately does not call master_claimer.close_popup(), whose generic
-    modal fallback can select a purchase button. It also never uses JS click.
+    The close button is selected from inside the identified promotion dialog.
+    Its actual portal attributes are checked again before a native Selenium
+    click. Generic modal buttons and the Store purchase button are never used.
     """
     state = _inspect_promotion_popup(driver)
     if state.get("inspection_error"):
         return False, "popup_state_unavailable"
-    if not state.get("visibleDialogCount"):
-        return True, "no_visible_dialog"
-    if not state.get("promotionalDialogVisible"):
+
+    dialog_count = int(state.get("visibleDialogCount", 0) or 0)
+    overlay_count = int(state.get("fullScreenBlockingOverlayCount", 0) or 0)
+    promotional_visible = bool(state.get("promotionalDialogVisible"))
+    if dialog_count == 0 and overlay_count == 0:
+        return True, "no_visible_dialog_or_fullscreen_overlay"
+    if not promotional_visible:
+        if overlay_count:
+            return False, "unknown_fullscreen_overlay_blocks_event_page"
         return False, "unknown_dialog_blocks_event_page"
 
     try:
@@ -376,23 +436,23 @@ def _dismiss_event_promotion_popup(driver, log: Callable[[str], None],
     except Exception as exc:
         return False, f"dialog_lookup_failed:{type(exc).__name__}"
 
-    target_dialog = None
+    matching_dialogs = []
     for dialog in dialogs:
         if not _visible(dialog):
             continue
         dialog_text = _element_text(dialog).casefold()
         if "exclusive discount activated" in dialog_text or "purchase or lose it" in dialog_text:
-            target_dialog = dialog
-            break
-    if target_dialog is None:
-        return False, "promotional_dialog_not_reacquired"
+            matching_dialogs.append(dialog)
+    if len(matching_dialogs) != 1:
+        return False, f"promotional_dialog_match_count:{len(matching_dialogs)}"
+    target_dialog = matching_dialogs[0]
 
     try:
         close_buttons = target_dialog.find_elements("css selector", EVENT_POPUP_CLOSE_SELECTOR)
     except Exception as exc:
         return False, f"close_control_lookup_failed:{type(exc).__name__}"
 
-    safe_close = None
+    safe_candidates = []
     for button in close_buttons:
         if not _visible(button):
             continue
@@ -401,34 +461,58 @@ def _dismiss_event_promotion_popup(driver, log: Callable[[str], None],
             aria = (button.get_attribute("aria-label") or "").casefold()
             title = (button.get_attribute("title") or "").casefold()
             variant = (button.get_attribute("data-variant") or "").casefold()
+            class_name = (button.get_attribute("class") or "").casefold()
+            button_type = (button.get_attribute("type") or "button").casefold()
+            disabled = button.get_attribute("disabled") is not None or button.get_attribute("aria-disabled") == "true"
         except Exception:
             continue
-        if testid == "close" or aria in {"close", "close dialog"} or title == "close" or variant == "close":
-            safe_close = button
-            break
-    if safe_close is None:
-        return False, "explicit_close_control_not_found"
+
+        # Reject any purchase control explicitly, even if a future portal
+        # change accidentally adds an accessibility label that resembles Close.
+        is_purchase = testid == "buy-button" or variant == "component-buy"
+        has_close_evidence = (
+            testid == "close" or variant == "close"
+            or aria in {"close", "close dialog"} or title == "close"
+            or "button-close" in class_name
+        )
+        if not is_purchase and not disabled and button_type == "button" and has_close_evidence:
+            safe_candidates.append(button)
+
+    # Multiple plausible controls are ambiguous; do not guess.
+    if len(safe_candidates) != 1:
+        return False, f"safe_close_candidate_count:{len(safe_candidates)}"
+    safe_close = safe_candidates[0]
 
     try:
-        # Native Selenium click only. No ActionChains or JavaScript fallback.
+        close_state = driver.execute_script(_POPUP_CLOSE_BUTTON_CHECK_SCRIPT, safe_close)
+    except Exception as exc:
+        return False, f"close_button_validation_failed:{type(exc).__name__}"
+    if not isinstance(close_state, dict) or not close_state.get("ok"):
+        reason = close_state.get("reason", "close_button_not_topmost_or_not_safe") if isinstance(close_state, dict) else "close_button_validation_no_state"
+        return False, str(reason)
+
+    try:
+        # Native Selenium click only. Never use JS click or generic modal fallback.
         safe_close.click()
     except Exception as exc:
         return False, f"native_close_click_failed:{type(exc).__name__}"
 
-    # Use a fixed, bounded poll count. Besides being deterministic in unit tests,
-    # this prevents a stalled browser clock from creating an unbounded wait.
     poll_count = max(1, int(float(timeout) / 0.2 + 0.999))
     for _ in range(poll_count):
         time.sleep(0.2)
         current = _inspect_promotion_popup(driver)
         if current.get("inspection_error"):
             continue
-        if not current.get("visibleDialogCount"):
-            log("✅ Halloween promotion popup dismissed and verified")
+        current_dialogs = int(current.get("visibleDialogCount", 0) or 0)
+        current_overlays = int(current.get("fullScreenBlockingOverlayCount", 0) or 0)
+        if current_dialogs == 0 and current_overlays == 0:
+            log("✅ Halloween promotion popup and full-screen overlay dismissed and verified")
             return True, "dismissed_and_verified"
         if not current.get("promotionalDialogVisible"):
+            if current_overlays:
+                return False, "fullscreen_overlay_remained_after_close_click"
             return False, "another_dialog_remains_visible"
-    return False, "popup_remained_after_close_click"
+    return False, "popup_or_fullscreen_overlay_remained_after_close_click"
 
 
 def _find_claim_button_for_threshold(driver, expected_threshold: int):
@@ -580,16 +664,22 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
     time.sleep(2.0)
 
     popup_ok, popup_reason = _dismiss_event_promotion_popup(driver, log)
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(0.5)
-    driver.execute_script("window.scrollTo(0, 0);")
-    time.sleep(0.3)
-    # A delayed promotion may appear during lazy rendering; inspect again.
-    popup_ok_after_scroll, popup_reason_after_scroll = _dismiss_event_promotion_popup(driver, log)
-    if not popup_ok_after_scroll:
+    if not popup_ok:
         result["retry_required"] = True
-        result["error"] = f"popup_blocking: {popup_reason_after_scroll}"
-        log(f"⚠️ Halloween page blocked; no reward clicks will be attempted: {result['error']}")
+        result["error"] = f"popup_blocking: {popup_reason}"
+        log(f"⚠️ Halloween page blocked before lazy loading; no reward clicks will be attempted: {result['error']}")
+    else:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(0.5)
+        driver.execute_script("window.scrollTo(0, 0);")
+        time.sleep(0.3)
+        # A delayed promotion can appear after lazy rendering; check and dismiss it
+        # again before parsing or attempting any event claim.
+        popup_ok_after_scroll, popup_reason_after_scroll = _dismiss_event_promotion_popup(driver, log)
+        if not popup_ok_after_scroll:
+            result["retry_required"] = True
+            result["error"] = f"popup_blocking: {popup_reason_after_scroll}"
+            log(f"⚠️ Halloween page blocked after lazy loading; no reward clicks will be attempted: {result['error']}")
 
     state = _read_page_state(driver)
     if name.casefold() not in state["body_text"].casefold() and not state["tiers"]:
