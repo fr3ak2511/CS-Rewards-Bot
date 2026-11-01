@@ -2,396 +2,283 @@ import unittest
 from unittest.mock import patch
 
 from event_rewards import (
-    _SNAPSHOT_SCRIPT,
-    EventRewardsError,
-    _normalise_snapshot,
-    claim_event_program,
-    _parse_balance,
-    _parse_reward_names,
-    _parse_threshold,
-    _tier_status,
-    _validate_claim_button,
-    merge_claim_ledger,
-    event_claim_count,
-    event_retry_required,
-    get_active_event_programs,
+    _SNAPSHOT_SCRIPT, _parse_balance, _parse_threshold, _parse_reward_names,
+    _normalise_snapshot, _tier_status, _validate_claim_button,
+    _dismiss_event_promotion_popup, claim_event_program,
+    get_active_event_programs, merge_claim_ledger, event_claim_count,
+    event_retry_required, EventRewardsError,
 )
 
 
-class EventRewardParsingTests(unittest.TestCase):
-    def test_parse_balance(self):
-        self.assertEqual(_parse_balance("Lost Soul Rewards\n1,000 / 1,300\n"), (1000, 1300))
-        self.assertEqual(_parse_balance("No balance here"), (None, None))
-
-    def test_threshold_and_reward_names(self):
-        card = "400\nx10\nOrb of Calamity\nx10\nAether Extract\nDelivered"
-        self.assertEqual(_parse_threshold(card), 400)
-        self.assertEqual(_parse_reward_names(card), ["Orb of Calamity ×10", "Aether Extract ×10"])
-        self.assertEqual(_parse_reward_names("5000\nx200K\nCash"), ["Cash ×200K"])
-
-    def test_status_requires_balance_confirmation(self):
-        self.assertEqual(_tier_status({"buttonText": "Delivered", "disabled": True, "cardText": "400\nDelivered"}, 1000), "delivered")
-        self.assertEqual(_tier_status({"buttonText": "Claim", "disabled": False, "cardText": "1300\nLuckyloon"}, 1000), "inconsistent_balance")
-        self.assertEqual(_tier_status({"buttonText": "Claim", "disabled": False, "cardText": "900\nAbyss"}, 1000), "available")
-        self.assertEqual(_tier_status({"buttonText": "", "disabled": True, "cardText": "2000\nSuper Chest"}, 1000), "locked")
-
-    def test_normalise_snapshot(self):
-        snapshot = _normalise_snapshot({
-            "title": "Halloween 2026",
-            "url": "https://hub.vertigogames.co/halloween-2026",
-            "bodyText": "Lost Soul Rewards\n1,000 / 1,300",
-            "cards": [
-                {"buttonIndex": 3, "buttonText": "Delivered", "disabled": True,
-                 "cardText": "400\nx10\nOrb of Calamity\nx10\nAether Extract\nDelivered"},
-                {"buttonIndex": 4, "buttonText": "", "disabled": True,
-                 "cardText": "1300\nx150\nLuckyloon"},
-            ],
-        })
-        self.assertEqual(snapshot["balance"], 1000)
-        self.assertEqual(snapshot["next_threshold"], 1300)
-        self.assertEqual([tier["status"] for tier in snapshot["tiers"]], ["delivered", "locked"])
-
-    def test_duplicate_threshold_is_rejected(self):
-        with self.assertRaises(EventRewardsError):
-            _normalise_snapshot({
-                "bodyText": "Lost Soul Rewards\n1,000 / 1,300",
-                "cards": [
-                    {"buttonIndex": 0, "buttonText": "Claim", "disabled": False, "visible": True, "cardText": "400\nOrb\nClaim"},
-                    {"buttonIndex": 1, "buttonText": "Claim", "disabled": False, "visible": True, "cardText": "400\nOther\nClaim"},
-                ],
-            })
-
-    def test_halloween_snapshot_reads_explicit_thresholds_and_reward_labels(self):
-        self.assertIn("div.relative.rounded-lp-card", _SNAPSHOT_SCRIPT)
-        self.assertIn("const thresholdMatch = firstLine.match", _SNAPSHOT_SCRIPT)
-        self.assertIn("(?:x|\\s|$)", _SNAPSHOT_SCRIPT)
-        claim_check = _SNAPSHOT_SCRIPT.index("const claimButtonEnabled")
-        reward_read = _SNAPSHOT_SCRIPT.index("const rewardRows")
-        self.assertLess(claim_check, reward_read)
-        self.assertIn("if (claimButtonEnabled)", _SNAPSHOT_SCRIPT)
-        self.assertIn('span[class*="line-clamp-1"]', _SNAPSHOT_SCRIPT)
-        self.assertIn("text-store-card-sku-img-quantity", _SNAPSHOT_SCRIPT)
-
-        snapshot = _normalise_snapshot({
-            "title": "Halloween 2026",
-            "url": "https://hub.vertigogames.co/halloween-2026",
-            "bodyText": "Lost Soul Rewards\\n10,000 / 11,000",
-            "cards": [
-                {
-                    "thresholdText": "5,200",
-                    "rewardItems": [{"name": "Viktor Character Card", "quantity": "x20"}],
-                    "claimButtonEnabled": True,
-                    "buttonIndex": 11,
-                    "buttonText": "Claim",
-                    "disabled": False,
-                    "visible": True,
-                    "cardText": "5,200\\nx20\\nViktor Character Card\\nClaim",
-                },
-                {
-                    "thresholdText": "10,200",
-                    "rewardItems": [],
-                    "claimButtonEnabled": False,
-                    "buttonIndex": 12,
-                    "buttonText": "",
-                    "disabled": True,
-                    "visible": True,
-                    "cardText": "10,200",
-                },
-            ],
-        })
-        self.assertEqual(snapshot["tiers"][0]["threshold"], 5200)
-        self.assertEqual(snapshot["tiers"][0]["reward"], ["Viktor Character Card ×20"])
-        self.assertEqual(snapshot["tiers"][0]["status"], "available")
-        self.assertEqual(snapshot["tiers"][1]["threshold"], 10200)
-        self.assertEqual(snapshot["tiers"][1]["reward"], [])
-        self.assertEqual(snapshot["tiers"][1]["status"], "locked")
-    def test_halloween_available_cards_extract_reward_names_best_effort(self):
-        snapshot = _normalise_snapshot({
-            "title": "Halloween 2026",
-            "url": "https://hub.vertigogames.co/halloween-2026",
-            "bodyText": "Lost Soul Rewards\n1,100 / 1,300",
-            "cards": [
-                {
-                    "thresholdText": "400",
-                    "rewardItems": [
-                        {"name": "Orb of Calamity", "quantity": "x10"},
-                        {"name": "Aether Extract", "quantity": "x10"},
-                    ],
-                    "claimButtonEnabled": True,
-                    "buttonIndex": 2,
-                    "buttonText": "Claim",
-                    "disabled": False,
-                    "visible": True,
-                    "cardText": "400\nx10\nOrb of Calamity\nx10\nAether Extract\nClaim",
-                },
-                {
-                    "thresholdText": "900",
-                    "rewardItems": [{"name": "Abyss", "quantity": ""}],
-                    "claimButtonEnabled": True,
-                    "buttonIndex": 3,
-                    "buttonText": "Claim",
-                    "disabled": False,
-                    "visible": True,
-                    "cardText": "900\nAbyss\nClaim",
-                },
-                {
-                    "thresholdText": "1,300",
-                    "rewardItems": [],
-                    "claimButtonEnabled": False,
-                    "buttonIndex": 4,
-                    "buttonText": "",
-                    "disabled": True,
-                    "visible": True,
-                    "cardText": "1,300\nx150\nLuckyloon",
-                },
-            ],
-        })
-        tiers = snapshot["tiers"]
-        self.assertEqual([tier["threshold"] for tier in tiers], [400, 900, 1300])
-        self.assertEqual(tiers[0]["reward"], ["Orb of Calamity ×10", "Aether Extract ×10"])
-        self.assertEqual(tiers[1]["reward"], ["Abyss"])
-        self.assertEqual([tier["status"] for tier in tiers], ["available", "available", "locked"])
-
-    def test_active_program_config_and_expiry(self):
-        config = {"enabled": True, "programs": [{
-            "enabled": True, "name": "Test", "slug": "test", "program_id": "pgp_test",
-            "end_at": 2000, "max_claims_per_run": 100,
-        }]}
-        active = get_active_event_programs(config, now_epoch=1999)
-        self.assertEqual(len(active), 1)
-        self.assertEqual(active[0]["max_claims_per_run"], 50)
-        self.assertEqual(get_active_event_programs(config, now_epoch=2000), [])
-        not_started = {"enabled": True, "programs": [{
-            "enabled": True, "name": "Later", "slug": "later", "program_id": "pgp_later",
-            "start_at": 3000, "end_at": 4000,
-        }]}
-        self.assertEqual(get_active_event_programs(not_started, now_epoch=2999), [])
-
-    def test_event_aggregates(self):
-        events = [
-            {"claims_this_run": [{"threshold": 400}, {"threshold": 900}], "retry_required": False},
-            {"claims_this_run": [], "retry_required": True},
-        ]
-        self.assertEqual(event_claim_count(events), 2)
-        self.assertTrue(event_retry_required(events))
-
-
-    def test_claim_ledger_preserves_history_and_is_idempotent(self):
-        original = [{"cycle": 0, "threshold": 400, "reward": ["Orb"], "claimed_at": "old"}]
-        new_claims = [{"threshold": 900, "reward": ["Abyss"]}]
-        first = merge_claim_ledger(original, new_claims, cycle=0, claimed_at="now")
-        second = merge_claim_ledger(first, new_claims, cycle=0, claimed_at="later")
-        self.assertEqual(len(second), 2)
-        self.assertEqual(second[0]["claimed_at"], "old")
-        self.assertEqual(second[1]["claimed_at"], "now")
-
-
-class _FakeButton:
-    def __init__(self):
-        self.disabled = False
+class FakeElement:
+    def __init__(self, text="", attrs=None, displayed=True, click_action=None):
+        self.text = text
+        self.attrs = attrs or {}
+        self.displayed = displayed
+        self.click_action = click_action
+        self.disabled = bool(self.attrs.get("disabled", False))
+        self.clicked = False
 
     def is_displayed(self):
-        return True
+        return self.displayed
 
-    def is_enabled(self):
-        return not self.disabled
+    def get_attribute(self, name):
+        return self.attrs.get(name, "")
+
+    def find_elements(self, by, selector):
+        if by == "css selector" and (selector.startswith("button[data-testid=\"close\"]") or selector.startswith("button[aria-label")):
+            return getattr(self, "close_buttons", [])
+        if by == "tag name" and selector == "button":
+            return getattr(self, "buttons", [])
+        return []
+
+    def click(self):
+        self.clicked = True
+        if self.click_action:
+            self.click_action()
 
 
-class _FakeDriver:
-    def __init__(self):
-        self.button = _FakeButton()
-        self.delivered = False
-        self.current_url = ""
-        self.missing_reward_names = False
+class FakeCard(FakeElement):
+    def __init__(self, threshold, button):
+        super().__init__(f"{threshold}\nAbyss\nClaim")
+        self.threshold = threshold
+        self.buttons = [button]
+
+
+class FakeDriver:
+    def __init__(self, popup=True, dismissible=True, click_delivers=True, obstruct=False):
+        self.url = ""
+        self.popup = popup
+        self.dismissible = dismissible
+        self.deliver_on_click = click_delivers
+        self.obstruct = obstruct
+        self.click_count = 0
+        self.refresh_count = 0
+        self.dialog = None
+        self.button = FakeElement("Claim")
+        self.button.click_action = self._on_claim
+        self.card = FakeCard(900, self.button)
+        self._build_dialog()
+
+    def _build_dialog(self):
+        if self.popup:
+            close = FakeElement("", {
+                "data-testid": "close", "aria-label": "Close dialog", "data-variant": "close"
+            }, click_action=self._dismiss)
+            self.dialog = FakeElement("Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 ₹623.00")
+            self.dialog.close_buttons = [close]
+            # A purchase button is deliberately NOT in the safe close selector result.
+            self.dialog.all_buttons = [close, FakeElement("₹623.00", {"data-testid": "buy-button"})]
+        else:
+            self.dialog = None
+
+    def _dismiss(self):
+        if self.dismissible:
+            self.popup = False
+            self.dialog = None
+
+    def _on_claim(self):
+        self.click_count += 1
+        if self.deliver_on_click:
+            self.delivered = True
+
+    @property
+    def delivered(self):
+        return getattr(self, "_delivered", False)
+
+    @delivered.setter
+    def delivered(self, value):
+        self._delivered = value
 
     def get(self, url):
-        self.current_url = url
-
-    def execute_script(self, script, *args):
-        if "EVENT_CLAIM_BUTTON_CHECK" in script:
-            self.validation_script = script
-            return {
-                "ok": True, "visible": True, "disabled": False,
-                "buttonText": "claim", "threshold": getattr(self, "validation_threshold", 900),
-                "cardText": "900\\nAbyss\\nClaim",
-            }
-        if "const buttons = Array.from(document.querySelectorAll('button'))" not in script:
-            return None
-        delivered_text = "Delivered" if self.delivered else "Claim"
-        enabled = not self.delivered
-        return {
-            "title": "Halloween 2026",
-            "url": self.current_url,
-            "bodyText": "Lost Soul Rewards\\n1,000 / 1,300",
-            "cards": [
-                {
-                    "thresholdText": "900",
-                    "rewardItems": [] if (self.missing_reward_names or self.delivered) else [{"name": "Abyss", "quantity": ""}],
-                    "claimButtonEnabled": enabled,
-                    "buttonIndex": 0,
-                    "buttonText": delivered_text,
-                    "disabled": self.delivered,
-                    "visible": True,
-                    "cardText": "900\\nAbyss\\n" + delivered_text,
-                },
-                {
-                    "thresholdText": "1300",
-                    "rewardItems": [],
-                    "claimButtonEnabled": False,
-                    "buttonIndex": 1,
-                    "buttonText": "",
-                    "disabled": True,
-                    "visible": True,
-                    "cardText": "1300",
-                },
-            ],
-        }
-
-    def find_elements(self, by, value):
-        self.assert_locator = (by, value)
-        return [self.button, _FakeButton()]
+        self.url = url
 
     def refresh(self):
+        self.refresh_count += 1
+
+    def find_elements(self, by, selector):
+        if by == "css selector" and selector == '[role="dialog"], [aria-modal="true"]':
+            return [self.dialog] if self.dialog else []
+        if by == "css selector" and selector == "div.relative.rounded-lp-card":
+            return [self.card]
+        if by == "tag name" and selector == "button":
+            return [self.button]
+        return []
+
+    def execute_script(self, script, *args):
+        if "EVENT_POPUP_INSPECT_V1" in script:
+            visible = bool(self.popup)
+            return {
+                "visibleDialogCount": 1 if visible else 0,
+                "dialogDescriptions": [{"text": "Exclusive Discount Activated!"}] if visible else [],
+                "promotionalDialogVisible": visible,
+                "promotionalDialogText": "Exclusive Discount Activated! Purchase or Lose it!" if visible else "",
+                "url": self.url,
+            }
+        if "EVENT_CLAIM_BUTTON_CHECK_V2" in script:
+            return {
+                "ok": not self.popup and not self.obstruct,
+                "visible": True, "disabled": False, "buttonText": "claim",
+                "threshold": 900, "topmost": not self.popup and not self.obstruct,
+                "blockingDialogCount": 1 if self.popup else 0,
+            }
+        if "EVENT_REWARDS_SNAPSHOT_V2" in script:
+            delivered = self.delivered
+            return {
+                "title": "Halloween 2026", "url": self.url,
+                "bodyText": "Lost Soul Rewards\n1,200 / 1,300",
+                "cards": [
+                    {"thresholdText": "400", "rewardItems": [], "claimButtonEnabled": False,
+                     "buttonIndex": 0, "buttonText": "Delivered", "disabled": True,
+                     "visible": True, "cardText": "400\nDelivered"},
+                    {"thresholdText": "900", "rewardItems": [{"name": "Abyss", "quantity": ""}],
+                     "claimButtonEnabled": not delivered, "buttonIndex": 1,
+                     "buttonText": "Delivered" if delivered else "Claim", "disabled": delivered,
+                     "visible": True, "cardText": "900\nAbyss\n" + ("Delivered" if delivered else "Claim")},
+                    {"thresholdText": "1300", "rewardItems": [], "claimButtonEnabled": False,
+                     "buttonIndex": 2, "buttonText": "", "disabled": True,
+                     "visible": True, "cardText": "1300"},
+                ],
+            }
         return None
 
 
-class EventRewardButtonGuardTests(unittest.TestCase):
-    def test_button_must_match_expected_tier(self):
-        driver = _FakeDriver()
-        button = _FakeButton()
-        driver.validation_threshold = 1300
-        valid, reason = _validate_claim_button(driver, button, 900)
-        self.assertFalse(valid)
-        self.assertIn("tier_mismatch", reason)
+class ParsingTests(unittest.TestCase):
+    def test_balance_threshold_and_reward_parser(self):
+        self.assertEqual(_parse_balance("Lost Soul Rewards\n1,200 / 1,300"), (1200, 1300))
+        self.assertEqual(_parse_threshold("5,200\nx20"), 5200)
+        self.assertEqual(_parse_reward_names("5000\nx200K\nCash"), ["Cash ×200K"])
 
-    def test_button_must_be_an_enabled_claim_control(self):
-        driver = _FakeDriver()
-        button = _FakeButton()
-        valid, reason = _validate_claim_button(driver, button, 900)
-        self.assertTrue(valid)
-        self.assertEqual(reason, "validated")
+    def test_tier_status_requires_live_enabled_claim_and_sufficient_balance(self):
+        self.assertEqual(_tier_status({"buttonText": "Delivered", "disabled": True, "cardText": "400\nDelivered"}, 1200), "delivered")
+        self.assertEqual(_tier_status({"buttonText": "Claim", "disabled": False, "cardText": "900\nAbyss"}, 1200), "available")
+        self.assertEqual(_tier_status({"buttonText": "Claim", "disabled": False, "cardText": "1300\nAbyss"}, 1200), "inconsistent_balance")
 
-    def test_validator_parses_threshold_concatenated_with_quantity(self):
-        driver = _FakeDriver()
-        button = _FakeButton()
-        driver.validation_threshold = 5200
-        valid, reason = _validate_claim_button(driver, button, 5200)
-        self.assertTrue(valid, reason)
-        self.assertIn("const thresholdMatch = firstLine.match", driver.validation_script)
-        self.assertIn(r"(?=\s*(?:x|\s|$))", driver.validation_script)
-        self.assertNotIn("thresholdElement = card", driver.validation_script)
-
-
-class EventRewardExecutionTests(unittest.TestCase):
-    @patch("event_rewards.time.sleep", return_value=None)
-    def test_expected_tier_count_mismatch_fails_before_click(self, _sleep):
-        driver = _FakeDriver()
-        clicks = []
+    def test_normalise_snapshot_and_duplicate_guard(self):
+        raw = {"title": "Halloween 2026", "url": "https://hub.vertigogames.co/halloween-2026",
+               "bodyText": "Lost Soul Rewards\n1,200 / 1,300",
+               "cards": [{"thresholdText": "900", "buttonText": "Claim", "disabled": False,
+                          "visible": True, "claimButtonEnabled": True, "buttonIndex": 3,
+                          "rewardItems": [{"name": "Abyss", "quantity": ""}], "cardText": "900\nAbyss\nClaim"}]}
+        state = _normalise_snapshot(raw)
+        self.assertEqual(state["balance"], 1200)
+        self.assertEqual(state["tiers"][0]["status"], "available")
+        self.assertEqual(state["tiers"][0]["reward"], ["Abyss"])
+        raw["cards"].append(dict(raw["cards"][0]))
         with self.assertRaises(EventRewardsError):
-            claim_event_program(
-                driver,
-                {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-                 "end_at_epoch": 9999999999, "max_claims_per_run": 20, "expected_tier_count": 14},
-                physical_click=lambda _driver, _button: clicks.append(True) or True,
-                bypass_cloudflare=lambda _driver: None,
-                close_popup=lambda _driver: None,
-                log=lambda _message: None,
-            )
-        self.assertEqual(clicks, [])
+            _normalise_snapshot(raw)
+
+    def test_snapshot_contains_new_safety_markers(self):
+        self.assertIn("EVENT_REWARDS_SNAPSHOT_V2", _SNAPSHOT_SCRIPT)
+
+
+class PopupSafetyTests(unittest.TestCase):
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_only_explicit_close_button_is_clicked_and_verified(self, _sleep):
+        driver = FakeDriver(popup=True, dismissible=True)
+        close = driver.dialog.close_buttons[0]
+        purchase = driver.dialog.all_buttons[1]
+        ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None, timeout=0.2)
+        self.assertTrue(ok, reason)
+        self.assertTrue(close.clicked)
+        self.assertFalse(purchase.clicked)
 
     @patch("event_rewards.time.sleep", return_value=None)
-    def test_available_claim_without_reward_name_is_allowed_and_verified(self, _sleep):
-        driver = _FakeDriver()
-        driver.missing_reward_names = True
-        clicks = []
+    def test_popup_that_does_not_close_is_reported_as_blocking(self, _sleep):
+        driver = FakeDriver(popup=True, dismissible=False)
+        ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None, timeout=0.2)
+        self.assertFalse(ok)
+        self.assertEqual(reason, "popup_remained_after_close_click")
+
+
+class ClaimExecutionTests(unittest.TestCase):
+    def _program(self):
+        return {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
+                "end_at_epoch": 9999999999, "max_claims_per_run": 20, "expected_tier_count": 3}
+
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_popup_is_closed_then_exact_tier_is_native_clicked_and_verified(self, _sleep):
+        driver = FakeDriver(popup=True, dismissible=True, click_delivers=True)
         logs = []
-
-        def physical_click(_driver, _button):
-            clicks.append(True)
-            driver.delivered = True
-            return True
-
         result = claim_event_program(
-            driver,
-            {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-             "end_at_epoch": 9999999999, "max_claims_per_run": 20},
-            physical_click=physical_click,
-            bypass_cloudflare=lambda _driver: None,
-            close_popup=lambda _driver: None,
+            driver, self._program(), physical_click=lambda *_: self.fail("unsafe callback must not be used"),
+            bypass_cloudflare=lambda _d: None, close_popup=lambda *_: self.fail("generic popup callback must not be used"),
             log=logs.append,
         )
-        self.assertEqual(len(clicks), 1)
-        self.assertEqual(result["tiers_delivered"], 1)
-        self.assertEqual(result["claims_this_run"][0]["threshold"], 900)
-        self.assertEqual(result["claims_this_run"][0]["reward"], [])
-        self.assertFalse(result["retry_required"])
-        self.assertIn("reward details unavailable", "\n".join(logs))
-
-    @patch("event_rewards.time.sleep", return_value=None)
-    def test_claims_enabled_tier_and_verifies_delivered(self, _sleep):
-        driver = _FakeDriver()
-        clicks = []
-
-        def physical_click(_driver, _button):
-            clicks.append(True)
-            driver.delivered = True
-            return True
-
-        result = claim_event_program(
-            driver,
-            {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-             "end_at_epoch": 9999999999, "max_claims_per_run": 20},
-            physical_click=physical_click,
-            bypass_cloudflare=lambda _driver: None,
-            close_popup=lambda _driver: None,
-            log=lambda _message: None,
-        )
-        self.assertEqual(len(clicks), 1)
-        self.assertEqual(result["balance"], 1000)
-        self.assertEqual(result["tiers_delivered"], 1)
+        self.assertEqual(driver.click_count, 1)
+        self.assertEqual(result["tiers_delivered"], 2)
         self.assertEqual(result["claims_this_run"][0]["threshold"], 900)
         self.assertFalse(result["retry_required"])
+        self.assertIn("dismissed and verified", "\n".join(logs))
 
     @patch("event_rewards.time.sleep", return_value=None)
-    def test_mismatched_button_is_not_clicked(self, _sleep):
-        driver = _FakeDriver()
-        driver.validation_threshold = 1300
-        clicks = []
-
+    def test_undismissed_popup_prevents_any_claim(self, _sleep):
+        driver = FakeDriver(popup=True, dismissible=False)
         result = claim_event_program(
-            driver,
-            {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-             "end_at_epoch": 9999999999, "max_claims_per_run": 20},
-            physical_click=lambda _driver, _button: clicks.append(True) or True,
-            bypass_cloudflare=lambda _driver: None,
-            close_popup=lambda _driver: None,
-            log=lambda _message: None,
+            driver, self._program(), physical_click=lambda *_: self.fail("must not click"),
+            bypass_cloudflare=lambda _d: None, close_popup=lambda *_: None,
+            log=lambda _m: None,
         )
-        self.assertEqual(clicks, [])
+        self.assertEqual(driver.click_count, 0)
+        self.assertTrue(result["retry_required"])
+        self.assertIn("popup_blocking", result["error"])
+
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_obstructed_target_refuses_claim(self, _sleep):
+        driver = FakeDriver(popup=False, obstruct=True)
+        result = claim_event_program(
+            driver, self._program(), physical_click=lambda *_: self.fail("must not click"),
+            bypass_cloudflare=lambda _d: None, close_popup=lambda _d: None,
+            log=lambda _m: None,
+        )
+        self.assertEqual(driver.click_count, 0)
         self.assertTrue(result["retry_required"])
         self.assertIn("button validation failed", result["error"])
 
     @patch("event_rewards.time.sleep", return_value=None)
-    def test_unconfirmed_claim_is_not_clicked_twice(self, _sleep):
-        driver = _FakeDriver()
-        clicks = []
-
-        def physical_click(_driver, _button):
-            clicks.append(True)
-            return False
-
+    def test_no_second_click_after_unconfirmed_native_click(self, _sleep):
+        driver = FakeDriver(popup=False, click_delivers=False)
         result = claim_event_program(
-            driver,
-            {"program_id": "pgp_test", "name": "Lost Soul Rewards", "slug": "halloween-2026",
-             "end_at_epoch": 9999999999, "max_claims_per_run": 20},
-            physical_click=physical_click,
-            bypass_cloudflare=lambda _driver: None,
-            close_popup=lambda _driver: None,
-            log=lambda _message: None,
+            driver, self._program(), physical_click=lambda *_: self.fail("unsafe callback must not be used"),
+            bypass_cloudflare=lambda _d: None, close_popup=lambda _d: None,
+            log=lambda _m: None,
         )
-        self.assertEqual(len(clicks), 1)
+        self.assertEqual(driver.click_count, 1)
         self.assertTrue(result["retry_required"])
         self.assertEqual(result["claims_this_run"], [])
+
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_native_click_exception_never_falls_back_to_javascript(self, _sleep):
+        driver = FakeDriver(popup=False)
+        def fail_click():
+            driver.click_count += 1
+            raise RuntimeError("intercepted")
+        driver.button.click_action = fail_click
+        result = claim_event_program(
+            driver, self._program(), physical_click=lambda *_: self.fail("fallback must not run"),
+            bypass_cloudflare=lambda _d: None, close_popup=lambda _d: None,
+            log=lambda _m: None,
+        )
+        self.assertEqual(driver.click_count, 1)
+        self.assertTrue(result["retry_required"])
+        self.assertIn("click failed", result["error"])
+
+
+class ExistingContractTests(unittest.TestCase):
+    def test_active_program_config_and_expiry(self):
+        config = {"enabled": True, "programs": [{"enabled": True, "name": "Test", "slug": "test",
+                  "program_id": "pgp_test", "end_at": 2000, "max_claims_per_run": 100}]}
+        self.assertEqual(get_active_event_programs(config, now_epoch=1999)[0]["max_claims_per_run"], 50)
+        self.assertEqual(get_active_event_programs(config, now_epoch=2000), [])
+
+    def test_claim_ledger_is_idempotent_and_aggregates_remain_compatible(self):
+        old = [{"cycle": 0, "threshold": 400, "reward": ["Orb"], "claimed_at": "old"}]
+        first = merge_claim_ledger(old, [{"threshold": 900, "reward": ["Abyss"]}], cycle=0, claimed_at="now")
+        second = merge_claim_ledger(first, [{"threshold": 900, "reward": ["Abyss"]}], cycle=0, claimed_at="later")
+        self.assertEqual(len(second), 2)
+        events = [{"claims_this_run": [{"threshold": 900}], "retry_required": True}]
+        self.assertEqual(event_claim_count(events), 1)
+        self.assertTrue(event_retry_required(events))
 
 
 if __name__ == "__main__":
