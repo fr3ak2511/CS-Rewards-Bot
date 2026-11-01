@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.2.0
+# master_claimer.py — CS Rewards Bot v3.3.2
 import csv
 import time
 import os
@@ -32,7 +32,7 @@ from event_rewards import (
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.3.1"
+VERSION        = "v3.3.2"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -281,11 +281,23 @@ def has_complete_full_claim_coverage(pid, meta):
     )
 
 
+def needs_standard_backup_audit(pid, meta):
+    """True until this player's standard Daily/Store cards were audited this reset."""
+    coverage = meta.get("full_claim_coverage", {})
+    entry = coverage.get(pid, {}) if isinstance(coverage, dict) else {}
+    return not (
+        isinstance(entry, dict)
+        and entry.get("standard_rewards_audited_reset") == _current_reset_date()
+    )
+
+
 def _result_needs_recovery(result):
     status = str(result.get("status") or "")
     if status in ("Login Failed", "Error", "Failed"):
         return True
     if (result.get("retry_required") or result.get("promotion_detection_failed")
+            or result.get("daily_unconfirmed") or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
             or event_retry_required(result.get("event_rewards"))):
         return True
     if status in ("Partial", "No Rewards"):
@@ -302,12 +314,12 @@ def _result_needs_recovery(result):
 
 
 def _record_full_claim_coverage(meta, pid, result, run_label):
-    """Persist actual full-path outcome separately from the legacy 'seen' list."""
+    """Persist full-path outcome and the reset date of the last clean standard-reward audit."""
     retry_required = _result_needs_recovery(result)
     reason = result.get("fail_reason")
     if not reason and retry_required:
         reason = "One or more claim attempts were incomplete or unconfirmed"
-    meta.setdefault("full_claim_coverage", {})[pid] = {
+    entry = {
         "reset_date": _current_reset_date(),
         "status": "pending" if retry_required else "complete",
         "last_full_attempt_at": get_ist_time().isoformat(),
@@ -316,6 +328,18 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
         "retry_required": bool(retry_required),
         "unresolved_reason": reason,
     }
+    # A clean live Daily + Store check is valid for this reset even if a separate
+    # event/promotion/Progression issue remains pending and needs its own recovery.
+    standard_checked = bool(result.get("standard_rewards_checked"))
+    standard_unconfirmed = bool(
+        result.get("daily_unconfirmed")
+        or result.get("store_unconfirmed_indices")
+    )
+    if standard_checked and not standard_unconfirmed:
+        entry["standard_rewards_audited_reset"] = _current_reset_date()
+    meta.setdefault("full_claim_coverage", {})[pid] = entry
+
+
 
 
 def _promotion_detail_worthy(promo):
@@ -364,6 +388,9 @@ def _summary_counts(results):
                 promo_status in ("claim_unconfirmed", "click_failed", "available")
                 or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available")
             )
+        unconfirmed += int(bool(result.get("daily_unconfirmed")))
+        unconfirmed += len(result.get("store_unconfirmed_indices", []) or [])
+        unconfirmed += int(bool(result.get("progression_unconfirmed")))
         event_results = result.get("event_rewards", []) or []
         event_reward_claims_made += event_claim_count(event_results)
         event_reward_failures += sum(1 for item in event_results if item.get("retry_required"))
@@ -387,6 +414,7 @@ def _summary_counts(results):
     )
     full_claim_accounts = sum(1 for result in results if result.get("processing_mode", "full_claim") == "full_claim")
     promotional_only_accounts = sum(1 for result in results if result.get("processing_mode") == "promotional_only")
+    backup_reconciliation_accounts = sum(1 for result in results if result.get("processing_mode") == "backup_reconciliation")
     return {
         "accounts_processed": len(results),
         "claims_made": claims_made,
@@ -405,6 +433,7 @@ def _summary_counts(results):
         "event_reward_claims_made": event_reward_claims_made,
         "event_reward_failures": event_reward_failures,
         "promotional_only_accounts": promotional_only_accounts,
+        "backup_reconciliation_accounts": backup_reconciliation_accounts,
         "full_claim_accounts": full_claim_accounts,
     }
 
@@ -545,93 +574,125 @@ def init_player_history(pid):
 
 
 def update_claim_history(pid, reward_type, claimed_count=0,
-                         reward_index=None, detected_cooldown=None, attempted=False):
-    h       = init_player_history(pid)
+                         reward_index=None, detected_cooldown=None, attempted=False,
+                         unconfirmed=False):
+    h = init_player_history(pid)
     ist_now = get_ist_time()
-    nr      = get_next_daily_reset()
+    nr = get_next_daily_reset()
+
+    def mark_unconfirmed(record):
+        # A live Free/Claim control disproves a same-reset history entry that claimed
+        # success. Preserve older historical claims, but remove today's false green.
+        raw_last_claim = record.get("last_claim")
+        if raw_last_claim:
+            try:
+                if datetime.fromisoformat(raw_last_claim) >= get_last_daily_reset():
+                    record["last_claim"] = None
+            except (TypeError, ValueError):
+                record["last_claim"] = None
+        record["next_available"] = None
+        record["status"] = "unconfirmed"
+        record["last_attempt_at"] = ist_now.isoformat()
+        record["unconfirmed_attempts"] = int(record.get("unconfirmed_attempts", 0) or 0) + 1
+        record.pop("portal_observed_at", None)
 
     if reward_type == "daily":
+        record = h[pid]["daily"]
         if claimed_count > 0:
-            h[pid]["daily"]["last_claim"]     = ist_now.isoformat()
-            h[pid]["daily"]["next_available"] = nr.isoformat()
-            h[pid]["daily"]["status"]         = "claimed"
-            log(f"📝 Daily claimed → next reset {nr.strftime('%I:%M %p IST')}")
+            record["last_claim"] = ist_now.isoformat()
+            record["next_available"] = nr.isoformat()
+            record["status"] = "claimed"
+            record.pop("portal_observed_at", None)
+            log(f"📝 Daily claim confirmed → next reset {nr.strftime('%I:%M %p IST')}")
         elif detected_cooldown is not None:
-            # A live Daily page timer confirms the reward is on cooldown,
-            # whether claimed manually or by the bot.
-            h[pid]["daily"]["next_available"] = nr.isoformat()
-            h[pid]["daily"]["status"]         = "portal_claimed"
-            h[pid]["daily"]["portal_observed_at"] = ist_now.isoformat()
-            log(f"📝 Daily portal state observed; suppressed until {nr.strftime('%I:%M %p IST')}")
+            # A live timer/Claimed state is portal evidence, not a bot click claim.
+            record["next_available"] = nr.isoformat()
+            record["status"] = "portal_claimed"
+            record["portal_observed_at"] = ist_now.isoformat()
+            log(f"📝 Daily portal state confirmed; suppressed until {nr.strftime('%I:%M %p IST')}")
+        elif unconfirmed:
+            mark_unconfirmed(record)
+            log("⚠️ Daily claim remains unconfirmed; eligible for the next live recheck")
         elif attempted:
-            lc = h[pid]["daily"].get("last_claim")
+            lc = record.get("last_claim")
             if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
-                log(f"📝 Daily — preserving (claimed since last reset)")
+                log("📝 Daily — preserving previously confirmed claim")
             else:
-                h[pid]["daily"]["status"] = "unavailable"
-                log(f"📝 Daily unavailable")
+                record["status"] = "unavailable"
+                log("📝 Daily unavailable")
 
     elif reward_type == "store" and reward_index is not None:
         rk = f"reward_{reward_index}"
-        rec = h[pid]["store"].setdefault(
+        record = h[pid]["store"].setdefault(
             rk, {"last_claim": None, "next_available": None, "status": "unknown"}
         )
 
         if reward_index == LEGACY_TEMP_STORE_REWARD_INDEX:
-            # Legacy reward_4 updates are retained only for compatibility with older callers.
+            # Legacy reward_4 state is retained for compatibility only.
             if claimed_count > 0:
-                rec["last_claim"] = ist_now.isoformat()
-                rec["next_available"] = None
-                rec["status"] = "claimed"
+                record["last_claim"] = ist_now.isoformat()
+                record["next_available"] = None
+                record["status"] = "claimed"
                 log("📝 Legacy reward_4 history updated; dynamic promotions are stored independently")
-            elif attempted:
-                # Do not permanently mark it unavailable after a failed click. Recheck live UI next run.
-                log("📝 Temporary Store reward claim not confirmed; will recheck next run")
+            elif attempted or unconfirmed:
+                log("📝 Temporary Store reward is not confirmed; it will be rechecked")
         else:
             if claimed_count > 0:
-                rec["last_claim"]     = ist_now.isoformat()
-                rec["next_available"] = nr.isoformat()
-                rec["status"]         = "claimed"
-                log(f"📝 Store {reward_index} claimed → next reset {nr.strftime('%I:%M %p IST')}")
+                record["last_claim"] = ist_now.isoformat()
+                record["next_available"] = nr.isoformat()
+                record["status"] = "claimed"
+                record.pop("portal_observed_at", None)
+                log(f"📝 Store {reward_index} claim confirmed → next reset {nr.strftime('%I:%M %p IST')}")
             elif detected_cooldown is not None:
-                # Portal-observed state is not falsely represented as a bot claim.
-                rec["next_available"] = nr.isoformat()
-                rec["status"]         = "portal_claimed"
-                rec["portal_observed_at"] = ist_now.isoformat()
-                log(f"📝 Store {reward_index} portal state observed; suppressed until daily reset")
+                record["next_available"] = nr.isoformat()
+                record["status"] = "portal_claimed"
+                record["portal_observed_at"] = ist_now.isoformat()
+                log(f"📝 Store {reward_index} portal state confirmed; suppressed until daily reset")
+            elif unconfirmed:
+                mark_unconfirmed(record)
+                log(f"⚠️ Store reward_{reward_index} remains unconfirmed; eligible for the next live recheck")
             elif attempted:
-                lc = rec.get("last_claim")
+                lc = record.get("last_claim")
                 if lc and datetime.fromisoformat(lc) >= get_last_daily_reset():
-                    log(f"📝 Store {reward_index} — preserving (claimed since last reset)")
+                    log(f"📝 Store {reward_index} — preserving previously confirmed claim")
                 else:
-                    rec["status"] = "unavailable"
+                    record["status"] = "unavailable"
 
     elif reward_type == "progression":
-        h[pid]["progression"]["last_visit"] = ist_now.isoformat()
+        record = h[pid]["progression"]
+        record["last_visit"] = ist_now.isoformat()
         if claimed_count > 0:
-            h[pid]["progression"]["last_claim"] = ist_now.isoformat()
-            h[pid]["progression"]["last_count"] = claimed_count
-            log(f"📝 Progression claimed {claimed_count}, last_visit updated")
+            record["last_claim"] = ist_now.isoformat()
+            record["last_count"] = claimed_count
+            record["status"] = "claimed"
+            record.pop("last_unconfirmed_at", None)
+            log(f"📝 Progression claims portal-confirmed: {claimed_count}; last_visit updated")
+        elif unconfirmed:
+            record["status"] = "unconfirmed"
+            record["last_unconfirmed_at"] = ist_now.isoformat()
+            log("⚠️ Progression claim could not be confirmed; eligible for the next live recheck")
+        else:
+            record["status"] = "checked_no_claimable_reward"
 
     elif reward_type == "loyalty":
         if claimed_count > 0:
             na = ist_now + timedelta(hours=LOYALTY_COOLDOWN_HOURS)
-            h[pid]["loyalty"]["last_claim"]     = ist_now.isoformat()
+            h[pid]["loyalty"]["last_claim"] = ist_now.isoformat()
             h[pid]["loyalty"]["next_available"] = na.isoformat()
-            h[pid]["loyalty"]["status"]         = "claimed"
+            h[pid]["loyalty"]["status"] = "claimed"
             log(f"📝 Loyalty claimed {claimed_count}, next in {LOYALTY_COOLDOWN_HOURS}h")
         elif detected_cooldown is not None:
             na = ist_now + detected_cooldown
             h[pid]["loyalty"]["next_available"] = na.isoformat()
-            h[pid]["loyalty"]["status"]         = "cooldown_detected"
+            h[pid]["loyalty"]["status"] = "cooldown_detected"
             log(f"📝 Loyalty cooldown → {format_time_until(na)}")
         elif attempted:
             lc = h[pid]["loyalty"].get("last_claim")
             if lc and ist_now < datetime.fromisoformat(lc) + timedelta(hours=LOYALTY_COOLDOWN_HOURS):
-                log(f"📝 Loyalty — preserving (within 24h cooldown)")
+                log("📝 Loyalty — preserving (within 24h cooldown)")
             else:
                 h[pid]["loyalty"]["status"] = "unavailable"
-                log(f"📝 Loyalty unavailable")
+                log("📝 Loyalty unavailable")
 
     save_claim_history(h)
     return h
@@ -661,7 +722,9 @@ def get_reward_status(pid):
     d_status = ph.get("daily", {}).get("status", "unknown")
     lc_d = ph.get("daily", {}).get("last_claim")
     na_d = ph.get("daily", {}).get("next_available")
-    if lc_d and datetime.fromisoformat(lc_d) >= lr:
+    if d_status == "unconfirmed":
+        d_avail, d_next = True, None
+    elif lc_d and datetime.fromisoformat(lc_d) >= lr:
         d_avail, d_next, d_status = False, format_time_until(nr), "claimed"
     elif na_d:
         nt = datetime.fromisoformat(na_d)
@@ -679,7 +742,9 @@ def get_reward_status(pid):
         s_status[i] = rd.get("status", "unknown")
         lc_s = rd.get("last_claim")
         na_s = rd.get("next_available")
-        if lc_s and datetime.fromisoformat(lc_s) >= lr:
+        if s_status[i] == "unconfirmed":
+            s_avail[i], s_next[i] = True, None
+        elif lc_s and datetime.fromisoformat(lc_s) >= lr:
             s_avail[i], s_next[i], s_status[i] = False, format_time_until(nr), "claimed"
         elif na_s:
             nt = datetime.fromisoformat(na_s)
@@ -1285,61 +1350,145 @@ def _daily_claim_is_already_visible_as_claimed(driver):
         return False
 
 
-def claim_daily_rewards(driver, pid):
-    """Returns (count_claimed, was_skipped)."""
-    s = get_reward_status(pid)
-    if not s["daily_available"]:
-        log(f"⏩ Daily already claimed. Next: {s['daily_next']}")
-        return 0, True
+def _find_daily_claim_button(driver):
+    """Return the visible, enabled Daily-page Claim button and its live state."""
+    try:
+        result = driver.execute_script(r"""
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                if (!el) return false;
+                const st = getComputedStyle(el), r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && st.display !== 'none'
+                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+            };
+            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
+            const claimed = buttons.some(b => visible(b)
+                && ['claimed', 'already claimed'].includes(norm(b.innerText || b.textContent)));
+            const button = buttons.find(b => visible(b)
+                && norm(b.innerText || b.textContent) === 'claim'
+                && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
+            if (button) return {status: 'available', button};
+            return {status: claimed ? 'claimed' : 'not_found'};
+        """)
+        if not isinstance(result, dict):
+            return None, "error"
+        return result.get("button"), str(result.get("status") or "error")
+    except Exception as exc:
+        log(f"⚠️ Daily claim button lookup failed: {type(exc).__name__}")
+        return None, "error"
 
-    log("🎁 Claiming Daily Rewards...")
-    claimed = 0
+
+def _daily_portal_confirms_claim(driver):
+    """Confirm Daily completion from its own live CTA, using a timer only as fallback."""
+    button, state = _find_daily_claim_button(driver)
+    if state == "available" and button is not None:
+        return False
+    if state == "claimed":
+        return True
+    try:
+        timer = detect_daily_timer_js(driver)
+        if timer and timer.total_seconds() > 60:
+            return True
+    except Exception:
+        pass
+    return _daily_claim_is_already_visible_as_claimed(driver)
+
+
+def _wait_for_daily_claim_confirmation(driver, timeout=6.0, poll_interval=0.5):
+    deadline = time.monotonic() + max(0.0, float(timeout))
+    while True:
+        if _daily_portal_confirms_claim(driver):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(max(0.05, float(poll_interval)))
+
+
+def claim_daily_rewards(driver, pid):
+    """Claim Daily only when live portal state says available; return (count, skipped, unconfirmed)."""
+    log("🎁 Checking Daily Rewards against live portal state...")
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
-        detect_page_cooldowns(driver, pid, "daily")
-        if _daily_claim_is_already_visible_as_claimed(driver):
+
+        # Do not trust local history as proof. The live Daily page is authoritative.
+        if _daily_portal_confirms_claim(driver):
             update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
-        portal_status = get_reward_status(pid)
-        if not portal_status["daily_available"]:
-            log(f"⏩ Daily already claimed/on cooldown in live portal; state reconciled ({portal_status['daily_next']})")
+            log("⏩ Daily: portal confirms already claimed/on cooldown")
             driver.save_screenshot(f"daily_{pid}.png")
-            return 0, True
+            return 0, True, False
 
-        for attempt in range(3):
-            ok = driver.execute_script("""
-                for(let btn of document.querySelectorAll('button')){
-                    let t=(btn.innerText||btn.textContent).trim().toLowerCase();
-                    if(t==='claim'&&btn.offsetParent!==null&&!btn.disabled){
-                        btn.scrollIntoView({behavior:'smooth',block:'center'});
-                        setTimeout(()=>btn.click(),300);
-                        return true;
-                    }
-                }
-                return false;
-            """)
-            if ok:
-                log("✅ Daily Claimed")
-                claimed = 1
-                time.sleep(2)
-                close_popup(driver)
-                update_claim_history(pid, "daily", claimed_count=1)
+        button, state = _find_daily_claim_button(driver)
+        if state != "available" or button is None:
+            update_claim_history(pid, "daily", unconfirmed=True)
+            log(f"⚠️ Daily state could not be established (portal_state={state}); leaving it retryable")
+            driver.save_screenshot(f"daily_{pid}.png")
+            return 0, False, True
+
+        for attempt in range(2):
+            # Re-resolve the actual page control immediately before each attempt.
+            button, state = _find_daily_claim_button(driver)
+            if state == "claimed" or _daily_portal_confirms_claim(driver):
+                update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                driver.save_screenshot(f"daily_{pid}.png")
+                return 0, True, False
+            if state != "available" or button is None:
                 break
+
+            clicked = bool(physical_click(driver, button))
+            if clicked:
+                log(f"🖱️ Daily claim click dispatched (attempt {attempt + 1}); awaiting portal confirmation")
             else:
-                log(f"ℹ️  No claimable daily (attempt {attempt+1})")
-                time.sleep(1)
+                log(f"⚠️ Daily click helper did not confirm dispatch (attempt {attempt + 1}); checking portal state")
 
-        if claimed == 0:
-            s2 = get_reward_status(pid)
-            if s2["daily_available"] and s2["daily_status"] not in ("cooldown_detected","claimed"):
-                update_claim_history(pid, "daily", attempted=True)
+            if _wait_for_daily_claim_confirmation(driver):
+                if clicked:
+                    update_claim_history(pid, "daily", claimed_count=1)
+                    log("✅ Daily claim confirmed by portal")
+                    driver.save_screenshot(f"daily_{pid}.png")
+                    return 1, False, False
+                update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                log("✅ Daily portal state changed to claimed; dispatch result was ambiguous")
+                driver.save_screenshot(f"daily_{pid}.png")
+                return 0, True, False
 
+            # A second attempt is permitted only when a fresh read still shows Claim.
+            if attempt == 0:
+                # Refresh once so the retry decision is based on server-rendered state,
+                # not only a possibly stale SPA view.
+                refreshed = False
+                try:
+                    driver.refresh()
+                    bypass_cloudflare(driver)
+                    time.sleep(1.5)
+                    close_popup(driver)
+                    refreshed = True
+                except Exception as refresh_exc:
+                    log(f"⚠️ Daily refresh before retry failed: {type(refresh_exc).__name__}")
+                if refreshed:
+                    fresh_button, fresh_state = _find_daily_claim_button(driver)
+                    if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
+                        update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                        driver.save_screenshot(f"daily_{pid}.png")
+                        return 0, True, False
+                    if fresh_state == "available" and fresh_button is not None:
+                        log("⚠️ Daily still appears claimable after a fresh page read; one retry will follow")
+                        continue
+            break
+
+        update_claim_history(pid, "daily", unconfirmed=True)
+        log("⚠️ Daily click was not confirmed by the portal; retry required")
         driver.save_screenshot(f"daily_{pid}.png")
-    except Exception as e:
-        log(f"❌ Daily error: {e}")
-    return claimed, False
+        return 0, False, True
+    except Exception as exc:
+        log(f"❌ Daily error: {type(exc).__name__}: {str(exc)[:160]}")
+        try:
+            update_claim_history(pid, "daily", unconfirmed=True)
+        except Exception:
+            pass
+        return 0, False, True
 
 
 STORE_DAILY_LABELS = {
@@ -1354,8 +1503,9 @@ LEGACY_TEMP_STORE_REWARD_INDEX = 4  # Legacy state is preserved, never used to s
 def _find_store_daily_button(driver, reward_index):
     """Find a claim button inside one named daily Store card only.
 
-    Returns (button, status) where status is available, cooldown,
-    label_not_found, button_not_found, or error. The daily Store cards are
+    Returns (button, status) where status is available, claimed,
+    label_not_found, button_not_found, or error. Ambiguous timers are not proof.
+    The daily Store cards are
     resolved independently so a promotional card cannot be mistaken for one.
     """
     target = STORE_DAILY_LABELS[reward_index].lower()
@@ -1391,9 +1541,12 @@ def _find_store_daily_button(driver, reward_index):
                 }));
                 if (states.some(x => ['claimed', 'already claimed'].includes(x.text)))
                     return {status: 'claimed'};
-                if (/\bnext in\b/.test(text)) return {status: 'cooldown'};
+                // Some Store Bonus labels have their own "Next in" timer even when
+                // the daily reward button is still Free. An enabled reward button wins.
                 const btn = states.find(x => ['free', 'claim'].includes(x.text) && !x.disabled);
                 if (btn) return {status: 'available', button: btn.el};
+                // Do not infer the daily reward is claimed from a generic "Next in" timer.
+                // Store Bonus badges can have their own timer while this card is still Free.
             }
             return {status: 'button_not_found'};
         """, target, others)
@@ -1690,18 +1843,36 @@ def discover_and_claim_promotions(driver, pid):
     return results
 
 
+def _wait_for_store_daily_state(driver, reward_index, timeout=6.0, poll_interval=0.5):
+    """Wait for a live Store card to become Claimed/on cooldown or remain Free."""
+    deadline = time.monotonic() + max(0.0, float(timeout))
+    last_state = "error"
+    while True:
+        _button, state = _find_store_daily_button(driver, reward_index)
+        last_state = state or "error"
+        if last_state in ("claimed", "cooldown"):
+            return last_state
+        if time.monotonic() >= deadline:
+            return last_state
+        time.sleep(max(0.05, float(poll_interval)))
+
+
 def claim_store_rewards(driver, pid):
-    """Claim the 3 reset-based daily Store rewards plus the separate one-time offer.
+    """Claim and verify the three daily Store cards plus dynamically discovered offers.
 
-    Returns daily_claimed, daily_skip_flags[3], temp_claimed, temp_skipped,
-    temp_possible(0/1), temp_status. Reward 4 is not a daily-reset reward.
+    Every run checks the live portal, even when local history says the card was
+    claimed. Returns (confirmed_count, skip_flags, promotions, unconfirmed_indices,
+    claimed_indices). A dispatched click is never counted without portal evidence.
     """
-    status = get_reward_status(pid)
-    skip_flags = [not available for available in status["store_available"]]
+    skip_flags = [False, False, False]
     claimed = 0
-    attempted_indices = set()
+    unconfirmed_indices = []
+    claimed_indices = []
+    recovered_indices = []
+    processed_indices = set()
+    promotions = []
 
-    log("🏪 Checking Store: Gold, Cash, Luckyloon and live promotional cards")
+    log("🏪 Reconciling live Store cards: Gold, Cash, Luckyloon and promotions")
     try:
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
@@ -1709,123 +1880,251 @@ def claim_store_rewards(driver, pid):
         close_popup(driver)
 
         for reward_index, label in STORE_DAILY_LABELS.items():
-            current = get_reward_status(pid)
-            if not current["store_available"][reward_index - 1]:
-                skip_flags[reward_index - 1] = True
-                log(f"⏩ Store {label}: already claimed/on cooldown ({current['store_next'][reward_index - 1]})")
-                continue
-
-            success_for_card = False
+            confirmed = False
             for attempt in range(2):
-                if "store" not in driver.current_url:
+                if "store" not in str(getattr(driver, "current_url", "")).lower():
                     driver.get("https://hub.vertigogames.co/store")
                     bypass_cloudflare(driver)
                     time.sleep(2)
+                    close_popup(driver)
 
                 button, button_status = _find_store_daily_button(driver, reward_index)
-                if button_status in ("cooldown", "claimed"):
+
+                if button_status in ("claimed", "cooldown"):
                     update_claim_history(
                         pid, "store", reward_index=reward_index,
                         detected_cooldown=timedelta(seconds=61)
                     )
                     skip_flags[reward_index - 1] = True
-                    log(f"⏩ Store {label}: live portal shows claimed/on cooldown; state reconciled")
+                    confirmed = True
+                    processed_indices.add(reward_index)
+                    log(f"⏩ Store {label}: live portal confirms already claimed/on cooldown")
                     break
 
-                if button is None:
-                    log(f"ℹ️ Store {label}: no exact Free/Claim button found (status={button_status})")
-                    if button_status == "label_not_found":
-                        skip_flags[reward_index - 1] = True
+                if button_status != "available" or button is None:
+                    log(f"⚠️ Store {label}: live card state is inconclusive (state={button_status})")
                     if attempt == 0:
                         time.sleep(1)
                         continue
                     break
 
-                attempted_indices.add(reward_index)
-                if physical_click(driver, button):
-                    time.sleep(2.5)
-                    close_popup(driver)
-                    # Existing daily-card behaviour is retained; state is anchored to daily reset.
-                    update_claim_history(pid, "store", claimed_count=1, reward_index=reward_index)
-                    claimed += 1
-                    success_for_card = True
-                    skip_flags[reward_index - 1] = False
-                    log(f"✅ Store {label} claim dispatched (mapped to reward_{reward_index})")
+                clicked = bool(physical_click(driver, button))
+                if clicked:
+                    log(f"🖱️ Store {label}: click dispatched (attempt {attempt + 1}); verifying portal state")
+                else:
+                    log(f"⚠️ Store {label}: click helper returned false (attempt {attempt + 1}); checking state")
+                time.sleep(1.5)
+                close_popup(driver)
+                portal_state = _wait_for_store_daily_state(driver, reward_index)
+
+                if portal_state in ("claimed", "cooldown"):
+                    # This card was freshly observed as available immediately before
+                    # this attempt, so a confirmed state transition is a recovered
+                    # reward even if the click helper raised after dispatch.
+                    recovered_indices.append(reward_index)
+                    if clicked:
+                        update_claim_history(pid, "store", claimed_count=1, reward_index=reward_index)
+                        claimed += 1
+                        claimed_indices.append(reward_index)
+                        log(f"✅ Store {label}: claim confirmed by portal")
+                    else:
+                        update_claim_history(
+                            pid, "store", reward_index=reward_index,
+                            detected_cooldown=timedelta(seconds=61)
+                        )
+                        log(f"✅ Store {label}: portal now confirms claimed; click dispatch was ambiguous")
+                    # If our click helper returned false, the card is still portal-confirmed
+                    # but must not be counted as a bot-verified claim made this run.
+                    skip_flags[reward_index - 1] = not clicked
+                    confirmed = True
+                    processed_indices.add(reward_index)
                     break
 
-                log(f"⚠️ Store {label}: click attempt {attempt + 1} failed")
-                time.sleep(1)
+                if portal_state == "available" and attempt == 0:
+                    # Force a server-backed page read before the one permitted retry.
+                    refreshed = False
+                    try:
+                        driver.refresh()
+                        bypass_cloudflare(driver)
+                        time.sleep(1.5)
+                        close_popup(driver)
+                        refreshed = True
+                    except Exception as refresh_exc:
+                        log(f"⚠️ Store {label} refresh before retry failed: {type(refresh_exc).__name__}")
+                    if not refreshed:
+                        log(f"⚠️ Store {label}: refresh failed; not retrying against a potentially stale page")
+                        break
+                    fresh_button, fresh_state = _find_store_daily_button(driver, reward_index)
+                    if fresh_state in ("claimed", "cooldown"):
+                        recovered_indices.append(reward_index)
+                        update_claim_history(
+                            pid, "store", reward_index=reward_index,
+                            detected_cooldown=timedelta(seconds=61)
+                        )
+                        skip_flags[reward_index - 1] = True
+                        confirmed = True
+                        processed_indices.add(reward_index)
+                        log(f"✅ Store {label}: fresh page read confirms claimed/cooldown after the click")
+                        break
+                    if fresh_state == "available" and fresh_button is not None:
+                        log(f"⚠️ Store {label} remains Free after refresh; one fresh retry will follow")
+                        continue
+                    log(f"⚠️ Store {label}: refresh did not establish a safe retry state ({fresh_state})")
+                    break
 
-            if not success_for_card and reward_index not in attempted_indices:
-                latest = get_reward_status(pid)
-                if (latest["store_available"][reward_index - 1]
-                        and latest["store_status"][reward_index - 1] not in ("cooldown_detected", "claimed")):
-                    update_claim_history(pid, "store", reward_index=reward_index, attempted=True)
+                log(f"⚠️ Store {label}: claim was not confirmed (final portal state={portal_state})")
+                break
+
+            if not confirmed:
+                skip_flags[reward_index - 1] = False
+                unconfirmed_indices.append(reward_index)
+                processed_indices.add(reward_index)
+                update_claim_history(pid, "store", reward_index=reward_index, unconfirmed=True)
+                log(f"🚩 Store {label}: marked unconfirmed and queued for a later live recheck")
 
         promotions = discover_and_claim_promotions(driver, pid)
-        log(f"📊 Daily Store: {claimed}/3 claimed this pass")
+        log(f"📊 Daily Store: {claimed}/3 confirmed claims made this pass")
+        if unconfirmed_indices:
+            labels = ", ".join(STORE_DAILY_LABELS[i] for i in unconfirmed_indices)
+            log(f"🚩 Daily Store items requiring attention: {labels}")
         log(f"🎁 Live promotional cards detected for this ID: {len(promotions)}")
         driver.save_screenshot(f"store_{pid}.png")
     except Exception as exc:
         log(f"❌ Store error: {type(exc).__name__}: {str(exc)[:180]}")
-        # A Store navigation/browser failure is not evidence that a promotion was absent.
         try:
             driver._promotion_discovery_failed = True
         except Exception:
             pass
+        # A Store page/navigation failure means all cards are unverified, not claimed.
+        for reward_index in STORE_DAILY_LABELS:
+            if reward_index not in processed_indices:
+                unconfirmed_indices.append(reward_index)
+                skip_flags[reward_index - 1] = False
+                try:
+                    update_claim_history(pid, "store", reward_index=reward_index, unconfirmed=True)
+                except Exception:
+                    pass
         promotions = []
 
-    return claimed, skip_flags, promotions
+    try:
+        driver._store_daily_unconfirmed = list(unconfirmed_indices)
+        driver._store_daily_claimed_indices = list(claimed_indices)
+        driver._store_daily_recovered_indices = list(recovered_indices)
+    except Exception:
+        pass
+    return claimed, skip_flags, promotions, unconfirmed_indices, claimed_indices
+
+
+def _progression_claim_snapshot(driver):
+    """Return visible/enabled progression Claim controls and Delivered controls."""
+    try:
+        snapshot = driver.execute_script(r"""
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const visible = el => {
+                if (!el) return false;
+                const st = getComputedStyle(el), r = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && st.display !== 'none'
+                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+            };
+            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
+            const claimable = buttons.filter(b => visible(b)
+                && ['claim', 'claim all'].includes(norm(b.innerText || b.textContent))
+                && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
+            const delivered = buttons.filter(b => visible(b)
+                && ['delivered', 'already delivered', 'claimed', 'already claimed', 'collected', 'redeemed']
+                    .includes(norm(b.innerText || b.textContent)));
+            return {
+                claimable_count: claimable.length,
+                delivered_count: delivered.length,
+                button: claimable.length ? claimable[0] : null,
+                button_text: claimable.length ? norm(claimable[0].innerText || claimable[0].textContent) : null
+            };
+        """)
+        return snapshot if isinstance(snapshot, dict) else None
+    except Exception as exc:
+        log(f"⚠️ Progression state inspection failed: {type(exc).__name__}")
+        return None
 
 
 def claim_progression_program_rewards(driver, pid):
-    log("🎯 Claiming Progression Program...")
+    """Claim progression rewards only when a post-click portal state change is observed."""
+    log("🎯 Checking Progression Program...")
     claimed = 0
+    unconfirmed = False
     try:
         driver.get("https://hub.vertigogames.co/progression-program")
         bypass_cloudflare(driver)
         time.sleep(2)
         close_popup(driver)
+
         for _ in range(6):
-            ok = driver.execute_script("""
-                // Detects both 'Claim' (single reward) and 'Claim all' (multi-reward card)
-                for(let btn of document.querySelectorAll('button')){
-                    let t=(btn.innerText||btn.textContent).trim().toLowerCase();
-                    let isClaimBtn = (t==='claim' || t==='claim all');
-                    if(!isClaimBtn) continue;
-                    if(btn.disabled) continue;
-                    // offsetParent check skipped for 'claim all' (carousel may not be visible)
-                    if(t==='claim' && btn.offsetParent===null) continue;
-                    let pt=(btn.parentElement.innerText||btn.parentElement.textContent)||'';
-                    if(pt.includes('Delivered')) continue;
-                    btn.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});
-                    setTimeout(()=>btn.click(),300);
-                    return t;
-                }
-                return false;
-            """)
-            if ok:
-                log(f"✅ Progression: '{ok}' clicked")
-                claimed += 1
-                time.sleep(2.0)
-                close_popup(driver)
-            else:
-                driver.execute_script(
-                    "for(let i of document.querySelectorAll('div'))"
-                    "{if(i.scrollWidth>i.clientWidth)i.scrollLeft+=400;}"
-                )
-                time.sleep(1)
+            before = _progression_claim_snapshot(driver)
+            if before is None:
+                unconfirmed = True
+                log("🚩 Progression page could not be inspected reliably")
+                break
+            if int(before.get("claimable_count", 0) or 0) <= 0:
+                log("ℹ️ Progression: no currently claimable reward")
+                break
 
-        # Always record last_visit so smart-skip knows the page was checked
-        update_claim_history(pid, "progression", claimed_count=claimed)
-    except:
-        # Still try to record visit even on exception
+            button = before.get("button")
+            if button is None:
+                unconfirmed = True
+                log("🚩 Progression has a claimable count but no safe button reference")
+                break
+
+            clicked = bool(physical_click(driver, button))
+            if not clicked:
+                unconfirmed = True
+                log("🚩 Progression click could not be dispatched; leaving reward retryable")
+                break
+
+            log(f"🖱️ Progression '{before.get('button_text')}' click dispatched; awaiting portal confirmation")
+            time.sleep(2)
+            close_popup(driver)
+
+            deadline = time.monotonic() + 6.0
+            after = None
+            confirmed = False
+            while True:
+                after = _progression_claim_snapshot(driver)
+                if after is None:
+                    break
+                before_claims = int(before.get("claimable_count", 0) or 0)
+                after_claims = int(after.get("claimable_count", 0) or 0)
+                before_delivered = int(before.get("delivered_count", 0) or 0)
+                after_delivered = int(after.get("delivered_count", 0) or 0)
+                if after_delivered > before_delivered:
+                    confirmed = True
+                    break
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.5)
+
+            if not confirmed:
+                unconfirmed = True
+                log("🚩 Progression button did not transition to Delivered; claim remains unconfirmed")
+                break
+
+            claimed += 1
+            log(f"✅ Progression claim confirmed by portal ({claimed} this visit)")
+            # Re-read the live page on the next loop; never count the dispatch alone.
+            time.sleep(0.5)
+
+        update_claim_history(pid, "progression", claimed_count=claimed, unconfirmed=unconfirmed)
+    except Exception as exc:
+        unconfirmed = True
+        log(f"❌ Progression error: {type(exc).__name__}: {str(exc)[:160]}")
         try:
-            update_claim_history(pid, "progression", claimed_count=0)
-        except:
+            update_claim_history(pid, "progression", claimed_count=claimed, unconfirmed=True)
+        except Exception:
             pass
-    return claimed
 
+    try:
+        driver._progression_unconfirmed = bool(unconfirmed)
+    except Exception:
+        pass
+    return claimed
 
 
 def run_event_reward_checks(driver, pid):
@@ -2037,6 +2336,12 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "possible":        0,
         "daily_portal_status": "unknown",
         "store_portal_status": ["unknown", "unknown", "unknown"],
+        "daily_unconfirmed": False,
+        "store_unconfirmed_indices": [],
+        "store_claimed_indices": [],
+        "progression_unconfirmed": False,
+        "standard_rewards_checked": False,
+        "progression_checked": True,
     }
 
     init_player_history(pid)
@@ -2059,9 +2364,10 @@ def process_player(pid, has_loyalty, is_new, run_label):
         stats["display_name"] = capture_display_name(driver)
 
         # Daily
-        d, d_skip = claim_daily_rewards(driver, pid)
-        stats["daily"]         = d
+        d, d_skip, d_unconfirmed = claim_daily_rewards(driver, pid)
+        stats["daily"] = d
         stats["daily_skipped"] = d_skip
+        stats["daily_unconfirmed"] = bool(d_unconfirmed)
         if not d_skip:
             stats["possible"] += 1
 
@@ -2069,9 +2375,13 @@ def process_player(pid, has_loyalty, is_new, run_label):
         # Reset the live-detection flag for this account; the dynamic scanner sets it
         # when the live Store DOM could not be inspected reliably.
         driver._promotion_discovery_failed = False
-        (store_count, store_skips, promotions) = claim_store_rewards(driver, pid)
+        (store_count, store_skips, promotions,
+         store_unconfirmed, store_claimed_indices) = claim_store_rewards(driver, pid)
         stats["store"] = store_count
         stats["store_skipped"] = store_skips
+        stats["store_unconfirmed_indices"] = list(store_unconfirmed)
+        stats["store_claimed_indices"] = list(store_claimed_indices)
+        stats["standard_rewards_checked"] = True
         stats["promotions_observed"] = promotions
         stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
@@ -2086,18 +2396,10 @@ def process_player(pid, has_loyalty, is_new, run_label):
             time.sleep(3)
 
         # Progression
-        for retry in range(2):
-            p = claim_progression_program_rewards(driver, pid)
-            stats["progression"] += p
-            if p == 0 and retry < 1:
-                log("⚠️ No progression, retrying...")
-                time.sleep(2)
-            elif p == 0:
-                log("ℹ️  No progression available")
-                break
-            elif retry < 1:
-                log(f"✅ Got {p} progression, checking for more...")
-                time.sleep(1)
+        driver._progression_unconfirmed = False
+        p = claim_progression_program_rewards(driver, pid)
+        stats["progression"] = p
+        stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
 
         # Loyalty
         if has_loyalty:
@@ -2130,6 +2432,17 @@ def process_player(pid, has_loyalty, is_new, run_label):
             stats["status"] = "Partial"
         else:
             stats["status"] = "No Rewards"
+
+        standard_claim_unconfirmed = bool(
+            stats.get("daily_unconfirmed")
+            or stats.get("store_unconfirmed_indices")
+            or stats.get("progression_unconfirmed")
+        )
+        if standard_claim_unconfirmed:
+            stats["retry_required"] = True
+            if stats["status"] not in ("Login Failed", "Error", "Failed"):
+                stats["status"] = "Partial"
+            stats["fail_reason"] = "One or more standard rewards were not confirmed by the live portal"
 
         promotion_unconfirmed = any(
             promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
@@ -2280,7 +2593,169 @@ def process_player_promotions_only(pid, is_new, run_label):
     return stats
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+def process_player_backup_reconciliation(pid, is_new, run_label):
+    """Perform the once-per-reset standard-reward audit plus promotions/events.
+
+    Daily and all three standard Store cards are read from the live portal so stale
+    history cannot hide a missed claim. Progression is reopened when a Store Bonus
+    changes from available to portal-confirmed.
+    """
+    start = get_ist_time()
+    stats = {
+        "pid": pid,
+        "display_name": None,
+        "is_new": is_new,
+        "has_loyalty": False,
+        "processing_mode": "backup_reconciliation",
+        "standard_rewards_checked": False,
+        "progression_checked": False,
+        "daily": 0,
+        "store": 0,
+        "store_temp": 0,
+        "store_possible": 0,
+        "store_temp_possible": 0,
+        "store_temp_skipped": True,
+        "store_temp_status": "not_found",
+        "promotions_observed": [],
+        "event_rewards": [],
+        "event_reward_claims": 0,
+        "event_rewards_retry_required": False,
+        "promotion_detection_failed": False,
+        "retry_required": False,
+        "progression": 0,
+        "progression_unconfirmed": False,
+        "daily_unconfirmed": False,
+        "store_unconfirmed_indices": [],
+        "store_claimed_indices": [],
+        "loyalty": 0,
+        "daily_skipped": False,
+        "store_skipped": [False, False, False],
+        "loyalty_skipped": True,
+        "skipped_all": False,
+        "status": "Error",
+        "fail_reason": None,
+        "duration_s": 0,
+        "possible": 0,
+        "daily_portal_status": "unknown",
+        "store_portal_status": ["unknown", "unknown", "unknown"],
+    }
+    init_player_history(pid)
+    driver = None
+    try:
+        log(f"\n🔎 Backup reconciliation: {pid}" + (" 🆕 NEW ID" if is_new else "") + f"  [{run_label}]")
+        driver = create_driver()
+        driver._promotion_discovery_failed = False
+        driver._progression_unconfirmed = False
+        if not login_to_hub(driver, pid):
+            stats["status"] = "Login Failed"
+            stats["fail_reason"] = "Could not authenticate for backup reconciliation"
+            stats["duration_s"] = int((get_ist_time() - start).total_seconds())
+            return stats
+
+        stats["display_name"] = capture_display_name(driver)
+
+        # Recheck Daily live; local history is not allowed to suppress this portal read.
+        daily_count, daily_skipped, daily_unconfirmed = claim_daily_rewards(driver, pid)
+        stats["daily"] = daily_count
+        stats["daily_skipped"] = daily_skipped
+        stats["daily_unconfirmed"] = bool(daily_unconfirmed)
+
+        # Recheck all three standard Store cards live, regardless of today's local history.
+        store_count, store_skips, promotions, store_unconfirmed, store_claimed_indices = claim_store_rewards(driver, pid)
+        stats["store"] = store_count
+        stats["store_skipped"] = store_skips
+        stats["store_unconfirmed_indices"] = list(store_unconfirmed)
+        stats["store_claimed_indices"] = list(store_claimed_indices)
+        stats["standard_rewards_checked"] = True
+        stats["store_recovered_indices"] = list(getattr(driver, "_store_daily_recovered_indices", []) or [])
+        stats["promotions_observed"] = promotions
+        stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
+        stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
+        stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
+        stats["store_temp_skipped"] = not bool(promotions)
+        stats["store_temp_status"] = "not_found" if not promotions else "observed"
+        stats["store_possible"] = sum(1 for skipped in store_skips if not skipped)
+        stats["possible"] = (0 if daily_skipped else 1) + stats["store_possible"] + stats["store_temp_possible"]
+
+        if daily_count > 0 or store_count > 0 or stats["store_temp"] > 0:
+            log("⏳ Waiting for confirmed Store bonuses/rewards to settle before downstream checks...")
+            time.sleep(3)
+
+        # A newly recovered daily Store bonus may unlock a Progression milestone.
+        recovered_store_indices = list(getattr(driver, "_store_daily_recovered_indices", []) or [])
+        if recovered_store_indices:
+            stats["progression_checked"] = True
+            p = claim_progression_program_rewards(driver, pid)
+            stats["progression"] = p
+            stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+        else:
+            log("ℹ️ Progression not reopened: no standard Store bonus changed from available to portal-confirmed")
+
+        stats["event_rewards"] = run_event_reward_checks(driver, pid)
+        stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
+        stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
+
+        unconfirmed_promotion = any(
+            promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
+            for promo in promotions
+        )
+        standard_unconfirmed = bool(
+            stats["daily_unconfirmed"]
+            or stats["store_unconfirmed_indices"]
+            or stats["progression_unconfirmed"]
+        )
+        if (standard_unconfirmed or stats["promotion_detection_failed"]
+                or unconfirmed_promotion or stats["event_rewards_retry_required"]):
+            stats["status"] = "Partial"
+            stats["retry_required"] = True
+            if standard_unconfirmed:
+                labels = []
+                if stats["daily_unconfirmed"]:
+                    labels.append("Daily reward")
+                labels.extend(STORE_DAILY_LABELS[i] for i in stats["store_unconfirmed_indices"])
+                if stats["progression_unconfirmed"]:
+                    labels.append("Progression reward")
+                stats["fail_reason"] = "Portal confirmation pending for: " + ", ".join(labels)
+            elif stats["promotion_detection_failed"]:
+                stats["fail_reason"] = "Dynamic promotional-card detection was inconclusive"
+            elif unconfirmed_promotion:
+                stats["fail_reason"] = "At least one observed promotional claim was not confirmed by the portal"
+            else:
+                stats["fail_reason"] = "One or more limited-time event reward claims could not be confirmed"
+        elif (daily_count + store_count + stats["store_temp"] + stats["event_reward_claims"]
+              + stats["progression"]) > 0:
+            stats["status"] = "Claims Made"
+        else:
+            stats["status"] = "Backup Reconciliation Complete"
+
+        try:
+            driver.save_screenshot(f"store_{pid}.png")
+        except Exception:
+            pass
+    except Exception as exc:
+        stats["status"] = "Error"
+        stats["retry_required"] = True
+        stats["fail_reason"] = f"{type(exc).__name__}: {str(exc)[:120]}"
+        log(f"❌ Backup reconciliation failed: {type(exc).__name__}: {str(exc)[:160]}")
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+
+    stats["duration_s"] = int((get_ist_time() - start).total_seconds())
+    snap = get_reward_status(pid)
+    stats["daily_next"] = snap.get("daily_next")
+    stats["store_next"] = snap.get("store_next")
+    stats["loyalty_next"] = snap.get("loyalty_next")
+    stats["daily_portal_status"] = snap.get("daily_status", "unknown")
+    stats["store_portal_status"] = snap.get("store_status", ["unknown", "unknown", "unknown"])
+    return stats
+
+
+
+
 # SECTION 10 — EMAIL (Light Theme, Mobile-First)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2418,6 +2893,15 @@ tr.rk{background:#fafafa !important;}
   .nr-grid{grid-template-columns:1fr 1fr;gap:6px;}
 }
 
+
+/* ── Standard reward attention: readable amber with dark text ── */
+.attn-box{background:#fffbeb !important;border:1px solid #f59e0b;border-left:5px solid #d97706;
+          border-radius:9px;padding:12px 15px;margin:0 0 14px;}
+.attn-title{font-size:13px;font-weight:800;color:#78350f !important;margin:0 0 8px;}
+.attn-row{background:#fff7ed !important;border:1px solid #fed7aa;border-radius:6px;
+          padding:8px 10px;margin:6px 0;color:#7c2d12 !important;font-size:12px;}
+.attn-row strong{color:#7c2d12 !important;}
+
 /* ── Detail cards ── */
 .dcs{margin-bottom:14px;}
 .dct{font-size:11px;font-weight:600;color:#6b7280 !important;
@@ -2473,13 +2957,15 @@ def _display_label(r):
 
 
 def _row_cls(status):
-    return {"Success":"rs", "Promotional Claims Made":"rs", "Partial":"rp", "Login Failed":"rf",
-            "Error":"rf", "Failed":"rf"}.get(status, "rk")
+    return {"Success":"rs", "Claims Made":"rs", "Promotional Claims Made":"rs",
+            "Partial":"rp", "Login Failed":"rf", "Error":"rf", "Failed":"rf"}.get(status, "rk")
 
 
 def _sb_html(status):
     m = {
         "Success":               ("ss", "✅ Success"),
+        "Claims Made":            ("ss", "✅ Claims Confirmed"),
+        "Backup Reconciliation Complete": ("sk", "🔎 Backup Check Complete"),
         "Promotional Claims Made": ("ss", "🎁 Promotions Claimed"),
         "Promotional Check Complete": ("sk", "🔎 Promo Check Complete"),
         "Partial":               ("sp", "⚠️ Partial"),
@@ -2522,6 +3008,33 @@ def _promotion_status_label(status):
         "click_failed": "⚠️ Claim click failed",
         "available": "⚠️ Claimable; not confirmed",
     }.get(str(status or "unknown"), "⚠️ Status unconfirmed")
+
+
+def build_standard_attention_section(results):
+    """Render standard Daily/Store/Progression claims that lack portal confirmation."""
+    rows = []
+    for result in results:
+        player = html.escape(_display_label(result))
+        if result.get("daily_unconfirmed"):
+            rows.append((player, "Daily reward", "Portal did not confirm a Claimed/cooldown state"))
+        for reward_index in (result.get("store_unconfirmed_indices", []) or []):
+            label = STORE_DAILY_LABELS.get(int(reward_index), f"Store reward {reward_index}")
+            rows.append((player, label, "Still available or portal state could not be established"))
+        if result.get("progression_unconfirmed"):
+            rows.append((player, "Progression reward", "Claim button did not transition to Delivered"))
+
+    if not rows:
+        return ""
+    row_html = "".join(
+        f"<div class='attn-row'><strong>{player}</strong> · {html.escape(reward)} — {html.escape(reason)}</div>"
+        for player, reward, reason in rows
+    )
+    return (
+        "<div class='attn-box'>"
+        f"<div class='attn-title'>⚠️ Attention Required — {len(rows)} unconfirmed standard reward(s)</div>"
+        f"{row_html}"
+        "</div>"
+    )
 
 
 def build_promotional_section(results):
@@ -2579,7 +3092,16 @@ def build_promotional_section(results):
                     f"<td>⚠️ {reason}</td></tr>"
                 )
 
-    items_requiring_attention = counts["actionable_promotion_results"] + counts["promotion_detection_failures"] + event_failures
+    standard_claim_attention = sum(
+        int(bool(result.get("daily_unconfirmed")))
+        + len(result.get("store_unconfirmed_indices", []) or [])
+        + int(bool(result.get("progression_unconfirmed")))
+        for result in results
+    )
+    items_requiring_attention = (
+        counts["actionable_promotion_results"] + counts["promotion_detection_failures"]
+        + event_failures + standard_claim_attention
+    )
     event_metrics_html = (
         f"<span class='si'>🎃 Event accounts checked: <strong>{event_checks}</strong></span>"
         f"<span class='si'>🏆 Event tiers claimed: <strong>{event_claims}</strong></span>"
@@ -2629,7 +3151,8 @@ def build_mobile_cards(results, n):
         status      = r["status"]
         rc          = _row_cls(status)
         new_mark    = " 🆕" if r.get("is_new") else ""
-        if r.get("processing_mode") == "promotional_only":
+        if (r.get("processing_mode") == "promotional_only"
+                and not r.get("standard_rewards_checked", False)):
             promotion_rows = "".join(
                 f'<div class="mpc-row"><span class="mpc-lbl">🎁 {html.escape(str(promo.get("title") or "Promotion"))}</span>'
                 f'<span class="mpc-val">{html.escape(_promotion_status_label(promo.get("status")))}</span></div>'
@@ -2653,11 +3176,17 @@ def build_mobile_cards(results, n):
         sk2 = r.get("store_skipped", [False, False, False])
         if not isinstance(sk2, list) or len(sk2) < 3:
             sk2 = [False, False, False]
-        free_slots2 = [i for i in range(3) if not sk2[i]]
-        cc2         = [False, False, False]
-        for j2, idx2 in enumerate(free_slots2):
-            if j2 < r["store"]:
-                cc2[idx2] = True
+        cc2 = [False, False, False]
+        explicit_claimed_indices2 = r.get("store_claimed_indices")
+        if isinstance(explicit_claimed_indices2, list):
+            for reward_index in explicit_claimed_indices2:
+                if isinstance(reward_index, int) and 1 <= reward_index <= 3:
+                    cc2[reward_index - 1] = True
+        else:
+            free_slots2 = [i for i in range(3) if not sk2[i]]
+            for j2, idx2 in enumerate(free_slots2):
+                if j2 < r["store"]:
+                    cc2[idx2] = True
 
         is_fail2 = status in ("Login Failed", "Error", "Failed")
 
@@ -2671,7 +3200,9 @@ def build_mobile_cards(results, n):
         g_ic  = "⏰" if sk2[0] else ("✅" if cc2[0] else ("❌" if is_fail2 else "⏳"))
         c_ic  = "⏰" if sk2[1] else ("✅" if cc2[1] else ("❌" if is_fail2 else "⏳"))
         l_ic  = "⏰" if sk2[2] else ("✅" if cc2[2] else ("❌" if is_fail2 else "⏳"))
-        p_ic  = "✅" if r["progression"] > 0 else ("❌" if is_fail2 else "⏳")
+        p_ic = ("—" if (r.get("processing_mode") == "backup_reconciliation"
+                         and not r.get("progression_checked"))
+                else ("✅" if r["progression"] > 0 else ("❌" if is_fail2 else "⏳")))
 
         if not r.get("has_loyalty"):
             ly_ic = "—"
@@ -2745,8 +3276,14 @@ def build_email(results, run_label, run_index, job_start, meta):
     failure_count = counts["actual_failures"]
     unconfirmed_count = counts["unconfirmed_claims"]
     full_claim_count = counts["full_claim_accounts"]
-    store_kpi_capacity = full_claim_count * 3
+    standard_check_count = full_claim_count + counts.get("backup_reconciliation_accounts", 0)
+    progression_checked_count = sum(
+        1 for r in results
+        if r.get("processing_mode") == "full_claim" or r.get("progression_checked", False)
+    )
+    store_kpi_capacity = standard_check_count * 3
     promo_section_html = build_promotional_section(results)
+    standard_attention_html = build_standard_attention_section(results)
     promos_observed = sum(len(r.get("promotions_observed", []) or []) for r in results)
 
     full_claim_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
@@ -2761,7 +3298,9 @@ def build_email(results, run_label, run_index, job_start, meta):
         0.0 if tp_all == 0 and has_unresolved_result
         else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
     )
-    eff_display = f"{eff:.1f}%" if eff is not None else "N/A (promotional-only)"
+    eff_display = (f"{eff:.1f}%" if eff is not None else
+                   ("N/A (backup reconciliation)" if counts.get("backup_reconciliation_accounts", 0)
+                    else "N/A (promotional-only)"))
     l_enrl  = sum(1 for r in full_claim_results if r.get("has_loyalty"))
     skip_ct = sum(1 for r in results if r.get("skipped_all"))
     act_ct  = n - skip_ct
@@ -2788,24 +3327,29 @@ def build_email(results, run_label, run_index, job_start, meta):
     bc  = _badge_cls(run_label)
     bi  = {"Primary Run": "🟢", "Manual Run": "🔧"}.get(run_label, "🔵")
 
-    d_pct = min(round(td / full_claim_count * 100) if full_claim_count else 0, 100)
+    d_pct = min(round(td / standard_check_count * 100) if standard_check_count else 0, 100)
     s_pct = min(round(ts / store_kpi_capacity * 100) if store_kpi_capacity else 0, 100)
-    daily_kpi_value = f"{td}<span>/{full_claim_count}</span>" if full_claim_count else "—"
-    store_kpi_value = f"{ts}<span>/{store_kpi_capacity}</span>" if full_claim_count else "—"
+    daily_kpi_value = f"{td}<span>/{standard_check_count}</span>" if standard_check_count else "—"
+    store_kpi_value = f"{ts}<span>/{store_kpi_capacity}</span>" if standard_check_count else "—"
     l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
     daily_bar = _pbar(d_pct, "pg") if full_claim_count else ""
     store_bar = _pbar(s_pct, "pb2") if full_claim_count else ""
-    progression_kpi_value = f"{tp}<span> items</span>" if full_claim_count else "N/A"
-    progression_kpi_subtitle = "Variable — grenade dependent" if full_claim_count else "Not checked in promotional-only mode"
-    progression_bar = _pbar(min(tp * 10, 100), "pp") if full_claim_count else ""
+    progression_kpi_value = f"{tp}<span> items</span>" if progression_checked_count else "N/A"
+    progression_kpi_subtitle = ("Variable — grenade dependent" if full_claim_count
+                                else "Rechecked only after a Store bonus was recovered" if progression_checked_count
+                                else "Not checked in this backup")
+    progression_bar = _pbar(min(tp * 10, 100), "pp") if progression_checked_count else ""
     loyalty_kpi_value = f"{tl}<span>/{l_enrl}</span>" if full_claim_count else "N/A"
     loyalty_kpi_subtitle = "Not checked in promotional-only mode"
     loyalty_bar = _pbar(l_pct, "pa") if full_claim_count else ""
-    standard_cooldown_display = str(unavailable_count) if full_claim_count else "N/A (promotional-only)"
+    standard_cooldown_display = str(unavailable_count) if standard_check_count else "N/A (promotional-only)"
 
     if not full_claim_count:
-        dlt_d = dlt_s = dlt_l = dlt_tot = '<span class="de">not applicable for promotional-only</span>'
-        dlt_eff = '<span class="de">N/A for promotional-only</span>'
+        no_full_run_label = ('backup check; no full-run comparison'
+                             if counts.get("backup_reconciliation_accounts", 0)
+                             else 'not applicable for promotional-only')
+        dlt_d = dlt_s = dlt_l = dlt_tot = f'<span class="de">{no_full_run_label}</span>'
+        dlt_eff = '<span class="de">N/A without a full-claim run</span>'
     elif comparable_full_runs:
         dlt_d   = _delta_html(td, lr_d)
         dlt_s   = _delta_html(ts, lr_s)
@@ -2838,7 +3382,9 @@ def build_email(results, run_label, run_index, job_start, meta):
 
         # Reward-type cells are intentionally blank on promotional-only checks;
         # those rewards were not inspected and must not look like cooldowns/failures.
-        promo_only_row = r.get("processing_mode") == "promotional_only"
+        promo_only_row = (r.get("processing_mode") == "promotional_only"
+                          and not r.get("standard_rewards_checked", False))
+        backup_recheck_row = r.get("processing_mode") == "backup_reconciliation"
         # Daily cell
         if promo_only_row:
             dc = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
@@ -2858,11 +3404,17 @@ def build_email(results, run_label, run_index, job_start, meta):
         sk = r.get("store_skipped", [False, False, False])
         if not isinstance(sk, list) or len(sk) < 3:
             sk = [False, False, False]
-        free_slots    = [i for i in range(3) if not sk[i]]
         claimed_cards = [False, False, False]
-        for j, idx in enumerate(free_slots):
-            if j < r["store"]:
-                claimed_cards[idx] = True
+        explicit_claimed_indices = r.get("store_claimed_indices")
+        if isinstance(explicit_claimed_indices, list):
+            for reward_index in explicit_claimed_indices:
+                if isinstance(reward_index, int) and 1 <= reward_index <= 3:
+                    claimed_cards[reward_index - 1] = True
+        else:
+            free_slots = [i for i in range(3) if not sk[i]]
+            for j, idx in enumerate(free_slots):
+                if j < r["store"]:
+                    claimed_cards[idx] = True
 
         sn_list = r.get("store_next") or [None, None, None]
         sc_html = ""
@@ -2885,7 +3437,8 @@ def build_email(results, run_label, run_index, job_start, meta):
             sc_html += f'<td{sep}>{cell}</td>'
 
         # Progression cell
-        pc = ('<span class="ic-na" title="Not checked in promotional-only mode">—</span>' if promo_only_row else
+        progression_not_checked = (backup_recheck_row and not r.get("progression_checked", False))
+        pc = ('<span class="ic-na" title="Not reopened: no Store bonus was recovered">—</span>' if (promo_only_row or progression_not_checked) else
               '<span class="ic-ok">✅</span>' if r["progression"] > 0
               else '<span class="ic-fl">❌</span>'
               if status in ("Login Failed", "Error", "Failed")
@@ -2911,7 +3464,8 @@ def build_email(results, run_label, run_index, job_start, meta):
         tm  = (f'<span style="color:#6b7280;">{d_s//60}m{d_s%60}s</span>'
                if d_s else '<span class="ic-na">—</span>')
 
-        mode_cell = "🎁 Promotional-only" if promo_only_row else "Full claim"
+        mode_cell = ("🎁 Promotional-only" if promo_only_row
+                     else ("🔄 Backup reconciliation" if backup_recheck_row else "Full claim"))
         table_rows += (
             f'<tr class="{rc}">'
             f'<td class="idc">{display_lbl}{new_mark}</td>'
@@ -3040,11 +3594,11 @@ def build_email(results, run_label, run_index, job_start, meta):
         f"<div class='kpi-row'>"
         f"<div class='kpi'><div class='kl'>🎁 Daily claimed this run</div>"
         f"<div class='kv'>{daily_kpi_value}</div>"
-        f"<div class='ks'>{dlt_d} · full-claim accounts only</div>{daily_bar}</div>"
+        f"<div class='ks'>{dlt_d} · accounts with live Daily checks</div>{daily_bar}</div>"
 
         f"<div class='kpi'><div class='kl'>🏪 Daily Store claimed this run</div>"
         f"<div class='kv'>{store_kpi_value}</div>"
-        f"<div class='ks'>{dlt_s} · 3 standard Store cards per full-claim account</div>{store_bar}</div>"
+        f"<div class='ks'>{dlt_s} · 3 standard Store cards per account checked</div>{store_bar}</div>"
 
         f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
         f"<div class='kv'>{progression_kpi_value}</div>"
@@ -3091,6 +3645,9 @@ def build_email(results, run_label, run_index, job_start, meta):
 
         # Mobile stacked cards (hidden on desktop)
         f"{mob_section}"
+
+        # Standard claim failures are separated from promotional/event observations.
+        f"{standard_attention_html}"
 
         # Promotional rewards appear only when a card was discovered on a live Store page.
         f"{promo_section_html}"
@@ -3639,6 +4196,9 @@ def run_claim_test_one_player():
     return 0
 
 
+
+
+
 def _full_claim_efficiency(results):
     """Efficiency for full-claim accounts only; N/A when a run is promotional-only."""
     full_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
@@ -3723,7 +4283,11 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "fail_reason": r.get("fail_reason"),
                 "daily_claimed_this_run": int(r.get("daily", 0) or 0),
                 "daily_portal_status": r.get("daily_portal_status", "unknown"),
+                "daily_unconfirmed": bool(r.get("daily_unconfirmed", False)),
                 "standard_store_claimed_this_run": int(r.get("store", 0) or 0),
+                "standard_store_unconfirmed_indices": list(r.get("store_unconfirmed_indices", []) or []),
+                "standard_store_claimed_indices": list(r.get("store_claimed_indices", []) or []),
+                "progression_unconfirmed": bool(r.get("progression_unconfirmed", False)),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
                 "event_rewards": r.get("event_rewards", []),
@@ -3759,7 +4323,6 @@ def main():
 
     if "--test-claims-one-player" in sys.argv[1:]:
         return run_claim_test_one_player()
-
     job_start = get_ist_time()
     log("=" * 60)
     log(f"CS HUB AUTO-CLAIMER {VERSION}")
@@ -3854,7 +4417,19 @@ def main():
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
         if is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
-            r = process_player_promotions_only(pid, new_id, run_label)
+            if needs_standard_backup_audit(pid, meta):
+                r = process_player_backup_reconciliation(pid, new_id, run_label)
+                if _result_needs_recovery(r):
+                    # A live audit can disprove stale same-day coverage; keep the ID pending.
+                    _record_full_claim_coverage(meta, pid, r, run_label)
+                elif r.get("standard_rewards_checked"):
+                    meta.setdefault("full_claim_coverage", {}).setdefault(pid, {})[
+                        "standard_rewards_audited_reset"
+                    ] = _current_reset_date()
+            else:
+                r = process_player_promotions_only(pid, new_id, run_label)
+                if _result_needs_recovery(r):
+                    _record_full_claim_coverage(meta, pid, r, run_label)
         else:
             if is_promotional_backup:
                 if new_id:
@@ -3902,7 +4477,7 @@ def main():
     log(f"Run complete: {tall} claimed | {eff_log} efficiency | {dur_s}s total")
     run_counts = _summary_counts(results)
     log(f"  Daily:{td}  Store Daily:{ts_daily}  Promotions:{ts_temp}  Prog:{tp}  Loyalty:{tl}  Event Rewards:{event_reward_claims}")
-    log(f"  Accounts:{len(results)} ({run_counts['full_claim_accounts']} full / {run_counts['promotional_only_accounts']} promo-only) | Standard cooldowns:{run_counts['standard_rewards_on_cooldown']} | Distinct promo types:{run_counts['distinct_promotional_offer_types']} | Promo claims:{run_counts['promotional_claims_made']} | Partial:{run_counts['partial_results']} | Failures:{run_counts['actual_failures']} | Unconfirmed promotions:{run_counts['unconfirmed_claims']} | Promo scan failures:{run_counts['promotion_detection_failures']}")
+    log(f"  Accounts:{len(results)} ({run_counts['full_claim_accounts']} full / {run_counts.get('backup_reconciliation_accounts', 0)} backup-reconciliation / {run_counts['promotional_only_accounts']} promo-only) | Standard cooldowns:{run_counts['standard_rewards_on_cooldown']} | Distinct promo types:{run_counts['distinct_promotional_offer_types']} | Promo claims:{run_counts['promotional_claims_made']} | Partial:{run_counts['partial_results']} | Failures:{run_counts['actual_failures']} | Unconfirmed claims:{run_counts['unconfirmed_claims']} | Promo scan failures:{run_counts['promotion_detection_failures']}")
     log(f"{'='*60}")
 
     # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
@@ -3953,6 +4528,7 @@ def main():
         "unconfirmed_claims": counts["unconfirmed_claims"],
         "promotion_detection_failures": counts["promotion_detection_failures"],
         "promotional_only_accounts": counts["promotional_only_accounts"],
+        "backup_reconciliation_accounts": counts.get("backup_reconciliation_accounts", 0),
         "full_claim_accounts": counts["full_claim_accounts"],
         "configured_player_count": configured_player_count,
     }
@@ -3967,7 +4543,9 @@ def main():
     failure_count = counts["actual_failures"]
     ist_label = job_start.strftime('%d-%b %I:%M %p')
     streak_d  = meta["streak"].get("current", 0)
-    cooldown_subject = str(counts["standard_rewards_on_cooldown"]) if counts["full_claim_accounts"] else "N/A promo-only"
+    cooldown_subject = (str(counts["standard_rewards_on_cooldown"])
+                        if counts["full_claim_accounts"] or counts.get("backup_reconciliation_accounts", 0)
+                        else "N/A promo-only")
     subject = (
         f"🎮 CS Hub | {ist_label} IST | {counts['accounts_processed']} accounts "
         f"| {counts['claims_made']} claims | {cooldown_subject} standard cooldowns "
