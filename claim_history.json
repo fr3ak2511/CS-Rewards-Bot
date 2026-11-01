@@ -47,28 +47,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.707532"
+        "last_seen_at": "2026-11-01T23:12:44.472236"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.813363"
+        "last_seen_at": "2026-11-01T23:12:44.480578"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.088900"
+        "last_seen_at": "2026-11-01T23:12:44.426062"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.930221"
+        "last_seen_at": "2026-11-01T23:12:44.488910"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -89,23 +89,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.136568"
+        "last_seen_at": "2026-11-01T23:12:44.434548"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:29:35.253161"
+        "last_seen_at": "2026-11-01T23:12:44.443361"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:29:35.368713",
+        "last_seen_at": "2026-11-01T23:12:44.451660",
         "last_claim": "2026-11-01T05:51:31.009318",
-        "portal_observed_at": "2026-11-01T20:29:35.368713"
+        "portal_observed_at": "2026-11-01T23:12:44.451660"
       }
     },
     "event_rewards": {
@@ -114,7 +114,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:29:55.034396",
+        "checked_at": "2026-11-01T23:13:03.430662",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -334,28 +334,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.635409"
+        "last_seen_at": "2026-11-01T23:13:43.496530"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.647044"
+        "last_seen_at": "2026-11-01T23:13:43.506594"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.453522"
+        "last_seen_at": "2026-11-01T23:13:43.463861"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.659062"
+        "last_seen_at": "2026-11-01T23:13:43.514948"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -376,22 +376,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.500311"
+        "last_seen_at": "2026-11-01T23:13:43.472609"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:30:36.572744"
+        "last_seen_at": "2026-11-01T23:13:43.480416"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:30:36.624597",
-        "portal_observed_at": "2026-11-01T20:30:36.624597",
+        "last_seen_at": "2026-11-01T23:13:43.488758",
+        "portal_observed_at": "2026-11-01T23:13:43.488758",
         "last_claim": "2026-11-01T05:54:20.750796"
       }
     },
@@ -401,7 +401,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:30:56.043750",
+        "checked_at": "2026-11-01T23:14:02.516535",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -730,28 +730,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.857569"
+        "last_seen_at": "2026-11-01T23:14:44.840382"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.868377"
+        "last_seen_at": "2026-11-01T23:14:44.960084"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.800751"
+        "last_seen_at": "2026-11-01T23:14:43.987229"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.881047"
+        "last_seen_at": "2026-11-01T23:14:45.080079"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -772,23 +772,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.817239"
+        "last_seen_at": "2026-11-01T23:14:44.401472"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:31:36.829832"
+        "last_seen_at": "2026-11-01T23:14:44.531263"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:31:36.842563",
+        "last_seen_at": "2026-11-01T23:14:44.710624",
         "last_claim": "2026-11-01T05:57:11.079835",
-        "portal_observed_at": "2026-11-01T20:31:36.842563"
+        "portal_observed_at": "2026-11-01T23:14:44.710624"
       }
     },
     "event_rewards": {
@@ -797,7 +797,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:31:55.822262",
+        "checked_at": "2026-11-01T23:15:04.178386",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -1016,28 +1016,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:36.883448"
+        "last_seen_at": "2026-11-01T23:15:44.607416"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:36.999124"
+        "last_seen_at": "2026-11-01T23:15:45.047809"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:36.509300"
+        "last_seen_at": "2026-11-01T23:15:44.183759"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:37.113740"
+        "last_seen_at": "2026-11-01T23:15:45.157827"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1058,23 +1058,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:36.560768"
+        "last_seen_at": "2026-11-01T23:15:44.236795"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:32:36.663148"
+        "last_seen_at": "2026-11-01T23:15:44.367010"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:32:36.763935",
+        "last_seen_at": "2026-11-01T23:15:44.477655",
         "last_claim": "2026-11-01T06:00:01.699718",
-        "portal_observed_at": "2026-11-01T20:32:36.763935"
+        "portal_observed_at": "2026-11-01T23:15:44.477655"
       }
     },
     "event_rewards": {
@@ -1083,7 +1083,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:32:56.283198",
+        "checked_at": "2026-11-01T23:16:04.223024",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -1412,28 +1412,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:36.861188"
+        "last_seen_at": "2026-11-01T23:16:45.232711"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:36.953239"
+        "last_seen_at": "2026-11-01T23:16:45.240873"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:36.632381"
+        "last_seen_at": "2026-11-01T23:16:44.629871"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:37.057514"
+        "last_seen_at": "2026-11-01T23:16:45.250118"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1454,23 +1454,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:36.651339"
+        "last_seen_at": "2026-11-01T23:16:45.084862"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:33:36.670545"
+        "last_seen_at": "2026-11-01T23:16:45.214463"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:33:36.727317",
+        "last_seen_at": "2026-11-01T23:16:45.222496",
         "last_claim": "2026-11-01T06:02:53.251051",
-        "portal_observed_at": "2026-11-01T20:33:36.727317"
+        "portal_observed_at": "2026-11-01T23:16:45.222496"
       }
     },
     "event_rewards": {
@@ -1479,7 +1479,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:33:56.033572",
+        "checked_at": "2026-11-01T23:17:04.322703",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -1683,28 +1683,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:37.439821"
+        "last_seen_at": "2026-11-01T23:17:44.568262"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:37.558838"
+        "last_seen_at": "2026-11-01T23:17:44.576056"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:36.802390"
+        "last_seen_at": "2026-11-01T23:17:44.533868"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:37.670350"
+        "last_seen_at": "2026-11-01T23:17:44.583487"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1725,23 +1725,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:36.836354"
+        "last_seen_at": "2026-11-01T23:17:44.543338"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:34:37.074442"
+        "last_seen_at": "2026-11-01T23:17:44.552101"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:34:37.349875",
+        "last_seen_at": "2026-11-01T23:17:44.560715",
         "last_claim": "2026-11-01T06:05:44.125245",
-        "portal_observed_at": "2026-11-01T20:34:37.349875"
+        "portal_observed_at": "2026-11-01T23:17:44.560715"
       }
     },
     "event_rewards": {
@@ -1750,7 +1750,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:34:58.182135",
+        "checked_at": "2026-11-01T23:18:03.459942",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -1969,35 +1969,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.571859"
+        "last_seen_at": "2026-11-01T23:18:43.384352"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.764639"
+        "last_seen_at": "2026-11-01T23:18:43.400530"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.851829"
+        "last_seen_at": "2026-11-01T23:18:43.408590"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.367957"
+        "last_seen_at": "2026-11-01T23:18:43.360876"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.944706"
+        "last_seen_at": "2026-11-01T23:18:43.416192"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2018,23 +2018,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.469624"
+        "last_seen_at": "2026-11-01T23:18:43.368758"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:35:40.539745"
+        "last_seen_at": "2026-11-01T23:18:43.376718"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:35:40.677780",
+        "last_seen_at": "2026-11-01T23:18:43.392943",
         "last_claim": "2026-11-01T06:08:34.540949",
-        "portal_observed_at": "2026-11-01T20:35:40.677780"
+        "portal_observed_at": "2026-11-01T23:18:43.392943"
       }
     },
     "event_rewards": {
@@ -2043,7 +2043,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:36:00.003157",
+        "checked_at": "2026-11-01T23:19:02.264710",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -2262,28 +2262,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:41.213299"
+        "last_seen_at": "2026-11-01T23:19:42.120101"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:41.335116"
+        "last_seen_at": "2026-11-01T23:19:42.239852"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:40.739689"
+        "last_seen_at": "2026-11-01T23:19:41.723314"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:41.484613"
+        "last_seen_at": "2026-11-01T23:19:42.360472"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2304,23 +2304,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:40.866543"
+        "last_seen_at": "2026-11-01T23:19:41.759728"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:36:40.977243"
+        "last_seen_at": "2026-11-01T23:19:41.879414"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:36:41.091975",
+        "last_seen_at": "2026-11-01T23:19:42.000410",
         "last_claim": "2026-11-01T06:11:25.454057",
-        "portal_observed_at": "2026-11-01T20:36:41.091975"
+        "portal_observed_at": "2026-11-01T23:19:42.000410"
       }
     },
     "event_rewards": {
@@ -2329,7 +2329,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:37:00.519663",
+        "checked_at": "2026-11-01T23:20:01.248908",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -2548,28 +2548,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.692700"
+        "last_seen_at": "2026-11-01T23:20:42.111842"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.808167"
+        "last_seen_at": "2026-11-01T23:20:42.241433"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.285731"
+        "last_seen_at": "2026-11-01T23:20:41.600605"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.928432"
+        "last_seen_at": "2026-11-01T23:20:42.332192"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2590,23 +2590,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.331609"
+        "last_seen_at": "2026-11-01T23:20:41.741947"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:37:41.453425"
+        "last_seen_at": "2026-11-01T23:20:41.871603"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:37:41.574919",
+        "last_seen_at": "2026-11-01T23:20:41.991689",
         "last_claim": "2026-11-01T06:14:14.725195",
-        "portal_observed_at": "2026-11-01T20:37:41.574919"
+        "portal_observed_at": "2026-11-01T23:20:41.991689"
       }
     },
     "event_rewards": {
@@ -2615,7 +2615,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:38:01.025735",
+        "checked_at": "2026-11-01T23:21:01.282154",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -2834,28 +2834,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.678282"
+        "last_seen_at": "2026-11-01T23:21:41.781121"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.689503"
+        "last_seen_at": "2026-11-01T23:21:41.789693"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.628165"
+        "last_seen_at": "2026-11-01T23:21:41.749013"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.700425"
+        "last_seen_at": "2026-11-01T23:21:41.797299"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2876,23 +2876,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.643362"
+        "last_seen_at": "2026-11-01T23:21:41.758084"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:38:41.654936"
+        "last_seen_at": "2026-11-01T23:21:41.765847"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:38:41.666269",
+        "last_seen_at": "2026-11-01T23:21:41.773445",
         "last_claim": "2026-11-01T06:17:06.610688",
-        "portal_observed_at": "2026-11-01T20:38:41.666269"
+        "portal_observed_at": "2026-11-01T23:21:41.773445"
       }
     },
     "event_rewards": {
@@ -2901,7 +2901,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:39:00.672603",
+        "checked_at": "2026-11-01T23:22:00.618674",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -3121,28 +3121,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.848598"
+        "last_seen_at": "2026-11-01T23:22:40.633661"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.859876"
+        "last_seen_at": "2026-11-01T23:22:40.753543"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.729134"
+        "last_seen_at": "2026-11-01T23:22:40.230087"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.871266"
+        "last_seen_at": "2026-11-01T23:22:40.873780"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3163,23 +3163,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.773861"
+        "last_seen_at": "2026-11-01T23:22:40.272331"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:39:41.825428"
+        "last_seen_at": "2026-11-01T23:22:40.392899"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:39:41.837711",
+        "last_seen_at": "2026-11-01T23:22:40.513512",
         "last_claim": "2026-11-01T06:19:55.856441",
-        "portal_observed_at": "2026-11-01T20:39:41.837711"
+        "portal_observed_at": "2026-11-01T23:22:40.513512"
       }
     },
     "event_rewards": {
@@ -3188,7 +3188,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:40:00.825834",
+        "checked_at": "2026-11-01T23:22:59.760825",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -3409,28 +3409,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.953324"
+        "last_seen_at": "2026-11-01T23:23:39.933726"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.964488"
+        "last_seen_at": "2026-11-01T23:23:40.043690"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.819266"
+        "last_seen_at": "2026-11-01T23:23:39.558469"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.976703"
+        "last_seen_at": "2026-11-01T23:23:40.164072"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3451,23 +3451,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.870343"
+        "last_seen_at": "2026-11-01T23:23:39.594036"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:40:41.928696"
+        "last_seen_at": "2026-11-01T23:23:39.713484"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:40:41.940422",
+        "last_seen_at": "2026-11-01T23:23:39.833924",
         "last_claim": "2026-11-01T06:22:44.144237",
-        "portal_observed_at": "2026-11-01T20:40:41.940422"
+        "portal_observed_at": "2026-11-01T23:23:39.833924"
       }
     },
     "event_rewards": {
@@ -3476,7 +3476,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:41:00.945591",
+        "checked_at": "2026-11-01T23:23:59.080659",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -3652,26 +3652,26 @@
       "last_claim": "2026-11-01T06:24:58.516409",
       "next_available": "2026-11-02T05:30:00",
       "status": "portal_claimed",
-      "portal_observed_at": "2026-11-01T21:06:14.015929"
+      "portal_observed_at": "2026-11-01T23:24:38.231731"
     },
     "store": {
       "reward_1": {
         "last_claim": "2026-11-01T06:25:22.769301",
         "next_available": "2026-11-02T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-01T21:06:34.291833"
+        "portal_observed_at": "2026-11-01T23:24:57.320626"
       },
       "reward_2": {
         "last_claim": "2026-11-01T06:25:26.512811",
         "next_available": "2026-11-02T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-01T21:06:34.340897"
+        "portal_observed_at": "2026-11-01T23:24:57.341767"
       },
       "reward_3": {
         "last_claim": "2026-11-01T06:25:30.088126",
         "next_available": "2026-11-02T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-01T21:06:34.384443"
+        "portal_observed_at": "2026-11-01T23:24:57.361727"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:29:37.762266",
@@ -3682,7 +3682,7 @@
     "progression": {
       "last_claim": "2026-11-01T06:26:03.070543",
       "last_count": 1,
-      "last_visit": "2026-11-01T21:06:52.745360",
+      "last_visit": "2026-11-01T23:25:15.264862",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -3697,28 +3697,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.507166"
+        "last_seen_at": "2026-11-01T23:24:57.410491"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.522379"
+        "last_seen_at": "2026-11-01T23:24:57.418597"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.433006"
+        "last_seen_at": "2026-11-01T23:24:57.379683"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.537770"
+        "last_seen_at": "2026-11-01T23:24:57.426643"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3739,23 +3739,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.460272"
+        "last_seen_at": "2026-11-01T23:24:57.387232"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:06:34.476711"
+        "last_seen_at": "2026-11-01T23:24:57.395257"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:06:34.491693",
+        "last_seen_at": "2026-11-01T23:24:57.402687",
         "last_claim": "2026-11-01T06:25:34.713485",
-        "portal_observed_at": "2026-11-01T21:06:34.491693"
+        "portal_observed_at": "2026-11-01T23:24:57.402687"
       }
     },
     "event_rewards": {
@@ -3764,7 +3764,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:07:51.932914",
+        "checked_at": "2026-11-01T23:26:13.640809",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -3969,28 +3969,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.083954"
+        "last_seen_at": "2026-11-01T23:26:53.257591"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.096125"
+        "last_seen_at": "2026-11-01T23:26:53.265130"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.035086"
+        "last_seen_at": "2026-11-01T23:26:53.222490"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.107592"
+        "last_seen_at": "2026-11-01T23:26:53.273557"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4011,23 +4011,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.048881"
+        "last_seen_at": "2026-11-01T23:26:53.230426"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:43:58.060610"
+        "last_seen_at": "2026-11-01T23:26:53.239161"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:43:58.071804",
+        "last_seen_at": "2026-11-01T23:26:53.249806",
         "last_claim": "2026-11-01T06:28:50.897798",
-        "portal_observed_at": "2026-11-01T20:43:58.071804"
+        "portal_observed_at": "2026-11-01T23:26:53.249806"
       }
     },
     "event_rewards": {
@@ -4036,7 +4036,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:44:17.022551",
+        "checked_at": "2026-11-01T23:27:12.146873",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -4257,28 +4257,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:58.021457"
+        "last_seen_at": "2026-11-01T23:27:52.171548"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:58.080252"
+        "last_seen_at": "2026-11-01T23:27:52.191007"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:57.975368"
+        "last_seen_at": "2026-11-01T23:27:52.139221"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:58.093561"
+        "last_seen_at": "2026-11-01T23:27:52.198850"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4299,22 +4299,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:57.986486"
+        "last_seen_at": "2026-11-01T23:27:52.147149"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:44:57.998505"
+        "last_seen_at": "2026-11-01T23:27:52.155279"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:44:58.010093",
-        "portal_observed_at": "2026-11-01T20:44:58.010093",
+        "last_seen_at": "2026-11-01T23:27:52.162849",
+        "portal_observed_at": "2026-11-01T23:27:52.162849",
         "last_claim": "2026-11-01T06:31:41.979128"
       }
     },
@@ -4324,7 +4324,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:45:17.100783",
+        "checked_at": "2026-11-01T23:28:11.083283",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -4544,28 +4544,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.760595"
+        "last_seen_at": "2026-11-01T23:28:51.707417"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.772355"
+        "last_seen_at": "2026-11-01T23:28:51.715834"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.707441"
+        "last_seen_at": "2026-11-01T23:28:51.674968"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.783424"
+        "last_seen_at": "2026-11-01T23:28:51.723494"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4586,23 +4586,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.719241"
+        "last_seen_at": "2026-11-01T23:28:51.684068"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:45:57.730391"
+        "last_seen_at": "2026-11-01T23:28:51.691686"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:45:57.745600",
+        "last_seen_at": "2026-11-01T23:28:51.699816",
         "last_claim": "2026-11-01T06:34:38.720366",
-        "portal_observed_at": "2026-11-01T20:45:57.745600"
+        "portal_observed_at": "2026-11-01T23:28:51.699816"
       }
     },
     "event_rewards": {
@@ -4611,7 +4611,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:46:16.717916",
+        "checked_at": "2026-11-01T23:29:10.473178",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -4831,28 +4831,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.347908"
+        "last_seen_at": "2026-11-01T23:29:50.382086"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.360245"
+        "last_seen_at": "2026-11-01T23:29:50.389735"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.301432"
+        "last_seen_at": "2026-11-01T23:29:50.350079"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.373391"
+        "last_seen_at": "2026-11-01T23:29:50.397542"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4873,23 +4873,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.312907"
+        "last_seen_at": "2026-11-01T23:29:50.357925"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:46:57.324477"
+        "last_seen_at": "2026-11-01T23:29:50.365875"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:46:57.336529",
+        "last_seen_at": "2026-11-01T23:29:50.373478",
         "last_claim": "2026-11-01T06:37:31.119008",
-        "portal_observed_at": "2026-11-01T20:46:57.336529"
+        "portal_observed_at": "2026-11-01T23:29:50.373478"
       }
     },
     "event_rewards": {
@@ -4898,7 +4898,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:47:16.289583",
+        "checked_at": "2026-11-01T23:30:09.190304",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -5118,28 +5118,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.533504"
+        "last_seen_at": "2026-11-01T23:30:49.501341"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.641075"
+        "last_seen_at": "2026-11-01T23:30:49.509190"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.111516"
+        "last_seen_at": "2026-11-01T23:30:49.468300"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.739153"
+        "last_seen_at": "2026-11-01T23:30:49.517817"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5160,23 +5160,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.231102"
+        "last_seen_at": "2026-11-01T23:30:49.476474"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:47:59.321019"
+        "last_seen_at": "2026-11-01T23:30:49.484884"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:47:59.431570",
+        "last_seen_at": "2026-11-01T23:30:49.492872",
         "last_claim": "2026-11-01T06:40:26.769990",
-        "portal_observed_at": "2026-11-01T20:47:59.431570"
+        "portal_observed_at": "2026-11-01T23:30:49.492872"
       }
     },
     "event_rewards": {
@@ -5185,7 +5185,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:48:19.015211",
+        "checked_at": "2026-11-01T23:31:08.325091",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -5405,28 +5405,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:49:00.459941"
+        "last_seen_at": "2026-11-01T23:31:50.925969"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:49:00.580309"
+        "last_seen_at": "2026-11-01T23:31:50.933618"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:48:59.929988"
+        "last_seen_at": "2026-11-01T23:31:50.892914"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:49:00.691761"
+        "last_seen_at": "2026-11-01T23:31:50.942145"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5447,23 +5447,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:49:00.015467"
+        "last_seen_at": "2026-11-01T23:31:50.900660"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:49:00.246252"
+        "last_seen_at": "2026-11-01T23:31:50.909495"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:49:00.360838",
+        "last_seen_at": "2026-11-01T23:31:50.917255",
         "last_claim": "2026-11-01T06:43:20.459686",
-        "portal_observed_at": "2026-11-01T20:49:00.360838"
+        "portal_observed_at": "2026-11-01T23:31:50.917255"
       }
     },
     "event_rewards": {
@@ -5472,7 +5472,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:49:19.873636",
+        "checked_at": "2026-11-01T23:32:09.897288",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -5692,35 +5692,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.802085"
+        "last_seen_at": "2026-11-01T23:32:49.581975"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.827472"
+        "last_seen_at": "2026-11-01T23:32:49.600234"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.838865"
+        "last_seen_at": "2026-11-01T23:32:49.608295"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.765324"
+        "last_seen_at": "2026-11-01T23:32:49.546968"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.850742"
+        "last_seen_at": "2026-11-01T23:32:49.616013"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5741,23 +5741,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.777461"
+        "last_seen_at": "2026-11-01T23:32:49.555816"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:50:00.788857"
+        "last_seen_at": "2026-11-01T23:32:49.574245"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:50:00.814188",
+        "last_seen_at": "2026-11-01T23:32:49.591999",
         "last_claim": "2026-11-01T06:46:12.226786",
-        "portal_observed_at": "2026-11-01T20:50:00.814188"
+        "portal_observed_at": "2026-11-01T23:32:49.591999"
       }
     },
     "event_rewards": {
@@ -5766,7 +5766,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:50:19.746938",
+        "checked_at": "2026-11-01T23:33:10.533270",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -5986,35 +5986,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.779764"
+        "last_seen_at": "2026-11-01T23:33:50.601237"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.806377"
+        "last_seen_at": "2026-11-01T23:33:50.832215"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.818374"
+        "last_seen_at": "2026-11-01T23:33:50.960474"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.743038"
+        "last_seen_at": "2026-11-01T23:33:50.322808"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.831075"
+        "last_seen_at": "2026-11-01T23:33:51.081375"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6035,23 +6035,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.754458"
+        "last_seen_at": "2026-11-01T23:33:50.380365"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:51:00.766036"
+        "last_seen_at": "2026-11-01T23:33:50.491358"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:51:00.794801",
+        "last_seen_at": "2026-11-01T23:33:50.710981",
         "last_claim": "2026-11-01T06:49:04.482554",
-        "portal_observed_at": "2026-11-01T20:51:00.794801"
+        "portal_observed_at": "2026-11-01T23:33:50.710981"
       }
     },
     "event_rewards": {
@@ -6060,7 +6060,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:51:19.890138",
+        "checked_at": "2026-11-01T23:34:09.995266",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -6280,35 +6280,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.784726"
+        "last_seen_at": "2026-11-01T23:34:50.051969"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.827892"
+        "last_seen_at": "2026-11-01T23:34:50.271760"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.839890"
+        "last_seen_at": "2026-11-01T23:34:50.371347"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.746402"
+        "last_seen_at": "2026-11-01T23:34:49.820541"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.851212"
+        "last_seen_at": "2026-11-01T23:34:50.491866"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6329,23 +6329,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.760030"
+        "last_seen_at": "2026-11-01T23:34:49.830904"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:52:00.771859"
+        "last_seen_at": "2026-11-01T23:34:49.942734"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:52:00.815991",
+        "last_seen_at": "2026-11-01T23:34:50.161819",
         "last_claim": "2026-11-01T06:51:56.656988",
-        "portal_observed_at": "2026-11-01T20:52:00.815991"
+        "portal_observed_at": "2026-11-01T23:34:50.161819"
       }
     },
     "event_rewards": {
@@ -6354,7 +6354,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:52:19.713312",
+        "checked_at": "2026-11-01T23:35:09.505431",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -6574,35 +6574,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.550574"
+        "last_seen_at": "2026-11-01T23:35:49.763555"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.573967"
+        "last_seen_at": "2026-11-01T23:35:50.003865"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.585157"
+        "last_seen_at": "2026-11-01T23:35:50.124283"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.426072"
+        "last_seen_at": "2026-11-01T23:35:49.521050"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.596163"
+        "last_seen_at": "2026-11-01T23:35:50.253694"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6623,23 +6623,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.437906"
+        "last_seen_at": "2026-11-01T23:35:49.571864"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:53:00.539587"
+        "last_seen_at": "2026-11-01T23:35:49.662739"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:53:00.562347",
+        "last_seen_at": "2026-11-01T23:35:49.883152",
         "last_claim": "2026-11-01T06:54:48.723929",
-        "portal_observed_at": "2026-11-01T20:53:00.562347"
+        "portal_observed_at": "2026-11-01T23:35:49.883152"
       }
     },
     "event_rewards": {
@@ -6648,7 +6648,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:53:19.633234",
+        "checked_at": "2026-11-01T23:36:09.114146",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -7165,28 +7165,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.356904"
+        "last_seen_at": "2026-11-01T23:36:49.160938"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.369552"
+        "last_seen_at": "2026-11-01T23:36:49.280374"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.305885"
+        "last_seen_at": "2026-11-01T23:36:48.754221"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.381040"
+        "last_seen_at": "2026-11-01T23:36:49.381332"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7207,23 +7207,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.319918"
+        "last_seen_at": "2026-11-01T23:36:48.830555"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:54:00.331567"
+        "last_seen_at": "2026-11-01T23:36:48.947949"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:54:00.344950",
+        "last_seen_at": "2026-11-01T23:36:49.062127",
         "last_claim": "2026-11-01T06:57:38.991887",
-        "portal_observed_at": "2026-11-01T20:54:00.344950"
+        "portal_observed_at": "2026-11-01T23:36:49.062127"
       }
     },
     "event_rewards": {
@@ -7232,7 +7232,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:54:19.868357",
+        "checked_at": "2026-11-01T23:37:08.564334",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -7451,28 +7451,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.409179"
+        "last_seen_at": "2026-11-01T23:37:48.814980"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.421669"
+        "last_seen_at": "2026-11-01T23:37:48.822625"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.347376"
+        "last_seen_at": "2026-11-01T23:37:48.770711"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.433161"
+        "last_seen_at": "2026-11-01T23:37:48.830742"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7493,23 +7493,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.358877"
+        "last_seen_at": "2026-11-01T23:37:48.779140"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:00.375199"
+        "last_seen_at": "2026-11-01T23:37:48.786768"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:55:00.397097",
+        "last_seen_at": "2026-11-01T23:37:48.806024",
         "last_claim": "2026-11-01T07:00:28.231039",
-        "portal_observed_at": "2026-11-01T20:55:00.397097"
+        "portal_observed_at": "2026-11-01T23:37:48.806024"
       }
     },
     "event_rewards": {
@@ -7518,7 +7518,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:55:19.297768",
+        "checked_at": "2026-11-01T23:38:07.672657",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -7737,28 +7737,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.802022"
+        "last_seen_at": "2026-11-01T23:38:47.815735"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.813242"
+        "last_seen_at": "2026-11-01T23:38:47.925649"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.756985"
+        "last_seen_at": "2026-11-01T23:38:47.391338"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.824034"
+        "last_seen_at": "2026-11-01T23:38:48.045604"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7779,23 +7779,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.768359"
+        "last_seen_at": "2026-11-01T23:38:47.485180"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:55:59.779484"
+        "last_seen_at": "2026-11-01T23:38:47.595846"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:55:59.790298",
+        "last_seen_at": "2026-11-01T23:38:47.705825",
         "last_claim": "2026-11-01T07:03:30.892871",
-        "portal_observed_at": "2026-11-01T20:55:59.790298"
+        "portal_observed_at": "2026-11-01T23:38:47.705825"
       }
     },
     "event_rewards": {
@@ -7804,7 +7804,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:56:18.901858",
+        "checked_at": "2026-11-01T23:39:06.980117",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -8008,35 +8008,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.439406"
+        "last_seen_at": "2026-11-01T23:39:47.438518"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.462403"
+        "last_seen_at": "2026-11-01T23:39:47.659519"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.473991"
+        "last_seen_at": "2026-11-01T23:39:47.778775"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.404739"
+        "last_seen_at": "2026-11-01T23:39:47.091656"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.486023"
+        "last_seen_at": "2026-11-01T23:39:47.879336"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8057,23 +8057,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.417178"
+        "last_seen_at": "2026-11-01T23:39:47.215478"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:56:59.428495"
+        "last_seen_at": "2026-11-01T23:39:47.317898"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:56:59.450864",
+        "last_seen_at": "2026-11-01T23:39:47.555716",
         "last_claim": "2026-11-01T07:06:18.572571",
-        "portal_observed_at": "2026-11-01T20:56:59.450864"
+        "portal_observed_at": "2026-11-01T23:39:47.555716"
       }
     },
     "event_rewards": {
@@ -8082,7 +8082,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:57:18.309088",
+        "checked_at": "2026-11-01T23:40:06.838006",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -8301,28 +8301,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:58:00.280771"
+        "last_seen_at": "2026-11-01T23:40:47.354361"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:58:00.669136"
+        "last_seen_at": "2026-11-01T23:40:47.474667"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:57:59.185744"
+        "last_seen_at": "2026-11-01T23:40:46.895322"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:58:01.060831"
+        "last_seen_at": "2026-11-01T23:40:47.594410"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8343,23 +8343,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:57:59.246342"
+        "last_seen_at": "2026-11-01T23:40:46.984169"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:57:59.619904"
+        "last_seen_at": "2026-11-01T23:40:47.104707"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:57:59.976900",
+        "last_seen_at": "2026-11-01T23:40:47.224994",
         "last_claim": "2026-11-01T07:09:08.599173",
-        "portal_observed_at": "2026-11-01T20:57:59.976900"
+        "portal_observed_at": "2026-11-01T23:40:47.224994"
       }
     },
     "event_rewards": {
@@ -8368,7 +8368,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:58:20.399279",
+        "checked_at": "2026-11-01T23:41:06.560629",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -8694,28 +8694,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.517104"
+        "last_seen_at": "2026-11-01T23:41:46.605616"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.528691"
+        "last_seen_at": "2026-11-01T23:41:46.691423"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.462698"
+        "last_seen_at": "2026-11-01T23:41:46.225994"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.540183"
+        "last_seen_at": "2026-11-01T23:41:46.802035"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8736,23 +8736,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.474166"
+        "last_seen_at": "2026-11-01T23:41:46.260753"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T20:59:01.485283"
+        "last_seen_at": "2026-11-01T23:41:46.375933"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T20:59:01.505820",
+        "last_seen_at": "2026-11-01T23:41:46.481073",
         "last_claim": "2026-11-01T07:12:03.234031",
-        "portal_observed_at": "2026-11-01T20:59:01.505820"
+        "portal_observed_at": "2026-11-01T23:41:46.481073"
       }
     },
     "event_rewards": {
@@ -8761,7 +8761,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T20:59:20.762720",
+        "checked_at": "2026-11-01T23:42:05.709186",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -9185,28 +9185,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:02.291609"
+        "last_seen_at": "2026-11-01T23:42:45.777361"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:02.411461"
+        "last_seen_at": "2026-11-01T23:42:45.899004"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:01.904807"
+        "last_seen_at": "2026-11-01T23:42:45.430898"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:02.529562"
+        "last_seen_at": "2026-11-01T23:42:46.018447"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9227,23 +9227,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:01.928457"
+        "last_seen_at": "2026-11-01T23:42:45.457998"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:00:02.050596"
+        "last_seen_at": "2026-11-01T23:42:45.557890"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:00:02.171245",
+        "last_seen_at": "2026-11-01T23:42:45.668229",
         "last_claim": "2026-11-01T07:14:56.809466",
-        "portal_observed_at": "2026-11-01T21:00:02.171245"
+        "portal_observed_at": "2026-11-01T23:42:45.668229"
       }
     },
     "event_rewards": {
@@ -9252,7 +9252,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:00:21.725089",
+        "checked_at": "2026-11-01T23:43:04.896302",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -9472,28 +9472,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:03.128211"
+        "last_seen_at": "2026-11-01T23:43:45.535140"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:03.140489"
+        "last_seen_at": "2026-11-01T23:43:45.647224"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:02.739559"
+        "last_seen_at": "2026-11-01T23:43:45.126465"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:03.155004"
+        "last_seen_at": "2026-11-01T23:43:45.764923"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9514,22 +9514,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:02.861083"
+        "last_seen_at": "2026-11-01T23:43:45.215408"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:01:02.985540"
+        "last_seen_at": "2026-11-01T23:43:45.335174"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:01:03.111164",
-        "portal_observed_at": "2026-11-01T21:01:03.111164",
+        "last_seen_at": "2026-11-01T23:43:45.436108",
+        "portal_observed_at": "2026-11-01T23:43:45.436108",
         "last_claim": "2026-11-01T07:17:52.044850"
       }
     },
@@ -9539,7 +9539,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:01:22.230586",
+        "checked_at": "2026-11-01T23:44:04.619939",
         "balance": 1200,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -9743,28 +9743,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.619063"
+        "last_seen_at": "2026-11-01T23:44:45.844229"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.630920"
+        "last_seen_at": "2026-11-01T23:44:45.862732"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.649897"
+        "last_seen_at": "2026-11-01T23:44:45.876866"
       },
       "promo_33f5658b38e37f0b3ef5": {
         "title": "First Purchaser Pack",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.666128"
+        "last_seen_at": "2026-11-01T23:44:45.891334"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -9778,30 +9778,30 @@
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:02:03.677961",
+        "last_seen_at": "2026-11-01T23:44:45.904807",
         "last_claim": "2026-11-01T07:20:42.193720",
-        "portal_observed_at": "2026-11-01T21:02:03.677961"
+        "portal_observed_at": "2026-11-01T23:44:45.904807"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.691397"
+        "last_seen_at": "2026-11-01T23:44:45.918596"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.704861"
+        "last_seen_at": "2026-11-01T23:44:45.933799"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:02:03.716499"
+        "last_seen_at": "2026-11-01T23:44:45.946156"
       }
     },
     "event_rewards": {
@@ -9810,7 +9810,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:02:22.788526",
+        "checked_at": "2026-11-01T23:45:04.757276",
         "balance": 700,
         "next_threshold": 900,
         "tiers_total": 14,
@@ -10022,29 +10022,29 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.603979"
+        "last_seen_at": "2026-11-01T23:45:45.474934"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.615551"
+        "last_seen_at": "2026-11-01T23:45:45.484152"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.626562"
+        "last_seen_at": "2026-11-01T23:45:45.494025"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:03:03.639659",
-        "portal_observed_at": "2026-11-01T21:03:03.639659",
+        "last_seen_at": "2026-11-01T23:45:45.502464",
+        "portal_observed_at": "2026-11-01T23:45:45.502464",
         "last_claim": "2026-11-01T07:23:34.332233"
       },
       "promo_fc4bebe1fb9b140f5a89": {
@@ -10052,21 +10052,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.651063"
+        "last_seen_at": "2026-11-01T23:45:45.512092"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.662105"
+        "last_seen_at": "2026-11-01T23:45:45.520524"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:03:03.673033"
+        "last_seen_at": "2026-11-01T23:45:45.530164"
       }
     },
     "event_rewards": {
@@ -10075,7 +10075,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:03:22.522057",
+        "checked_at": "2026-11-01T23:46:04.403831",
         "balance": 1100,
         "next_threshold": 1300,
         "tiers_total": 14,
@@ -10279,51 +10279,51 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.591947"
+        "last_seen_at": "2026-11-01T23:46:45.336162"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.645389"
+        "last_seen_at": "2026-11-01T23:46:45.346150"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.706957"
+        "last_seen_at": "2026-11-01T23:46:45.356093"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-01T21:04:03.769265",
+        "last_seen_at": "2026-11-01T23:46:45.365457",
         "last_claim": "2026-11-01T07:26:21.410203",
-        "portal_observed_at": "2026-11-01T21:04:03.769265"
+        "portal_observed_at": "2026-11-01T23:46:45.365457"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.781002"
+        "last_seen_at": "2026-11-01T23:46:45.374953"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.793535"
+        "last_seen_at": "2026-11-01T23:46:45.383781"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-01T21:04:03.805471"
+        "last_seen_at": "2026-11-01T23:46:45.393914"
       }
     },
     "event_rewards": {
@@ -10332,7 +10332,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-01T21:04:23.096911",
+        "checked_at": "2026-11-01T23:47:04.237017",
         "balance": 200,
         "next_threshold": 400,
         "tiers_total": 14,
