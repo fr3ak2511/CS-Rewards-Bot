@@ -1,0 +1,36 @@
+name: Halloween event regression tests
+
+on:
+  push:
+    branches:
+      - fix/halloween-popup-guard
+    paths:
+      - 'event_rewards.py'
+      - 'tests/test_event_rewards.py'
+      - '.github/workflows/event-tests.yml'
+  pull_request:
+    branches:
+      - feature/halloween-event-rewards
+    paths:
+      - 'event_rewards.py'
+      - 'tests/test_event_rewards.py'
+      - '.github/workflows/event-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  event-regression-tests:
+    name: Halloween event regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Halloween event tests
+        run: python -m unittest discover -s tests -p 'test_event_rewards.py' -v
