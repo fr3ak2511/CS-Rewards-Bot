@@ -7,6 +7,7 @@ portal state transition for success, and never retries an unconfirmed click.
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Any, Callable
 
@@ -14,6 +15,7 @@ _DELIVERED_LABELS = {
     "delivered", "already delivered", "claimed", "already claimed",
     "collected", "redeemed",
 }
+_CLAIM_LABELS = {"claim", "claim all"}
 
 
 def _safe_snapshot(snapshot_fn: Callable, driver, log: Callable[[str], None]) -> dict[str, Any] | None:
@@ -27,22 +29,53 @@ def _safe_snapshot(snapshot_fn: Callable, driver, log: Callable[[str], None]) ->
     return state
 
 
-def _is_confirmed(before: dict[str, Any], after: dict[str, Any]) -> bool:
-    """Prefer same-card Delivered evidence; retain delivered-count fallback.
+def _normalise_card_identity(value: Any) -> str:
+    """Normalise a card identity while ignoring its changing CTA/status label.
 
-    The fallback supports the existing v3.3.2 contract and unit-test fixtures.
-    The production snapshot returns a card signature, so a state change on an
-    unrelated reward card cannot confirm the target click.
+    The live portal can render the same card as ``6 x20 Claim`` before a click
+    and ``6 x20 Delivered`` after it. Those labels describe state, not identity.
+    Remove only known action/status words, timers and spacing differences.
+    """
+    text = str(value or "").casefold()
+    text = re.sub(
+        r"\b(?:already\s+delivered|already\s+claimed|claim\s+all|claim|delivered|claimed|collected|redeemed)\b",
+        " ",
+        text,
+    )
+    text = re.sub(r"\b\d{1,2}:\d{2}(?::\d{2})?\b", " ", text)
+    text = re.sub(r"\bnext\s+(?:reward\s+)?in\b.*$", " ", text)
+    return re.sub(r"\s+", " ", text).strip(" |:-")
+
+
+def _is_confirmed(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """Confirm by exact or status-normalised same-card Delivered evidence.
+
+    Exact signature equality remains preferred. If the portal changes the CTA
+    text as part of the same card, compare a conservative canonical identity.
+    A canonical match must be unique among delivered cards; an unrelated or
+    ambiguous card must never confirm the click.
     """
     signature = str(before.get("card_signature") or "").strip()
+    delivered_signatures = after.get("delivered_signatures") or []
+    terminal_cards = after.get("terminal_card_signatures") or []
+    candidates = list(dict.fromkeys(
+        str(item).strip()
+        for item in list(delivered_signatures) + list(terminal_cards)
+        if str(item).strip()
+    ))
+
     if signature:
-        delivered_signatures = after.get("delivered_signatures") or []
-        if signature in delivered_signatures:
+        if signature in candidates:
             return True
-        # Some portal layouts represent a Delivered status outside a button.
-        terminal_cards = after.get("terminal_card_signatures") or []
-        if signature in terminal_cards:
-            return True
+        before_identity = _normalise_card_identity(before.get("card_text") or signature)
+        if not before_identity:
+            before_identity = _normalise_card_identity(signature)
+        if before_identity:
+            matches = [
+                item for item in candidates
+                if _normalise_card_identity(item) == before_identity
+            ]
+            return len(matches) == 1
         return False
 
     try:

@@ -2,8 +2,10 @@
 
 This module only closes visible dialog/popup layers through an explicit,
 validated close control and a native Selenium click. It never clicks purchase,
-claim, confirm, accept, redeem, or the overlay background. Unknown full-screen
-blockers are reported and left untouched.
+claim, confirm, accept, redeem, or the overlay background. One tightly scoped
+exception allows the portal's exact ``Continue`` control inside its own
+``Your rewards! xN`` success dialog to be dismissed; generic Continue buttons
+remain blocked.
 """
 from __future__ import annotations
 
@@ -47,7 +49,7 @@ return {
   url: location.href
 };"""
 
-_CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_CLOSE_CONTROL_CHECK_V1 */
+_CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_CLOSE_CONTROL_CHECK_V2 */
 const button = arguments[0], dialog = arguments[1];
 if (!button || !dialog) return {ok:false, reason:'missing_element'};
 const norm = v => (v || '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -65,14 +67,40 @@ const variant = norm(button.getAttribute('data-variant'));
 const cls = String(button.className || '').toLowerCase();
 const type = norm(button.getAttribute('type') || 'button');
 const disabled = !!button.disabled || button.getAttribute('aria-disabled') === 'true';
+const dialogText = norm(dialog.innerText || dialog.textContent);
+
+// The only non-close action permitted is the portal's exact Continue button
+// in a clearly labelled reward-success modal that also displays a quantity.
+// Generic Continue buttons, and every purchase/claim/confirm action, stay blocked.
+const rewardSuccessTitle = /\byour rewards!(?:\s|$)/.test(dialogText);
+const rewardQuantity = /\bx\s*\d+\b/.test(dialogText)
+  || /\b\d+\s*(?:coins?|items?|cards?|rewards?)\b/.test(dialogText);
+const dialogControls = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+  .filter(el => visible(el) && !el.disabled && el.getAttribute('aria-disabled') !== 'true');
+const nonCloseControls = dialogControls.filter(el => {
+  const elText = norm(el.innerText || el.textContent);
+  const elAria = norm(el.getAttribute('aria-label'));
+  const elTitle = norm(el.getAttribute('title'));
+  const elTestId = norm(el.getAttribute('data-testid'));
+  const elClass = String(el.className || '').toLowerCase();
+  return !(elTestId === 'close' || ['close', 'close dialog', 'dismiss'].includes(elAria)
+    || ['close', 'dismiss'].includes(elTitle) || elClass.includes('button-close')
+    || elClass.includes('modal-close') || elClass.includes('dialog-close')
+    || ['x', '×', 'close', 'dismiss'].includes(elText));
+});
+const safeRewardContinue = text === 'continue' && rewardSuccessTitle
+  && rewardQuantity && nonCloseControls.length === 1 && nonCloseControls[0] === button;
+
 const actionText = [text, aria, title, testid, variant].join(' ');
-const dangerousAction = /\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|continue|submit|yes)\b/i.test(actionText);
+const dangerousAction = /\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|submit|yes)\b/i.test(actionText)
+  || ( /\bcontinue\b/i.test(actionText) && !safeRewardContinue );
 const closeEvidence = testid === 'close' || variant === 'close'
   || ['close', 'close dialog', 'dismiss'].includes(aria)
   || ['close', 'dismiss'].includes(title)
   || cls.includes('button-close') || cls.includes('modal-close')
   || cls.includes('dialog-close')
-  || ['x', '×', 'close', 'dismiss'].includes(text);
+  || ['x', '×', 'close', 'dismiss'].includes(text)
+  || safeRewardContinue;
 const r = button.getBoundingClientRect();
 const top = visible(button) ? document.elementFromPoint(r.left + r.width/2, r.top + r.height/2) : null;
 const topmost = !!(top && (top === button || button.contains(top)));
@@ -88,9 +116,10 @@ return {
     : !closeEvidence ? 'no_explicit_close_evidence'
     : dangerousAction ? 'control_looks_like_action_not_close'
     : !topmost ? 'close_button_not_topmost'
+    : safeRewardContinue ? 'validated_reward_continue'
     : 'validated',
   text, aria, title, testid, variant, className:cls.slice(0,180),
-  topmost, zIndex:z, dialogVisible
+  topmost, zIndex:z, dialogVisible, safeRewardContinue
 };"""
 
 
@@ -127,8 +156,9 @@ def dismiss_all_safe_popups(
     """Dismiss stacked dialogs one at a time; fail closed on unknown blockers.
 
     The candidate must be inside a visible dialog, have explicit close
-    semantics, be enabled, be a real button, and be the topmost hit-test target.
-    Every dismissal is a native Selenium click followed by a visibility check.
+    semantics (or be the narrowly validated reward-success Continue control),
+    be enabled, be a real button, and be the topmost hit-test target. Every
+    dismissal is a native Selenium click followed by a visibility check.
     """
     dismissed = 0
     max_popups = max(1, min(12, int(max_popups)))
@@ -176,6 +206,7 @@ def dismiss_all_safe_popups(
                     if isinstance(validation, dict) and validation.get("ok"):
                         candidates.append((
                             int(validation.get("zIndex", 0) or 0),
+                            0 if validation.get("safeRewardContinue") else 1,
                             button_id,
                             dialog,
                             button,
@@ -194,12 +225,16 @@ def dismiss_all_safe_popups(
 
             # Only one close control should be topmost at its click point. Prefer
             # the highest dialog z-index; ambiguous peers are not guessed at.
-            highest = max(item[0] for item in candidates)
-            top_candidates = [item for item in candidates if item[0] == highest]
+            highest_z = max(item[0] for item in candidates)
+            highest_priority = max(item[1] for item in candidates if item[0] == highest_z)
+            top_candidates = [
+                item for item in candidates
+                if item[0] == highest_z and item[1] == highest_priority
+            ]
             if len(top_candidates) != 1:
                 return False, f"ambiguous_topmost_close_controls:{len(top_candidates)}; dismissed={dismissed}"
 
-            _, _, target_dialog, target_button, validation = top_candidates[0]
+            _, _, _, target_dialog, target_button, validation = top_candidates[0]
             dialog_description = ""
             try:
                 dialog_description = driver.execute_script(
@@ -234,10 +269,12 @@ def dismiss_all_safe_popups(
                 return False, f"dialog_remained_after_native_close_click; dismissed={dismissed}"
 
             dismissed += 1
-            _log(log, f"🧹 Reward popup guard: closed layer {dismissed} ({dialog_description[:80]!r})")
+            control_kind = "reward Continue" if validation.get("safeRewardContinue") else "close"
+            _log(log, f"🧹 Reward popup guard: {control_kind} layer {dismissed} ({dialog_description[:80]!r})")
 
         final_state = _inspect(driver)
         if int(final_state.get("dialogCount", 0) or 0) == 0 and int(final_state.get("fullscreenOverlayCount", 0) or 0) == 0:
+            _log(log, f"✅ Reward popup guard: dismissed and verified {dismissed} popup(s)")
             return True, f"clear; dismissed={dismissed}"
         return False, f"popup_limit_reached; dialogs={final_state.get('dialogCount')}; overlays={final_state.get('fullscreenOverlayCount')}; dismissed={dismissed}"
     except Exception as exc:
