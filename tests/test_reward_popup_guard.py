@@ -35,16 +35,19 @@ class Element:
 
 
 class LayerDriver:
-    def __init__(self, layers=1, closable=True, ambiguous=False, overlay_only=False):
+    def __init__(self, layers=1, closable=True, ambiguous=False, overlay_only=False,
+                 dialog_text=None, action_text="Buy now", extra_action=False):
         self.overlay_only = overlay_only
         self.dialogs = []
         self.purchase_buttons = []
         self.close_buttons = []
+        self.continue_buttons = []
         self.close_count = 0
         self.ambiguous = ambiguous
         for i in range(layers):
+            description = dialog_text if dialog_text is not None else f"Promotional offer layer {i+1}"
             dialog = Element(
-                f"Promotional offer layer {i+1}",
+                description,
                 {"role": "dialog", "aria-modal": "true", "class": "modal"},
             )
             close = None
@@ -53,11 +56,20 @@ class LayerDriver:
                     "type": "button", "aria-label": "Close dialog",
                     "data-testid": "close", "class": "button-close",
                 }, click_action=lambda d=dialog: self._close(d))
-            purchase = Element("Buy now", {
-                "type": "button", "data-testid": "buy-button",
-                "data-variant": "component-buy",
-            })
-            dialog.children = [x for x in (close, purchase) if x is not None]
+            action = Element(
+                action_text,
+                {"type": "button", "data-testid": "action"},
+                click_action=(lambda d=dialog: self._close(d)) if action_text.strip().lower() == "continue" else None,
+            )
+            dialog.children = [x for x in (close, action) if x is not None]
+            if action_text.strip().lower() == "continue":
+                self.continue_buttons.append(action)
+            else:
+                self.purchase_buttons.append(action)
+            if extra_action:
+                other = Element("Claim", {"type": "button", "data-testid": "claim"})
+                dialog.children.append(other)
+                self.purchase_buttons.append(other)
             if ambiguous and close is not None:
                 second = Element("×", {
                     "type": "button", "aria-label": "Close dialog",
@@ -67,7 +79,6 @@ class LayerDriver:
             self.dialogs.append(dialog)
             if close is not None:
                 self.close_buttons.append(close)
-            self.purchase_buttons.append(purchase)
 
     def _close(self, dialog):
         self.close_count += 1
@@ -88,12 +99,35 @@ class LayerDriver:
                 "fullscreenOverlayClasses": ["fixed overlay"] if self.dialogs or self.overlay_only else [],
                 "url": "https://hub.vertigogames.co/progression-program",
             }
-        if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V1" in script:
+        if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V2" in script:
             button, dialog = args
             is_top = bool(self.dialogs and dialog is self.dialogs[-1])
-            is_close = button in dialog.children and button not in self.purchase_buttons
-            ok = bool(is_top and is_close and button.get_attribute("aria-label") == "Close dialog")
-            return {"ok": ok, "zIndex": 900 + len(self.dialogs), "reason": "validated" if ok else "not_safe"}
+            button_text = button.text.strip().lower()
+            is_close = button in dialog.children and (
+                button.get_attribute("aria-label") == "Close dialog"
+                or button_text in {"x", "×", "close", "dismiss"}
+            )
+            non_close = [
+                child for child in dialog.children
+                if child.text.strip().lower() not in {"x", "×", "close", "dismiss"}
+                and child.get_attribute("aria-label") != "Close dialog"
+            ]
+            is_reward_continue = (
+                button_text == "continue"
+                and dialog.text.strip().lower().startswith("your rewards!")
+                and "x" in dialog.text.lower()
+                and len(non_close) == 1
+                and non_close[0] is button
+            )
+            ok = bool(is_top and (is_close or is_reward_continue))
+            return {
+                "ok": ok,
+                "zIndex": 900 + len(self.dialogs),
+                "reason": "validated" if ok else "not_safe",
+                "safeRewardContinue": is_reward_continue,
+            }
+        if "return (arguments[0].innerText" in script:
+            return args[0].text
         raise AssertionError("Unexpected JavaScript execution in popup test")
 
 
@@ -107,6 +141,41 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(driver.dialogs, [])
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
         self.assertTrue(any("dismissed and verified" in line.lower() for line in log))
+
+    def test_dismisses_exact_continue_in_reward_success_dialog(self):
+        driver = LayerDriver(
+            dialog_text="Your rewards! x20 Continue",
+            action_text="Continue",
+            closable=False,
+        )
+        ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
+        self.assertTrue(ok, reason)
+        self.assertEqual(len(driver.continue_buttons), 1)
+        self.assertTrue(driver.continue_buttons[0].clicked)
+        self.assertEqual(driver.dialogs, [])
+
+    def test_generic_continue_button_is_not_allowed(self):
+        driver = LayerDriver(
+            dialog_text="Confirm your selection",
+            action_text="Continue",
+            closable=False,
+        )
+        ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
+        self.assertFalse(ok)
+        self.assertIn("no_unambiguous_safe_close", reason)
+        self.assertFalse(driver.continue_buttons[0].clicked)
+
+    def test_reward_continue_is_not_allowed_when_dialog_has_another_action(self):
+        driver = LayerDriver(
+            dialog_text="Your rewards! x20 Continue",
+            action_text="Continue",
+            closable=False,
+            extra_action=True,
+        )
+        ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
+        self.assertFalse(ok)
+        self.assertIn("no_unambiguous_safe_close", reason)
+        self.assertFalse(driver.continue_buttons[0].clicked)
 
     def test_unknown_dialog_fails_closed_without_clicking_any_control(self):
         driver = LayerDriver(layers=1, closable=False)

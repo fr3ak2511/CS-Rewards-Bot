@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from progression_claim_safety import claim_progression_rewards
+from progression_claim_safety import _is_confirmed, claim_progression_rewards
 
 
 class BrowserStub:
@@ -57,6 +57,38 @@ class ProgressionSafetyTests(unittest.TestCase):
         self.assertEqual(len(clicks), 1)
         self.assertFalse(driver._progression_unconfirmed)
         self.assertEqual(history[-1][1], {"claimed_count": 1, "unconfirmed": False})
+
+    def test_claim_to_delivered_label_change_preserves_card_identity(self):
+        before = {
+            "card_signature": "6 x20 Claim",
+            "card_text": "6 x20 Claim",
+            "delivered_signatures": [],
+        }
+        after = {
+            "delivered_signatures": ["6 x20 Delivered"],
+            "terminal_card_signatures": ["6 x20 Delivered"],
+        }
+        self.assertTrue(_is_confirmed(before, after))
+
+    def test_different_delivered_card_does_not_confirm_target(self):
+        before = {
+            "card_signature": "6 x20 Claim",
+            "card_text": "6 x20 Claim",
+            "delivered_signatures": [],
+        }
+        after = {"delivered_signatures": ["12 x80 Delivered"]}
+        self.assertFalse(_is_confirmed(before, after))
+
+    def test_ambiguous_canonical_match_does_not_confirm_target(self):
+        before = {
+            "card_signature": "6 x20 Claim",
+            "card_text": "6 x20 Claim",
+            "delivered_signatures": [],
+        }
+        after = {"delivered_signatures": ["6 x20 Delivered", "6  x20 Delivered"]}
+        # Distinct DOM candidates that collapse to the same identity are
+        # ambiguous and must not confirm the attempted card.
+        self.assertFalse(_is_confirmed(before, after))
 
     def test_claim_button_disappearing_without_same_card_delivered_is_not_success(self):
         button = object()
