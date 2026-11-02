@@ -24,7 +24,7 @@ class Element:
         return self.attrs.get(name)
 
     def find_elements(self, by, selector):
-        if by == "css selector" and selector == "button, [role=\"button\"]":
+        if by == "css selector" and selector == 'button, [role="button"]':
             return list(self.children)
         return []
 
@@ -35,8 +35,11 @@ class Element:
 
 
 class LayerDriver:
-    def __init__(self, layers=1, closable=True, ambiguous=False, overlay_only=False,
-                 dialog_text=None, action_text="Buy now", extra_action=False):
+    def __init__(
+        self, layers=1, closable=True, ambiguous=False, overlay_only=False,
+        dialog_text=None, action_text="Buy now", extra_action=False,
+        residual_success_inspections=0,
+    ):
         self.overlay_only = overlay_only
         self.dialogs = []
         self.purchase_buttons = []
@@ -44,6 +47,8 @@ class LayerDriver:
         self.continue_buttons = []
         self.close_count = 0
         self.ambiguous = ambiguous
+        self.residual_success_inspections = residual_success_inspections
+        self.residual_dialog = None
         for i in range(layers):
             description = dialog_text if dialog_text is not None else f"Promotional offer layer {i+1}"
             dialog = Element(
@@ -84,19 +89,39 @@ class LayerDriver:
         self.close_count += 1
         if dialog in self.dialogs:
             self.dialogs.remove(dialog)
+        dialog.displayed = False
+        if (
+            dialog.text.strip().lower().startswith("your rewards!")
+            and self.residual_success_inspections != 0
+        ):
+            # Simulate the portal's non-interactive wrapper remaining briefly
+            # after the actual Continue control has already been clicked.
+            residue = Element(
+                dialog.text,
+                {"role": "dialog", "aria-modal": "true", "class": "modal residue"},
+            )
+            residue.children = []
+            self.residual_dialog = residue
+            self.dialogs.append(residue)
 
     def find_elements(self, by, selector):
-        if by == "css selector" and "[role=\"dialog\"]" in selector:
+        if by == "css selector" and '[role="dialog"]' in selector:
             return list(self.dialogs)
         return []
 
     def execute_script(self, script, *args):
         if "REWARD_POPUP_LAYER_INSPECT_V1" in script:
+            if self.residual_dialog is not None and self.residual_success_inspections > 0:
+                self.residual_success_inspections -= 1
+                if self.residual_success_inspections == 0:
+                    if self.residual_dialog in self.dialogs:
+                        self.dialogs.remove(self.residual_dialog)
+                    self.residual_dialog.displayed = False
             return {
-                "dialogCount": len(self.dialogs),
-                "dialogSummaries": [{"text": d.text} for d in self.dialogs],
-                "fullscreenOverlayCount": 1 if self.dialogs or self.overlay_only else 0,
-                "fullscreenOverlayClasses": ["fixed overlay"] if self.dialogs or self.overlay_only else [],
+                "dialogCount": sum(1 for d in self.dialogs if d.is_displayed()),
+                "dialogSummaries": [{"text": d.text} for d in self.dialogs if d.is_displayed()],
+                "fullscreenOverlayCount": 1 if self.overlay_only else 0,
+                "fullscreenOverlayClasses": ["fixed overlay"] if self.overlay_only else [],
                 "url": "https://hub.vertigogames.co/progression-program",
             }
         if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V2" in script:
@@ -115,7 +140,7 @@ class LayerDriver:
             is_reward_continue = (
                 button_text == "continue"
                 and dialog.text.strip().lower().startswith("your rewards!")
-                and "x" in dialog.text.lower()
+                and bool(__import__("re").search(r"\bx\s*\d+\b", dialog.text.lower()))
                 and len(non_close) == 1
                 and non_close[0] is button
             )
@@ -153,6 +178,38 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(len(driver.continue_buttons), 1)
         self.assertTrue(driver.continue_buttons[0].clicked)
         self.assertEqual(driver.dialogs, [])
+
+    def test_waits_for_residual_reward_success_wrapper_without_second_click(self):
+        driver = LayerDriver(
+            dialog_text="Your rewards! x20 Continue",
+            action_text="Continue",
+            closable=False,
+            residual_success_inspections=2,
+        )
+        log = []
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=log.append, timeout=0.5, poll_interval=0.05
+        )
+        self.assertTrue(ok, reason)
+        self.assertTrue(driver.continue_buttons[0].clicked)
+        self.assertEqual(driver.close_count, 1)
+        self.assertEqual(driver.dialogs, [])
+        self.assertTrue(any("residue cleared" in line.lower() for line in log))
+
+    def test_persistent_reward_success_residue_fails_closed(self):
+        driver = LayerDriver(
+            dialog_text="Your rewards! x150 Continue",
+            action_text="Continue",
+            closable=False,
+            residual_success_inspections=-1,
+        )
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2, poll_interval=0.05
+        )
+        self.assertFalse(ok)
+        self.assertIn("reward_success_dialog_did_not_settle", reason)
+        self.assertEqual(driver.close_count, 1)
+        self.assertEqual(sum(button.clicked for button in driver.continue_buttons), 1)
 
     def test_generic_continue_button_is_not_allowed(self):
         driver = LayerDriver(
