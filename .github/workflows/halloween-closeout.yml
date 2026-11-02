@@ -1,0 +1,39 @@
+name: Halloween 2026 Event Closeout
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Choose a safe validation or explicit event closeout action'
+        required: true
+        type: choice
+        options:
+          - preflight
+          - dry-run
+          - sweep
+          - finalize
+        default: preflight
+      player_id:
+        description: 'Optional player ID for read-only dry-run only'
+        required: false
+        type: string
+      player_limit:
+        description: 'Maximum accounts for read-only dry-run (default 1)'
+        required: false
+        type: string
+        default: '1'
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-notice:
+    name: Safe launcher notice (default branch only)
+    if: github.ref == 'refs/heads/feature/halloween-event-rewards'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain how to run the tested branch version
+        run: |
+          echo "This default-branch workflow is only a safe launcher placeholder."
+          echo "No repository code was checked out, no browser was opened, and no reward claims were attempted."
+          echo "To test the Phase 1 implementation, select branch fix/halloween-event-closeout in the Run workflow branch dropdown."
