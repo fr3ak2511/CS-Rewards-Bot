@@ -1,4 +1,4 @@
-# master_claimer.py — CS Rewards Bot v3.3.2
+# master_claimer.py — CS Rewards Bot v3.3.3
 import csv
 import time
 import os
@@ -27,12 +27,14 @@ from event_rewards import (
     event_retry_required,
     merge_claim_ledger,
 )
+from reward_popup_guard import dismiss_all_safe_popups
+from progression_claim_safety import claim_progression_rewards
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
-VERSION        = "v3.3.2"
+VERSION        = "v3.3.3"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
@@ -1132,23 +1134,28 @@ def close_popup(driver):
         pass
 
 
-def physical_click(driver, el):
+def physical_click(driver, el, *, allow_js_fallback=True):
+    """Scroll and click; callers may forbid the JavaScript fallback."""
     try:
         driver.execute_script(
             "arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", el)
         time.sleep(0.5)
         el.click()
         return True
-    except:
+    except Exception:
         try:
             ActionChains(driver).move_to_element(el).click().perform()
             return True
-        except:
+        except Exception:
+            if not allow_js_fallback:
+                return False
             try:
                 driver.execute_script("arguments[0].click();", el)
                 return True
-            except:
+            except Exception:
                 return False
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7 — TIMER DETECTION (JS DOM)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2016,115 +2023,169 @@ def claim_store_rewards(driver, pid):
 
 
 def _progression_claim_snapshot(driver):
-    """Return visible/enabled progression Claim controls and Delivered controls."""
+    """Return visible Progression claim controls with card-level identity."""
     try:
         snapshot = driver.execute_script(r"""
-            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            /* PROGRESSION_CARD_SNAPSHOT_V1 */
+            const norm = value => (value || '').replace(/\s+/g, ' ').trim();
+            const lower = value => norm(value).toLowerCase();
             const visible = el => {
-                if (!el) return false;
-                const st = getComputedStyle(el), r = el.getBoundingClientRect();
-                return !!(el.getClientRects().length && st.display !== 'none'
-                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+              if (!el) return false;
+              const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+              return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+                && s.display !== 'none' && s.visibility !== 'hidden'
+                && Number(s.opacity || '1') > 0);
             };
-            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
-            const claimable = buttons.filter(b => visible(b)
-                && ['claim', 'claim all'].includes(norm(b.innerText || b.textContent))
-                && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
-            const delivered = buttons.filter(b => visible(b)
-                && ['delivered', 'already delivered', 'claimed', 'already claimed', 'collected', 'redeemed']
-                    .includes(norm(b.innerText || b.textContent)));
+            const cta = new Set(['claim', 'claim all']);
+            const terminal = new Set([
+              'delivered', 'already delivered', 'claimed', 'already claimed',
+              'collected', 'redeemed'
+            ]);
+            const controls = Array.from(document.querySelectorAll('button,[role="button"]'));
+            const isInDialog = el => !!el.closest(
+              '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+            );
+            const cardInfo = button => {
+              const buttonLabel = lower(button.innerText || button.textContent
+                || button.getAttribute('aria-label'));
+              let node = button.parentElement, best = null, bestText = '';
+              for (let depth = 0; depth < 10 && node; depth++, node = node.parentElement) {
+                const raw = norm(node.innerText || node.textContent || '');
+                const childActions = Array.from(node.querySelectorAll('button,[role="button"]'))
+                  .filter(visible)
+                  .filter(b => cta.has(lower(b.innerText || b.textContent
+                    || b.getAttribute('aria-label')))
+                    || terminal.has(lower(b.innerText || b.textContent
+                    || b.getAttribute('aria-label'))));
+                if (childActions.length > 1) break;
+                const rawLines = raw.split(/\n+/).map(norm).filter(Boolean);
+                const hasTerminalLine = rawLines.some(line => terminal.has(line.toLowerCase()));
+                if (((childActions.length === 1) || (childActions.length === 0 && hasTerminalLine))
+                    && raw.length >= buttonLabel.length + 3 && raw.length <= 1800) {
+                  best = node;
+                  bestText = raw;
+                }
+              }
+              best = best || button.parentElement || button;
+              bestText = bestText || norm(best.innerText || best.textContent || '');
+              const stableLines = bestText.split(/\n+/).map(norm).filter(line => line
+                && !cta.has(line.toLowerCase()) && !terminal.has(line.toLowerCase())
+                && !/^\d{1,2}:\d{2}(?::\d{2})?$/.test(line)
+                && !/^next\s+(reward\s+)?in\b/i.test(line));
+              const className = String(best.className || '').replace(/\s+/g, ' ').trim();
+              const dataId = best.getAttribute('data-testid') || best.getAttribute('data-id') || '';
+              const signature = (stableLines.join(' | ') || dataId || className || best.tagName || '')
+                .slice(0, 900);
+              return {card:best, card_text:bestText.slice(0, 1400), card_signature:signature};
+            };
+            const pointIsTopmost = button => {
+              const r = button.getBoundingClientRect();
+              const top = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2);
+              return !!(top && (top === button || button.contains(top)));
+            };
+            const claimable = controls.filter(button => visible(button) && !isInDialog(button)
+              && cta.has(lower(button.innerText || button.textContent
+                || button.getAttribute('aria-label')))
+              && !button.disabled && button.getAttribute('aria-disabled') !== 'true'
+              && pointIsTopmost(button));
+            const deliveredControls = controls.filter(button => visible(button) && !isInDialog(button)
+              && terminal.has(lower(button.innerText || button.textContent
+                || button.getAttribute('aria-label'))));
+            const claimableCards = claimable.map(button => {
+              const info = cardInfo(button);
+              return {button, button_text:lower(button.innerText || button.textContent),
+                card_signature:info.card_signature, card_text:info.card_text};
+            });
+            const terminalTextElements = Array.from(document.querySelectorAll('span,div,p'))
+              .filter(el => visible(el) && terminal.has(lower(el.innerText || el.textContent)));
+            const deliveredSignatures = deliveredControls.map(button => cardInfo(button).card_signature)
+              .concat(terminalTextElements.map(el => cardInfo(el).card_signature))
+              .filter(Boolean);
+            const path = (location.pathname || '').toLowerCase();
+            const title = lower(document.title || '');
+            const leadText = lower((document.body && document.body.innerText || '').slice(0, 900));
+            const cloudflare = /cloudflare|just a moment|checking your browser|verify you are human/.test(title + ' ' + leadText);
+            const validPage = path.includes('/progression-program') && !cloudflare;
             return {
-                claimable_count: claimable.length,
-                delivered_count: delivered.length,
-                button: claimable.length ? claimable[0] : null,
-                button_text: claimable.length ? norm(claimable[0].innerText || claimable[0].textContent) : null
+              valid_page:validPage, url:location.href, title:document.title || '',
+              claimable_count:claimableCards.length,
+              delivered_count:deliveredControls.length,
+              button:claimableCards.length ? claimableCards[0].button : null,
+              button_text:claimableCards.length ? claimableCards[0].button_text : null,
+              card_signature:claimableCards.length ? claimableCards[0].card_signature : null,
+              card_text:claimableCards.length ? claimableCards[0].card_text : null,
+              claimable_cards:claimableCards,
+              delivered_signatures:deliveredSignatures,
+              terminal_card_signatures:deliveredSignatures
             };
         """)
-        return snapshot if isinstance(snapshot, dict) else None
+        if not isinstance(snapshot, dict):
+            return None
+        return snapshot
     except Exception as exc:
         log(f"⚠️ Progression state inspection failed: {type(exc).__name__}")
         return None
 
 
-def claim_progression_program_rewards(driver, pid):
-    """Claim progression rewards only when a post-click portal state change is observed."""
-    log("🎯 Checking Progression Program...")
-    claimed = 0
-    unconfirmed = False
+def _dismiss_progression_popups(driver):
+    """Clear all safely dismissible layers; unknown blockers stop the claim."""
+    # Small unit-test fakes without the WebDriver browser API are not live pages.
+    # A real Selenium WebDriver always exposes execute_script; never fall back to
+    # the generic production close_popup() when inspection fails.
+    if not callable(getattr(driver, "execute_script", None)):
+        return True, "non-browser test double"
+    return dismiss_all_safe_popups(driver, log=log, max_popups=8, timeout=2.5)
+
+
+def _scroll_progression_carousel(driver):
+    """Advance horizontal reward carousels without dispatching any claim click."""
     try:
-        driver.get("https://hub.vertigogames.co/progression-program")
-        bypass_cloudflare(driver)
-        time.sleep(2)
-        close_popup(driver)
-
-        for _ in range(6):
-            before = _progression_claim_snapshot(driver)
-            if before is None:
-                unconfirmed = True
-                log("🚩 Progression page could not be inspected reliably")
-                break
-            if int(before.get("claimable_count", 0) or 0) <= 0:
-                log("ℹ️ Progression: no currently claimable reward")
-                break
-
-            button = before.get("button")
-            if button is None:
-                unconfirmed = True
-                log("🚩 Progression has a claimable count but no safe button reference")
-                break
-
-            clicked = bool(physical_click(driver, button))
-            if not clicked:
-                unconfirmed = True
-                log("🚩 Progression click could not be dispatched; leaving reward retryable")
-                break
-
-            log(f"🖱️ Progression '{before.get('button_text')}' click dispatched; awaiting portal confirmation")
-            time.sleep(2)
-            close_popup(driver)
-
-            deadline = time.monotonic() + 6.0
-            after = None
-            confirmed = False
-            while True:
-                after = _progression_claim_snapshot(driver)
-                if after is None:
-                    break
-                before_claims = int(before.get("claimable_count", 0) or 0)
-                after_claims = int(after.get("claimable_count", 0) or 0)
-                before_delivered = int(before.get("delivered_count", 0) or 0)
-                after_delivered = int(after.get("delivered_count", 0) or 0)
-                if after_delivered > before_delivered:
-                    confirmed = True
-                    break
-                if time.monotonic() >= deadline:
-                    break
-                time.sleep(0.5)
-
-            if not confirmed:
-                unconfirmed = True
-                log("🚩 Progression button did not transition to Delivered; claim remains unconfirmed")
-                break
-
-            claimed += 1
-            log(f"✅ Progression claim confirmed by portal ({claimed} this visit)")
-            # Re-read the live page on the next loop; never count the dispatch alone.
-            time.sleep(0.5)
-
-        update_claim_history(pid, "progression", claimed_count=claimed, unconfirmed=unconfirmed)
+        moved = driver.execute_script(r"""
+            const visible = el => {
+              const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+              return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+                && s.display !== 'none' && s.visibility !== 'hidden');
+            };
+            const candidates = Array.from(document.querySelectorAll('div,section,ul'))
+              .filter(el => visible(el) && el.scrollWidth > el.clientWidth + 40
+                && el.clientWidth > 180 && el.clientHeight > 80
+                && !el.closest('[role="dialog"],[aria-modal="true"]'))
+              .sort((a,b) => (b.clientWidth*b.clientHeight) - (a.clientWidth*a.clientHeight));
+            if (!candidates.length) return false;
+            let changed = false;
+            for (const el of candidates.slice(0, 4)) {
+              const before = el.scrollLeft;
+              const step = Math.max(260, Math.floor(el.clientWidth * 0.72));
+              el.scrollLeft = Math.min(el.scrollWidth - el.clientWidth, before + step);
+              if (el.scrollLeft > before) changed = true;
+            }
+            return changed;
+        """)
+        return bool(moved)
     except Exception as exc:
-        unconfirmed = True
-        log(f"❌ Progression error: {type(exc).__name__}: {str(exc)[:160]}")
-        try:
-            update_claim_history(pid, "progression", claimed_count=claimed, unconfirmed=True)
-        except Exception:
-            pass
+        log(f"⚠️ Progression carousel scan could not advance: {type(exc).__name__}")
+        return False
 
-    try:
-        driver._progression_unconfirmed = bool(unconfirmed)
-    except Exception:
-        pass
-    return claimed
+
+def claim_progression_program_rewards(driver, pid):
+    """Claim card-bound Progression rewards with popup and portal verification."""
+    log("🎯 Checking Progression Program...")
+    result = claim_progression_rewards(
+        driver,
+        pid,
+        log=log,
+        bypass_cloudflare=bypass_cloudflare,
+        snapshot_fn=_progression_claim_snapshot,
+        click_fn=lambda d, button: physical_click(d, button, allow_js_fallback=False),
+        update_history=update_claim_history,
+        dismiss_popups=_dismiss_progression_popups,
+        scroll_carousel=_scroll_progression_carousel,
+        sleep=time.sleep,
+        verify_polls=16,
+        poll_seconds=0.5,
+        max_claims_per_visit=6,
+    )
+    return result
 
 
 def run_event_reward_checks(driver, pid):
