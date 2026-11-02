@@ -199,6 +199,7 @@ class FakeDriver:
                 "fullscreenOverlayCount": 1 if (self.dialogs or self.overlay_only) else 0,
                 "fullscreenOverlayClasses": ["fixed inset-0 z-900 bg-sem-bg-bg-overlay"] if (self.dialogs or self.overlay_only) else [],
                 "url": self.url,
+            }
         
         
         if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V2" in script:
