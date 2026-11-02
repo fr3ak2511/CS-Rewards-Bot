@@ -6,9 +6,14 @@ claim, confirm, accept, redeem, or the overlay background. One tightly scoped
 exception allows the portal's exact ``Continue`` control inside its own
 ``Your rewards! xN`` success dialog to be dismissed; generic Continue buttons
 remain blocked.
+
+A second, bounded settling check handles the portal's short-lived residual
+success-dialog wrapper after Continue has already been clicked. It never clicks
+that residue or treats a persistent/unknown blocker as clear.
 """
 from __future__ import annotations
 
+import re
 import time
 from typing import Callable
 
@@ -145,6 +150,57 @@ def _inspect(driver) -> dict:
     return state
 
 
+def _is_reward_success_residue(state: dict) -> bool:
+    """Return true only for one residual, exact portal reward-success dialog.
+
+    This is intentionally stricter than generic popup detection. It is used
+    only after this guard has already dismissed at least one safe layer.
+    """
+    if int(state.get("dialogCount", 0) or 0) != 1:
+        return False
+    if int(state.get("fullscreenOverlayCount", 0) or 0) != 0:
+        return False
+    summaries = state.get("dialogSummaries") or []
+    if len(summaries) != 1:
+        return False
+    text = re.sub(r"\s+", " ", str(summaries[0].get("text") or "")).strip().lower()
+    return bool(
+        re.match(r"^your rewards!\s*x\s*\d+\b", text)
+        and re.search(r"\bcontinue\b", text)
+    )
+
+
+def _wait_for_reward_success_residue(
+    driver, *, timeout: float, poll_interval: float
+) -> bool:
+    """Wait briefly for the already-dismissed success-dialog wrapper to vanish.
+
+    No controls are searched for or clicked here. Any different dialog or any
+    fullscreen overlay immediately fails this special-case check.
+    """
+    deadline = time.monotonic() + max(0.2, min(2.0, float(timeout)))
+    while time.monotonic() < deadline:
+        try:
+            state = _inspect(driver)
+        except Exception:
+            return False
+        dialog_count = int(state.get("dialogCount", 0) or 0)
+        overlay_count = int(state.get("fullscreenOverlayCount", 0) or 0)
+        if dialog_count == 0 and overlay_count == 0:
+            return True
+        if not _is_reward_success_residue(state):
+            return False
+        time.sleep(poll_interval)
+    try:
+        final_state = _inspect(driver)
+        return (
+            int(final_state.get("dialogCount", 0) or 0) == 0
+            and int(final_state.get("fullscreenOverlayCount", 0) or 0) == 0
+        )
+    except Exception:
+        return False
+
+
 def dismiss_all_safe_popups(
     driver,
     *,
@@ -159,6 +215,8 @@ def dismiss_all_safe_popups(
     semantics (or be the narrowly validated reward-success Continue control),
     be enabled, be a real button, and be the topmost hit-test target. Every
     dismissal is a native Selenium click followed by a visibility check.
+    A narrowly recognised residual success-dialog wrapper is allowed only a
+    bounded, click-free settling wait after a safe dialog has been dismissed.
     """
     dismissed = 0
     max_popups = max(1, min(12, int(max_popups)))
@@ -214,6 +272,20 @@ def dismiss_all_safe_popups(
                         ))
 
             if not candidates:
+                # The portal can leave a short-lived, non-interactive wrapper
+                # for the just-dismissed "Your rewards! xN Continue" layer.
+                # Wait for that exact residue to disappear; never click it again.
+                if dismissed > 0 and _is_reward_success_residue(state):
+                    if _wait_for_reward_success_residue(
+                        driver, timeout=min(1.5, timeout), poll_interval=poll_interval
+                    ):
+                        _log(log, "✅ Reward success dialog residue cleared after transition")
+                        return True, f"clear_after_reward_transition; dismissed={dismissed}"
+                    return False, (
+                        "reward_success_dialog_did_not_settle; "
+                        f"dismissed={dismissed}; no additional click attempted"
+                    )
+
                 if overlay_count and not dialog_count:
                     return False, f"unknown_fullscreen_overlay_blocks_page; dismissed={dismissed}"
                 summary = state.get("dialogSummaries") or []
