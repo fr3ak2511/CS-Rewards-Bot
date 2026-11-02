@@ -199,8 +199,92 @@ class FakeDriver:
                 "fullscreenOverlayCount": 1 if (self.dialogs or self.overlay_only) else 0,
                 "fullscreenOverlayClasses": ["fixed inset-0 z-900 bg-sem-bg-bg-overlay"] if (self.dialogs or self.overlay_only) else [],
                 "url": self.url,
+        
+        
+        if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V2" in script:
+            button, dialog = args
+            pair = next(
+                (item for item in self._layer_controls if item[0] is dialog),
+                None,
+            )
+            close = pair[1] if pair else None
+
+            is_top = bool(self.dialogs and dialog is self.dialogs[-1])
+            is_close = bool(
+                close is not None
+                and button is close
+                and self.close_control
+            )
+
+            text = (button.text or "").strip().lower()
+            aria = (button.get_attribute("aria-label") or "").strip().lower()
+            title = (button.get_attribute("title") or "").strip().lower()
+            testid = (button.get_attribute("data-testid") or "").strip().lower()
+            variant = (button.get_attribute("data-variant") or "").strip().lower()
+            cls = (button.get_attribute("class") or "").lower()
+            button_type = (button.get_attribute("type") or "button").lower()
+
+            disabled = bool(
+                button.disabled
+                or button.get_attribute("aria-disabled") == "true"
+            )
+
+            close_evidence = (
+                testid == "close"
+                or variant == "close"
+                or aria in {"close", "close dialog", "dismiss"}
+                or title in {"close", "dismiss"}
+                or "button-close" in cls
+                or "modal-close" in cls
+                or "dialog-close" in cls
+                or text in {"x", "×", "close", "dismiss"}
+            )
+
+            action_text = " ".join(
+                (text, aria, title, testid, variant)
+            )
+
+            dangerous = any(
+                word in action_text.split()
+                for word in {
+                    "buy", "purchase", "claim", "confirm",
+                    "accept", "redeem", "subscribe", "pay",
+                    "submit", "yes", "continue"
+                }
+            )
+
+            topmost = bool(is_top and is_close and self.close_topmost)
+            dialog_visible = dialog.is_displayed()
+            visible = button.is_displayed()
+
+            ok = bool(
+                visible
+                and dialog_visible
+                and not disabled
+                and button_type == "button"
+                and is_close
+                and close_evidence
+                and not dangerous
+                and topmost
+            )
+
+            return {
+                "ok": ok,
+                "reason": "validated" if ok else "not_safe",
+                "text": text,
+                "aria": aria,
+                "title": title,
+                "testid": testid,
+                "variant": variant,
+                "className": cls,
+                "topmost": topmost,
+                "zIndex": 900 + len(self.dialogs),
+                "dialogVisible": dialog_visible,
+                "safeRewardContinue": False,
             }
 
+
+        
         if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V1" in script:
             button, dialog = args
             is_top = bool(self.dialogs and dialog is self.dialogs[-1])
