@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+from reward_popup_guard import DIALOG_SELECTOR
+
 from event_rewards import (
     EVENT_POPUP_CLOSE_SELECTOR,
     EVENT_POPUP_SELECTOR,
@@ -36,6 +38,8 @@ class FakeElement:
         self.clicked = False
         self.close_buttons = []
         self.buttons = []
+        self.all_buttons = []
+        self.id = f"fake-{id(self)}"
 
     def is_displayed(self):
         return self.displayed
@@ -49,6 +53,8 @@ class FakeElement:
     def find_elements(self, by, selector):
         if by == "css selector" and selector == EVENT_POPUP_CLOSE_SELECTOR:
             return list(self.close_buttons)
+        if by == "css selector" and selector == "button, [role=\"button\"]":
+            return list(self.all_buttons or self.buttons)
         if by == "tag name" and selector == "button":
             return list(self.buttons)
         return []
@@ -73,11 +79,12 @@ class FakeCard(FakeElement):
 
 
 class FakeDriver:
-    """Small Selenium fake that models the actual captured Vertigo modal markup."""
+    """Selenium fake for one or more stacked Vertigo promotional dialogs."""
 
     def __init__(self, popup=True, dismissible=True, click_delivers=True,
                  obstruct=False, close_topmost=True, close_control=True,
-                 overlay_only=False, popup_on_scroll=False, missing_reward_names=False):
+                 overlay_only=False, popup_on_scroll=False, missing_reward_names=False,
+                 popup_layers=1):
         self.url = ""
         self.popup = popup
         self.dismissible = dismissible
@@ -90,55 +97,71 @@ class FakeDriver:
         self.missing_reward_names = missing_reward_names
         self.scroll_popup_shown = False
         self.click_count = 0
+        self.close_click_count = 0
         self.refresh_count = 0
         self.validation_threshold = 900
+        self.dialogs = []
         self.dialog = None
         self.close_button = None
         self.purchase_button = None
+        self.popup_layers = max(0, int(popup_layers)) if popup else 0
         self.button = FakeElement("Claim", {"type": "button"})
         self.button.click_action = self._on_claim
         self.card = FakeCard(900, self.button)
-        self._build_dialog()
+        self._build_dialogs()
 
-    def _build_dialog(self):
-        if not self.popup:
-            self.dialog = None
-            self.close_button = None
-            self.purchase_button = None
-            return
-
-        # These attributes and class markers are taken from the uploaded
-        # diagnostic's actual button outerHTML, not invented test-only markers.
+    def _make_dialog(self, layer):
         close_attrs = {
-            "type": "button",
-            "data-testid": "close",
-            "data-variant": "close",
-            "data-color": "base",
-            "aria-label": "Close dialog",
+            "type": "button", "data-testid": "close", "data-variant": "close",
+            "data-color": "base", "aria-label": "Close dialog",
             "class": "group/button bg-sem-component-sf-component-button-close",
         }
-        self.close_button = FakeElement(
-            "", close_attrs, click_action=self._dismiss, enabled=True
-        ) if self.close_control else None
         purchase_attrs = {
-            "type": "button",
-            "data-testid": "buy-button",
+            "type": "button", "data-testid": "buy-button",
             "data-variant": "component-buy",
             "class": "group/button bg-sem-component-sf-component-buy",
         }
-        self.purchase_button = FakeElement("₹623.00\n₹890.00", purchase_attrs)
-        self.dialog = FakeElement(
-            "Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 1,200 Gold -30% Discount ₹623.00 ₹890.00",
+        dialog = FakeElement(
+            f"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 Layer {layer}",
             {"role": "dialog", "aria-modal": "true", "class": "pointer-events-auto modal"},
         )
-        self.dialog.close_buttons = [self.close_button] if self.close_button else []
-        self.dialog.all_buttons = [x for x in (self.close_button, self.purchase_button) if x]
+        close = FakeElement("", close_attrs, click_action=lambda d=dialog: self._dismiss_dialog(d)) if self.close_control else None
+        purchase = FakeElement("₹623.00\n₹890.00", purchase_attrs)
+        dialog.close_buttons = [close] if close else []
+        dialog.all_buttons = [x for x in (close, purchase) if x is not None]
+        return dialog, close, purchase
+
+    def _build_dialogs(self):
+        self.dialogs = []
+        self._layer_controls = []
+        if not self.popup or self.popup_layers <= 0:
+            self.dialog = self.close_button = self.purchase_button = None
+            return
+        for layer in range(self.popup_layers):
+            dialog, close, purchase = self._make_dialog(layer + 1)
+            self.dialogs.append(dialog)
+            self._layer_controls.append((dialog, close, purchase))
+        self.dialog = self.dialogs[-1]
+        self.close_button = self._layer_controls[-1][1]
+        self.purchase_button = self._layer_controls[-1][2]
+
+    def _dismiss_dialog(self, dialog):
+        self.close_click_count += 1
+        if self.dismissible and dialog in self.dialogs:
+            self.dialogs.remove(dialog)
+            self.popup_layers = len(self.dialogs)
+            if not self.dialogs:
+                self.popup = False
+                self.overlay_only = False
+                self.dialog = self.close_button = self.purchase_button = None
+            else:
+                self.dialog = self.dialogs[-1]
+                _pair = next(x for x in self._layer_controls if x[0] is self.dialog)
+                self.close_button, self.purchase_button = _pair[1], _pair[2]
 
     def _dismiss(self):
-        if self.dismissible:
-            self.popup = False
-            self.overlay_only = False
-            self.dialog = None
+        if self.dialog is not None:
+            self._dismiss_dialog(self.dialog)
 
     def _on_claim(self):
         self.click_count += 1
@@ -160,8 +183,8 @@ class FakeDriver:
         self.refresh_count += 1
 
     def find_elements(self, by, selector):
-        if by == "css selector" and selector == EVENT_POPUP_SELECTOR:
-            return [self.dialog] if self.dialog and self.popup else []
+        if by == "css selector" and selector in (EVENT_POPUP_SELECTOR, DIALOG_SELECTOR):
+            return list(self.dialogs)
         if by == "css selector" and selector == "div.relative.rounded-lp-card":
             return [self.card]
         if by == "tag name" and selector == "button":
@@ -169,67 +192,73 @@ class FakeDriver:
         return []
 
     def execute_script(self, script, *args):
-        if "EVENT_POPUP_INSPECT_V2" in script:
-            dialog_visible = bool(self.popup)
-            overlay_count = 1 if (self.popup or self.overlay_only) else 0
+        if "REWARD_POPUP_LAYER_INSPECT_V1" in script:
             return {
-                "visibleDialogCount": 1 if dialog_visible else 0,
-                "dialogDescriptions": [{"text": "Exclusive Discount Activated!"}] if dialog_visible else [],
+                "dialogCount": len(self.dialogs),
+                "dialogSummaries": [{"text": d.text} for d in self.dialogs],
+                "fullscreenOverlayCount": 1 if (self.dialogs or self.overlay_only) else 0,
+                "fullscreenOverlayClasses": ["fixed inset-0 z-900 bg-sem-bg-bg-overlay"] if (self.dialogs or self.overlay_only) else [],
+                "url": self.url,
+            }
+
+        if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V1" in script:
+            button, dialog = args
+            is_top = bool(self.dialogs and dialog is self.dialogs[-1])
+            is_close = any(button is pair[1] and dialog is pair[0] for pair in self._layer_controls)
+            ok = bool(is_close and is_top and self.close_topmost and self.close_control
+                      and not button.disabled and not self.purchase_button.clicked)
+            return {"ok": ok, "reason": "validated" if ok else "close_button_not_topmost_or_not_safe",
+                    "zIndex": 900 + len(self.dialogs), "topmost": ok}
+
+        if "EVENT_POPUP_INSPECT_V2" in script:
+            dialog_visible = bool(self.dialogs)
+            return {
+                "visibleDialogCount": len(self.dialogs),
+                "dialogDescriptions": [{"text": d.text} for d in self.dialogs],
                 "promotionalDialogVisible": dialog_visible,
-                "promotionalDialogText": "Exclusive Discount Activated! Purchase or Lose it!" if dialog_visible else "",
-                "fullScreenBlockingOverlayCount": overlay_count,
-                "fullScreenBlockingOverlayClasses": ["fixed inset-0 z-900 bg-sem-bg-bg-overlay"] if overlay_count else [],
+                "promotionalDialogText": self.dialog.text if self.dialog else "",
+                "fullScreenBlockingOverlayCount": 1 if (dialog_visible or self.overlay_only) else 0,
+                "fullScreenBlockingOverlayClasses": ["fixed inset-0 z-900 bg-sem-bg-bg-overlay"] if (dialog_visible or self.overlay_only) else [],
                 "url": self.url,
             }
 
         if "EVENT_POPUP_CLOSE_BUTTON_CHECK_V1" in script:
             button = args[0]
             is_close = button is self.close_button
-            return {
-                "ok": bool(is_close and self.close_topmost and self.close_control and not self.purchase_button.clicked),
-                "visible": bool(is_close), "disabled": False, "isPurchase": not is_close,
-                "hasCloseEvidence": is_close, "type": "button",
-                "topmost": bool(is_close and self.close_topmost),
-                "testid": button.get_attribute("data-testid"),
-                "variant": button.get_attribute("data-variant"),
-                "aria": button.get_attribute("aria-label"),
-            }
+            return {"ok": bool(is_close and self.close_topmost and self.close_control),
+                    "visible": bool(is_close), "disabled": False, "isPurchase": not is_close,
+                    "hasCloseEvidence": is_close, "type": "button", "topmost": bool(is_close and self.close_topmost),
+                    "testid": button.get_attribute("data-testid"), "variant": button.get_attribute("data-variant"),
+                    "aria": button.get_attribute("aria-label")}
 
         if "EVENT_CLAIM_BUTTON_CHECK_V2" in script:
-            return {
-                "ok": not self.popup and not self.overlay_only and not self.obstruct,
-                "visible": True,
-                "disabled": False,
-                "buttonText": "claim",
-                "threshold": self.validation_threshold,
-                "topmost": not self.popup and not self.overlay_only and not self.obstruct,
-                "blockingDialogCount": 1 if self.popup else 0,
-            }
+            return {"ok": not self.popup and not self.overlay_only and not self.obstruct,
+                    "visible": True, "disabled": False, "buttonText": "claim",
+                    "threshold": self.validation_threshold,
+                    "topmost": not self.popup and not self.overlay_only and not self.obstruct,
+                    "blockingDialogCount": len(self.dialogs)}
 
         if "EVENT_REWARDS_SNAPSHOT_V2" in script:
             delivered = self.delivered
             available_reward_items = [] if self.missing_reward_names or delivered else [{"name": "Abyss", "quantity": ""}]
-            return {
-                "title": "Halloween 2026",
-                "url": self.url,
-                "bodyText": "Lost Soul Rewards\n1,200 / 1,300",
-                "cards": [
-                    {"thresholdText": "400", "rewardItems": [], "claimButtonEnabled": False,
-                     "buttonIndex": 0, "buttonText": "Delivered", "disabled": True,
-                     "visible": True, "cardText": "400\nx10\nOrb of Calamity\nDelivered"},
-                    {"thresholdText": "900", "rewardItems": available_reward_items,
-                     "claimButtonEnabled": not delivered, "buttonIndex": 1,
-                     "buttonText": "Delivered" if delivered else "Claim", "disabled": delivered,
-                     "visible": True, "cardText": "900\nAbyss\n" + ("Delivered" if delivered else "Claim")},
-                    {"thresholdText": "1300", "rewardItems": [], "claimButtonEnabled": False,
-                     "buttonIndex": 2, "buttonText": "", "disabled": True,
-                     "visible": True, "cardText": "1300\nx150\nLuckyloon"},
-                ],
-            }
+            return {"title": "Halloween 2026", "url": self.url,
+                    "bodyText": "Lost Soul Rewards\n1,200 / 1,300",
+                    "cards": [
+                        {"thresholdText": "400", "rewardItems": [], "claimButtonEnabled": False,
+                         "buttonIndex": 0, "buttonText": "Delivered", "disabled": True, "visible": True,
+                         "cardText": "400\nx10\nOrb of Calamity\nDelivered"},
+                        {"thresholdText": "900", "rewardItems": available_reward_items,
+                         "claimButtonEnabled": not delivered, "buttonIndex": 1,
+                         "buttonText": "Delivered" if delivered else "Claim", "disabled": delivered,
+                         "visible": True, "cardText": "900\nAbyss\n" + ("Delivered" if delivered else "Claim")},
+                        {"thresholdText": "1300", "rewardItems": [], "claimButtonEnabled": False,
+                         "buttonIndex": 2, "buttonText": "", "disabled": True, "visible": True,
+                         "cardText": "1300\nx150\nLuckyloon"}],}
 
         if "window.scrollTo(0, document.body.scrollHeight)" in script and self.popup_on_scroll and not self.scroll_popup_shown:
             self.popup = True
-            self._build_dialog()
+            self.popup_layers = 1
+            self._build_dialogs()
             self.scroll_popup_shown = True
             return None
         return None
@@ -393,7 +422,7 @@ class PopupSafetyTests(unittest.TestCase):
         driver = FakeDriver(popup=True, dismissible=False)
         ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None, timeout=0.2)
         self.assertFalse(ok)
-        self.assertIn("remained_after_close_click", reason)
+        self.assertIn("remained_after", reason)
         self.assertFalse(driver.purchase_button.clicked)
 
     @patch("event_rewards.time.sleep", return_value=None)
@@ -401,7 +430,7 @@ class PopupSafetyTests(unittest.TestCase):
         driver = FakeDriver(popup=True, close_control=False)
         ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None, timeout=0.2)
         self.assertFalse(ok)
-        self.assertIn("safe_close_candidate_count:0", reason)
+        self.assertIn("no_unambiguous_safe_close", reason)
         self.assertFalse(driver.purchase_button.clicked)
 
     @patch("event_rewards.time.sleep", return_value=None)
@@ -409,7 +438,7 @@ class PopupSafetyTests(unittest.TestCase):
         driver = FakeDriver(popup=True, close_topmost=False)
         ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None, timeout=0.2)
         self.assertFalse(ok)
-        self.assertIn("not_safe", reason)
+        self.assertIn("no_unambiguous_safe_close", reason)
         self.assertFalse(driver.close_button.clicked)
         self.assertFalse(driver.purchase_button.clicked)
 
@@ -417,7 +446,17 @@ class PopupSafetyTests(unittest.TestCase):
         driver = FakeDriver(popup=False, overlay_only=True)
         ok, reason = _dismiss_event_promotion_popup(driver, lambda _m: None)
         self.assertFalse(ok)
-        self.assertEqual(reason, "unknown_fullscreen_overlay_blocks_event_page")
+        self.assertIn("unknown_fullscreen_overlay_blocks_page", reason)
+
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_multiple_stacked_promotional_popups_are_all_dismissed_before_claim(self, _sleep):
+        driver = FakeDriver(popup=True, dismissible=True, popup_layers=2)
+        purchase = driver.purchase_button
+        ok, reason = _dismiss_event_promotion_popup(driver, lambda _message: None, timeout=0.3)
+        self.assertTrue(ok, reason)
+        self.assertEqual(driver.close_click_count, 2)
+        self.assertEqual(len(driver.dialogs), 0)
+        self.assertFalse(purchase.clicked)
 
     def test_popup_detection_includes_the_captured_role_and_modal_markers(self):
         self.assertIn("[role=\"dialog\"]", _POPUP_INSPECT_SCRIPT)
