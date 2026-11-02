@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from reward_popup_guard import dismiss_all_safe_popups
+
 DEFAULT_CONFIG_PATH = Path(__file__).with_name("event_rewards_config.json")
 EVENT_CARD_SELECTOR = "div.relative.rounded-lp-card"
 # The captured Vertigo Games promotion exposes all three close markers below.
@@ -411,108 +413,21 @@ def _inspect_promotion_popup(driver) -> dict[str, Any]:
 
 def _dismiss_event_promotion_popup(driver, log: Callable[[str], None],
                                    timeout: float = EVENT_POPUP_WAIT_SECONDS) -> tuple[bool, str]:
-    """Safely dismiss the captured Store promotion and verify its overlay is gone.
+    """Dismiss every safely identifiable modal/promotion, not just one offer.
 
-    The close button is selected from inside the identified promotion dialog.
-    Its actual portal attributes are checked again before a native Selenium
-    click. Generic modal buttons and the Store purchase button are never used.
+    The shared guard only native-clicks a visible, enabled, explicit Close /
+    Dismiss control that is topmost at its own click point. Unknown blockers,
+    purchase controls, and ambiguous close controls fail closed.
     """
-    state = _inspect_promotion_popup(driver)
-    if state.get("inspection_error"):
-        return False, "popup_state_unavailable"
-
-    dialog_count = int(state.get("visibleDialogCount", 0) or 0)
-    overlay_count = int(state.get("fullScreenBlockingOverlayCount", 0) or 0)
-    promotional_visible = bool(state.get("promotionalDialogVisible"))
-    if dialog_count == 0 and overlay_count == 0:
-        return True, "no_visible_dialog_or_fullscreen_overlay"
-    if not promotional_visible:
-        if overlay_count:
-            return False, "unknown_fullscreen_overlay_blocks_event_page"
-        return False, "unknown_dialog_blocks_event_page"
-
-    try:
-        dialogs = driver.find_elements("css selector", EVENT_POPUP_SELECTOR)
-    except Exception as exc:
-        return False, f"dialog_lookup_failed:{type(exc).__name__}"
-
-    matching_dialogs = []
-    for dialog in dialogs:
-        if not _visible(dialog):
-            continue
-        dialog_text = _element_text(dialog).casefold()
-        if "exclusive discount activated" in dialog_text or "purchase or lose it" in dialog_text:
-            matching_dialogs.append(dialog)
-    if len(matching_dialogs) != 1:
-        return False, f"promotional_dialog_match_count:{len(matching_dialogs)}"
-    target_dialog = matching_dialogs[0]
-
-    try:
-        close_buttons = target_dialog.find_elements("css selector", EVENT_POPUP_CLOSE_SELECTOR)
-    except Exception as exc:
-        return False, f"close_control_lookup_failed:{type(exc).__name__}"
-
-    safe_candidates = []
-    for button in close_buttons:
-        if not _visible(button):
-            continue
-        try:
-            testid = (button.get_attribute("data-testid") or "").casefold()
-            aria = (button.get_attribute("aria-label") or "").casefold()
-            title = (button.get_attribute("title") or "").casefold()
-            variant = (button.get_attribute("data-variant") or "").casefold()
-            class_name = (button.get_attribute("class") or "").casefold()
-            button_type = (button.get_attribute("type") or "button").casefold()
-            disabled = button.get_attribute("disabled") is not None or button.get_attribute("aria-disabled") == "true"
-        except Exception:
-            continue
-
-        # Reject any purchase control explicitly, even if a future portal
-        # change accidentally adds an accessibility label that resembles Close.
-        is_purchase = testid == "buy-button" or variant == "component-buy"
-        has_close_evidence = (
-            testid == "close" or variant == "close"
-            or aria in {"close", "close dialog"} or title == "close"
-            or "button-close" in class_name
-        )
-        if not is_purchase and not disabled and button_type == "button" and has_close_evidence:
-            safe_candidates.append(button)
-
-    # Multiple plausible controls are ambiguous; do not guess.
-    if len(safe_candidates) != 1:
-        return False, f"safe_close_candidate_count:{len(safe_candidates)}"
-    safe_close = safe_candidates[0]
-
-    try:
-        close_state = driver.execute_script(_POPUP_CLOSE_BUTTON_CHECK_SCRIPT, safe_close)
-    except Exception as exc:
-        return False, f"close_button_validation_failed:{type(exc).__name__}"
-    if not isinstance(close_state, dict) or not close_state.get("ok"):
-        reason = close_state.get("reason", "close_button_not_topmost_or_not_safe") if isinstance(close_state, dict) else "close_button_validation_no_state"
-        return False, str(reason)
-
-    try:
-        # Native Selenium click only. Never use JS click or generic modal fallback.
-        safe_close.click()
-    except Exception as exc:
-        return False, f"native_close_click_failed:{type(exc).__name__}"
-
-    poll_count = max(1, int(float(timeout) / 0.2 + 0.999))
-    for _ in range(poll_count):
-        time.sleep(0.2)
-        current = _inspect_promotion_popup(driver)
-        if current.get("inspection_error"):
-            continue
-        current_dialogs = int(current.get("visibleDialogCount", 0) or 0)
-        current_overlays = int(current.get("fullScreenBlockingOverlayCount", 0) or 0)
-        if current_dialogs == 0 and current_overlays == 0:
-            log("✅ Halloween promotion popup and full-screen overlay dismissed and verified")
-            return True, "dismissed_and_verified"
-        if not current.get("promotionalDialogVisible"):
-            if current_overlays:
-                return False, "fullscreen_overlay_remained_after_close_click"
-            return False, "another_dialog_remains_visible"
-    return False, "popup_or_fullscreen_overlay_remained_after_close_click"
+    ok, reason = dismiss_all_safe_popups(
+        driver, log=log, max_popups=8, timeout=timeout, poll_interval=0.15
+    )
+    if ok:
+        if "dismissed=0" in reason:
+            return True, "no_visible_dialog_or_fullscreen_overlay"
+        log("✅ Halloween popup stack cleared and verified")
+        return True, "dismissed_and_verified"
+    return False, reason
 
 
 def _find_claim_button_for_threshold(driver, expected_threshold: int):
@@ -556,11 +471,18 @@ def _validate_claim_button(driver, button, expected_threshold: int) -> tuple[boo
     return True, "validated"
 
 
-def _wait_for_delivered(driver, threshold: int, timeout: float) -> dict[str, Any] | None:
+def _wait_for_delivered(driver, threshold: int, timeout: float,
+                        log: Callable[[str], None] | None = None) -> dict[str, Any] | None:
     # Fixed, bounded polling keeps the wait predictable even when monotonic time
-    # is mocked or the browser's execution clock stalls.
+    # is mocked or the browser's execution clock stalls. Check the popup stack
+    # on every poll: a second offer can appear asynchronously after the click.
     poll_count = max(1, int(float(timeout) / 0.3 + 0.999))
     for _ in range(poll_count):
+        popup_ok, popup_reason = _dismiss_event_promotion_popup(
+            driver, log or (lambda _message: None)
+        )
+        if not popup_ok and log:
+            log(f"⚠️ Popup guard during Halloween verification: {popup_reason}")
         try:
             state = _read_page_state(driver)
             updated = _tier_by_threshold(state, threshold)
@@ -623,7 +545,7 @@ def _claim_one_event_tier(driver, tier: dict[str, Any], physical_click: Callable
 
     reward_text = "; ".join(tier.get("reward", []) or []) or "reward details unavailable"
     log(f"🎃 Halloween native click dispatched at {threshold} points — {reward_text}; awaiting portal confirmation")
-    delivered = _wait_for_delivered(driver, threshold, EVENT_CLAIM_VERIFY_SECONDS)
+    delivered = _wait_for_delivered(driver, threshold, EVENT_CLAIM_VERIFY_SECONDS, log=log)
     if delivered:
         return "claimed_this_run", delivered
 
@@ -636,7 +558,7 @@ def _claim_one_event_tier(driver, tier: dict[str, Any], physical_click: Callable
         popup_ok, popup_reason = _dismiss_event_promotion_popup(driver, log)
         if not popup_ok:
             log(f"⚠️ Popup remains during final verification: {popup_reason}")
-        delivered = _wait_for_delivered(driver, threshold, 3.0)
+        delivered = _wait_for_delivered(driver, threshold, 3.0, log=log)
         if delivered:
             return "claimed_this_run", delivered
     except Exception as exc:
