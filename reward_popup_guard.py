@@ -11,9 +11,10 @@ A second, bounded settling check handles the portal's short-lived residual
 success-dialog wrapper after Continue has already been clicked. It never clicks
 that residue or treats a persistent/unknown blocker as clear.
 
-When a dialog cannot be safely dismissed, the guard now records a bounded,
-read-only inventory of visible control labels and attributes. This is
-diagnostic-only: it does not change which controls are eligible for dismissal.
+When a dialog cannot be safely dismissed, the guard records a bounded,
+read-only inventory of the popup's surrounding DOM, ancestors, and nearby
+interactive-looking elements. This is diagnostic-only: it does not change
+which controls are eligible for dismissal.
 """
 from __future__ import annotations
 
@@ -59,12 +60,11 @@ return {
   url: location.href
 };"""
 
-# Read-only diagnostic only. This selector deliberately includes labelled
-# non-button elements too, because some portals implement icon close controls
-# without a native <button>. Nothing returned by this script is clicked.
-_DIALOG_CONTROL_DIAGNOSTICS_JS = r"""/* REWARD_POPUP_DIALOG_CONTROLS_DIAGNOSTICS_V1 */
-const dialog = arguments[0];
-if (!dialog) return [];
+# Read-only diagnostics. Unlike the dismissal search, this intentionally looks
+# outside the dialog boundary as well. Some sites render a close icon in a
+# sibling/portal wrapper, or as an SVG/custom element rather than a button.
+# Returned elements are metadata only; this script never interacts with them.
+_POPUP_CONTEXT_DIAGNOSTICS_JS = r"""/* REWARD_POPUP_CONTEXT_DIAGNOSTICS_V2 */
 const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
 const visible = el => {
   if (!el) return false;
@@ -73,26 +73,97 @@ const visible = el => {
     && s.display !== 'none' && s.visibility !== 'hidden'
     && Number(s.opacity || '1') > 0 && s.pointerEvents !== 'none');
 };
-const selector = [
-  'button', '[role="button"]', 'a[href]',
-  'input[type="button"]', 'input[type="submit"]',
-  '[aria-label]', '[title]'
-].join(',');
-return Array.from(dialog.querySelectorAll(selector))
-  .filter(visible)
-  .slice(0, 12)
-  .map(el => ({
+const rectData = el => {
+  const r = el.getBoundingClientRect();
+  return {
+    x: Math.round(r.x), y: Math.round(r.y),
+    width: Math.round(r.width), height: Math.round(r.height)
+  };
+};
+const brief = el => {
+  const s = getComputedStyle(el);
+  return {
     tag: String(el.tagName || '').toLowerCase(),
-    text: norm(el.innerText || el.value || el.textContent).slice(0, 72),
+    role: norm(el.getAttribute('role')).slice(0, 32),
     aria: norm(el.getAttribute('aria-label')).slice(0, 72),
     title: norm(el.getAttribute('title')).slice(0, 72),
     testid: norm(el.getAttribute('data-testid')).slice(0, 72),
-    variant: norm(el.getAttribute('data-variant')).slice(0, 48),
-    type: norm(el.getAttribute('type')).slice(0, 24),
-    role: norm(el.getAttribute('role')).slice(0, 24),
-    className: String(el.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
-    disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true'
-  }));"""
+    dataState: norm(el.getAttribute('data-state')).slice(0, 40),
+    dataSlot: norm(el.getAttribute('data-slot')).slice(0, 40),
+    className: String(el.getAttribute('class') || '')
+      .replace(/\s+/g, ' ').trim().slice(0, 120),
+    text: norm(el.innerText || el.textContent).slice(0, 80),
+    position: s.position,
+    zIndex: s.zIndex,
+    cursor: s.cursor,
+    pointerEvents: s.pointerEvents,
+    onclickPresent: el.hasAttribute('onclick'),
+    disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
+    rect: rectData(el)
+  };
+};
+const rootSelector = [
+  '[role="dialog"]', '[aria-modal="true"]', 'dialog',
+  '[class*="modal"]', '[class*="Modal"]',
+  '[class*="popup"]', '[class*="Popup"]'
+].join(',');
+const roots = Array.from(document.querySelectorAll(rootSelector)).filter(visible);
+roots.sort((a, b) => {
+  const za = Number.parseInt(getComputedStyle(a).zIndex || '0', 10) || 0;
+  const zb = Number.parseInt(getComputedStyle(b).zIndex || '0', 10) || 0;
+  return zb - za;
+});
+const candidateSelector = [
+  'button', '[role="button"]', 'a[href]',
+  'input[type="button"]', 'input[type="submit"]',
+  '[aria-label]', '[title]', '[data-testid]', '[data-slot]',
+  '[tabindex]:not([tabindex="-1"])', 'svg',
+  '[class*="close" i]', '[class*="dismiss" i]', '[onclick]'
+].join(',');
+const allCandidates = Array.from(document.querySelectorAll(candidateSelector));
+const inspectRoot = root => {
+  const rr = root.getBoundingClientRect();
+  const left = rr.left - 100, right = rr.right + 100;
+  const top = rr.top - 100, bottom = rr.bottom + 100;
+  const nearby = allCandidates.filter(el => {
+    if (!visible(el)) return false;
+    const r = el.getBoundingClientRect();
+    const withinExpandedRect = r.right >= left && r.left <= right
+      && r.bottom >= top && r.top <= bottom;
+    return root.contains(el) || withinExpandedRect;
+  });
+  nearby.sort((a, b) => {
+    const ac = root.contains(a) ? 0 : 1, bc = root.contains(b) ? 0 : 1;
+    if (ac !== bc) return ac - bc;
+    const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+    const ad = Math.hypot((ar.x + ar.width/2) - (rr.x + rr.width/2),
+                          (ar.y + ar.height/2) - (rr.y + rr.height/2));
+    const bd = Math.hypot((br.x + br.width/2) - (rr.x + rr.width/2),
+                          (br.y + br.height/2) - (rr.y + rr.height/2));
+    return ad - bd;
+  });
+  const ancestors = [];
+  let node = root.parentElement;
+  for (let i = 0; node && i < 4; i++, node = node.parentElement) {
+    ancestors.push(brief(node));
+  }
+  return {
+    root: brief(root),
+    ancestors,
+    nearbyControls: nearby.slice(0, 16).map(brief)
+  };
+};
+const dialogRoots = roots.slice(0, 2).map(inspectRoot);
+const overlaySelector = '[class*="overlay"], [class*="Overlay"], [class*="backdrop"], [class*="Backdrop"]';
+const overlays = Array.from(document.querySelectorAll(overlaySelector))
+  .filter(visible).slice(0, 3).map(brief);
+return {
+  url: location.href,
+  viewport: { width: window.innerWidth, height: window.innerHeight },
+  dialogRootCount: roots.length,
+  dialogRoots,
+  visibleOverlays: overlays
+};"""
 
 _CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_CLOSE_CONTROL_CHECK_V2 */
 const button = arguments[0], dialog = arguments[1];
@@ -190,49 +261,67 @@ def _inspect(driver) -> dict:
     return state
 
 
-def _visible_control_diagnostics(driver, dialogs, *, max_dialogs: int = 3) -> str:
-    """Return bounded metadata for visible controls; never click or mutate them."""
-    entries = []
-    for index, dialog in enumerate(dialogs[:max_dialogs], start=1):
-        if not _is_visible(dialog):
+def _popup_context_diagnostics(driver) -> str:
+    """Return bounded popup DOM context; never click, type, or mutate elements."""
+    try:
+        context = driver.execute_script(_POPUP_CONTEXT_DIAGNOSTICS_JS)
+    except Exception as exc:
+        return "popup_context=" + json.dumps({"diagnostic_error": type(exc).__name__})
+
+    if not isinstance(context, dict):
+        return 'popup_context={"diagnostic_error":"invalid_result"}'
+
+    # Sanitize and cap once more in Python. Never include input values, HTML,
+    # arbitrary attributes, or page-wide text in the diagnostic payload.
+    safe_roots = []
+    for item in (context.get("dialogRoots") or [])[:2]:
+        if not isinstance(item, dict):
             continue
-        try:
-            controls = driver.execute_script(_DIALOG_CONTROL_DIAGNOSTICS_JS, dialog)
-        except Exception as exc:
-            entries.append({
-                "dialog": index,
-                "diagnostic_error": type(exc).__name__,
-            })
-            continue
+        def safe_element(element):
+            if not isinstance(element, dict):
+                return {}
+            rect = element.get("rect") if isinstance(element.get("rect"), dict) else {}
+            return {
+                key: str(element.get(key) or "")[:limit]
+                for key, limit in (
+                    ("tag", 16), ("role", 32), ("aria", 72), ("title", 72),
+                    ("testid", 72), ("dataState", 40), ("dataSlot", 40),
+                    ("className", 120), ("text", 80), ("position", 20),
+                    ("zIndex", 20), ("cursor", 20), ("pointerEvents", 20),
+                )
+            } | {
+                "onclickPresent": bool(element.get("onclickPresent")),
+                "disabled": bool(element.get("disabled")),
+                "rect": {
+                    key: int(rect.get(key) or 0)
+                    for key in ("x", "y", "width", "height")
+                },
+            }
 
-        if not isinstance(controls, list):
-            entries.append({"dialog": index, "diagnostic_error": "invalid_result"})
-            continue
+        ancestors = [safe_element(x) for x in (item.get("ancestors") or [])[:4]]
+        controls = [safe_element(x) for x in (item.get("nearbyControls") or [])[:16]]
+        safe_roots.append({
+            "root": safe_element(item.get("root")),
+            "ancestors": ancestors,
+            "nearbyControls": controls,
+        })
 
-        sanitized = []
-        for item in controls[:12]:
-            if not isinstance(item, dict):
-                continue
-            sanitized.append({
-                "tag": str(item.get("tag") or "")[:16],
-                "text": str(item.get("text") or "")[:72],
-                "aria": str(item.get("aria") or "")[:72],
-                "title": str(item.get("title") or "")[:72],
-                "testid": str(item.get("testid") or "")[:72],
-                "variant": str(item.get("variant") or "")[:48],
-                "type": str(item.get("type") or "")[:24],
-                "role": str(item.get("role") or "")[:24],
-                "className": str(item.get("className") or "")[:120],
-                "disabled": bool(item.get("disabled")),
-            })
-        entries.append({"dialog": index, "controls": sanitized})
-
-    if not entries:
-        return "visible_controls=none_or_unavailable"
-
-    serialized = json.dumps(entries, ensure_ascii=True, separators=(",", ":"))
-    # Keep a diagnostic comfortably below the workflow log/report field limits.
-    return "visible_controls=" + serialized[:2200]
+    overlays = [safe_element(x) for x in (context.get("visibleOverlays") or [])[:3]]
+    viewport = context.get("viewport") if isinstance(context.get("viewport"), dict) else {}
+    sanitized = {
+        "url": str(context.get("url") or "")[:180],
+        "viewport": {
+            "width": int(viewport.get("width") or 0),
+            "height": int(viewport.get("height") or 0),
+        },
+        "dialogRootCount": int(context.get("dialogRootCount") or 0),
+        "dialogRoots": safe_roots,
+        "visibleOverlays": overlays,
+    }
+    serialized = json.dumps(sanitized, ensure_ascii=True, separators=(",", ":"))
+    if len(serialized) > 7000:
+        serialized = serialized[:7000] + "...[truncated]"
+    return "popup_context=" + serialized
 
 
 def _is_reward_success_residue(state: dict) -> bool:
@@ -303,9 +392,9 @@ def dismiss_all_safe_popups(
     A narrowly recognised residual success-dialog wrapper is allowed only a
     bounded, click-free settling wait after a safe dialog has been dismissed.
 
-    If no safe close candidate exists, bounded control metadata is appended to
-    the failure reason for diagnosis. This metadata is read-only and does not
-    relax any safety condition.
+    If no safe close candidate exists, bounded read-only popup DOM context is
+    appended to the failure reason. This metadata does not relax any safety
+    condition or add any new click target.
     """
     dismissed = 0
     max_popups = max(1, min(12, int(max_popups)))
@@ -361,7 +450,7 @@ def dismiss_all_safe_popups(
                         ))
 
             if not candidates:
-                diagnostics = _visible_control_diagnostics(driver, dialogs)
+                diagnostics = _popup_context_diagnostics(driver)
                 # The portal can leave a short-lived, non-interactive wrapper
                 # for the just-dismissed "Your rewards! xN Continue" layer.
                 # Wait for that exact residue to disappear; never click it again.
@@ -404,7 +493,7 @@ def dismiss_all_safe_popups(
             dialog_description = ""
             try:
                 dialog_description = driver.execute_script(
-                    "return (arguments[0].innerText || arguments[0].textContent || '').replace(/\\s+/g,' ').trim().slice(0,120);",
+                    "return (arguments[0].innerText || arguments[0].textContent || '').replace(/\\\\s+/g,' ').trim().slice(0,120);",
                     target_dialog,
                 ) or ""
             except Exception:
