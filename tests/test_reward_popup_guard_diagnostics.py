@@ -20,10 +20,10 @@ class FakeElement:
 
 
 class FakeDriver:
-    def __init__(self, dialog, button, controls):
+    def __init__(self, dialog, button, context):
         self.dialog = dialog
         self.button = button
-        self.controls = controls
+        self.context = context
         self.diagnostic_calls = 0
 
     def find_elements(self, by, selector):
@@ -44,10 +44,31 @@ class FakeDriver:
             }
         if script == guard._CLOSE_CONTROL_CHECK_JS:
             return {"ok": False, "reason": "no_explicit_close_evidence"}
-        if script == guard._DIALOG_CONTROL_DIAGNOSTICS_JS:
+        if script == guard._POPUP_CONTEXT_DIAGNOSTICS_JS:
             self.diagnostic_calls += 1
-            return self.controls
+            return self.context
         raise AssertionError("Unexpected JavaScript execution")
+
+
+def make_element(tag, *, text="", class_name="", aria="", rect=None):
+    return {
+        "tag": tag,
+        "role": "",
+        "aria": aria,
+        "title": "",
+        "testid": "",
+        "dataState": "",
+        "dataSlot": "",
+        "className": class_name,
+        "text": text,
+        "position": "absolute",
+        "zIndex": "1001",
+        "cursor": "pointer",
+        "pointerEvents": "auto",
+        "onclickPresent": False,
+        "disabled": False,
+        "rect": rect or {"x": 10, "y": 10, "width": 24, "height": 24},
+    }
 
 
 class PopupDiagnosticsTests(unittest.TestCase):
@@ -57,54 +78,77 @@ class PopupDiagnosticsTests(unittest.TestCase):
             element_id="discount-dialog",
             children=[self.button],
         )
-        self.controls = [{
-            "tag": "button",
-            "text": "Get 7 Days Premium",
-            "aria": "",
-            "title": "",
-            "testid": "",
-            "variant": "primary",
-            "type": "button",
-            "role": "",
-            "className": "btn btn-primary",
-            "disabled": False,
-        }]
-        self.driver = FakeDriver(self.dialog, self.button, self.controls)
+        close_icon = make_element("svg", text="", class_name="popup-close-icon")
+        parent = make_element("div", class_name="popup-shell")
+        self.context = {
+            "url": "https://hub.example/store",
+            "viewport": {"width": 1280, "height": 720},
+            "dialogRootCount": 1,
+            "dialogRoots": [{
+                "root": make_element("div", text="Exclusive Discount Activated!", class_name="promotion-modal"),
+                "ancestors": [parent],
+                "nearbyControls": [
+                    make_element("button", text="Get 7 Days Premium", class_name="btn btn-primary"),
+                    close_icon,
+                ],
+            }],
+            "visibleOverlays": [],
+        }
+        self.driver = FakeDriver(self.dialog, self.button, self.context)
 
-    def test_blocking_dialog_includes_control_metadata_without_clicking(self):
+    def test_context_includes_ancestors_and_nearby_svg_without_clicking(self):
         ok, reason = guard.dismiss_all_safe_popups(self.driver)
 
         self.assertFalse(ok)
         self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", reason)
-        self.assertIn("visible_controls=", reason)
+        self.assertIn("popup_context=", reason)
+        self.assertIn("popup-shell", reason)
+        self.assertIn("popup-close-icon", reason)
         self.assertIn("Get 7 Days Premium", reason)
-        self.assertIn("btn btn-primary", reason)
         self.assertEqual(self.driver.diagnostic_calls, 1)
         self.assertFalse(self.button.clicked)
 
     def test_diagnostic_failure_does_not_change_fail_closed_result(self):
         class BrokenDiagnosticDriver(FakeDriver):
             def execute_script(self, script, *args):
-                if script == guard._DIALOG_CONTROL_DIAGNOSTICS_JS:
+                if script == guard._POPUP_CONTEXT_DIAGNOSTICS_JS:
                     raise RuntimeError("diagnostic unavailable")
                 return super().execute_script(script, *args)
 
-        driver = BrokenDiagnosticDriver(self.dialog, self.button, self.controls)
+        driver = BrokenDiagnosticDriver(self.dialog, self.button, self.context)
         ok, reason = guard.dismiss_all_safe_popups(driver)
 
         self.assertFalse(ok)
         self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", reason)
-        self.assertIn("diagnostic_error", reason)
+        self.assertIn('diagnostic_error', reason)
+        self.assertIn('RuntimeError', reason)
         self.assertFalse(self.button.clicked)
 
-    def test_diagnostic_inventory_is_bounded_to_twelve_controls(self):
-        many_controls = [dict(self.controls[0], text=f"Control {i}") for i in range(20)]
-        driver = FakeDriver(self.dialog, self.button, many_controls)
+    def test_context_inventory_is_bounded_to_sixteen_nearby_controls(self):
+        many_controls = [
+            make_element("button", text=f"Control {i}") for i in range(24)
+        ]
+        context = dict(self.context)
+        context["dialogRoots"] = [dict(self.context["dialogRoots"][0], nearbyControls=many_controls)]
+        driver = FakeDriver(self.dialog, self.button, context)
+        diagnostic = guard._popup_context_diagnostics(driver)
+
+        self.assertIn("Control 15", diagnostic)
+        self.assertNotIn("Control 16", diagnostic)
+        self.assertFalse(self.button.clicked)
+
+    def test_diagnostics_are_separate_from_click_eligibility(self):
+        # Even a nearby element whose class contains "close" is only recorded.
+        # It is not added to the Selenium click candidate list.
+        nearby = make_element("svg", class_name="close-icon")
+        context = dict(self.context)
+        context["dialogRoots"] = [dict(self.context["dialogRoots"][0], nearbyControls=[nearby])]
+        driver = FakeDriver(self.dialog, self.button, context)
+
         ok, reason = guard.dismiss_all_safe_popups(driver)
 
         self.assertFalse(ok)
-        self.assertIn("Control 11", reason)
-        self.assertNotIn("Control 12", reason)
+        self.assertIn("close-icon", reason)
         self.assertFalse(self.button.clicked)
 
 
