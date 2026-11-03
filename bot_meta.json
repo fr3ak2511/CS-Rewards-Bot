@@ -53,124 +53,118 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-03T00:20:38.533345",
-    "run_label": "Promotional Check #2",
-    "failed_player_ids": [],
-    "failed_player_count": 0,
-    "retry_player_ids": [
-      "5429611A24A8F01A",
-      "856EB1365FA9D02E",
-      "F251D3D226496061",
-      "86CD85689FAE9549",
-      "A6DA56D3C46DF31B",
-      "7E53CF9C948CED45",
-      "F820398935D2C403",
-      "C3960960443AF932",
-      "4D1AA8C2C628E73F",
-      "8FC80EF0CC5B9D39",
-      "6163D9F946C4BD48",
-      "BB382E889AA37C4F",
-      "51001A5D6014F2DD",
-      "809109186A2962E4"
+    "timestamp": "2026-11-03T07:54:20.012362",
+    "run_label": "Manual Run",
+    "failed_player_ids": [
+      "E1E9729A4885E6D9"
     ],
-    "retry_player_count": 14,
-    "total_claimed": 2,
-    "efficiency": 100.0,
+    "failed_player_count": 1,
+    "retry_player_ids": [
+      "E1E9729A4885E6D9",
+      "BB382E889AA37C4F"
+    ],
+    "retry_player_count": 2,
+    "total_claimed": 174,
+    "efficiency": 99.4,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 2251,
+    "duration_seconds": 4580,
     "per_type": {
-      "daily": 0,
-      "store": 0,
-      "store_daily": 0,
-      "store_temp": 0,
-      "promotions": 0,
-      "progression": 2,
+      "daily": 34,
+      "store": 135,
+      "store_daily": 102,
+      "store_temp": 33,
+      "promotions": 33,
+      "progression": 1,
       "loyalty": 0,
-      "event_rewards": 0
+      "event_rewards": 4
     },
-    "slowest_player": "3F493D8C327FAF81",
-    "avg_time_per_player": 63.3,
+    "slowest_player": "5429611A24A8F01A",
+    "avg_time_per_player": 129.9,
     "accounts_processed": 35,
-    "claims_made": 2,
-    "unavailable_rewards": 222,
-    "standard_rewards_on_cooldown": 5,
-    "promotional_unavailable_observations": 217,
+    "claims_made": 174,
+    "unavailable_rewards": 245,
+    "standard_rewards_on_cooldown": 34,
+    "promotional_unavailable_observations": 211,
     "distinct_promotional_offer_types": 8,
-    "promotional_claims_made": 0,
-    "actionable_promotion_results": 0,
-    "partial_results": 14,
-    "actual_failures": 0,
-    "unconfirmed_claims": 14,
+    "promotional_claims_made": 33,
+    "actionable_promotion_results": 1,
+    "partial_results": 1,
+    "actual_failures": 1,
+    "unconfirmed_claims": 1,
     "promotion_detection_failures": 0,
-    "promotional_only_accounts": 34,
+    "promotional_only_accounts": 0,
     "backup_reconciliation_accounts": 0,
-    "full_claim_accounts": 1,
+    "full_claim_accounts": 35,
     "configured_player_count": 35,
     "email_sent": true,
     "player_count": 35
   },
   "last_full_run": {
-    "timestamp": "2026-11-02T18:54:45.612928",
-    "run_label": "Promotional Check #1",
-    "failed_player_ids": [],
-    "failed_player_count": 0,
-    "retry_player_ids": [],
-    "retry_player_count": 0,
-    "total_claimed": 59,
-    "efficiency": 100.0,
+    "timestamp": "2026-11-03T07:54:20.012362",
+    "run_label": "Manual Run",
+    "failed_player_ids": [
+      "E1E9729A4885E6D9"
+    ],
+    "failed_player_count": 1,
+    "retry_player_ids": [
+      "E1E9729A4885E6D9",
+      "BB382E889AA37C4F"
+    ],
+    "retry_player_count": 2,
+    "total_claimed": 174,
+    "efficiency": 99.4,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 4185,
+    "duration_seconds": 4580,
     "per_type": {
-      "daily": 1,
-      "store": 0,
-      "store_daily": 0,
-      "store_temp": 0,
-      "promotions": 0,
-      "progression": 32,
+      "daily": 34,
+      "store": 135,
+      "store_daily": 102,
+      "store_temp": 33,
+      "promotions": 33,
+      "progression": 1,
       "loyalty": 0,
-      "event_rewards": 26
+      "event_rewards": 4
     },
-    "slowest_player": "B4BAE5FC4CACA8F7",
-    "avg_time_per_player": 122.2,
-    "accounts_processed": 34,
-    "claims_made": 59,
-    "unavailable_rewards": 380,
-    "standard_rewards_on_cooldown": 169,
+    "slowest_player": "5429611A24A8F01A",
+    "avg_time_per_player": 129.9,
+    "accounts_processed": 35,
+    "claims_made": 174,
+    "unavailable_rewards": 245,
+    "standard_rewards_on_cooldown": 34,
     "promotional_unavailable_observations": 211,
     "distinct_promotional_offer_types": 8,
-    "promotional_claims_made": 0,
-    "actionable_promotion_results": 0,
-    "partial_results": 0,
-    "actual_failures": 0,
-    "unconfirmed_claims": 0,
+    "promotional_claims_made": 33,
+    "actionable_promotion_results": 1,
+    "partial_results": 1,
+    "actual_failures": 1,
+    "unconfirmed_claims": 1,
     "promotion_detection_failures": 0,
     "promotional_only_accounts": 0,
     "backup_reconciliation_accounts": 0,
-    "full_claim_accounts": 34,
-    "configured_player_count": 34,
+    "full_claim_accounts": 35,
+    "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 34
+    "player_count": 35
   },
   "full_claim_coverage": {
     "E1E9729A4885E6D9": {
-      "reset_date": "2026-11-02",
-      "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:47:11.709791",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "Success",
-      "retry_required": false,
-      "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "reset_date": "2026-11-03",
+      "status": "pending",
+      "last_full_attempt_at": "2026-11-03T06:38:42.406972",
+      "last_run_label": "Manual Run",
+      "last_status": "Login Failed",
+      "retry_required": true,
+      "unresolved_reason": "Could not authenticate"
     },
     "4DC0E2AA7130D7E6": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:49:13.823457",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T06:40:54.483737",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "FBF717E3BFDF5E94": {
       "reset_date": "2026-10-22",
@@ -182,24 +176,24 @@
       "unresolved_reason": null
     },
     "46C57810F646B91F": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:51:11.274581",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T06:43:05.499686",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "8EE5A8F3D8CAD1F3": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:53:08.799035",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T06:45:15.225554",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "E72DC1D6C5301F47": {
       "reset_date": "2026-10-22",
@@ -211,233 +205,244 @@
       "unresolved_reason": null
     },
     "5899855DAA167B36": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:55:07.922516",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T06:47:25.794408",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "5D14D66D5B6C7B8F": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T17:57:12.476966",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T06:49:36.945943",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "5429611A24A8F01A": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:50:26.284163",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T06:52:16.617467",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "856EB1365FA9D02E": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:51:28.131029",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T06:54:27.364280",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "F251D3D226496061": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:52:30.204487",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T06:56:37.197305",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "3D9A901755C3B2D8": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:05:23.432612",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T06:58:47.078438",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "86CD85689FAE9549": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:54:34.257585",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:00:57.142602",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "A32124B011061E03": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:09:31.044725",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:03:09.286838",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "63989CEF5D15F053": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:11:28.639964",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T07:05:19.503305",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "B0036841F0183A12": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:13:31.558613",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:07:35.094696",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "A6DA56D3C46DF31B": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:58:44.483638",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:09:45.082152",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "7E53CF9C948CED45": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-02T23:59:46.249170",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:11:54.876740",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "E796C81690AB75C0": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:19:42.127446",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:14:04.267959",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "F820398935D2C403": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:01:51.448433",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:16:20.149222",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "C3960960443AF932": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:02:52.953765",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:18:31.402654",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "2B50290C73E02027": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:25:49.154513",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:20:42.341438",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "188A50EA1ABE0765": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:27:51.881801",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:23:21.355133",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "4D1AA8C2C628E73F": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:06:00.682975",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:25:30.570912",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "B4BAE5FC4CACA8F7": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:32:11.307073",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:27:42.086496",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "8FC80EF0CC5B9D39": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:08:04.762657",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:29:52.698503",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "1956988E56026BA7": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:36:23.445285",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:32:11.028161",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "631FEB500E5C1EB7": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:38:31.565983",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:34:25.342386",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "6163D9F946C4BD48": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:11:10.950972",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
-    },
-    "B3ED965EAECB6F7C": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:42:39.447741",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:36:37.551010",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
+    },
+    "B3ED965EAECB6F7C": {
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:38:46.648717",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "4A8D19E91CCE94E6": {
       "reset_date": "2026-10-22",
@@ -449,13 +454,14 @@
       "unresolved_reason": null
     },
     "BB382E889AA37C4F": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:13:14.787416",
-      "last_run_label": "Promotional Check #2",
+      "last_full_attempt_at": "2026-11-03T07:40:58.992480",
+      "last_run_label": "Manual Run",
       "last_status": "Partial",
       "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "unresolved_reason": "At least one promotional claim was not confirmed by the portal",
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "2D29FA0DEE0A941B": {
       "reset_date": "2026-10-22",
@@ -476,23 +482,24 @@
       "unresolved_reason": null
     },
     "DA4C269DB53172C5": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:46:41.853242",
-      "last_run_label": "Promotional Check #1",
+      "last_full_attempt_at": "2026-11-03T07:43:09.008309",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "51001A5D6014F2DD": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:15:21.180224",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:45:19.855848",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "7F249D454D121DEF": {
       "reset_date": "2026-10-17",
@@ -504,43 +511,44 @@
       "unresolved_reason": null
     },
     "4443B75C454AEFF8": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:50:44.674229",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T07:47:40.556884",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "809109186A2962E4": {
-      "reset_date": "2026-11-02",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-03T00:17:26.425673",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more limited-time event reward claims could not be confirmed"
+      "reset_date": "2026-11-03",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-03T07:49:55.759366",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "90A110C58E410DDF": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-02T18:54:45.112237",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T07:52:08.133678",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     },
     "3F493D8C327FAF81": {
-      "reset_date": "2026-11-02",
+      "reset_date": "2026-11-03",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-03T00:20:38.032764",
-      "last_run_label": "Promotional Check #2",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-03T07:54:19.511761",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-02"
+      "standard_rewards_audited_reset": "2026-11-03"
     }
   }
 }
