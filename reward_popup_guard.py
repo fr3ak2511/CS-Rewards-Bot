@@ -10,9 +10,14 @@ remain blocked.
 A second, bounded settling check handles the portal's short-lived residual
 success-dialog wrapper after Continue has already been clicked. It never clicks
 that residue or treats a persistent/unknown blocker as clear.
+
+When a dialog cannot be safely dismissed, the guard now records a bounded,
+read-only inventory of visible control labels and attributes. This is
+diagnostic-only: it does not change which controls are eligible for dismissal.
 """
 from __future__ import annotations
 
+import json
 import re
 import time
 from typing import Callable
@@ -53,6 +58,41 @@ return {
   fullscreenOverlayClasses: overlays.map(el => String(el.className || '').slice(0, 180)),
   url: location.href
 };"""
+
+# Read-only diagnostic only. This selector deliberately includes labelled
+# non-button elements too, because some portals implement icon close controls
+# without a native <button>. Nothing returned by this script is clicked.
+_DIALOG_CONTROL_DIAGNOSTICS_JS = r"""/* REWARD_POPUP_DIALOG_CONTROLS_DIAGNOSTICS_V1 */
+const dialog = arguments[0];
+if (!dialog) return [];
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden'
+    && Number(s.opacity || '1') > 0 && s.pointerEvents !== 'none');
+};
+const selector = [
+  'button', '[role="button"]', 'a[href]',
+  'input[type="button"]', 'input[type="submit"]',
+  '[aria-label]', '[title]'
+].join(',');
+return Array.from(dialog.querySelectorAll(selector))
+  .filter(visible)
+  .slice(0, 12)
+  .map(el => ({
+    tag: String(el.tagName || '').toLowerCase(),
+    text: norm(el.innerText || el.value || el.textContent).slice(0, 72),
+    aria: norm(el.getAttribute('aria-label')).slice(0, 72),
+    title: norm(el.getAttribute('title')).slice(0, 72),
+    testid: norm(el.getAttribute('data-testid')).slice(0, 72),
+    variant: norm(el.getAttribute('data-variant')).slice(0, 48),
+    type: norm(el.getAttribute('type')).slice(0, 24),
+    role: norm(el.getAttribute('role')).slice(0, 24),
+    className: String(el.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+    disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true'
+  }));"""
 
 _CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_CLOSE_CONTROL_CHECK_V2 */
 const button = arguments[0], dialog = arguments[1];
@@ -150,6 +190,51 @@ def _inspect(driver) -> dict:
     return state
 
 
+def _visible_control_diagnostics(driver, dialogs, *, max_dialogs: int = 3) -> str:
+    """Return bounded metadata for visible controls; never click or mutate them."""
+    entries = []
+    for index, dialog in enumerate(dialogs[:max_dialogs], start=1):
+        if not _is_visible(dialog):
+            continue
+        try:
+            controls = driver.execute_script(_DIALOG_CONTROL_DIAGNOSTICS_JS, dialog)
+        except Exception as exc:
+            entries.append({
+                "dialog": index,
+                "diagnostic_error": type(exc).__name__,
+            })
+            continue
+
+        if not isinstance(controls, list):
+            entries.append({"dialog": index, "diagnostic_error": "invalid_result"})
+            continue
+
+        sanitized = []
+        for item in controls[:12]:
+            if not isinstance(item, dict):
+                continue
+            sanitized.append({
+                "tag": str(item.get("tag") or "")[:16],
+                "text": str(item.get("text") or "")[:72],
+                "aria": str(item.get("aria") or "")[:72],
+                "title": str(item.get("title") or "")[:72],
+                "testid": str(item.get("testid") or "")[:72],
+                "variant": str(item.get("variant") or "")[:48],
+                "type": str(item.get("type") or "")[:24],
+                "role": str(item.get("role") or "")[:24],
+                "className": str(item.get("className") or "")[:120],
+                "disabled": bool(item.get("disabled")),
+            })
+        entries.append({"dialog": index, "controls": sanitized})
+
+    if not entries:
+        return "visible_controls=none_or_unavailable"
+
+    serialized = json.dumps(entries, ensure_ascii=True, separators=(",", ":"))
+    # Keep a diagnostic comfortably below the workflow log/report field limits.
+    return "visible_controls=" + serialized[:2200]
+
+
 def _is_reward_success_residue(state: dict) -> bool:
     """Return true only for one residual, exact portal reward-success dialog.
 
@@ -217,6 +302,10 @@ def dismiss_all_safe_popups(
     dismissal is a native Selenium click followed by a visibility check.
     A narrowly recognised residual success-dialog wrapper is allowed only a
     bounded, click-free settling wait after a safe dialog has been dismissed.
+
+    If no safe close candidate exists, bounded control metadata is appended to
+    the failure reason for diagnosis. This metadata is read-only and does not
+    relax any safety condition.
     """
     dismissed = 0
     max_popups = max(1, min(12, int(max_popups)))
@@ -272,6 +361,7 @@ def dismiss_all_safe_popups(
                         ))
 
             if not candidates:
+                diagnostics = _visible_control_diagnostics(driver, dialogs)
                 # The portal can leave a short-lived, non-interactive wrapper
                 # for the just-dismissed "Your rewards! xN Continue" layer.
                 # Wait for that exact residue to disappear; never click it again.
@@ -283,16 +373,20 @@ def dismiss_all_safe_popups(
                         return True, f"clear_after_reward_transition; dismissed={dismissed}"
                     return False, (
                         "reward_success_dialog_did_not_settle; "
-                        f"dismissed={dismissed}; no additional click attempted"
+                        f"dismissed={dismissed}; {diagnostics}; no additional click attempted"
                     )
 
                 if overlay_count and not dialog_count:
-                    return False, f"unknown_fullscreen_overlay_blocks_page; dismissed={dismissed}"
+                    return False, (
+                        "unknown_fullscreen_overlay_blocks_page; "
+                        f"dismissed={dismissed}; {diagnostics}"
+                    )
                 summary = state.get("dialogSummaries") or []
                 description = summary[0].get("text", "")[:100] if summary else ""
                 return False, (
                     f"blocking_dialog_has_no_unambiguous_safe_close; dialogs={dialog_count}; "
-                    f"overlays={overlay_count}; top_dialog={description!r}; dismissed={dismissed}"
+                    f"overlays={overlay_count}; top_dialog={description!r}; "
+                    f"dismissed={dismissed}; {diagnostics}"
                 )
 
             # Only one close control should be topmost at its click point. Prefer
