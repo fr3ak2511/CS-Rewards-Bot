@@ -18,6 +18,7 @@ on:
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
       - '.github/workflows/halloween-closeout.yml'
+      - '.github/workflows/schedule.yml'
 
   pull_request:
     branches:
@@ -33,6 +34,7 @@ on:
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
       - '.github/workflows/halloween-closeout.yml'
+      - '.github/workflows/schedule.yml'
 
   workflow_dispatch:
 
