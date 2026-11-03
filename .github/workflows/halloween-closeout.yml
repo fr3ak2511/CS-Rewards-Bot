@@ -5,7 +5,7 @@ on:
     # Primary event-only sweep: 04-Nov-2026 11:00 PM IST.
     - cron: '30 17 4 11 *'
     # Backup/reconciliation sweep: 05-Nov-2026 12:30 AM IST.
-    - cron: '0 19 4 11 *'
+    - cron: '10 19 4 11 *'
     # Read-only finalizer: 05-Nov-2026 02:45 AM IST (15 minutes after expiry).
     - cron: '15 21 4 11 *'
 
