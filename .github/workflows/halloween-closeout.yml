@@ -1,10 +1,18 @@
 name: Halloween 2026 Event Closeout
 
 on:
+  schedule:
+    # Primary event-only sweep: 04-Nov-2026 11:00 PM IST.
+    - cron: '30 17 4 11 *'
+    # Backup/reconciliation sweep: 05-Nov-2026 12:30 AM IST.
+    - cron: '0 19 4 11 *'
+    # Read-only finalizer: 05-Nov-2026 02:45 AM IST (15 minutes after expiry).
+    - cron: '15 21 4 11 *'
+
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Choose a safe validation or explicit event closeout action'
+        description: 'Choose a safe validation or explicit live action'
         required: true
         type: choice
         options:
@@ -14,26 +22,154 @@ on:
           - finalize
         default: preflight
       player_id:
-        description: 'Optional player ID for read-only dry-run only'
+        description: 'Optional player ID for dry-run only; must already exist in players.csv'
         required: false
         type: string
       player_limit:
-        description: 'Maximum accounts for read-only dry-run (default 1)'
+        description: 'Maximum accounts for dry-run only (default 1)'
         required: false
         type: string
         default: '1'
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+# Share the normal claimer's lock so the two workflows never drive the same
+# account at the same time. A queued closeout is not allowed to cancel a claim run.
+concurrency:
+  group: rewards-claimer
+  cancel-in-progress: false
 
 jobs:
-  bootstrap-notice:
-    name: Safe launcher notice (default branch only)
-    if: github.ref == 'refs/heads/feature/halloween-event-rewards'
+  event-closeout:
+    name: Halloween event closeout
     runs-on: ubuntu-latest
+    timeout-minutes: 105
+    permissions:
+      contents: write
+      actions: read
+
     steps:
-      - name: Explain how to run the tested branch version
+      - name: Check out the selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install pinned dependencies
         run: |
-          echo "This default-branch workflow is only a safe launcher placeholder."
-          echo "No repository code was checked out, no browser was opened, and no reward claims were attempted."
-          echo "To test the Phase 1 implementation, select branch fix/halloween-event-closeout in the Run workflow branch dropdown."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Select safe execution mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+          MANUAL_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "schedule" ]]; then
+            # GitHub cron has no year field. This workflow is deliberately one-off
+            # for the 2026 Halloween event; fail closed in every other calendar year.
+            if [[ "$(date -u +%Y-%m-%d)" != "2026-11-04" ]]; then
+              MODE='skip'
+            else
+              case "$SCHEDULE_CRON" in
+                '30 17 4 11 *'|'0 19 4 11 *') MODE='sweep' ;;
+                '15 21 4 11 *') MODE='finalize' ;;
+                *) echo "Unknown Halloween closeout cron; fail closed."; exit 2 ;;
+              esac
+            fi
+          else
+            MODE="${MANUAL_MODE:-preflight}"
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "HALLOWEEN_CLOSEOUT_MODE=$MODE"
+
+      - name: Run event closeout
+        env:
+          SMTP_SERVER: smtp.gmail.com
+          SMTP_PORT: '465'
+          SMTP_USERNAME: ${{ secrets.SENDER_EMAIL }}
+          SMTP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.SENDER_EMAIL }}
+          SMTP_TO: ${{ secrets.RECIPIENT_EMAIL }}
+          CLOSEOUT_MODE: ${{ steps.mode.outputs.mode }}
+          TARGET_PLAYER_ID: ${{ inputs.player_id }}
+          PLAYER_LIMIT: ${{ inputs.player_limit }}
+        run: |
+          set -euo pipefail
+          case "$CLOSEOUT_MODE" in
+            skip)
+              echo "Halloween 2026 one-off schedule is not in its 2026 UTC execution window; no action taken."
+              ;;
+            preflight)
+              python event_closeout.py --mode preflight
+              ;;
+            dry-run)
+              args=(--mode dry-run --limit "${PLAYER_LIMIT:-1}")
+              if [[ -n "${TARGET_PLAYER_ID:-}" ]]; then args+=(--player-id "$TARGET_PLAYER_ID"); fi
+              python event_closeout.py "${args[@]}"
+              ;;
+            sweep)
+              python event_closeout.py --mode sweep
+              ;;
+            finalize)
+              python event_closeout.py --mode finalize
+              ;;
+            *) echo "Unsupported mode: $CLOSEOUT_MODE"; exit 2 ;;
+          esac
+
+      - name: Persist event closeout snapshots
+        if: always() && (steps.mode.outputs.mode == 'sweep' || steps.mode.outputs.mode == 'finalize')
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- claim_history.json
+          if git diff --cached --quiet; then
+            echo "No claim-history changes to persist."
+            exit 0
+          fi
+          git commit -m "bot: save Halloween closeout state [skip ci]"
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET_BRANCH"
+            if ! git rebase "origin/$TARGET_BRANCH"; then
+              git rebase --abort || true
+              echo "Could not safely rebase event closeout state."
+              exit 1
+            fi
+            if git push origin "HEAD:$TARGET_BRANCH"; then
+              echo "Saved closeout state to $TARGET_BRANCH."
+              exit 0
+            fi
+          done
+          echo "Could not persist closeout state after three attempts."
+          exit 1
+
+      - name: Upload closeout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: halloween-closeout-${{ github.run_id }}
+          path: |
+            run_artifacts/halloween_closeout_*.json
+            run_artifacts/halloween_closeout_*.html
+            debug_email.html
+          if-no-files-found: warn
+          retention-days: 30

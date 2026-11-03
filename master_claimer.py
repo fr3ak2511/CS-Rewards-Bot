@@ -1133,7 +1133,12 @@ def close_popup(driver):
     except:
         pass
 
-
+def _dismiss_store_promotion_popups(driver):
+    """Use the conservative shared guard before interacting with Store promotions."""
+    if not callable(getattr(driver, "execute_script", None)):
+        return False, "webdriver_popup_inspection_unavailable"
+    return dismiss_all_safe_popups(driver, log=log, max_popups=8, timeout=2.5)
+    
 def physical_click(driver, el, *, allow_js_fallback=True):
     """Scroll and click; callers may forbid the JavaScript fallback."""
     try:
@@ -1767,11 +1772,26 @@ def _same_promotion(candidate, expected):
 
 
 def discover_and_claim_promotions(driver, pid):
-    """Discover and claim every eligible non-daily promotional card on the live Store page.
+    """Discover and claim eligible Store promotions using fail-closed popup handling.
 
-    The stable physical_click helper and post-click portal verification are reused.
-    Old one-time reward_4 state does not suppress discovery of future promotions.
+    Every claim is preceded by a fresh safe-popup check. After a click, the same
+    guard must clear any resulting dialog before the portal state is inspected.
+    Promotion clicks never use the JavaScript fallback. An unknown popup stops
+    processing immediately so no later offer is clicked through an obstruction.
     """
+    popup_ok, popup_reason = _dismiss_store_promotion_popups(driver)
+    if not popup_ok:
+        log(f"⛔ Store promotions blocked by an unsafe popup; no promotion buttons clicked: {popup_reason}")
+        return [{
+            "key": "store-popup-blocked",
+            "title": "Store promotion popup",
+            "campaign_id": None,
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "claimable_observed": 0,
+            "error": popup_reason,
+        }]
+
     cards = discover_promotional_cards(driver)
     results = []
     for card in cards:
@@ -1796,7 +1816,16 @@ def discover_and_claim_promotions(driver, pid):
 
         confirmed = False
         click_failed = False
+        popup_blocked = False
         for attempt in range(2):
+            popup_ok, popup_reason = _dismiss_store_promotion_popups(driver)
+            if not popup_ok:
+                entry["status"] = "popup_blocked"
+                entry["error"] = popup_reason
+                popup_blocked = True
+                log(f"⛔ Store promotion blocked before click ({card['title']}): {popup_reason}")
+                break
+
             # Re-resolve the visible card/button immediately before clicking to avoid stale DOM references.
             current_cards = discover_promotional_cards(driver)
             current = next((x for x in current_cards if _same_promotion(x, card)), None)
@@ -1815,7 +1844,7 @@ def discover_and_claim_promotions(driver, pid):
                 confirmed = True
                 break
             try:
-                click_ok = physical_click(driver, button)
+                click_ok = physical_click(driver, button, allow_js_fallback=False)
             except Exception as exc:
                 log(f"⚠️ Promotion click attempt {attempt + 1} failed: {type(exc).__name__}")
                 click_ok = False
@@ -1824,9 +1853,16 @@ def discover_and_claim_promotions(driver, pid):
                 time.sleep(1)
                 continue
 
-            log(f"🎁 Promotion claim clicked via existing physical_click flow: {card['title']} (attempt {attempt + 1})")
+            log(f"🎁 Promotion claim clicked without JavaScript fallback: {card['title']} (attempt {attempt + 1})")
             time.sleep(2.5)
-            close_popup(driver)
+            popup_ok, popup_reason = _dismiss_store_promotion_popups(driver)
+            if not popup_ok:
+                entry["status"] = "popup_blocked"
+                entry["error"] = popup_reason
+                popup_blocked = True
+                log(f"⛔ Store promotion result could not be safely inspected ({card['title']}): {popup_reason}")
+                break
+
             time.sleep(1)
             after_cards = discover_promotional_cards(driver)
             after = next((x for x in after_cards if _same_promotion(x, card)), None)
@@ -1844,11 +1880,14 @@ def discover_and_claim_promotions(driver, pid):
             break
 
         if not confirmed:
-            entry["status"] = "claim_unconfirmed" if not click_failed else "click_failed"
+            if not popup_blocked:
+                entry["status"] = "claim_unconfirmed" if not click_failed else "click_failed"
             _record_promotion_history(pid, card, entry["status"])
         results.append(entry)
+        if popup_blocked:
+            log("⛔ Remaining Store promotions skipped because the popup guard did not establish a clear page")
+            break
     return results
-
 
 def _wait_for_store_daily_state(driver, reward_index, timeout=6.0, poll_interval=0.5):
     """Wait for a live Store card to become Claimed/on cooldown or remain Free."""
@@ -2601,7 +2640,8 @@ def process_player_promotions_only(pid, is_new, run_label):
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
         time.sleep(2)
-        close_popup(driver)
+        # discover_and_claim_promotions() performs the fail-closed popup check.
+        # Do not run the legacy generic close_popup() before that safety check.
         promotions = discover_and_claim_promotions(driver, pid)
         stats["promotions_observed"] = promotions
         if any(promo.get("status") == "claimed_this_run" for promo in promotions):
@@ -2616,8 +2656,10 @@ def process_player_promotions_only(pid, is_new, run_label):
         stats["store_temp_skipped"] = not bool(promotions)
         stats["store_temp_status"] = "not_found" if not promotions else "observed"
         stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
+        popup_blocked = any(promo.get("status") == "popup_blocked" for promo in promotions)
+        stats["promotion_popup_blocked"] = popup_blocked
         unconfirmed = any(
-            promo.get("status") in ("claim_unconfirmed", "click_failed", "available")
+            promo.get("status") in ("claim_unconfirmed", "click_failed", "available", "popup_blocked")
             for promo in promotions
         )
         if (stats["promotion_detection_failed"] or unconfirmed
@@ -2625,11 +2667,13 @@ def process_player_promotions_only(pid, is_new, run_label):
             stats["status"] = "Partial"
             stats["retry_required"] = True
             stats["fail_reason"] = (
-                "Dynamic promotional-card detection was inconclusive"
-                if stats["promotion_detection_failed"]
-                else ("At least one observed promotional claim was not confirmed by the portal"
-                      if unconfirmed or stats["store_temp"] < stats["possible"]
-                      else "One or more limited-time event reward claims could not be confirmed")
+                "A Store promotion popup could not be safely dismissed; remaining promotions were skipped"
+                if popup_blocked
+                else ("Dynamic promotional-card detection was inconclusive"
+                      if stats["promotion_detection_failed"]
+                      else ("At least one observed promotional claim was not confirmed by the portal"
+                            if unconfirmed or stats["store_temp"] < stats["possible"]
+                            else "One or more limited-time event reward claims could not be confirmed"))
             )
         elif stats["store_temp"] > 0 or stats["event_reward_claims"] > 0:
             stats["status"] = "Promotional / Event Claims Made"

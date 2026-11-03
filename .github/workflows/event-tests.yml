@@ -1,4 +1,3 @@
-
 name: Halloween and reward regression tests
 
 on:
@@ -7,7 +6,9 @@ on:
       - fix/halloween-popup-guard
       - feature/halloween-event-rewards
       - release/halloween-2026-production
+      - feature/halloween-closeout-integration
     paths:
+      - 'event_closeout.py'
       - 'event_rewards.py'
       - 'event_rewards_config.json'
       - 'master_claimer.py'
@@ -16,11 +17,13 @@ on:
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
+      - '.github/workflows/halloween-closeout.yml'
 
   pull_request:
     branches:
       - feature/halloween-event-rewards
     paths:
+      - 'event_closeout.py'
       - 'event_rewards.py'
       - 'event_rewards_config.json'
       - 'master_claimer.py'
@@ -29,6 +32,7 @@ on:
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
+      - '.github/workflows/halloween-closeout.yml'
 
   workflow_dispatch:
 
