@@ -1,24 +1,24 @@
 {
   "E1E9729A4885E6D9": {
     "daily": {
-      "last_claim": "2026-11-03T07:56:08.277265",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T06:30:11.786275",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:56:30.810281",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:30:34.446875",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:56:33.510595",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:30:37.118870",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:56:36.267426",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:30:39.770415",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -28,10 +28,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T17:46:32.929149",
+      "last_claim": "2026-11-04T06:31:11.063138",
       "last_count": 1,
-      "last_visit": "2026-11-03T07:57:04.019009",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:31:11.063138",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -44,28 +44,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.181948"
+        "last_seen_at": "2026-11-04T06:30:45.707269"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.194194"
+        "last_seen_at": "2026-11-04T06:30:45.724834"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.124671"
+        "last_seen_at": "2026-11-04T06:30:40.360949"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.206346"
+        "last_seen_at": "2026-11-04T06:30:45.740432"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -86,22 +86,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.136311"
+        "last_seen_at": "2026-11-04T06:30:40.380414"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:38:14.148983"
+        "last_seen_at": "2026-11-04T06:30:40.402906"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:38:14.170018",
-        "last_claim": "2026-11-03T07:56:40.944567",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:30:45.687287",
+        "last_claim": "2026-11-04T06:30:45.687287",
         "portal_observed_at": "2026-11-03T21:38:14.170018"
       }
     },
@@ -111,8 +111,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:38:33.851671",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:31:47.587292",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -291,29 +291,25 @@
   },
   "4DC0E2AA7130D7E6": {
     "daily": {
-      "last_claim": "2026-11-03T06:39:22.244106",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T17:57:12.984201"
+      "last_claim": "2026-11-04T06:32:27.850794",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:39:43.811402",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T17:57:33.032665"
+        "last_claim": "2026-11-04T06:32:50.420351",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:39:46.418395",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T17:57:33.072760"
+        "last_claim": "2026-11-04T06:32:53.028414",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:39:48.969957",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T17:57:33.124978"
+        "last_claim": "2026-11-04T06:32:56.628008",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -323,10 +319,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T17:48:35.009601",
+      "last_claim": "2026-11-04T06:33:28.271580",
       "last_count": 1,
-      "last_visit": "2026-11-03T17:57:53.548912",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:33:28.271580",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -339,28 +335,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.718410"
+        "last_seen_at": "2026-11-04T06:33:02.772276"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.816648"
+        "last_seen_at": "2026-11-04T06:33:02.790131"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.228713"
+        "last_seen_at": "2026-11-04T06:32:57.499914"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.927791"
+        "last_seen_at": "2026-11-04T06:33:02.808129"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -381,23 +377,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.315862"
+        "last_seen_at": "2026-11-04T06:32:57.516274"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:39:15.495969"
+        "last_seen_at": "2026-11-04T06:32:57.531604"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:39:15.606575",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:33:02.753886",
         "portal_observed_at": "2026-11-03T21:39:15.606575",
-        "last_claim": "2026-11-03T06:39:53.589607"
+        "last_claim": "2026-11-04T06:33:02.753886"
       }
     },
     "event_rewards": {
@@ -406,8 +402,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:39:35.761520",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:34:04.516413",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -696,29 +692,25 @@
   },
   "46C57810F646B91F": {
     "daily": {
-      "last_claim": "2026-11-03T06:41:34.187547",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:13:18.458214"
+      "last_claim": "2026-11-04T06:34:45.341848",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:41:55.723574",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:13:38.323093"
+        "last_claim": "2026-11-04T06:35:07.963388",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:41:59.270609",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:13:38.357649"
+        "last_claim": "2026-11-04T06:35:10.553697",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:42:01.806792",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:13:38.402336"
+        "last_claim": "2026-11-04T06:35:13.247030",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:02:25.341777",
@@ -727,11 +719,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-01T05:57:39.448779",
+      "last_claim": "2026-11-04T06:35:40.822843",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:13:58.586310",
-      "status": "checked_no_claimable_reward",
-      "last_unconfirmed_at": "2026-11-02T08:10:47.569204"
+      "last_visit": "2026-11-04T06:35:40.822843",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -811,7 +802,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:14:35.154056",
+        "checked_at": "2026-11-04T06:36:17.240552",
         "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
@@ -984,29 +975,25 @@
   },
   "8EE5A8F3D8CAD1F3": {
     "daily": {
-      "last_claim": "2026-11-03T06:43:44.899583",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:15:14.861092"
+      "last_claim": "2026-11-04T06:36:58.122339",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:44:06.414803",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:15:34.769496"
+        "last_claim": "2026-11-04T06:37:20.687429",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:44:08.957473",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:15:34.804675"
+        "last_claim": "2026-11-04T06:37:23.541576",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:44:11.520716",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:15:34.834087"
+        "last_claim": "2026-11-04T06:37:27.895385",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:04:54.791047",
@@ -1015,11 +1002,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-01T06:00:30.136060",
+      "last_claim": "2026-11-04T06:37:57.653593",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:15:55.306138",
-      "status": "checked_no_claimable_reward",
-      "last_unconfirmed_at": "2026-11-02T08:13:16.574771"
+      "last_visit": "2026-11-04T06:37:57.653593",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -1046,7 +1032,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:15:34.864857"
+        "last_seen_at": "2026-11-04T06:37:27.939245"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
@@ -1074,21 +1060,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:15:34.878197"
+        "last_seen_at": "2026-11-04T06:37:27.963795"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:15:34.891595"
+        "last_seen_at": "2026-11-04T06:37:27.987755"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:15:34.904543",
+        "status": "popup_blocked",
+        "last_seen_at": "2026-11-04T06:37:32.179324",
         "last_claim": "2026-11-03T06:44:16.050950",
         "portal_observed_at": "2026-11-03T22:15:34.904543"
       }
@@ -1099,8 +1085,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:16:31.814379",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:38:34.042319",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -1382,29 +1368,25 @@
   },
   "5899855DAA167B36": {
     "daily": {
-      "last_claim": "2026-11-03T06:45:54.969206",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T18:01:10.048097"
+      "last_claim": "2026-11-04T06:39:14.932417",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:46:16.712926",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:01:30.129951"
+        "last_claim": "2026-11-04T06:39:37.551198",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:46:19.341600",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:01:30.169083"
+        "last_claim": "2026-11-04T06:39:40.154062",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:46:21.883468",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:01:30.220221"
+        "last_claim": "2026-11-04T06:39:42.876217",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:09:54.276704",
@@ -1413,11 +1395,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-01T06:03:21.598235",
+      "last_claim": "2026-11-04T06:40:14.479209",
       "last_count": 1,
-      "last_visit": "2026-11-03T18:01:50.768007",
-      "status": "checked_no_claimable_reward",
-      "last_unconfirmed_at": "2026-11-02T08:15:45.087993"
+      "last_visit": "2026-11-04T06:40:14.479209",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -1430,28 +1411,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.300279"
+        "last_seen_at": "2026-11-04T06:39:48.726686"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.312263"
+        "last_seen_at": "2026-11-04T06:39:48.743740"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.252181"
+        "last_seen_at": "2026-11-04T06:39:43.424658"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.323852"
+        "last_seen_at": "2026-11-04T06:39:48.760249"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1472,22 +1453,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.264308"
+        "last_seen_at": "2026-11-04T06:39:43.449740"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:42:16.275859"
+        "last_seen_at": "2026-11-04T06:39:43.475896"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:42:16.287714",
-        "last_claim": "2026-11-03T06:46:26.489428",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:39:48.701704",
+        "last_claim": "2026-11-04T06:39:48.701704",
         "portal_observed_at": "2026-11-03T21:42:16.287714"
       }
     },
@@ -1497,8 +1478,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:42:35.875837",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:40:50.764409",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -1655,29 +1636,25 @@
   },
   "5D14D66D5B6C7B8F": {
     "daily": {
-      "last_claim": "2026-11-03T06:48:05.749802",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:17:12.301126"
+      "last_claim": "2026-11-04T06:41:31.174640",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:48:27.791916",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:17:32.170723"
+        "last_claim": "2026-11-04T06:41:53.839440",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:48:30.300709",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:17:32.207269"
+        "last_claim": "2026-11-04T06:41:56.440975",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:48:32.803658",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:17:32.236574"
+        "last_claim": "2026-11-04T06:41:59.235021",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:12:23.995407",
@@ -1686,10 +1663,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T17:56:33.355105",
+      "last_claim": "2026-11-04T06:42:31.057895",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:17:52.379587",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:42:31.057895",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -1702,28 +1679,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.319702"
+        "last_seen_at": "2026-11-04T06:42:05.178822"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.336183"
+        "last_seen_at": "2026-11-04T06:42:05.195480"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.268027"
+        "last_seen_at": "2026-11-04T06:41:59.828315"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.348661"
+        "last_seen_at": "2026-11-04T06:42:05.211887"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1744,22 +1721,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.280672"
+        "last_seen_at": "2026-11-04T06:41:59.850697"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:17:32.293279"
+        "last_seen_at": "2026-11-04T06:41:59.873261"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:17:32.306586",
-        "last_claim": "2026-11-03T06:48:37.394501",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:42:05.161848",
+        "last_claim": "2026-11-04T06:42:05.161848",
         "portal_observed_at": "2026-11-03T22:17:32.306586"
       }
     },
@@ -1769,8 +1746,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:18:29.122165",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:43:07.380238",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -1949,29 +1926,25 @@
   },
   "5429611A24A8F01A": {
     "daily": {
-      "last_claim": "2026-11-03T06:50:16.456247",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:19:09.259635"
+      "last_claim": "2026-11-04T06:43:48.321077",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:50:39.564087",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:19:28.876683"
+        "last_claim": "2026-11-04T06:44:10.986513",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:51:10.407257",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:19:28.912064"
+        "last_claim": "2026-11-04T06:44:13.606950",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:51:12.967344",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:19:28.990513"
+        "last_claim": "2026-11-04T06:44:16.236647",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:14:53.557593",
@@ -1980,10 +1953,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T17:58:36.247222",
+      "last_claim": "2026-11-04T06:44:48.251857",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:19:49.259873",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:44:48.251857",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -1996,35 +1969,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.061469"
+        "last_seen_at": "2026-11-04T06:44:16.869627"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.088437"
+        "last_seen_at": "2026-11-04T06:44:22.205437"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.102737"
+        "last_seen_at": "2026-11-04T06:44:22.226373"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.021901"
+        "last_seen_at": "2026-11-04T06:44:16.812102"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.117012"
+        "last_seen_at": "2026-11-04T06:44:22.246138"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2045,22 +2018,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.035109"
+        "last_seen_at": "2026-11-04T06:44:16.834495"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:19:29.048407"
+        "last_seen_at": "2026-11-04T06:44:16.853735"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:19:29.075067",
-        "last_claim": "2026-11-03T06:51:17.501608",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:44:22.185666",
+        "last_claim": "2026-11-04T06:44:22.185666",
         "portal_observed_at": "2026-11-03T22:19:29.075067"
       }
     },
@@ -2070,8 +2043,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:20:26.154188",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:45:24.802333",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -2250,29 +2223,25 @@
   },
   "856EB1365FA9D02E": {
     "daily": {
-      "last_claim": "2026-11-03T06:52:56.080396",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:21:06.084607"
+      "last_claim": "2026-11-04T06:46:07.237978",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:53:17.504672",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:21:25.696114"
+        "last_claim": "2026-11-04T06:46:29.782092",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:53:20.195579",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:21:25.741743"
+        "last_claim": "2026-11-04T06:46:32.358574",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:53:22.724737",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:21:25.771076"
+        "last_claim": "2026-11-04T06:46:35.601437",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:17:23.269057",
@@ -2281,10 +2250,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:00:39.887962",
+      "last_claim": "2026-11-04T06:47:07.099415",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:21:45.989875",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:47:07.099415",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -2297,28 +2266,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.887480"
+        "last_seen_at": "2026-11-04T06:46:40.793655"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.900330"
+        "last_seen_at": "2026-11-04T06:46:40.816501"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.804696"
+        "last_seen_at": "2026-11-04T06:46:35.648155"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.912967"
+        "last_seen_at": "2026-11-04T06:46:40.831746"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2339,22 +2308,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.847377"
+        "last_seen_at": "2026-11-04T06:46:35.663953"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:21:25.861310"
+        "last_seen_at": "2026-11-04T06:46:35.680145"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:21:25.874236",
-        "last_claim": "2026-11-03T06:53:27.337549",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:46:40.774466",
+        "last_claim": "2026-11-04T06:46:40.774466",
         "portal_observed_at": "2026-11-03T22:21:25.874236"
       }
     },
@@ -2364,8 +2333,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:22:22.499170",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:47:43.347233",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -2544,29 +2513,25 @@
   },
   "F251D3D226496061": {
     "daily": {
-      "last_claim": "2026-11-03T06:55:06.950315",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:23:02.552399"
+      "last_claim": "2026-11-04T06:48:23.892643",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:55:28.271615",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:23:22.259357"
+        "last_claim": "2026-11-04T06:48:46.537187",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:55:30.816667",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:23:22.293021"
+        "last_claim": "2026-11-04T06:48:49.170095",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:55:33.428066",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:23:22.333614"
+        "last_claim": "2026-11-04T06:48:51.812647",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:19:54.019943",
@@ -2575,10 +2540,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:02:42.883973",
+      "last_claim": "2026-11-04T06:49:24.042766",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:23:42.731216",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:49:24.042766",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -2591,28 +2556,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.519019"
+        "last_seen_at": "2026-11-04T06:48:57.984620"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.531548"
+        "last_seen_at": "2026-11-04T06:48:58.000799"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.364067"
+        "last_seen_at": "2026-11-04T06:48:52.490699"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.544614"
+        "last_seen_at": "2026-11-04T06:48:58.016951"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2633,22 +2598,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.435254"
+        "last_seen_at": "2026-11-04T06:48:52.507275"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:23:22.447604"
+        "last_seen_at": "2026-11-04T06:48:52.523613"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:23:22.461589",
-        "last_claim": "2026-11-03T06:55:37.979317",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:48:57.968065",
+        "last_claim": "2026-11-04T06:48:57.968065",
         "portal_observed_at": "2026-11-03T22:23:22.461589"
       }
     },
@@ -2658,8 +2623,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:24:19.412485",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:50:00.344869",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -2838,24 +2803,24 @@
   },
   "3D9A901755C3B2D8": {
     "daily": {
-      "last_claim": "2026-11-03T06:57:16.717455",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T06:50:42.342226",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:57:38.045822",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:51:05.054577",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:57:40.593227",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:51:07.836407",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:57:43.115324",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T06:51:10.495318",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -2865,10 +2830,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:04:45.496901",
+      "last_claim": "2026-11-04T06:51:41.964168",
       "last_count": 1,
-      "last_visit": "2026-11-03T06:58:10.554751",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:51:41.964168",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -2881,28 +2846,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.747984"
+        "last_seen_at": "2026-11-04T06:51:16.414614"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.761870"
+        "last_seen_at": "2026-11-04T06:51:16.434668"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.697155"
+        "last_seen_at": "2026-11-04T06:51:11.117684"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.775613"
+        "last_seen_at": "2026-11-04T06:51:16.454572"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2923,22 +2888,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.710977"
+        "last_seen_at": "2026-11-04T06:51:11.138497"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:47:20.724371"
+        "last_seen_at": "2026-11-04T06:51:11.162459"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:47:20.736345",
-        "last_claim": "2026-11-03T06:57:47.700648",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:51:16.397768",
+        "last_claim": "2026-11-04T06:51:16.397768",
         "portal_observed_at": "2026-11-03T21:47:20.736345"
       }
     },
@@ -2948,8 +2913,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:47:40.464828",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:52:18.341383",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -3128,29 +3093,25 @@
   },
   "86CD85689FAE9549": {
     "daily": {
-      "last_claim": "2026-11-03T06:59:26.640140",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:24:59.265913"
+      "last_claim": "2026-11-04T06:52:58.982192",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T06:59:48.111630",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:25:19.190122"
+        "last_claim": "2026-11-04T06:53:21.555985",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T06:59:50.755926",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:25:19.229627"
+        "last_claim": "2026-11-04T06:53:24.265645",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T06:59:53.354733",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:25:19.261405"
+        "last_claim": "2026-11-04T06:53:27.007942",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:24:54.793662",
@@ -3159,10 +3120,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:06:46.896334",
+      "last_claim": "2026-11-04T06:53:53.043483",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:25:39.434492",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:53:53.043483",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -3243,7 +3204,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:26:15.721170",
+        "checked_at": "2026-11-04T06:54:29.479023",
         "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
@@ -3423,29 +3384,25 @@
   },
   "A32124B011061E03": {
     "daily": {
-      "last_claim": "2026-11-03T07:01:36.262274",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:26:55.485096"
+      "last_claim": "2026-11-04T06:55:09.830228",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:01:57.665784",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:27:15.221237"
+        "last_claim": "2026-11-04T06:55:32.353783",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:02:00.180077",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:27:15.252854"
+        "last_claim": "2026-11-04T06:55:34.945422",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:02:02.767688",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:27:15.284766"
+        "last_claim": "2026-11-04T06:55:37.556950",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -3455,10 +3412,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:08:49.128421",
+      "last_claim": "2026-11-04T06:56:09.161592",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:27:35.704025",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T06:56:09.161592",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -3472,28 +3429,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.479649"
+        "last_seen_at": "2026-11-04T06:55:43.363941"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.492861"
+        "last_seen_at": "2026-11-04T06:55:43.381827"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.357686"
+        "last_seen_at": "2026-11-04T06:55:38.097277"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.506162"
+        "last_seen_at": "2026-11-04T06:55:43.397868"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3514,22 +3471,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.372385"
+        "last_seen_at": "2026-11-04T06:55:38.117126"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:27:15.387260"
+        "last_seen_at": "2026-11-04T06:55:38.133024"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:27:15.465731",
-        "last_claim": "2026-11-03T07:02:07.345726",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:55:43.343511",
+        "last_claim": "2026-11-04T06:55:43.343511",
         "portal_observed_at": "2026-11-03T22:27:15.465731"
       }
     },
@@ -3539,8 +3496,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:28:12.311984",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:56:45.461147",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -3719,29 +3676,25 @@
   },
   "63989CEF5D15F053": {
     "daily": {
-      "last_claim": "2026-11-03T07:03:48.836880",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:28:52.253277"
+      "last_claim": "2026-11-04T06:57:25.920762",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:04:10.593188",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:29:12.219148"
+        "last_claim": "2026-11-04T06:57:48.499937",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:04:13.172421",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:29:12.253086"
+        "last_claim": "2026-11-04T06:57:52.375674",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:04:15.808371",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:29:12.286398"
+        "last_claim": "2026-11-04T06:57:55.080452",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:29:37.762266",
@@ -3750,11 +3703,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-01T06:26:03.070543",
+      "last_claim": "2026-11-04T06:58:26.220785",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:29:32.537451",
-      "status": "checked_no_claimable_reward",
-      "last_unconfirmed_at": "2026-11-02T08:35:38.922226"
+      "last_visit": "2026-11-04T06:58:26.220785",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -3768,28 +3720,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.369404"
+        "last_seen_at": "2026-11-04T06:58:00.829090"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.382998"
+        "last_seen_at": "2026-11-04T06:58:00.851889"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.317922"
+        "last_seen_at": "2026-11-04T06:57:55.570056"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.397088"
+        "last_seen_at": "2026-11-04T06:58:00.867580"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3810,22 +3762,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.331076"
+        "last_seen_at": "2026-11-04T06:57:55.589211"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:29:12.344106"
+        "last_seen_at": "2026-11-04T06:57:55.608169"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:29:12.357264",
-        "last_claim": "2026-11-03T07:04:20.372295",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T06:58:00.805191",
+        "last_claim": "2026-11-04T06:58:00.805191",
         "portal_observed_at": "2026-11-03T22:29:12.357264"
       }
     },
@@ -3835,8 +3787,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:30:09.073338",
-        "balance": 1400,
+        "checked_at": "2026-11-04T06:59:02.658336",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -3993,29 +3945,25 @@
   },
   "B0036841F0183A12": {
     "daily": {
-      "last_claim": "2026-11-03T07:05:58.830250",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:30:49.480617"
+      "last_claim": "2026-11-04T06:59:43.670508",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:06:20.380827",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:31:09.498671"
+        "last_claim": "2026-11-04T07:00:06.291730",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:06:22.919794",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:31:09.539431"
+        "last_claim": "2026-11-04T07:00:08.901101",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:06:25.796964",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:31:09.568352"
+        "last_claim": "2026-11-04T07:00:11.573968",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:32:07.844383",
@@ -4024,10 +3972,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:12:52.402277",
+      "last_claim": "2026-11-04T07:00:42.965183",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:31:30.600595",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:00:42.965183",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -4041,28 +3989,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:09.655126"
+        "last_seen_at": "2026-11-04T07:00:17.415521"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:09.668157"
+        "last_seen_at": "2026-11-04T07:00:17.434002"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:09.599441"
+        "last_seen_at": "2026-11-04T07:00:12.121866"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:10.104280"
+        "last_seen_at": "2026-11-04T07:00:17.453690"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4083,22 +4031,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:09.614143"
+        "last_seen_at": "2026-11-04T07:00:12.138408"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:31:09.627698"
+        "last_seen_at": "2026-11-04T07:00:12.153962"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:31:09.642145",
-        "last_claim": "2026-11-03T07:06:35.750444",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:00:17.392724",
+        "last_claim": "2026-11-04T07:00:17.392724",
         "portal_observed_at": "2026-11-03T22:31:09.642145"
       }
     },
@@ -4108,8 +4056,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:32:07.185327",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:01:19.388422",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -4288,29 +4236,25 @@
   },
   "A6DA56D3C46DF31B": {
     "daily": {
-      "last_claim": "2026-11-03T07:08:14.758043",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:32:46.954142"
+      "last_claim": "2026-11-04T07:02:00.428141",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:08:36.191027",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:33:06.626132"
+        "last_claim": "2026-11-04T07:02:23.037961",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:08:38.726848",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:33:06.664179"
+        "last_claim": "2026-11-04T07:02:25.641200",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:08:41.305561",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:33:06.691842"
+        "last_claim": "2026-11-04T07:02:28.397386",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -4320,10 +4264,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:14:54.911620",
+      "last_claim": "2026-11-04T07:02:59.816232",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:33:26.946788",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:02:59.816232",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -4337,28 +4281,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.775936"
+        "last_seen_at": "2026-11-04T07:02:34.395037"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.789076"
+        "last_seen_at": "2026-11-04T07:02:34.415960"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.722588"
+        "last_seen_at": "2026-11-04T07:02:29.000427"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.802392"
+        "last_seen_at": "2026-11-04T07:02:34.443086"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4379,23 +4323,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.736368"
+        "last_seen_at": "2026-11-04T07:02:29.016670"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:33:06.750391"
+        "last_seen_at": "2026-11-04T07:02:29.032207"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:33:06.763554",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:02:34.376064",
         "portal_observed_at": "2026-11-03T22:33:06.763554",
-        "last_claim": "2026-11-03T07:08:45.871001"
+        "last_claim": "2026-11-04T07:02:34.376064"
       }
     },
     "event_rewards": {
@@ -4404,8 +4348,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:34:03.473652",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:03:37.198039",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -4584,24 +4528,24 @@
   },
   "7E53CF9C948CED45": {
     "daily": {
-      "last_claim": "2026-11-03T07:10:24.699990",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T07:04:18.090159",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:10:46.063740",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:04:40.759004",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:10:48.673221",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:04:43.490340",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:10:51.224216",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:04:46.268969",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -4611,10 +4555,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:17:01.175728",
+      "last_claim": "2026-11-04T07:05:17.542014",
       "last_count": 1,
-      "last_visit": "2026-11-03T07:11:18.572522",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:05:17.542014",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": "2026-04-24T09:22:58.732699",
@@ -4628,28 +4572,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.178408"
+        "last_seen_at": "2026-11-04T07:04:52.036221"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.191096"
+        "last_seen_at": "2026-11-04T07:04:52.060188"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.127219"
+        "last_seen_at": "2026-11-04T07:04:46.784617"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.307558"
+        "last_seen_at": "2026-11-04T07:04:52.083116"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4670,22 +4614,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.140308"
+        "last_seen_at": "2026-11-04T07:04:46.800832"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:52:33.152448"
+        "last_seen_at": "2026-11-04T07:04:46.816936"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:52:33.165368",
-        "last_claim": "2026-11-03T07:10:55.793177",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:04:52.011771",
+        "last_claim": "2026-11-04T07:04:52.011771",
         "portal_observed_at": "2026-11-03T21:52:33.165368"
       }
     },
@@ -4695,8 +4639,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:52:52.922064",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:05:53.936500",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -4875,29 +4819,25 @@
   },
   "E796C81690AB75C0": {
     "daily": {
-      "last_claim": "2026-11-03T07:12:34.117047",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:34:42.911134"
+      "last_claim": "2026-11-04T07:06:34.627090",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:12:55.576178",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:35:02.837126"
+        "last_claim": "2026-11-04T07:06:57.242695",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:12:58.102212",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:35:02.874967"
+        "last_claim": "2026-11-04T07:06:59.974939",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:13:00.664153",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:35:02.904793"
+        "last_claim": "2026-11-04T07:07:02.813436",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:39:35.063517",
@@ -4906,10 +4846,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:19:03.281527",
+      "last_claim": "2026-11-04T07:07:28.779436",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:35:23.149379",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:07:28.779436",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": "2026-04-14T06:05:26.460179",
@@ -4990,7 +4930,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:35:59.834520",
+        "checked_at": "2026-11-04T07:08:05.374268",
         "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
@@ -5170,31 +5110,27 @@
   },
   "F820398935D2C403": {
     "daily": {
-      "last_claim": "2026-11-03T07:14:48.348357",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
+      "last_claim": "2026-11-04T07:08:46.329322",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-02T07:17:27.387305",
-      "unconfirmed_attempts": 1,
-      "portal_observed_at": "2026-11-03T22:36:39.525677"
+      "unconfirmed_attempts": 1
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:15:09.777804",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:36:59.260711"
+        "last_claim": "2026-11-04T07:09:09.066506",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:15:12.351511",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:36:59.301618"
+        "last_claim": "2026-11-04T07:09:11.765726",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:15:14.841210",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:36:59.410519"
+        "last_claim": "2026-11-04T07:09:14.374930",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:42:05.425122",
@@ -5203,10 +5139,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:21:05.329202",
+      "last_claim": "2026-11-04T07:09:45.840739",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:37:19.797527",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:09:45.840739",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -5220,28 +5156,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.645435"
+        "last_seen_at": "2026-11-04T07:09:20.294892"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.658797"
+        "last_seen_at": "2026-11-04T07:09:20.310815"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.444141"
+        "last_seen_at": "2026-11-04T07:09:14.987681"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.672419"
+        "last_seen_at": "2026-11-04T07:09:20.326476"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5262,22 +5198,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.457742"
+        "last_seen_at": "2026-11-04T07:09:15.011980"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:36:59.583390"
+        "last_seen_at": "2026-11-04T07:09:15.036140"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:36:59.598833",
-        "last_claim": "2026-11-03T07:15:19.366834",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:09:20.278025",
+        "last_claim": "2026-11-04T07:09:20.278025",
         "portal_observed_at": "2026-11-03T22:36:59.598833"
       }
     },
@@ -5287,8 +5223,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:37:56.560101",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:10:22.448795",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -5467,29 +5403,25 @@
   },
   "C3960960443AF932": {
     "daily": {
-      "last_claim": "2026-11-03T07:16:59.465582",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:38:36.390498"
+      "last_claim": "2026-11-04T07:11:03.133338",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:17:20.996775",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:38:56.465705"
+        "last_claim": "2026-11-04T07:11:25.814756",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:17:25.092351",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:38:56.498838"
+        "last_claim": "2026-11-04T07:11:28.448740",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:17:27.656624",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:38:56.622103"
+        "last_claim": "2026-11-04T07:11:31.427616",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:44:35.833798",
@@ -5498,10 +5430,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:23:07.889205",
+      "last_claim": "2026-11-04T07:12:03.623144",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:39:17.850012",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:12:03.623144",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -5515,28 +5447,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.704171"
+        "last_seen_at": "2026-11-04T07:11:37.367098"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.717021"
+        "last_seen_at": "2026-11-04T07:11:37.385212"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.652449"
+        "last_seen_at": "2026-11-04T07:11:32.035439"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.729065"
+        "last_seen_at": "2026-11-04T07:11:37.403443"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5557,22 +5489,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.665363"
+        "last_seen_at": "2026-11-04T07:11:32.059247"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:38:56.678399"
+        "last_seen_at": "2026-11-04T07:11:32.078765"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:38:56.691029",
-        "last_claim": "2026-11-03T07:17:32.195244",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:11:37.347785",
+        "last_claim": "2026-11-04T07:11:37.347785",
         "portal_observed_at": "2026-11-03T22:38:56.691029"
       }
     },
@@ -5582,8 +5514,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:39:54.455966",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:12:40.060095",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -5762,29 +5694,25 @@
   },
   "2B50290C73E02027": {
     "daily": {
-      "last_claim": "2026-11-03T07:19:11.291753",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T18:13:01.446329"
+      "last_claim": "2026-11-04T07:13:20.615107",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:19:32.807842",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:13:21.688949"
+        "last_claim": "2026-11-04T07:13:46.642116",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:19:35.891248",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:13:21.736841"
+        "last_claim": "2026-11-04T07:14:18.598737",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:19:38.435483",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T18:13:21.775975"
+        "last_claim": "2026-11-04T07:14:21.187834",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:47:06.604338",
@@ -5793,10 +5721,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:25:09.822655",
+      "last_claim": "2026-11-04T07:14:52.819466",
       "last_count": 1,
-      "last_visit": "2026-11-03T18:13:42.198012",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:14:52.819466",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -5810,35 +5738,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.268206"
+        "last_seen_at": "2026-11-04T07:14:21.849417"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.293267"
+        "last_seen_at": "2026-11-04T07:14:27.229180"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.305410"
+        "last_seen_at": "2026-11-04T07:14:27.253273"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.231026"
+        "last_seen_at": "2026-11-04T07:14:21.791568"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.328733"
+        "last_seen_at": "2026-11-04T07:14:27.278009"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5859,22 +5787,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.243721"
+        "last_seen_at": "2026-11-04T07:14:21.812946"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:56:32.255748"
+        "last_seen_at": "2026-11-04T07:14:21.831293"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:56:32.281063",
-        "last_claim": "2026-11-03T07:19:43.011412",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:14:27.203754",
+        "last_claim": "2026-11-04T07:14:27.203754",
         "portal_observed_at": "2026-11-03T21:56:32.281063"
       }
     },
@@ -5884,8 +5812,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:56:52.281058",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:15:29.285555",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -6064,29 +5992,25 @@
   },
   "188A50EA1ABE0765": {
     "daily": {
-      "last_claim": "2026-11-03T07:21:21.497201",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:40:33.848039"
+      "last_claim": "2026-11-04T07:16:09.755507",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:21:43.123888",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:40:53.706621"
+        "last_claim": "2026-11-04T07:16:33.161584",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:21:47.071507",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:40:53.745024"
+        "last_claim": "2026-11-04T07:17:05.246960",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:22:17.811556",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:40:53.773617"
+        "last_claim": "2026-11-04T07:17:07.888225",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:49:36.238475",
@@ -6095,10 +6019,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:27:12.858876",
+      "last_claim": "2026-11-04T07:17:39.390460",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:41:13.931044",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:17:39.390460",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -6112,35 +6036,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.848766"
+        "last_seen_at": "2026-11-04T07:17:08.517373"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.875819"
+        "last_seen_at": "2026-11-04T07:17:13.830341"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.888914"
+        "last_seen_at": "2026-11-04T07:17:13.846065"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.806100"
+        "last_seen_at": "2026-11-04T07:17:08.464505"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.901611"
+        "last_seen_at": "2026-11-04T07:17:13.861861"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6161,22 +6085,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.819815"
+        "last_seen_at": "2026-11-04T07:17:08.482310"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:40:53.834331"
+        "last_seen_at": "2026-11-04T07:17:08.500196"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:40:53.862366",
-        "last_claim": "2026-11-03T07:22:22.347965",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:17:13.814289",
+        "last_claim": "2026-11-04T07:17:13.814289",
         "portal_observed_at": "2026-11-03T22:40:53.862366"
       }
     },
@@ -6186,8 +6110,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:41:50.486582",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:18:15.676257",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -6366,29 +6290,25 @@
   },
   "4D1AA8C2C628E73F": {
     "daily": {
-      "last_claim": "2026-11-03T07:24:00.435756",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:42:30.244285"
+      "last_claim": "2026-11-04T07:18:59.848489",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:24:21.841365",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:42:49.856818"
+        "last_claim": "2026-11-04T07:19:22.559033",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:24:24.354309",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:42:49.897454"
+        "last_claim": "2026-11-04T07:19:25.194366",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:24:26.851268",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:42:49.928005"
+        "last_claim": "2026-11-04T07:19:27.956256",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:52:06.271825",
@@ -6397,10 +6317,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:29:14.685958",
+      "last_claim": "2026-11-04T07:19:59.445600",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:43:10.269750",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:19:59.445600",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -6414,35 +6334,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:49.997536"
+        "last_seen_at": "2026-11-04T07:19:28.613417"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:50.025024"
+        "last_seen_at": "2026-11-04T07:19:33.936028"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:50.038038"
+        "last_seen_at": "2026-11-04T07:19:33.953736"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:49.959467"
+        "last_seen_at": "2026-11-04T07:19:28.560812"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:50.052506"
+        "last_seen_at": "2026-11-04T07:19:33.977876"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6463,22 +6383,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:49.972515"
+        "last_seen_at": "2026-11-04T07:19:28.580734"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:42:49.984689"
+        "last_seen_at": "2026-11-04T07:19:28.597108"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:42:50.010688",
-        "last_claim": "2026-11-03T07:24:31.416721",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:19:33.915078",
+        "last_claim": "2026-11-04T07:19:33.915078",
         "portal_observed_at": "2026-11-03T22:42:50.010688"
       }
     },
@@ -6488,8 +6408,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:43:48.921431",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:20:35.818155",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -6668,24 +6588,24 @@
   },
   "B4BAE5FC4CACA8F7": {
     "daily": {
-      "last_claim": "2026-11-03T07:26:10.198375",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T07:21:16.505033",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:26:31.824018",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:21:39.098531",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:26:34.422509",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:21:41.733049",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:26:37.011043",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:21:44.398379",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -6695,10 +6615,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:31:25.131762",
+      "last_claim": "2026-11-04T07:22:16.038559",
       "last_count": 1,
-      "last_visit": "2026-11-03T07:27:04.650190",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:22:16.038559",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -6712,35 +6632,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.080894"
+        "last_seen_at": "2026-11-04T07:21:45.168267"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.110876"
+        "last_seen_at": "2026-11-04T07:21:50.502686"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.123590"
+        "last_seen_at": "2026-11-04T07:21:50.524717"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.040880"
+        "last_seen_at": "2026-11-04T07:21:45.101706"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.135976"
+        "last_seen_at": "2026-11-04T07:21:50.541149"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6761,22 +6681,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.053759"
+        "last_seen_at": "2026-11-04T07:21:45.124867"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T21:59:33.065834"
+        "last_seen_at": "2026-11-04T07:21:45.148029"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T21:59:33.098344",
-        "last_claim": "2026-11-03T07:26:41.618253",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:21:50.481429",
+        "last_claim": "2026-11-04T07:21:50.481429",
         "portal_observed_at": "2026-11-03T21:59:33.098344"
       }
     },
@@ -6786,8 +6706,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T21:59:52.644502",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:22:52.463036",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -7264,29 +7184,25 @@
   },
   "8FC80EF0CC5B9D39": {
     "daily": {
-      "last_claim": "2026-11-03T07:28:21.999962",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:44:28.816406"
+      "last_claim": "2026-11-04T07:23:34.477769",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:28:43.748172",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:44:48.632508"
+        "last_claim": "2026-11-04T07:23:59.363980",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:28:46.324369",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:44:48.671180"
+        "last_claim": "2026-11-04T07:24:02.086173",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:28:48.839186",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:44:48.701969"
+        "last_claim": "2026-11-04T07:24:04.795224",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:57:06.257429",
@@ -7295,10 +7211,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:33:34.721531",
+      "last_claim": "2026-11-04T07:24:36.573216",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:45:08.983670",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:24:36.573216",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": "2026-08-16T07:04:26.256713",
@@ -7311,28 +7227,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.829091"
+        "last_seen_at": "2026-11-04T07:24:10.764236"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.842493"
+        "last_seen_at": "2026-11-04T07:24:10.780670"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.733680"
+        "last_seen_at": "2026-11-04T07:24:05.490205"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.855188"
+        "last_seen_at": "2026-11-04T07:24:10.796672"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7353,22 +7269,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.747470"
+        "last_seen_at": "2026-11-04T07:24:05.512350"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:44:48.760273"
+        "last_seen_at": "2026-11-04T07:24:05.534436"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:44:48.791135",
-        "last_claim": "2026-11-03T07:28:53.399355",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:24:10.747575",
+        "last_claim": "2026-11-04T07:24:10.747575",
         "portal_observed_at": "2026-11-03T22:44:48.791135"
       }
     },
@@ -7378,8 +7294,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:45:45.415039",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:25:13.040150",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -7558,29 +7474,25 @@
   },
   "1956988E56026BA7": {
     "daily": {
-      "last_claim": "2026-11-03T07:30:31.923703",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:46:26.212574"
+      "last_claim": "2026-11-04T07:25:53.266315",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:30:56.655200",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:46:45.971133"
+        "last_claim": "2026-11-04T07:26:15.865279",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:30:59.220704",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:46:46.055813"
+        "last_claim": "2026-11-04T07:26:18.508931",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:31:01.869276",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:46:46.084537"
+        "last_claim": "2026-11-04T07:26:21.233112",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T02:59:37.418645",
@@ -7589,10 +7501,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:35:44.478199",
+      "last_claim": "2026-11-04T07:26:52.934128",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:47:06.350242",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:26:52.934128",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -7605,28 +7517,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.164065"
+        "last_seen_at": "2026-11-04T07:26:27.076317"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.175922"
+        "last_seen_at": "2026-11-04T07:26:27.092851"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.114437"
+        "last_seen_at": "2026-11-04T07:26:21.746620"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.190112"
+        "last_seen_at": "2026-11-04T07:26:27.108464"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7647,22 +7559,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.126815"
+        "last_seen_at": "2026-11-04T07:26:21.771681"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:46:46.139152"
+        "last_seen_at": "2026-11-04T07:26:21.791941"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:46:46.151612",
-        "last_claim": "2026-11-03T07:31:11.566718",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:26:27.054701",
+        "last_claim": "2026-11-04T07:26:27.054701",
         "portal_observed_at": "2026-11-03T22:46:46.151612"
       }
     },
@@ -7672,8 +7584,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:47:43.238615",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:27:29.452941",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -7852,24 +7764,24 @@
   },
   "631FEB500E5C1EB7": {
     "daily": {
-      "last_claim": "2026-11-03T07:32:50.668427",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T07:28:09.865255",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:33:12.141933",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:28:33.617584",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:33:14.703787",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:28:36.318081",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:33:17.200824",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:28:40.513062",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -7881,8 +7793,8 @@
     "progression": {
       "last_claim": "2026-11-03T07:33:48.482803",
       "last_count": 1,
-      "last_visit": "2026-11-03T07:33:48.482803",
-      "status": "claimed"
+      "last_visit": "2026-11-04T07:29:08.592529",
+      "status": "checked_no_claimable_reward"
     },
     "loyalty": {
       "last_claim": "2026-10-18T06:57:47.126603",
@@ -7909,7 +7821,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:02:38.625362"
+        "last_seen_at": "2026-11-04T07:28:41.514967"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
@@ -7937,21 +7849,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:02:38.702791"
+        "last_seen_at": "2026-11-04T07:28:41.531110"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:02:38.811596"
+        "last_seen_at": "2026-11-04T07:28:41.548801"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:02:38.922170",
+        "status": "popup_blocked",
+        "last_seen_at": "2026-11-04T07:28:45.882326",
         "last_claim": "2026-11-03T07:33:21.714355",
         "portal_observed_at": "2026-11-03T22:02:38.922170"
       }
@@ -7962,8 +7874,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:02:58.811160",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:29:45.512927",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -8128,29 +8040,25 @@
   },
   "6163D9F946C4BD48": {
     "daily": {
-      "last_claim": "2026-11-03T07:35:06.583330",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:48:22.415082"
+      "last_claim": "2026-11-04T07:30:26.154296",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:35:28.242292",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:48:42.831681"
+        "last_claim": "2026-11-04T07:30:48.865933",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:35:30.808718",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:48:42.874061"
+        "last_claim": "2026-11-04T07:30:52.592194",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:35:33.438503",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:48:42.904275"
+        "last_claim": "2026-11-04T07:30:55.237696",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": "2026-10-11T03:04:39.263293",
@@ -8159,10 +8067,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:39:55.175537",
+      "last_claim": "2026-11-04T07:31:21.477284",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:49:03.036261",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:31:21.477284",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -8249,7 +8157,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:49:39.702473",
+        "checked_at": "2026-11-04T07:31:58.345090",
         "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
@@ -8429,24 +8337,24 @@
   },
   "B3ED965EAECB6F7C": {
     "daily": {
-      "last_claim": "2026-11-03T07:37:16.723172",
-      "next_available": "2026-11-04T05:30:00",
+      "last_claim": "2026-11-04T07:32:38.685474",
+      "next_available": "2026-11-05T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:37:38.121957",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:33:01.442043",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:37:40.659113",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:33:04.066492",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:37:43.151129",
-        "next_available": "2026-11-04T05:30:00",
+        "last_claim": "2026-11-04T07:33:06.738601",
+        "next_available": "2026-11-05T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -8456,10 +8364,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:41:59.258462",
+      "last_claim": "2026-11-04T07:33:38.702004",
       "last_count": 1,
-      "last_visit": "2026-11-03T07:38:10.386790",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:33:38.702004",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": "2026-10-06T04:16:35.947696",
@@ -8472,28 +8380,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.175223"
+        "last_seen_at": "2026-11-04T07:33:12.818663"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.194562"
+        "last_seen_at": "2026-11-04T07:33:12.834620"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.075189"
+        "last_seen_at": "2026-11-04T07:33:07.441437"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.215318"
+        "last_seen_at": "2026-11-04T07:33:12.850376"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8514,22 +8422,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.094896"
+        "last_seen_at": "2026-11-04T07:33:07.464496"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:04:41.112709"
+        "last_seen_at": "2026-11-04T07:33:07.483331"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:04:41.135011",
-        "last_claim": "2026-11-03T07:37:47.674315",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:33:12.799401",
+        "last_claim": "2026-11-04T07:33:12.799401",
         "portal_observed_at": "2026-11-03T22:04:41.135011"
       }
     },
@@ -8539,8 +8447,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:05:00.687458",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:34:15.202252",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -8826,28 +8734,28 @@
   "BB382E889AA37C4F": {
     "daily": {
       "last_claim": "2026-11-03T07:39:28.895915",
-      "next_available": "2026-11-04T05:30:00",
+      "next_available": "2026-11-05T05:30:00",
       "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:50:19.669231"
+      "portal_observed_at": "2026-11-04T07:34:55.284716"
     },
     "store": {
       "reward_1": {
         "last_claim": "2026-11-03T07:39:50.236716",
-        "next_available": "2026-11-04T05:30:00",
+        "next_available": "2026-11-05T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:50:39.370175"
+        "portal_observed_at": "2026-11-04T07:35:15.657237"
       },
       "reward_2": {
         "last_claim": "2026-11-03T07:39:52.728393",
-        "next_available": "2026-11-04T05:30:00",
+        "next_available": "2026-11-05T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:50:39.406800"
+        "portal_observed_at": "2026-11-04T07:35:15.703086"
       },
       "reward_3": {
         "last_claim": "2026-11-03T07:39:55.292411",
-        "next_available": "2026-11-04T05:30:00",
+        "next_available": "2026-11-05T05:30:00",
         "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:50:39.434922"
+        "portal_observed_at": "2026-11-04T07:35:15.735161"
       },
       "reward_4": {
         "last_claim": null,
@@ -8859,7 +8767,7 @@
     "progression": {
       "last_claim": "2026-11-02T18:44:03.263143",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:50:59.764244",
+      "last_visit": "2026-11-04T07:35:35.780243",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -8873,28 +8781,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.607437"
+        "last_seen_at": "2026-11-04T07:35:15.832100"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.619907"
+        "last_seen_at": "2026-11-04T07:35:15.847674"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.462526"
+        "last_seen_at": "2026-11-04T07:35:15.769760"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.632223"
+        "last_seen_at": "2026-11-04T07:35:15.864144"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8915,23 +8823,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.537824"
+        "last_seen_at": "2026-11-04T07:35:15.785587"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:50:39.560489"
+        "last_seen_at": "2026-11-04T07:35:15.800412"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
         "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:50:39.573709",
+        "last_seen_at": "2026-11-04T07:35:15.815891",
         "last_claim": "2026-11-02T07:48:16.840181",
-        "portal_observed_at": "2026-11-03T22:50:39.573709"
+        "portal_observed_at": "2026-11-04T07:35:15.815891"
       }
     },
     "event_rewards": {
@@ -8940,8 +8848,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:51:36.184551",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:36:12.270259",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -9317,29 +9225,25 @@
   },
   "DA4C269DB53172C5": {
     "daily": {
-      "last_claim": "2026-11-03T07:41:38.732820",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:52:16.107933"
+      "last_claim": "2026-11-04T07:36:53.142392",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:42:00.323385",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:52:36.250855"
+        "last_claim": "2026-11-04T07:37:15.685663",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:42:02.878076",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:52:36.287094"
+        "last_claim": "2026-11-04T07:37:18.373199",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:42:05.456348",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:52:36.318102"
+        "last_claim": "2026-11-04T07:37:20.999362",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -9349,10 +9253,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:46:02.790393",
+      "last_claim": "2026-11-04T07:37:52.763716",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:52:56.662613",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:37:52.763716",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -9365,28 +9269,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.403064"
+        "last_seen_at": "2026-11-04T07:37:26.867320"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.415144"
+        "last_seen_at": "2026-11-04T07:37:26.883383"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.349351"
+        "last_seen_at": "2026-11-04T07:37:21.544251"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.427706"
+        "last_seen_at": "2026-11-04T07:37:26.899135"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9407,22 +9311,22 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.361801"
+        "last_seen_at": "2026-11-04T07:37:21.564081"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:52:36.376052"
+        "last_seen_at": "2026-11-04T07:37:21.580119"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:52:36.390169",
-        "last_claim": "2026-11-03T07:42:10.014225",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:37:26.850836",
+        "last_claim": "2026-11-04T07:37:26.850836",
         "portal_observed_at": "2026-11-03T22:52:36.390169"
       }
     },
@@ -9432,8 +9336,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:53:33.356149",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:38:29.143603",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -9612,31 +9516,27 @@
   },
   "51001A5D6014F2DD": {
     "daily": {
-      "last_claim": "2026-11-03T07:43:49.258738",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
+      "last_claim": "2026-11-04T07:39:10.117634",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-02T09:19:43.793755",
-      "unconfirmed_attempts": 2,
-      "portal_observed_at": "2026-11-03T22:54:14.916526"
+      "unconfirmed_attempts": 2
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:44:10.797351",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:54:34.675827"
+        "last_claim": "2026-11-04T07:39:32.894405",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:44:13.412850",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:54:34.718238"
+        "last_claim": "2026-11-04T07:39:35.485247",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:44:15.988501",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:54:34.749078"
+        "last_claim": "2026-11-04T07:39:38.164476",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -9646,10 +9546,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:48:05.128938",
+      "last_claim": "2026-11-04T07:40:10.133585",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:54:55.027332",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:40:10.133585",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -9662,28 +9562,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.835965"
+        "last_seen_at": "2026-11-04T07:39:44.207307"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.849625"
+        "last_seen_at": "2026-11-04T07:39:44.227928"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.782441"
+        "last_seen_at": "2026-11-04T07:39:38.889227"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.863247"
+        "last_seen_at": "2026-11-04T07:39:44.246971"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9704,23 +9604,23 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.796489"
+        "last_seen_at": "2026-11-04T07:39:38.910145"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:54:34.809553"
+        "last_seen_at": "2026-11-04T07:39:38.925789"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:54:34.822864",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:39:44.191070",
         "portal_observed_at": "2026-11-03T22:54:34.822864",
-        "last_claim": "2026-11-03T07:44:20.577631"
+        "last_claim": "2026-11-04T07:39:44.191070"
       }
     },
     "event_rewards": {
@@ -9729,8 +9629,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:55:31.697454",
-        "balance": 1400,
+        "checked_at": "2026-11-04T07:40:46.552992",
+        "balance": 1500,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -9895,29 +9795,25 @@
   },
   "4443B75C454AEFF8": {
     "daily": {
-      "last_claim": "2026-11-03T07:45:59.481184",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:56:12.244287"
+      "last_claim": "2026-11-04T07:41:27.511036",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:46:20.914124",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:56:32.031601"
+        "last_claim": "2026-11-04T07:41:50.139951",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:46:23.439482",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:56:32.070721"
+        "last_claim": "2026-11-04T07:41:52.722499",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:46:29.825690",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:56:32.106052"
+        "last_claim": "2026-11-04T07:41:56.382170",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -9926,10 +9822,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:50:07.852453",
+      "last_claim": "2026-11-04T07:42:27.762085",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:56:52.530861",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:42:27.762085",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -9942,28 +9838,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.138773"
+        "last_seen_at": "2026-11-04T07:41:56.440139"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.151690"
+        "last_seen_at": "2026-11-04T07:41:56.463462"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.164864"
+        "last_seen_at": "2026-11-04T07:41:56.484768"
       },
       "promo_33f5658b38e37f0b3ef5": {
         "title": "First Purchaser Pack",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.178114"
+        "last_seen_at": "2026-11-04T07:41:56.505735"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -9976,9 +9872,9 @@
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:56:32.382368",
-        "last_claim": "2026-11-03T07:46:39.718111",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:42:01.797983",
+        "last_claim": "2026-11-04T07:42:01.797983",
         "portal_observed_at": "2026-11-03T22:56:32.382368"
       },
       "promo_fc4bebe1fb9b140f5a89": {
@@ -9986,21 +9882,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.396714"
+        "last_seen_at": "2026-11-04T07:42:01.814686"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.410495"
+        "last_seen_at": "2026-11-04T07:42:01.830354"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:56:32.423169"
+        "last_seen_at": "2026-11-04T07:42:01.845996"
       }
     },
     "event_rewards": {
@@ -10009,8 +9905,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:57:29.128172",
-        "balance": 900,
+        "checked_at": "2026-11-04T07:43:04.122157",
+        "balance": 1000,
         "next_threshold": 1300,
         "tiers_total": 14,
         "tiers_delivered": 2,
@@ -10182,29 +10078,25 @@
   },
   "809109186A2962E4": {
     "daily": {
-      "last_claim": "2026-11-03T07:48:20.061500",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T22:58:08.591423"
+      "last_claim": "2026-11-04T07:43:44.338897",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:48:42.065040",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:58:28.687635"
+        "last_claim": "2026-11-04T07:44:06.929902",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:48:44.582680",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:58:28.732882"
+        "last_claim": "2026-11-04T07:44:09.709248",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:48:50.175909",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T22:58:28.763025"
+        "last_claim": "2026-11-04T07:44:13.280621",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -10213,10 +10105,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:52:07.548473",
+      "last_claim": "2026-11-04T07:44:44.143861",
       "last_count": 1,
-      "last_visit": "2026-11-03T22:58:48.918494",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:44:44.143861",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -10229,28 +10121,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:58:28.794325"
+        "last_seen_at": "2026-11-04T07:44:14.295043"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:58:28.807576"
+        "last_seen_at": "2026-11-04T07:44:14.314475"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T22:58:28.821779"
+        "last_seen_at": "2026-11-04T07:44:14.335760"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T22:58:28.834188",
+        "status": "popup_blocked",
+        "last_seen_at": "2026-11-04T07:44:18.517249",
         "portal_observed_at": "2026-11-03T22:58:28.834188",
         "last_claim": "2026-11-03T07:48:54.701193"
       },
@@ -10282,8 +10174,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T22:59:25.661512",
-        "balance": 1300,
+        "checked_at": "2026-11-04T07:45:20.476420",
+        "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
@@ -10449,30 +10341,27 @@
   "90A110C58E410DDF": {
     "daily": {
       "last_claim": "2026-11-03T07:50:35.162979",
-      "next_available": "2026-11-04T05:30:00",
+      "next_available": "2026-11-05T05:30:00",
       "status": "portal_claimed",
       "last_attempt_at": "2026-11-02T08:01:33.977203",
       "unconfirmed_attempts": 1,
-      "portal_observed_at": "2026-11-03T23:00:05.447635"
+      "portal_observed_at": "2026-11-04T07:46:00.407471"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:50:56.549775",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:00:25.417518"
+        "last_claim": "2026-11-04T07:46:23.270244",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:50:59.088882",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:00:25.457098"
+        "last_claim": "2026-11-04T07:46:25.944172",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:51:02.655429",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:00:25.488655"
+        "last_claim": "2026-11-04T07:46:28.681605",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -10481,10 +10370,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-02T18:54:08.292731",
+      "last_claim": "2026-11-04T07:46:55.151667",
       "last_count": 1,
-      "last_visit": "2026-11-03T23:00:45.710791",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-04T07:46:55.151667",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -10550,7 +10439,7 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T23:01:21.975076",
+        "checked_at": "2026-11-04T07:47:31.465275",
         "balance": 400,
         "next_threshold": 900,
         "tiers_total": 14,
@@ -10716,29 +10605,25 @@
   },
   "3F493D8C327FAF81": {
     "daily": {
-      "last_claim": "2026-11-03T07:52:47.778119",
-      "next_available": "2026-11-04T05:30:00",
-      "status": "portal_claimed",
-      "portal_observed_at": "2026-11-03T23:02:01.754529"
+      "last_claim": "2026-11-04T07:48:12.118033",
+      "next_available": "2026-11-05T05:30:00",
+      "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-03T07:53:09.162685",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:02:21.520977"
+        "last_claim": "2026-11-04T07:48:34.695884",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-03T07:53:11.715283",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:02:21.562871"
+        "last_claim": "2026-11-04T07:48:37.331416",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-03T07:53:14.226771",
-        "next_available": "2026-11-04T05:30:00",
-        "status": "portal_claimed",
-        "portal_observed_at": "2026-11-03T23:02:21.592356"
+        "last_claim": "2026-11-04T07:48:40.158567",
+        "next_available": "2026-11-05T05:30:00",
+        "status": "claimed"
       },
       "reward_4": {
         "last_claim": null,
@@ -10747,10 +10632,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-03T00:20:00.805287",
-      "last_count": 2,
-      "last_visit": "2026-11-03T23:02:41.682005",
-      "status": "checked_no_claimable_reward"
+      "last_claim": "2026-11-04T07:49:11.818234",
+      "last_count": 1,
+      "last_visit": "2026-11-04T07:49:11.818234",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
@@ -10763,51 +10648,51 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.626914"
+        "last_seen_at": "2026-11-04T07:48:40.851407"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.639650"
+        "last_seen_at": "2026-11-04T07:48:40.868195"
       },
       "promo_b5c164bc46bfb068d6c6": {
         "title": "1,500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.653280"
+        "last_seen_at": "2026-11-04T07:48:40.884221"
       },
       "promo_c17fafed062a58a3ef4d": {
         "title": "Trick or Treat Bag",
         "campaign_id": null,
         "href": null,
-        "status": "portal_claimed",
-        "last_seen_at": "2026-11-03T23:02:21.666690",
+        "status": "claimed",
+        "last_seen_at": "2026-11-04T07:48:46.059815",
         "portal_observed_at": "2026-11-03T23:02:21.666690",
-        "last_claim": "2026-11-03T07:53:18.766532"
+        "last_claim": "2026-11-04T07:48:46.059815"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.680625"
+        "last_seen_at": "2026-11-04T07:48:46.079094"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.693594"
+        "last_seen_at": "2026-11-04T07:48:46.098193"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-03T23:02:21.706075"
+        "last_seen_at": "2026-11-04T07:48:46.116853"
       }
     },
     "event_rewards": {
@@ -10816,8 +10701,8 @@
         "slug": "halloween-2026",
         "points_label": "Lost Souls",
         "cycle": 0,
-        "checked_at": "2026-11-03T23:03:18.313940",
-        "balance": 1300,
+        "checked_at": "2026-11-04T07:49:48.165048",
+        "balance": 1400,
         "next_threshold": 2000,
         "tiers_total": 14,
         "tiers_delivered": 3,
