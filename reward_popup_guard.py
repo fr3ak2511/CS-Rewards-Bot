@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import re
 import time
+import traceback
+from pathlib import Path
 from typing import Callable
 
 DIALOG_SELECTOR = (
@@ -259,6 +261,49 @@ def _inspect(driver) -> dict:
     if not isinstance(state, dict):
         raise RuntimeError("popup layer inspection returned no state")
     return state
+
+
+def _format_exception_diagnostic(exc: BaseException) -> str:
+    """Return a bounded traceback summary without exposing player IDs/secrets.
+
+    Only source basenames, function names, and line numbers are retained from
+    frames. Exception text is bounded and common sensitive values are redacted.
+    This helper is diagnostic-only and never affects popup click decisions.
+    """
+    try:
+        extracted = traceback.extract_tb(exc.__traceback__) if exc.__traceback__ else []
+        frames = [
+            f"{Path(frame.filename).name[:100]}:{frame.name[:100]}:{frame.lineno}"
+            for frame in extracted[-8:]
+        ]
+        frame_text = " <- ".join(frames) if frames else "unavailable"
+    except Exception:
+        frame_text = "unavailable"
+
+    try:
+        message = str(exc).replace("\r", " ").replace("\n", " ")
+    except Exception:
+        message = "[exception message unavailable]"
+    message = re.sub(r"\b[A-Fa-f0-9]{16}\b", "[redacted-player-id]", message)
+    message = re.sub(r"(https?://[^\s?#]+)\?[^\s#]*", r"\1?[redacted]", message)
+    message = re.sub(
+        r"(?i)\b(password|token|secret|authorization)\b\s*[:=]\s*[^\s,;]+",
+        r"\1=[redacted]",
+        message,
+    )
+    message = message[:240]
+
+    details = [
+        f"traceback={frame_text}",
+        f"exception={type(exc).__name__}",
+        f"message={message!r}",
+    ]
+    undefined_name = getattr(exc, "name", None)
+    if isinstance(exc, NameError) and undefined_name:
+        candidate = str(undefined_name)
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,79}", candidate):
+            details.append(f"undefined_name={candidate}")
+    return "; ".join(details)[:1600]
 
 
 def _popup_context_diagnostics(driver) -> str:
@@ -533,7 +578,11 @@ def dismiss_all_safe_popups(
             return True, f"clear; dismissed={dismissed}"
         return False, f"popup_limit_reached; dialogs={final_state.get('dialogCount')}; overlays={final_state.get('fullscreenOverlayCount')}; dismissed={dismissed}"
     except Exception as exc:
-        return False, f"popup_guard_error:{type(exc).__name__}; dismissed={dismissed}"
+        diagnostic = _format_exception_diagnostic(exc)
+        _log(log, f"⚠️ Popup guard exception diagnostic: {diagnostic}")
+        return False, (
+            f"popup_guard_error:{type(exc).__name__}; dismissed={dismissed}; {diagnostic}"
+        )
 
 
 __all__ = ["dismiss_all_safe_popups"]
