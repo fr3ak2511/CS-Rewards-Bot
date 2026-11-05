@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 import re
 import time
+import traceback
+from pathlib import Path
 from typing import Callable
 
 DIALOG_SELECTOR = (
@@ -259,6 +261,36 @@ def _inspect(driver) -> dict:
     if not isinstance(state, dict):
         raise RuntimeError("popup layer inspection returned no state")
     return state
+
+
+def _format_exception_diagnostic(exc: BaseException) -> str:
+    """Return a bounded, content-free traceback summary.
+
+    Only source basenames, function names, line numbers, exception type, and
+    Python's validated NameError.name identifier are retained. Raw exception
+    messages are deliberately excluded because this repository is public and
+    third-party exception text can contain account or session data.
+    This helper is diagnostic-only and never affects popup click decisions.
+    """
+    try:
+        extracted = traceback.extract_tb(exc.__traceback__) if exc.__traceback__ else []
+        frames = [
+            f"{Path(frame.filename).name[:100]}:{frame.name[:100]}:{frame.lineno}"
+            for frame in extracted[-8:]
+        ]
+        frame_text = " <- ".join(frames) if frames else "unavailable"
+    except Exception:
+        frame_text = "unavailable"
+
+    details = [
+        f"traceback={frame_text}",
+        f"exception={type(exc).__name__}",
+    ]
+    undefined_name = getattr(exc, "name", None)
+    if isinstance(exc, NameError) and isinstance(undefined_name, str):
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,79}", undefined_name):
+            details.append(f"undefined_name={undefined_name}")
+    return "; ".join(details)[:1600]
 
 
 def _popup_context_diagnostics(driver) -> str:
@@ -533,7 +565,11 @@ def dismiss_all_safe_popups(
             return True, f"clear; dismissed={dismissed}"
         return False, f"popup_limit_reached; dialogs={final_state.get('dialogCount')}; overlays={final_state.get('fullscreenOverlayCount')}; dismissed={dismissed}"
     except Exception as exc:
-        return False, f"popup_guard_error:{type(exc).__name__}; dismissed={dismissed}"
+        diagnostic = _format_exception_diagnostic(exc)
+        _log(log, f"⚠️ Popup guard exception diagnostic: {diagnostic}")
+        return False, (
+            f"popup_guard_error:{type(exc).__name__}; dismissed={dismissed}; {diagnostic}"
+        )
 
 
 __all__ = ["dismiss_all_safe_popups"]
