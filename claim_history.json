@@ -282,7 +282,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -444,7 +444,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:36:47.541876",
@@ -461,7 +461,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:36:47.541876",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:36:47.541876",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -749,7 +758,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -911,7 +920,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:37:48.935363",
@@ -928,7 +937,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:37:48.935363",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:37:48.935363",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -1318,7 +1336,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -1480,7 +1498,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:38:50.297446",
@@ -1497,7 +1515,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:38:50.297446",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:38:50.297446",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -1777,7 +1804,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -1939,7 +1966,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:39:51.669771",
@@ -1956,7 +1983,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:39:51.669771",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:39:51.669771",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -2331,7 +2367,7 @@
         ],
         "claims_this_run": [],
         "claim_ledger": [],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -2493,7 +2529,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:40:52.533791",
@@ -2510,7 +2546,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:40:52.533791",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:40:52.533791",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -2797,7 +2842,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -2959,7 +3004,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:41:53.602174",
@@ -2976,7 +3021,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:41:53.602174",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:41:53.602174",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -3270,7 +3324,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -3432,7 +3486,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:42:54.482047",
@@ -3449,7 +3503,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:42:54.482047",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:42:54.482047",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -3736,7 +3799,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -3898,7 +3961,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:43:56.677957",
@@ -3915,7 +3978,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:43:56.677957",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:43:56.677957",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -4202,7 +4274,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -4364,7 +4436,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:44:57.787333",
@@ -4381,7 +4453,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:44:57.787333",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:44:57.787333",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -4668,7 +4749,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -4830,7 +4911,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:45:58.893669",
@@ -4847,7 +4928,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:45:58.893669",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:45:58.893669",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -5135,7 +5225,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -5297,7 +5387,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:47:00.139608",
@@ -5314,7 +5404,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:47:00.139608",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:47:00.139608",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -5603,7 +5702,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -5765,7 +5864,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:48:02.625595",
@@ -5782,7 +5881,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:48:02.625595",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:48:02.625595",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -6048,7 +6156,7 @@
         ],
         "claims_this_run": [],
         "claim_ledger": [],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -6210,7 +6318,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:49:03.402833",
@@ -6227,7 +6335,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:49:03.402833",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:49:03.402833",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -6515,7 +6632,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -6677,7 +6794,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:50:04.780872",
@@ -6694,7 +6811,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:50:04.780872",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:50:04.780872",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -6983,7 +7109,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -7145,7 +7271,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:51:05.977109",
@@ -7162,7 +7288,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:51:05.977109",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:51:05.977109",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -7450,7 +7585,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -7612,7 +7747,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:52:07.246792",
@@ -7629,7 +7764,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:52:07.246792",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:52:07.246792",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -7917,7 +8061,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -8079,7 +8223,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:53:08.337265",
@@ -8096,7 +8240,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:53:08.337265",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:53:08.337265",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -8386,7 +8539,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Days Premium -20% Disc'; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Da\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":137,\"width\":672,\"height\":784}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Da\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":807,\"width\":55,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":749,\"y\":303,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9352.00 \\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":801,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9352.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":821,\"width\":63,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":203,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":916,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":259,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":918,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":169,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":159,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -8565,7 +8718,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:54:08.432130",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:54:08.432130",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -8853,7 +9015,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -9015,7 +9177,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:55:09.243524",
@@ -9032,7 +9194,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:55:09.243524",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:55:09.243524",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -9327,7 +9498,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -9489,7 +9660,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:56:09.900174",
@@ -9506,7 +9677,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:56:09.900174",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:56:09.900174",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -9801,7 +9981,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: popup_guard_error:NameError; dismissed=1",
         "end_at": 1793826000,
@@ -9980,7 +10160,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:57:10.029264",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:57:10.029264",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -10275,7 +10464,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -10437,7 +10626,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:58:12.914039",
@@ -10454,7 +10643,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:58:12.914039",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:58:12.914039",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -10749,7 +10947,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -10911,7 +11109,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-04T23:59:14.224705",
@@ -10928,7 +11126,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-04T23:59:14.224705",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-04T23:59:14.224705",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -11513,7 +11720,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:27 7 Days Premium -20% Disc'; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:27 7 Da\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":137,\"width\":672,\"height\":784}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:27 7 Da\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":807,\"width\":55,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":749,\"y\":303,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9352.00 \\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":801,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9352.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":821,\"width\":63,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":203,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":916,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":259,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":918,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":169,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":159,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -11692,7 +11899,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:00:14.580305",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:00:14.580305",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -11979,7 +12195,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:26 7 Days Premium -20% Disc'; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:26 7 Da\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":137,\"width\":672,\"height\":784}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:26 7 Da\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":807,\"width\":55,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":749,\"y\":303,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9352.00 \\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":801,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9352.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":821,\"width\":63,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":203,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":916,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":259,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":918,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":169,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":159,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -12158,7 +12374,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:01:17.285375",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:01:17.285375",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -12431,7 +12656,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -12593,7 +12818,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-05T00:02:18.698598",
@@ -12610,7 +12835,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:02:18.698598",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:02:18.698598",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -12904,7 +13138,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200 Gold -30% Discount '; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":123,\"width\":672,\"height\":812}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":820,\"width\":54,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":748,\"y\":289,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9623.00 \\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":814,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9623.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":834,\"width\":64,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":189,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":245,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":917,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":919,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":155,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":145,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -13083,7 +13317,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:03:18.531950",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:03:18.531950",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -13370,7 +13613,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -13532,7 +13775,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-05T00:04:19.911933",
@@ -13549,7 +13792,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:04:19.911933",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:04:19.911933",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -13921,7 +14173,7 @@
         ],
         "claims_this_run": [],
         "claim_ledger": [],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -14083,7 +14335,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-05T00:05:21.530492",
@@ -14100,7 +14352,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:05:21.530492",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:05:21.530492",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -14607,7 +14868,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -14769,7 +15030,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-05T00:06:22.894318",
@@ -14786,7 +15047,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:06:22.894318",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:06:22.894318",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -15062,7 +15332,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200 Gold -30% Discount '; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":123,\"width\":672,\"height\":812}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:29 1,200\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":820,\"width\":54,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":748,\"y\":289,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9623.00 \\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":814,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9623.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":834,\"width\":64,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":189,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":245,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":917,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":919,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":155,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":145,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -15241,7 +15511,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:07:23.440682",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:07:23.440682",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -15521,7 +15800,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "checked",
+        "status": "expired",
         "retry_required": false,
         "error": null,
         "end_at": 1793826000,
@@ -15683,7 +15962,7 @@
           "unconfirmed_promotions": [],
           "promotions_claimed_this_run": []
         },
-        "closeout_status": "checked",
+        "closeout_status": "completed",
         "closeout_attempts": [
           {
             "checked_at": "2026-11-05T00:08:24.992958",
@@ -15700,7 +15979,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:08:24.992958",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1000,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 2,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:08:24.992958",
+        "status_before_expiry_finalization": "checked",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -15959,7 +16247,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Days Premium -20% Disc'; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Da\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":137,\"width\":672,\"height\":784}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +10 00:59:29 7 Da\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":807,\"width\":55,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":749,\"y\":303,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9352.00 \\u20b9440.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":801,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9352.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":821,\"width\":63,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":203,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":916,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+4\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":853,\"width\":35,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":259,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":918,\"y\":854,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":169,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":153,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":159,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -16138,7 +16426,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:09:24.916594",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1400,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:09:24.916594",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -16399,7 +16696,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:30 1,200 Gold -30% Discount '; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:30 1,200\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":123,\"width\":672,\"height\":812}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:30 1,200\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":820,\"width\":54,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":748,\"y\":289,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9623.00 \\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":814,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9623.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":834,\"width\":64,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":189,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":245,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":917,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":919,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":155,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":145,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -16578,7 +16875,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:10:26.126240",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 500,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 1,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:10:26.126240",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   },
@@ -16837,7 +17143,7 @@
             "verification": "delivered"
           }
         ],
-        "status": "attention_required",
+        "status": "expired",
         "retry_required": true,
         "error": "popup_blocking: blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=0; top_dialog='Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:28 1,200 Gold -30% Discount '; dismissed=1; popup_context={\"url\":\"https://hub.vertigogames.co/halloween-2026\",\"viewport\":{\"width\":1920,\"height\":993},\"dialogRootCount\":1,\"dialogRoots\":[{\"root\":{\"tag\":\"div\",\"role\":\"dialog\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-auto relative max-h-full w-full overflow-hidden bg-transparent outline-none landscape-max-lg:h-full lg:h-\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:28 1,200\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":617,\"y\":123,\"width\":672,\"height\":812}},\"ancestors\":[{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"pointer-events-none fixed inset-0 flex flex-col items-center justify-center\",\"text\":\"Exclusive Discount Activated! Purchase or Lose it! Store Bonus +5 00:59:28 1,200\",\"position\":\"fixed\",\"zIndex\":\"2000\",\"cursor\":\"auto\",\"pointerEvents\":\"none\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":32,\"width\":1905,\"height\":993}},{\"tag\":\"body\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}},{\"tag\":\"html\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"Critical Strike CS: Online FPS Official Page Home Store Daily Rewards Progressio\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":0,\"y\":0,\"width\":1905,\"height\":1171}}],\"nearbyControls\":[{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"scale-90 leading-none! font-normal! whitespace-nowrap\",\"text\":\"\\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":925,\"y\":820,\"width\":54,\"height\":14}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-me-0.5 shrink-0 size-3.5 md:size-4\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":748,\"y\":289,\"width\":15,\"height\":15}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"buy-button\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\\u20b9623.00 \\u20b9890.00\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":741,\"y\":814,\"width\":423,\"height\":44}},{\"tag\":\"span\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"store-card/price_after_discount\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"\",\"text\":\"\\u20b9623.00\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":921,\"y\":834,\"width\":64,\"height\":19}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-desc\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"text-center text-body-md text-pretty text-sem-text-tx-secondary max-w-sm whitespace-pre-line landscape-max-lg:text-start\",\"text\":\"Purchase or Lose it!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":887,\"y\":189,\"width\":131,\"height\":18}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-2.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":746,\"y\":245,\"width\":10,\"height\":10}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":956,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-rp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":917,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"sku-badge-point-lp\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"-mx-0.5 flex items-center gap-0.5 truncate px-0.5\",\"text\":\"+7\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":954,\"y\":866,\"width\":33,\"height\":15}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"size-3.5 shrink-0\",\"text\":\"\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":919,\"y\":867,\"width\":13,\"height\":13}},{\"tag\":\"h4\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"dialog-title\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"max-w-sm text-ui-dialog-title text-balance wrap-break-word text-sem-component-tx-component-dialog-title\",\"text\":\"Exclusive Discount Activated!\",\"position\":\"static\",\"zIndex\":\"auto\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":824,\"y\":155,\"width\":258,\"height\":22}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"fixed inset-e-(--close-inset) top-[max(1rem,env(safe-area-inset-top))] z-10 lg:absolute lg:inset-e-4 lg:top-4 [--close-i\",\"text\":\"\",\"position\":\"absolute\",\"zIndex\":\"10\",\"cursor\":\"auto\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"button\",\"role\":\"\",\"aria\":\"Close dialog\",\"title\":\"\",\"testid\":\"close\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"group/button relative inline-flex cursor-pointer items-center justify-center transition-[color,transform,opacity,backgro\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"auto\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1245,\"y\":139,\"width\":28,\"height\":28}},{\"tag\":\"div\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"relative z-10 inline-flex items-center gap-1.5 wrap-break-word whitespace-pre-wrap transition-colors text-sem-component-\",\"text\":\"\",\"position\":\"relative\",\"zIndex\":\"10\",\"cursor\":\"pointer\",\"pointerEvents\":\"auto\",\"onclickPresent\":false,\"disabled\":false,\"rect\":{\"x\":1251,\"y\":145,\"width\":16,\"height\":16}},{\"tag\":\"svg\",\"role\":\"\",\"aria\":\"\",\"title\":\"\",\"testid\":\"\",\"dataState\":\"\",\"dataSlot\":\"\",\"className\":\"lucide lucide-x size-4\",\"text\":\"\",\"position\":\"s...[truncated]",
         "end_at": 1793826000,
@@ -17016,7 +17322,16 @@
           }
         ],
         "closeout_last_checked_at": "2026-11-05T00:11:27.221782",
-        "closeout_program_end_at": 1793826000
+        "closeout_program_end_at": 1793826000,
+        "final_balance": 1400,
+        "final_tiers_total": 14,
+        "final_tiers_delivered": 3,
+        "unredeemed_tiers_at_expiry": [],
+        "final_snapshot_checked_at": "2026-11-05T00:11:27.221782",
+        "status_before_expiry_finalization": "attention_required",
+        "expired_at": "2026-11-05T07:58:22.074165+05:30",
+        "event_end_at": 1793826000,
+        "event_end_at_ist": "05 Nov 2026, 02:30 AM IST"
       }
     }
   }
