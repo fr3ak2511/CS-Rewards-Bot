@@ -172,19 +172,19 @@ class PopupDiagnosticsTests(unittest.TestCase):
         self.assertLessEqual(len(reason), 1700)
         self.assertFalse(self.button.clicked)
 
-    def test_exception_diagnostic_redacts_player_ids_tokens_and_url_queries(self):
+    def test_exception_message_is_never_included_in_public_diagnostic(self):
         exc = RuntimeError(
             "player 0123456789ABCDEF token=supersecret "
             "https://example.test/path?session=private"
         )
         diagnostic = guard._format_exception_diagnostic(exc)
 
-        self.assertIn("[redacted-player-id]", diagnostic)
-        self.assertIn("token=[redacted]", diagnostic)
-        self.assertIn("https://example.test/path?[redacted]", diagnostic)
+        self.assertIn("exception=RuntimeError", diagnostic)
         self.assertNotIn("0123456789ABCDEF", diagnostic)
         self.assertNotIn("supersecret", diagnostic)
         self.assertNotIn("session=private", diagnostic)
+        self.assertNotIn("https://example.test/path", diagnostic)
+        self.assertNotIn("message=", diagnostic)
 
 
 if __name__ == "__main__":
