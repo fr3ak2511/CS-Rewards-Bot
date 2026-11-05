@@ -264,10 +264,12 @@ def _inspect(driver) -> dict:
 
 
 def _format_exception_diagnostic(exc: BaseException) -> str:
-    """Return a bounded traceback summary without exposing player IDs/secrets.
+    """Return a bounded, content-free traceback summary.
 
-    Only source basenames, function names, and line numbers are retained from
-    frames. Exception text is bounded and common sensitive values are redacted.
+    Only source basenames, function names, line numbers, exception type, and
+    Python's validated NameError.name identifier are retained. Raw exception
+    messages are deliberately excluded because this repository is public and
+    third-party exception text can contain account or session data.
     This helper is diagnostic-only and never affects popup click decisions.
     """
     try:
@@ -280,29 +282,14 @@ def _format_exception_diagnostic(exc: BaseException) -> str:
     except Exception:
         frame_text = "unavailable"
 
-    try:
-        message = str(exc).replace("\r", " ").replace("\n", " ")
-    except Exception:
-        message = "[exception message unavailable]"
-    message = re.sub(r"\b[A-Fa-f0-9]{16}\b", "[redacted-player-id]", message)
-    message = re.sub(r"(https?://[^\s?#]+)\?[^\s#]*", r"\1?[redacted]", message)
-    message = re.sub(
-        r"(?i)\b(password|token|secret|authorization)\b\s*[:=]\s*[^\s,;]+",
-        r"\1=[redacted]",
-        message,
-    )
-    message = message[:240]
-
     details = [
         f"traceback={frame_text}",
         f"exception={type(exc).__name__}",
-        f"message={message!r}",
     ]
     undefined_name = getattr(exc, "name", None)
-    if isinstance(exc, NameError) and undefined_name:
-        candidate = str(undefined_name)
-        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,79}", candidate):
-            details.append(f"undefined_name={candidate}")
+    if isinstance(exc, NameError) and isinstance(undefined_name, str):
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,79}", undefined_name):
+            details.append(f"undefined_name={undefined_name}")
     return "; ".join(details)[:1600]
 
 
