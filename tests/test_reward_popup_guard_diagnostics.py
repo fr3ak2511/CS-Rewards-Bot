@@ -151,6 +151,41 @@ class PopupDiagnosticsTests(unittest.TestCase):
         self.assertIn("close-icon", reason)
         self.assertFalse(self.button.clicked)
 
+    def test_nameerror_includes_source_frames_and_undefined_name(self):
+        class NameErrorDriver(FakeDriver):
+            def execute_script(self, script, *args):
+                if script == guard._LAYER_INSPECT_JS:
+                    raise NameError(
+                        "name 'missing_guard_symbol' is not defined",
+                        name="missing_guard_symbol",
+                    )
+                return super().execute_script(script, *args)
+
+        driver = NameErrorDriver(self.dialog, self.button, self.context)
+        ok, reason = guard.dismiss_all_safe_popups(driver)
+
+        self.assertFalse(ok)
+        self.assertIn("popup_guard_error:NameError", reason)
+        self.assertIn("undefined_name=missing_guard_symbol", reason)
+        self.assertIn("reward_popup_guard.py", reason)
+        self.assertIn("execute_script", reason)
+        self.assertLessEqual(len(reason), 1700)
+        self.assertFalse(self.button.clicked)
+
+    def test_exception_diagnostic_redacts_player_ids_tokens_and_url_queries(self):
+        exc = RuntimeError(
+            "player 0123456789ABCDEF token=supersecret "
+            "https://example.test/path?session=private"
+        )
+        diagnostic = guard._format_exception_diagnostic(exc)
+
+        self.assertIn("[redacted-player-id]", diagnostic)
+        self.assertIn("token=[redacted]", diagnostic)
+        self.assertIn("https://example.test/path?[redacted]", diagnostic)
+        self.assertNotIn("0123456789ABCDEF", diagnostic)
+        self.assertNotIn("supersecret", diagnostic)
+        self.assertNotIn("session=private", diagnostic)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
