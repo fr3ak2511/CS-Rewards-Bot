@@ -2,10 +2,10 @@
   "current_streak": 0,
   "last_run_date": "2026-03-30",
   "streak": {
-    "current": 25,
+    "current": 26,
     "best": 70,
-    "last_success_date": "2026-11-04",
-    "last_checked_date": "2026-11-04"
+    "last_success_date": "2026-11-05",
+    "last_checked_date": "2026-11-05"
   },
   "new_ids_seen": [
     "E1E9729A4885E6D9",
@@ -53,83 +53,79 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-04T22:54:06.372080",
-    "run_label": "Recovery Run",
+    "timestamp": "2026-11-05T07:15:04.727494",
+    "run_label": "Manual Run",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_player_ids": [],
     "retry_player_count": 0,
-    "total_claimed": 1,
+    "total_claimed": 174,
     "efficiency": 100.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 2218,
+    "duration_seconds": 4100,
     "per_type": {
-      "daily": 1,
-      "store": 0,
-      "store_daily": 0,
+      "daily": 35,
+      "store": 105,
+      "store_daily": 105,
       "store_temp": 0,
       "promotions": 0,
-      "progression": 0,
+      "progression": 34,
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "4DC0E2AA7130D7E6",
-    "avg_time_per_player": 115.9,
-    "accounts_processed": 19,
-    "claims_made": 1,
-    "unavailable_rewards": 212,
-    "standard_rewards_on_cooldown": 94,
-    "promotional_unavailable_observations": 118,
-    "distinct_promotional_offer_types": 8,
+    "slowest_player": "5429611A24A8F01A",
+    "avg_time_per_player": 116.2,
+    "accounts_processed": 35,
+    "claims_made": 174,
+    "unavailable_rewards": 149,
+    "standard_rewards_on_cooldown": 35,
+    "promotional_unavailable_observations": 114,
+    "distinct_promotional_offer_types": 6,
     "promotional_claims_made": 0,
-    "actionable_promotion_results": 0,
+    "actionable_promotion_results": 8,
     "partial_results": 0,
     "actual_failures": 0,
-    "unconfirmed_claims": 0,
+    "unconfirmed_claims": 8,
     "promotion_detection_failures": 0,
     "promotional_only_accounts": 0,
     "backup_reconciliation_accounts": 0,
-    "full_claim_accounts": 19,
+    "full_claim_accounts": 35,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 19
+    "player_count": 35
   },
   "last_full_run": {
-    "timestamp": "2026-11-04T07:49:48.893244",
+    "timestamp": "2026-11-05T07:15:04.727494",
     "run_label": "Manual Run",
     "failed_player_ids": [],
     "failed_player_count": 0,
-    "retry_player_ids": [
-      "8EE5A8F3D8CAD1F3",
-      "631FEB500E5C1EB7",
-      "809109186A2962E4"
-    ],
-    "retry_player_count": 3,
-    "total_claimed": 194,
-    "efficiency": 98.2,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
+    "total_claimed": 174,
+    "efficiency": 100.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 4827,
+    "duration_seconds": 4100,
     "per_type": {
-      "daily": 33,
-      "store": 128,
-      "store_daily": 102,
-      "store_temp": 26,
-      "promotions": 26,
-      "progression": 33,
+      "daily": 35,
+      "store": 105,
+      "store_daily": 105,
+      "store_temp": 0,
+      "promotions": 0,
+      "progression": 34,
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "2B50290C73E02027",
-    "avg_time_per_player": 137.0,
+    "slowest_player": "5429611A24A8F01A",
+    "avg_time_per_player": 116.2,
     "accounts_processed": 35,
-    "claims_made": 194,
-    "unavailable_rewards": 217,
-    "standard_rewards_on_cooldown": 40,
-    "promotional_unavailable_observations": 177,
-    "distinct_promotional_offer_types": 9,
-    "promotional_claims_made": 26,
+    "claims_made": 174,
+    "unavailable_rewards": 149,
+    "standard_rewards_on_cooldown": 35,
+    "promotional_unavailable_observations": 114,
+    "distinct_promotional_offer_types": 6,
+    "promotional_claims_made": 0,
     "actionable_promotion_results": 8,
-    "partial_results": 3,
+    "partial_results": 0,
     "actual_failures": 0,
     "unconfirmed_claims": 8,
     "promotion_detection_failures": 0,
@@ -142,24 +138,24 @@
   },
   "full_claim_coverage": {
     "E1E9729A4885E6D9": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:10:32.597807",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:08:55.723716",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "4DC0E2AA7130D7E6": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:19:13.439377",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:10:51.810305",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "FBF717E3BFDF5E94": {
       "reset_date": "2026-10-22",
@@ -171,24 +167,24 @@
       "unresolved_reason": null
     },
     "46C57810F646B91F": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:21:10.074946",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:12:46.772251",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "8EE5A8F3D8CAD1F3": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:14:32.269785",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:14:41.431656",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "E72DC1D6C5301F47": {
       "reset_date": "2026-10-22",
@@ -200,244 +196,244 @@
       "unresolved_reason": null
     },
     "5899855DAA167B36": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T06:40:50.992400",
+      "last_full_attempt_at": "2026-11-05T06:16:35.671267",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "5D14D66D5B6C7B8F": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:23:06.480313",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:18:29.529171",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "5429611A24A8F01A": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T06:45:25.036997",
+      "last_full_attempt_at": "2026-11-05T06:20:54.334730",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "856EB1365FA9D02E": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:25:03.024384",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:22:48.816035",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "F251D3D226496061": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:27:01.558505",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:24:42.952172",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "3D9A901755C3B2D8": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:28:57.355931",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:26:37.455439",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "86CD85689FAE9549": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:30:54.989891",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:29:00.828418",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "A32124B011061E03": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:32:51.616683",
-      "last_run_label": "Recovery Run",
+      "last_full_attempt_at": "2026-11-05T06:30:55.726266",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "63989CEF5D15F053": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T06:59:02.891460",
+      "last_full_attempt_at": "2026-11-05T06:32:51.369868",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "B0036841F0183A12": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:24:34.795538",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:34:45.851975",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "A6DA56D3C46DF31B": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T07:03:37.420132",
+      "last_full_attempt_at": "2026-11-05T06:36:40.156268",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "7E53CF9C948CED45": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T07:05:54.160145",
+      "last_full_attempt_at": "2026-11-05T06:38:35.140323",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "E796C81690AB75C0": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:34:47.554433",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:40:30.652855",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "F820398935D2C403": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:26:33.766072",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:42:25.158403",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "C3960960443AF932": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:36:43.084492",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:44:19.146127",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "2B50290C73E02027": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:38:38.785198",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:46:13.272653",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "188A50EA1ABE0765": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:40:34.407290",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:48:08.410506",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "4D1AA8C2C628E73F": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:42:30.454355",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:50:02.375894",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "B4BAE5FC4CACA8F7": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T07:22:52.689745",
+      "last_full_attempt_at": "2026-11-05T06:51:57.393958",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "8FC80EF0CC5B9D39": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:32:32.137879",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
-      "retry_required": false,
-      "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
-    },
-    "1956988E56026BA7": {
-      "reset_date": "2026-11-04",
-      "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:44:26.158377",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
-      "retry_required": false,
-      "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
-    },
-    "631FEB500E5C1EB7": {
-      "reset_date": "2026-11-04",
-      "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:46:22.185862",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
-      "retry_required": false,
-      "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
-    },
-    "6163D9F946C4BD48": {
-      "reset_date": "2026-11-04",
-      "status": "complete",
-      "last_full_attempt_at": "2026-11-04T07:31:58.571798",
+      "last_full_attempt_at": "2026-11-05T06:53:52.158907",
       "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
-    "B3ED965EAECB6F7C": {
-      "reset_date": "2026-11-04",
+    "1956988E56026BA7": {
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:38:32.046988",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T06:55:51.796416",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
+    },
+    "631FEB500E5C1EB7": {
+      "reset_date": "2026-11-05",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-05T06:57:46.479650",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-05"
+    },
+    "6163D9F946C4BD48": {
+      "reset_date": "2026-11-05",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-05T06:59:41.270084",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-05"
+    },
+    "B3ED965EAECB6F7C": {
+      "reset_date": "2026-11-05",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-05T07:01:35.989758",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "4A8D19E91CCE94E6": {
       "reset_date": "2026-10-22",
@@ -449,14 +445,14 @@
       "unresolved_reason": null
     },
     "BB382E889AA37C4F": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:48:18.115682",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T07:03:32.040589",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "2D29FA0DEE0A941B": {
       "reset_date": "2026-10-22",
@@ -477,24 +473,24 @@
       "unresolved_reason": null
     },
     "DA4C269DB53172C5": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:50:13.755742",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
-      "retry_required": false,
-      "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
-    },
-    "51001A5D6014F2DD": {
-      "reset_date": "2026-11-04",
-      "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:42:30.663146",
-      "last_run_label": "Recovery Run",
+      "last_full_attempt_at": "2026-11-05T07:05:27.321581",
+      "last_run_label": "Manual Run",
       "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
+    },
+    "51001A5D6014F2DD": {
+      "reset_date": "2026-11-05",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-05T07:07:23.507626",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "7F249D454D121DEF": {
       "reset_date": "2026-10-17",
@@ -506,44 +502,44 @@
       "unresolved_reason": null
     },
     "4443B75C454AEFF8": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:52:09.942685",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T07:09:18.402505",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "809109186A2962E4": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T22:54:05.871492",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T07:11:13.704772",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "90A110C58E410DDF": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:48:29.403367",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T07:13:08.599801",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     },
     "3F493D8C327FAF81": {
-      "reset_date": "2026-11-04",
+      "reset_date": "2026-11-05",
       "status": "complete",
-      "last_full_attempt_at": "2026-11-04T18:50:28.948021",
-      "last_run_label": "Recovery Run",
-      "last_status": "All Skipped (Cooldown)",
+      "last_full_attempt_at": "2026-11-05T07:15:04.226890",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
       "retry_required": false,
       "unresolved_reason": null,
-      "standard_rewards_audited_reset": "2026-11-04"
+      "standard_rewards_audited_reset": "2026-11-05"
     }
   }
 }
