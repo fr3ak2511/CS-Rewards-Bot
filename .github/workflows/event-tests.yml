@@ -1,12 +1,14 @@
-name: Halloween and reward regression tests
+name: Reward regression tests
 
 on:
   push:
     branches:
-      - fix/halloween-popup-guard
-      - feature/halloween-event-rewards
-      - release/halloween-2026-production
-      - feature/halloween-closeout-integration
+      - prod
+      - dev
+      - test
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
     paths:
       - 'event_closeout.py'
       - 'event_rewards.py'
@@ -17,12 +19,13 @@ on:
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
-      - '.github/workflows/halloween-closeout.yml'
       - '.github/workflows/schedule.yml'
 
   pull_request:
     branches:
-      - feature/halloween-event-rewards
+      - prod
+      - dev
+      - test
     paths:
       - 'event_closeout.py'
       - 'event_rewards.py'
@@ -33,7 +36,6 @@ on:
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
-      - '.github/workflows/halloween-closeout.yml'
       - '.github/workflows/schedule.yml'
 
   workflow_dispatch:
@@ -43,7 +45,7 @@ permissions:
 
 jobs:
   reward-regression-tests:
-    name: Halloween and reward regression tests
+    name: Reward regression tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
