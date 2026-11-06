@@ -73,8 +73,14 @@ jobs:
               core.info(`${run ? 'CONTINUE' : 'SKIP'}: ${reason}`);
             };
 
+            const selectedBranch = context.ref.replace(/^refs\/heads\//, '');
+            if (selectedBranch !== 'prod') {
+              out(false, `production-only claimer; selected branch '${selectedBranch}' is not 'prod'`);
+              return;
+            }
+
             if (context.eventName !== 'schedule') {
-              out(true, `${context.eventName} request`);
+              out(true, `${context.eventName} request on prod`);
               return;
             }
 
@@ -134,7 +140,7 @@ jobs:
   primary_delay:
     name: Wait for randomized primary window
     needs: preflight
-    if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * *' && needs.preflight.outputs.should_run == 'true'
+    if: github.ref_name == 'prod' && github.event_name == 'schedule' && github.event.schedule == '30 21 * * *' && needs.preflight.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
@@ -165,6 +171,7 @@ jobs:
     name: Run Master Claimer
     needs: [preflight, primary_delay]
     if: >-
+      github.ref_name == 'prod' &&
       always() &&
       needs.preflight.outputs.should_run == 'true' &&
       (needs.primary_delay.result == 'success' || needs.primary_delay.result == 'skipped')
@@ -191,6 +198,7 @@ jobs:
           RUN_EVENT: ${{ github.event_name }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           DISPATCH_TYPE: ${{ github.event.action }}
+          SELECTED_BRANCH: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
           import csv
@@ -202,6 +210,7 @@ jobs:
           event = os.environ.get('RUN_EVENT', '')
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
           dispatch_type = os.environ.get('DISPATCH_TYPE', '')
+          selected_branch = os.environ.get('SELECTED_BRANCH', '')
           out_path = os.environ['GITHUB_OUTPUT']
           launcher_cron = '30 21 * * *'
           retry_cron = '0-30/5 0 * * *'
@@ -247,8 +256,12 @@ jobs:
               offset = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
               return datetime.combine(day, dt_time(5, 35)) + timedelta(seconds=offset)
 
+          if selected_branch != 'prod':
+              emit(False, False, f"production-only claimer; selected branch '{selected_branch or 'unknown'}' is not 'prod'")
+              raise SystemExit(0)
+
           if event == 'workflow_dispatch':
-              emit(True, False, 'manual workflow_dispatch request; run the selected manual mode')
+              emit(True, False, 'manual workflow_dispatch request on prod; run the selected manual mode')
               raise SystemExit(0)
 
           meta = load_json('bot_meta.json', {})

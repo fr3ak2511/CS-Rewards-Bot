@@ -2,7 +2,7 @@
 
 Automated CS Hub rewards claimer using Python, Selenium, and GitHub Actions.
 
-**Release:** v3.2.0 · **Configured roster:** loaded dynamically from `players.csv` (current repository snapshot contains 36 IDs).
+**Release:** v3.3.3 · **Configured roster:** loaded dynamically from `players.csv` (current repository snapshot contains 35 IDs).
 
 ## Reward model
 
@@ -64,7 +64,7 @@ The scheduled primary wait logic is retained. Login diagnostics and login-only t
 
 | File | Purpose |
 |---|---|
-| `master_claimer.py` | Core full/promotional-only claim paths, portal-state reconciliation, coverage tracking, reports and guarded test modes (v3.2.0) |
+| `master_claimer.py` | Core full/promotional-only claim paths, portal-state reconciliation, coverage tracking, reports and guarded test modes (v3.3.3) |
 | `.github/workflows/schedule.yml` | Randomized primary wait, four unique promotional-check slots, preflight/run gates, state commit-back and artifacts |
 | `players.csv` | Current configured player IDs; unchanged |
 | `requirements.txt` | Pinned Selenium / undetected-chromedriver versions for reproducible installation |
