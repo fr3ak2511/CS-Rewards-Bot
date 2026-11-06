@@ -345,9 +345,41 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
 
 
 def _promotion_detail_worthy(promo):
-    """Keep routine unavailable/already-claimed observations out of the email body."""
+    """Return True only for free, actionable Store promotion outcomes worth emailing.
+
+    Paid/discounted cards are filtered using the live card text captured for reporting.
+    This is a presentation filter only: it does not change discovery or click behaviour.
+    """
     status = str(promo.get("status") or "unknown")
-    return status not in ("unavailable", "portal_claimed")
+    if status == "popup_blocked":
+        return True
+    if status not in ("claimed_this_run", "claim_unconfirmed", "click_failed", "available"):
+        return False
+
+    card_text = _normalize_promotion_text(promo.get("card_text") or "")
+    button_text = _normalize_promotion_text(promo.get("button_text") or "")
+
+    # Suppress prices and promotional sales language. The bot still scans the Store;
+    # these checks decide only whether a result belongs in the email.
+    paid_or_discounted_patterns = (
+        # Currency symbols/codes before the amount (₹499, Rs. 499, USD 4.99).
+        r"(?:₹|rs\.?|inr|usd|eur|gbp|aud|cad|\$|€|£)\s*[1-9][0-9,]*(?:\.[0-9]{1,2})?",
+        # Currency codes after the amount (499 INR, 4.99 USD).
+        r"\b[1-9][0-9,]*(?:\.[0-9]{1,2})?\s*(?:inr|usd|eur|gbp|aud|cad)\b",
+        # Explicit percentage-off language.
+        r"\b[1-9][0-9]*(?:\.[0-9]+)?\s*%\s*(?:off|discount|discounted|saving)\b",
+        r"\bsave\s+[1-9][0-9]*(?:\.[0-9]+)?\s*%",
+        # Commercial wording. 'Bundle' alone is deliberately not treated as paid.
+        r"\b(?:discount|discounted|sale|buy\s+now|purchase|paid|price)\b",
+    )
+    combined_text = f"{card_text} {button_text}"
+    if any(re.search(pattern, combined_text, flags=re.IGNORECASE) for pattern in paid_or_discounted_patterns):
+        return False
+
+    # The live scanner recognizes these explicit claim controls. Unknown CTA labels
+    # remain out of the email rather than being presented as free/redeemable.
+    allowed_actions = {"free", "claim", "claim reward", "claim now"}
+    return button_text in allowed_actions
 
 
 def _promotion_offer_type_key(promo):
@@ -382,7 +414,7 @@ def _summary_counts(results):
                 distinct_offer_types.add(offer_type_key)
             if promo_status == "unavailable":
                 promotional_unavailable += 1
-            elif promo_status == "claimed_this_run":
+            elif promo_status == "claimed_this_run" and _promotion_detail_worthy(promo):
                 promotional_claims_made += max(1, int(promo.get("claim_count", 0) or 0))
             elif _promotion_detail_worthy(promo):
                 actionable_promotion_results += 1
@@ -1800,6 +1832,8 @@ def discover_and_claim_promotions(driver, pid):
             "campaign_id": card.get("campaign_id") or None,
             "status": card["state"], "claim_count": 0,
             "claimable_observed": 1 if card["state"] == "available" and not card.get("disabled") else 0,
+            "button_text": card.get("button_text", ""),
+            "card_text": card.get("card_text", ""),
         }
         if card["state"] == "portal_claimed":
             entry["status"] = "portal_claimed"
@@ -3112,6 +3146,7 @@ def _promotion_status_label(status):
         "claim_unconfirmed": "⚠️ Claim attempted; not confirmed",
         "click_failed": "⚠️ Claim click failed",
         "available": "⚠️ Claimable; not confirmed",
+        "popup_blocked": "⛔ Popup safety check blocked the claim",
     }.get(str(status or "unknown"), "⚠️ Status unconfirmed")
 
 
@@ -3143,103 +3178,98 @@ def build_standard_attention_section(results):
 
 
 def build_promotional_section(results):
-    """Combine Store Trick & Treat observations with active limited-time rewards."""
-    counts = _summary_counts(results)
+    """Render only free, actionable Store promotion outcomes and scan exceptions."""
     rows = []
-    event_checks = 0
-    event_claims = 0
-    event_failures = 0
-    active_event_reporting = any(bool(result.get("event_rewards")) for result in results)
+    claimed_count = 0
+    attention_count = 0
 
     for result in results:
         player = html.escape(_display_label(result))
-        for promo in result.get("promotions_observed", []) or []:
+        for promo in (result.get("promotions_observed", []) or []):
             if not _promotion_detail_worthy(promo):
                 continue
-            title = html.escape(str(promo.get("title") or "Promotion detected"))
-            status = html.escape(_promotion_status_label(promo.get("status")))
-            rows.append(f"<tr><td>{title}</td><td>{player}</td><td>{status}</td></tr>")
-        if result.get("promotion_detection_failed"):
-            reason = str(result.get("fail_reason") or "See workflow log for detector exception")
+            status = str(promo.get("status") or "unknown")
+            title = html.escape(str(promo.get("title") or "Store promotion"))
+            label = html.escape(_promotion_status_label(status))
+            if status == "claimed_this_run":
+                claimed_count += max(1, int(promo.get("claim_count", 0) or 0))
+            else:
+                attention_count += 1
             rows.append(
-                f"<tr><td>Dynamic promotional scan</td><td>{player}</td>"
-                f"<td>⚠️ Scan failed: {html.escape(reason)}</td></tr>"
+                "<div class='v2-item'>"
+                f"<div><strong>{title}</strong><small>{player}</small></div>"
+                f"<span class='v2-result'>{label}</span></div>"
             )
 
-        for event in result.get("event_rewards", []) or []:
-            event_checks += 1
-            claims = event.get("claims_this_run", []) or []
-            event_claims += len(claims)
-            event_failures += int(bool(event.get("retry_required")))
-            event_name = html.escape(str(event.get("name") or "Limited-time event"))
+        if result.get("promotion_detection_failed"):
+            attention_count += 1
+            reason = html.escape(str(result.get("fail_reason") or "Live Store scan did not complete"))
+            rows.append(
+                "<div class='v2-item v2-attention'>"
+                f"<div><strong>Store promotion scan</strong><small>{player}</small></div>"
+                f"<span class='v2-result'>⚠️ {reason}</span></div>"
+            )
+
+    if not rows:
+        return ""
+
+    return (
+        "<section class='v2-section'>"
+        "<div class='v2-section-head'><h2>Store Promotions</h2>"
+        f"<span>{claimed_count} claimed · {attention_count} needing attention</span></div>"
+        + "".join(rows)
+        + "</section>"
+    )
+
+
+def build_event_rewards_section(results):
+    """Render active limited-time event progress separately from Store Promotions."""
+    rows = []
+    claimed_total = 0
+    retry_total = 0
+
+    for result in results:
+        player = html.escape(_display_label(result))
+        for event in (result.get("event_rewards", []) or []):
+            name = html.escape(str(event.get("name") or "Limited-time event"))
             balance = event.get("balance")
             points_label = html.escape(str(event.get("points_label") or "points"))
             balance_text = f"{int(balance):,} {points_label}" if isinstance(balance, (int, float)) else "Points unavailable"
             next_threshold = event.get("next_threshold")
-            next_text = f"next tier: {int(next_threshold):,}" if isinstance(next_threshold, (int, float)) else "no next tier shown"
+            next_text = f"Next tier: {int(next_threshold):,}" if isinstance(next_threshold, (int, float)) else "No next tier shown"
             delivered = int(event.get("tiers_delivered", 0) or 0)
             total = int(event.get("tiers_total", 0) or 0)
             rows.append(
-                f"<tr><td>{event_name} — progress</td><td>{player}</td>"
-                f"<td>{html.escape(balance_text)} · {html.escape(next_text)} · {delivered}/{total} delivered</td></tr>"
+                "<div class='v2-item'>"
+                f"<div><strong>{name} — progress</strong><small>{player}</small></div>"
+                f"<span class='v2-result'>{html.escape(balance_text)} · {html.escape(next_text)} · {delivered}/{total} delivered</span></div>"
             )
-            for claim in claims:
+            for claim in (event.get("claims_this_run", []) or []):
                 threshold = int(claim.get("threshold", 0) or 0)
                 rewards = ", ".join(str(item) for item in (claim.get("reward", []) or [])) or "Reward details unavailable"
+                claimed_total += 1
                 rows.append(
-                    f"<tr><td>{event_name} — {threshold:,} points</td><td>{player}</td>"
-                    f"<td>✅ Claimed this run: {html.escape(rewards)}</td></tr>"
+                    "<div class='v2-item'>"
+                    f"<div><strong>{name} — {threshold:,} points</strong><small>{player}</small></div>"
+                    f"<span class='v2-result v2-good'>✅ Confirmed · {html.escape(rewards)}</span></div>"
                 )
             if event.get("retry_required"):
+                retry_total += 1
                 reason = html.escape(str(event.get("error") or "Claim state could not be confirmed"))
                 rows.append(
-                    f"<tr><td>{event_name} — attention required</td><td>{player}</td>"
-                    f"<td>⚠️ {reason}</td></tr>"
+                    "<div class='v2-item v2-attention'>"
+                    f"<div><strong>{name} — attention required</strong><small>{player}</small></div>"
+                    f"<span class='v2-result'>⚠️ {reason}</span></div>"
                 )
 
-    standard_claim_attention = sum(
-        int(bool(result.get("daily_unconfirmed")))
-        + len(result.get("store_unconfirmed_indices", []) or [])
-        + int(bool(result.get("progression_unconfirmed")))
-        for result in results
-    )
-    items_requiring_attention = (
-        counts["actionable_promotion_results"] + counts["promotion_detection_failures"]
-        + event_failures + standard_claim_attention
-    )
-    event_metrics_html = (
-        f"<span class='si'>🎃 Event accounts checked: <strong>{event_checks}</strong></span>"
-        f"<span class='si'>🏆 Event tiers claimed: <strong>{event_claims}</strong></span>"
-        if active_event_reporting else ""
-    )
-    summary_html = (
-        "<div class='strip promo-summary'>"
-        f"<span class='si'>🎁 Trick &amp; Treat offer types: <strong>{counts['distinct_promotional_offer_types']}</strong></span>"
-        f"<span class='si'>✅ Trick &amp; Treat claims: <strong>{counts['promotional_claims_made']}</strong></span>"
-        f"{event_metrics_html}"
-        f"<span class='si'>⚠️ Items requiring attention: <strong>{items_requiring_attention}</strong></span>"
-        f"<span class='si'>🔎 Store scan failures: <strong>{counts['promotion_detection_failures']}</strong></span>"
-        "</div>"
-    )
-    empty_message = (
-        "No Trick &amp; Treat claims or active limited-time event updates were recorded. Locked tiers and routine unavailable offers are omitted."
-        if active_event_reporting else
-        "No Trick &amp; Treat claims were recorded. Routine unavailable offers are omitted."
-    )
-    details_html = (
-        "<div class='tsc'><table><tr><th>Event / reward</th><th>Player</th><th>Result / progress</th></tr>"
-        + "".join(rows) + "</table></div>"
-        if rows else
-        "<p style='margin:0 0 10px;color:#6b7280;font-size:12px;'>" + empty_message + "</p>"
-    )
-    section_title = (
-        "🎁 Trick &amp; Treat + Limited-Time Event Rewards"
-        if active_event_reporting else "🎁 Trick &amp; Treat Rewards"
-    )
+    if not rows:
+        return ""
     return (
-        "<div class='dcs promo-sec'>"
-        f"<div class='dct'>{section_title}</div>"
-        + summary_html + details_html + "</div>"
+        "<section class='v2-section'>"
+        "<div class='v2-section-head'><h2>Active Event Rewards</h2>"
+        f"<span>{claimed_total} tiers claimed · {retry_total} needing attention</span></div>"
+        + "".join(rows)
+        + "</section>"
     )
 
 
@@ -3361,437 +3391,197 @@ def build_mobile_cards(results, n):
 
 
 def build_email(results, run_label, run_index, job_start, meta):
+    """Build the compact Email V2 report; streak remains internal in bot_meta.json."""
     ist_now = get_ist_time()
-    dur_s   = int((ist_now - job_start).total_seconds())
-    dur_str = f"{dur_s // 60}m {dur_s % 60}s"
-    n       = len(results)
-
-    td       = sum(r["daily"] for r in results)
-    ts_daily = sum(r["store"] for r in results)
-    ts_temp  = sum(r.get("store_temp", 0) for r in results)
-    ts       = ts_daily
-    tp       = sum(r["progression"] for r in results)
-    tl       = sum(r.get("loyalty", 0) for r in results)
-    promo_claims = ts_temp
-    event_reward_claims = sum(event_claim_count(r.get("event_rewards")) for r in results)
-    tall     = td + ts + promo_claims + tp + tl + event_reward_claims
+    duration_seconds = max(0, int((ist_now - job_start).total_seconds()))
+    duration_text = f"{duration_seconds // 60}m {duration_seconds % 60}s"
+    account_count = len(results)
     counts = _summary_counts(results)
-    unavailable_count = counts["standard_rewards_on_cooldown"]
-    partial_count = counts["partial_results"]
-    failure_count = counts["actual_failures"]
-    unconfirmed_count = counts["unconfirmed_claims"]
-    full_claim_count = counts["full_claim_accounts"]
-    standard_check_count = full_claim_count + counts.get("backup_reconciliation_accounts", 0)
-    progression_checked_count = sum(
-        1 for r in results
-        if r.get("processing_mode") == "full_claim" or r.get("progression_checked", False)
+    hard_failures = {"Login Failed", "Error", "Failed"}
+
+    def _is_hard_failure(result):
+        return str(result.get("status") or "") in hard_failures
+
+    # Category totals are scoped to accounts that actually checked that reward
+    # type. Promo-only and backup-reconciliation runs must not imply unchecked
+    # categories returned zero claims.
+    standard_checked_results = [
+        result for result in results
+        if (bool(result.get("standard_rewards_checked"))
+            or (result.get("processing_mode", "full_claim") == "full_claim"
+                and not _is_hard_failure(result)))
+    ]
+    progression_checked_results = [
+        result for result in results
+        if (bool(result.get("progression_checked"))
+            or (result.get("processing_mode", "full_claim") == "full_claim"
+                and not _is_hard_failure(result)))
+    ]
+    full_claim_results = [
+        result for result in results
+        if result.get("processing_mode", "full_claim") == "full_claim"
+        and not _is_hard_failure(result)
+    ]
+    loyalty_checked_results = [
+        result for result in full_claim_results if bool(result.get("has_loyalty"))
+    ]
+
+    daily_claims = sum(int(result.get("daily", 0) or 0) for result in standard_checked_results)
+    store_claims = sum(int(result.get("store", 0) or 0) for result in standard_checked_results)
+    progression_claims = sum(int(result.get("progression", 0) or 0) for result in progression_checked_results)
+    loyalty_claims = sum(int(result.get("loyalty", 0) or 0) for result in loyalty_checked_results)
+    # The email headline follows the same visibility policy as the detail sections:
+    # paid/discounted promotions remain in internal run telemetry but are not counted
+    # in this user-facing report total. Standard and active-event claims remain included.
+    reportable_promotion_claims = int(counts.get("promotional_claims_made", 0) or 0)
+    event_claims = sum(event_claim_count(result.get("event_rewards")) for result in results)
+    confirmed_claims = (
+        daily_claims + store_claims + progression_claims + loyalty_claims
+        + reportable_promotion_claims + event_claims
     )
-    store_kpi_capacity = standard_check_count * 3
-    promo_section_html = build_promotional_section(results)
-    standard_attention_html = build_standard_attention_section(results)
-    promos_observed = sum(len(r.get("promotions_observed", []) or []) for r in results)
 
-    full_claim_results = [r for r in results if r.get("processing_mode", "full_claim") == "full_claim"]
-    tp_all = sum(r.get("possible", 0) for r in full_claim_results)
-    has_unresolved_result = any(_result_needs_recovery(r) for r in full_claim_results)
-    eligible_claims = sum(
-        int(r.get("daily", 0) or 0) + int(r.get("store", 0) or 0)
-        + int(r.get("store_temp", 0) or 0) + int(r.get("loyalty", 0) or 0)
-        for r in full_claim_results
-    )
-    eff = None if not full_claim_results else (
-        0.0 if tp_all == 0 and has_unresolved_result
-        else (100.0 if tp_all == 0 else round(eligible_claims / tp_all * 100, 1))
-    )
-    eff_display = (f"{eff:.1f}%" if eff is not None else
-                   ("N/A (backup reconciliation)" if counts.get("backup_reconciliation_accounts", 0)
-                    else "N/A (promotional-only)"))
-    l_enrl  = sum(1 for r in full_claim_results if r.get("has_loyalty"))
-    skip_ct = sum(1 for r in results if r.get("skipped_all"))
-    act_ct  = n - skip_ct
-
-    streak = meta.get("streak", {})
-    s_cur  = streak.get("current", 0)
-    s_best = streak.get("best", 0)
-    lr     = meta.get("last_run") or {}
-    lr_d   = lr.get("per_type", {}).get("daily")
-    _prev_types = lr.get("per_type", {})
-    # Do not compare the first new combined-store KPI against a legacy daily-only value.
-    lr_s = _prev_types.get("store_daily") if "store_daily" in _prev_types else _prev_types.get("store")
-    lr_l   = _prev_types.get("loyalty")
-    lr_tot = lr.get("total_claimed")
-    lr_eff = lr.get("efficiency")
-    current_full_roster = full_claim_count == n
-    previous_full_count = int(lr.get("full_claim_accounts", lr.get("player_count", 0)) or 0)
-    comparable_full_runs = current_full_roster and previous_full_count == n
-
-    timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
-    avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
-    slowest = max(timed, key=lambda x: x[1]) if timed else None
-
-    bc  = _badge_cls(run_label)
-    bi  = {"Primary Run": "🟢", "Manual Run": "🔧"}.get(run_label, "🔵")
-
-    d_pct = min(round(td / standard_check_count * 100) if standard_check_count else 0, 100)
-    s_pct = min(round(ts / store_kpi_capacity * 100) if store_kpi_capacity else 0, 100)
-    daily_kpi_value = f"{td}<span>/{standard_check_count}</span>" if standard_check_count else "—"
-    store_kpi_value = f"{ts}<span>/{store_kpi_capacity}</span>" if standard_check_count else "—"
-    l_pct = min(round(tl / l_enrl * 100) if l_enrl else 0, 100)
-    daily_bar = _pbar(d_pct, "pg") if full_claim_count else ""
-    store_bar = _pbar(s_pct, "pb2") if full_claim_count else ""
-    progression_kpi_value = f"{tp}<span> items</span>" if progression_checked_count else "N/A"
-    progression_kpi_subtitle = ("Variable — grenade dependent" if full_claim_count
-                                else "Rechecked only after a Store bonus was recovered" if progression_checked_count
-                                else "Not checked in this backup")
-    progression_bar = _pbar(min(tp * 10, 100), "pp") if progression_checked_count else ""
-    loyalty_kpi_value = f"{tl}<span>/{l_enrl}</span>" if full_claim_count else "N/A"
-    loyalty_kpi_subtitle = "Not checked in promotional-only mode"
-    loyalty_bar = _pbar(l_pct, "pa") if full_claim_count else ""
-    standard_cooldown_display = str(unavailable_count) if standard_check_count else "N/A (promotional-only)"
-
-    if not full_claim_count:
-        no_full_run_label = ('backup check; no full-run comparison'
-                             if counts.get("backup_reconciliation_accounts", 0)
-                             else 'not applicable for promotional-only')
-        dlt_d = dlt_s = dlt_l = dlt_tot = f'<span class="de">{no_full_run_label}</span>'
-        dlt_eff = '<span class="de">N/A without a full-claim run</span>'
-    elif comparable_full_runs:
-        dlt_d   = _delta_html(td, lr_d)
-        dlt_s   = _delta_html(ts, lr_s)
-        dlt_l   = _delta_html(tl, lr_l)
-        dlt_tot = _delta_html(tall, lr_tot)
-        dlt_eff = _delta_html(
-            round(eff, 1),
-            round(lr_eff, 1) if lr_eff is not None else None, "%"
+    attention_accounts = 0
+    exception_cards = []
+    for result in results:
+        status = str(result.get("status") or "")
+        promotions = result.get("promotions_observed", []) or []
+        promo_attention = any(
+            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available", "popup_blocked")
+            and _promotion_detail_worthy(promo)
+            for promo in promotions
         )
-    elif not lr and current_full_roster:
-        dlt_d = dlt_s = dlt_l = dlt_tot = dlt_eff = '<span class="de">first full-claim run</span>'
-    else:
-        not_comparable = '<span class="de">not comparable across run modes</span>'
-        dlt_d = dlt_s = dlt_l = dlt_tot = dlt_eff = not_comparable
-
-    if full_claim_count:
-        loyalty_kpi_subtitle = dlt_l
-
-    # ── Build table rows ──────────────────────────────────────────────────────
-    table_rows   = ""
-    detail_cards = ""
-    has_details  = False
-
-    for r in results:
-        pid         = r["pid"]
-        display_lbl = _display_label(r)   # privacy-safe — never raw pid
-        status      = r["status"]
-        rc          = _row_cls(status)
-        new_mark    = " 🆕" if r.get("is_new") else ""
-
-        # Reward-type cells are intentionally blank on promotional-only checks;
-        # those rewards were not inspected and must not look like cooldowns/failures.
-        promo_only_row = (r.get("processing_mode") == "promotional_only"
-                          and not r.get("standard_rewards_checked", False))
-        backup_recheck_row = r.get("processing_mode") == "backup_reconciliation"
-        # Daily cell
-        if promo_only_row:
-            dc = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
-        elif r["daily_skipped"]:
-            dn = r.get("daily_next") or "next reset"
-            d_status = r.get("daily_portal_status", "unknown")
-            d_tip = "Portal observed: already claimed/on cooldown" if d_status == "portal_claimed" else f"Next: {dn}"
-            dc = f'<span class="ic-cd" title="{d_tip}">⏰</span>'
-        elif r["daily"] > 0:
-            dc = '<span class="ic-ok">✅</span>'
-        elif status in ("Login Failed", "Error", "Failed"):
-            dc = '<span class="ic-fl">❌</span>'
-        else:
-            dc = '<span class="ic-pd">⏳</span>'
-
-        # Store cells
-        sk = r.get("store_skipped", [False, False, False])
-        if not isinstance(sk, list) or len(sk) < 3:
-            sk = [False, False, False]
-        claimed_cards = [False, False, False]
-        explicit_claimed_indices = r.get("store_claimed_indices")
-        if isinstance(explicit_claimed_indices, list):
-            for reward_index in explicit_claimed_indices:
-                if isinstance(reward_index, int) and 1 <= reward_index <= 3:
-                    claimed_cards[reward_index - 1] = True
-        else:
-            free_slots = [i for i in range(3) if not sk[i]]
-            for j, idx in enumerate(free_slots):
-                if j < r["store"]:
-                    claimed_cards[idx] = True
-
-        sn_list = r.get("store_next") or [None, None, None]
-        sc_html = ""
-        for i in range(3):
-            sep = ' style="border-left:1px solid #e5e7eb;"' if i == 0 else ''
-            if promo_only_row:
-                cell = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
-            elif sk[i]:
-                nxt  = (sn_list[i] if sn_list and len(sn_list) > i else None) or "next reset"
-                live_store_states = r.get("store_portal_status", [])
-                portal_state = live_store_states[i] if isinstance(live_store_states, list) and len(live_store_states) > i else "unknown"
-                tip = "Portal observed: already claimed/on cooldown" if portal_state == "portal_claimed" else f"Next: {nxt}"
-                cell = f'<span class="ic-cd" title="{tip}">⏰</span>'
-            elif claimed_cards[i]:
-                cell = '<span class="ic-ok">✅</span>'
-            elif status in ("Login Failed", "Error", "Failed"):
-                cell = '<span class="ic-fl">❌</span>'
-            else:
-                cell = '<span class="ic-pd">⏳</span>'
-            sc_html += f'<td{sep}>{cell}</td>'
-
-        # Progression cell
-        progression_not_checked = (backup_recheck_row and not r.get("progression_checked", False))
-        pc = ('<span class="ic-na" title="Not reopened: no Store bonus was recovered">—</span>' if (promo_only_row or progression_not_checked) else
-              '<span class="ic-ok">✅</span>' if r["progression"] > 0
-              else '<span class="ic-fl">❌</span>'
-              if status in ("Login Failed", "Error", "Failed")
-              else '<span class="ic-lk" title="Awaiting grenades/bullets">⏳</span>')
-
-        # Loyalty cell
-        if promo_only_row:
-            lc = '<span class="ic-na" title="Not checked in promotional-only mode">—</span>'
-        elif not r.get("has_loyalty"):
-            lc = '<span class="ic-na">—</span>'
-        elif r.get("loyalty_skipped"):
-            ln = r.get("loyalty_next") or "24h"
-            lc = f'<span class="ic-cd" title="Next: {ln}">⏰</span>'
-        elif r.get("loyalty", 0) > 0:
-            lc = '<span class="ic-ok">✅</span>'
-        elif status in ("Login Failed", "Error", "Failed"):
-            lc = '<span class="ic-fl">❌</span>'
-        else:
-            lc = '<span class="ic-lk" title="Awaiting LP from purchases">🔒</span>'
-
-        # Time cell — always shows duration for each roster entry
-        d_s = r.get("duration_s", 0)
-        tm  = (f'<span style="color:#6b7280;">{d_s//60}m{d_s%60}s</span>'
-               if d_s else '<span class="ic-na">—</span>')
-
-        mode_cell = ("🎁 Promotional-only" if promo_only_row
-                     else ("🔄 Backup reconciliation" if backup_recheck_row else "Full claim"))
-        table_rows += (
-            f'<tr class="{rc}">'
-            f'<td class="idc">{display_lbl}{new_mark}</td>'
-            f'<td>{mode_cell}</td>'
-            f'<td style="border-left:1px solid #e5e7eb;">{dc}</td>'
-            f'{sc_html}'
-            f'<td style="border-left:1px solid #e5e7eb;">{pc}</td>'
-            f'<td style="border-left:1px solid #e5e7eb;">{lc}</td>'
-            f'<td style="border-left:1px solid #e5e7eb;">{tm}</td>'
-            f'<td>{_sb_html(status)}</td>'
-            f'</tr>'
+        hidden_promo_unconfirmed = any(
+            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available")
+            and not _promotion_detail_worthy(promo)
+            for promo in promotions
         )
-
-        # Detail cards (failed/partial only)
-        if status in ("Failed", "Partial", "Login Failed", "Error", "No Rewards"):
-            has_details = True
-            dc_cls   = "dcf" if status in ("Error", "Failed", "Login Failed") else "dcp"
-            err_html = (f'<div class="dce">⚠️ {html.escape(str(r["fail_reason"]))}</div>'
-                        if r.get("fail_reason") else "")
-
-            if promo_only_row:
-                promo_details = "".join(
-                    _drow(html.escape(str(promo.get("title") or "Promotion")),
-                          html.escape(_promotion_status_label(promo.get("status"))))
-                    for promo in (r.get("promotions_observed", []) or [])
-                    if _promotion_detail_worthy(promo)
-                )
-                detail_cards += (
-                    f'<div class="dc {dc_cls}"><div class="dcid">{display_lbl}{new_mark}</div>{err_html}'
-                    f'{_drow("Processing mode", "Promotional-only check; other reward types not checked")}'
-                    f'{promo_details or _drow("Promotion details", "See the promotional summary; routine unavailable offers are omitted")}'
-                    f'{_drow("Time", str(d_s) + "s") if d_s else ""}</div>'
-                )
-                continue
-
-            d_val = ("✅ Claimed" if r["daily"] > 0
-                     else f'⏰ {r.get("daily_next") or "On cooldown"}' if r["daily_skipped"]
-                     else "⏳ Not claimed")
-
-            SNAMES = ["🥇 Gold (Daily)", "💵 Cash (Daily)", "🍀 Luckyloon (Daily)"]
-            s_rows = ""
-            for i in range(3):
-                if claimed_cards[i]:
-                    sv = "✅ Claimed this run"
-                elif sk[i]:
-                    nxt = (sn_list[i] if sn_list and len(sn_list) > i else None) or "On cooldown"
-                    sv  = f"⏰ {nxt}"
-                else:
-                    sv = "⏳ Not claimed"
-                s_rows += _drow(SNAMES[i], sv)
-
-            pg = (f"✅ {r['progression']} claimed" if r["progression"] > 0
-                  else "⏳ Awaiting grenade/bullet threshold")
-
-            if r.get("has_loyalty"):
-                if r.get("loyalty", 0) > 0:
-                    lv = f"✅ {r['loyalty']} claimed"
-                elif r.get("loyalty_skipped"):
-                    lv = f"⏰ {r.get('loyalty_next') or 'On 24h cooldown'}"
-                else:
-                    lv = "🔒 Awaiting LP threshold from purchases"
-            else:
-                lv = "— Not enrolled"
-
-            detail_cards += (
-                f'<div class="dc {dc_cls}">'
-                f'<div class="dcid">{display_lbl}{new_mark}</div>'
-                f'{err_html}'
-                f'{_drow("🎁 Daily", d_val)}'
-                f'{s_rows}'
-                f'{_drow("🎯 Progression", pg)}'
-                f'{_drow("🏆 Loyalty", lv)}'
-                f'{_drow("⏱️ Time", str(d_s) + "s") if d_s else ""}'
-                f'</div>'
+        event_attention = any(bool(event.get("retry_required")) for event in (result.get("event_rewards", []) or []))
+        standard_attention = bool(
+            result.get("daily_unconfirmed")
+            or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
+        )
+        # The claim engine retains retry/status telemetry for every observed offer.
+        # The email, however, must not expose a filtered paid/discounted offer
+        # indirectly through a generic Partial/retry warning. Suppress that warning
+        # only when the known promotional-confirmation reason is the sole issue.
+        hidden_promo_only_failure = bool(
+            hidden_promo_unconfirmed
+            and not standard_attention
+            and not result.get("promotion_detection_failed")
+            and not promo_attention
+            and not event_attention
+            and status not in hard_failures
+            and str(result.get("fail_reason") or "").strip()
+                == "At least one observed promotional claim was not confirmed by the portal"
+        )
+        needs_attention = (
+            status in hard_failures
+            or (status in ("Partial", "No Rewards") and not hidden_promo_only_failure)
+            or (bool(result.get("retry_required")) and not hidden_promo_only_failure)
+            or standard_attention
+            or bool(result.get("promotion_detection_failed"))
+            or promo_attention
+            or event_attention
+        )
+        if needs_attention:
+            attention_accounts += 1
+            has_specific_detail = bool(
+                standard_attention
+                or result.get("promotion_detection_failed")
+                or promo_attention
+                or event_attention
             )
+            if status in hard_failures or not has_specific_detail:
+                reason = str(result.get("fail_reason") or "One or more items need review")
+                exception_cards.append(
+                    "<div class='v2-exception'>"
+                    f"<div><strong>{html.escape(_display_label(result))}</strong>"
+                    f"<span class='v2-status'>{html.escape(status or 'Needs review')}</span></div>"
+                    f"<p>{html.escape(reason)}</p></div>"
+                )
 
-    detail_sec = ""
-    if has_details:
-        detail_sec = (
-            f'<div class="dcs">'
-            f'<div class="dct">⚠️ Requires Attention — Failed &amp; Partial IDs</div>'
-            f'{detail_cards}'
-            f'</div>'
+    actual_failures = int(counts.get("actual_failures", 0) or 0)
+    if account_count == 0 or (actual_failures and actual_failures == account_count):
+        health_label, health_class = "Failed", "v2-failed"
+    elif attention_accounts:
+        health_label, health_class = "Attention Required", "v2-warn"
+    else:
+        health_label, health_class = "Healthy", "v2-healthy"
+
+    standard_attention_html = build_standard_attention_section(results)
+    promotion_html = build_promotional_section(results)
+    event_html = build_event_rewards_section(results)
+    attention_html = "".join(exception_cards)
+    if attention_html:
+        attention_html = (
+            "<section class='v2-section v2-exceptions'>"
+            f"<div class='v2-section-head'><h2>Exceptions &amp; Attention</h2><span>{attention_accounts} accounts</span></div>"
+            + attention_html + "</section>"
+        )
+    if not (standard_attention_html or promotion_html or event_html or attention_html):
+        attention_html = "<p class='v2-all-clear'>No outstanding exceptions were recorded for this run.</p>"
+
+    def _category_card(label, checked_results, claim_key, empty_note="Not checked in this run"):
+        if not checked_results:
+            value, note = "—", empty_note
+        else:
+            value = sum(int(result.get(claim_key, 0) or 0) for result in checked_results)
+            note = f"confirmed · {len(checked_results)} checked"
+        return (
+            f"<div class='v2-category'><span>{label}</span>"
+            f"<strong>{value}</strong><small>{note}</small></div>"
         )
 
-    # Schedule footer
-    sched   = next_scheduled_runs_ist()
-    nr_html = ""
-    for i, (lbl, t) in enumerate(sched):
-        cls      = ' class="nr nrp"' if i == 0 else ' class="nr"'
-        nr_html += f'<div{cls}><div class="nrl">{lbl}</div><div class="nrt">{t}</div></div>'
+    category_html = "".join((
+        _category_card("Daily", standard_checked_results, "daily"),
+        _category_card("Standard Store", standard_checked_results, "store"),
+        _category_card("Progression", progression_checked_results, "progression"),
+        _category_card(
+            "Loyalty", loyalty_checked_results, "loyalty",
+            "No enrolled accounts" if full_claim_results else "Not checked in this run",
+        ),
+    ))
+    generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
+    safe_run_label = html.escape(str(run_label or "Reward Run"))
 
-    slowest_str = f"{slowest[0][:8]}… ({slowest[1]}s)" if slowest else "—"
-
-    # Mobile stacked cards
-    mob_section = build_mobile_cards(results, n)
-
-    email_html = (
-        "<!DOCTYPE html><html lang='en'>"
-        "<head><meta charset='UTF-8'>"
+    return (
+        "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
-        f"<style>{_CSS}</style></head>"
-        "<body><div class='wrap'>"
-
-        # Hero
-        f"<div class='hero'>"
-        f"<span class='badge {bc}'>{bi} {run_label}</span>"
-        f"<div class='hero-grid'>"
-        f"<div class='hero-left'>"
-        f"<h1>CS Hub Rewards Dashboard</h1>"
-        f"<p>📅 {ist_now.strftime('%d %b %Y, %I:%M %p IST')}"
-        f" &nbsp;·&nbsp; ⏱️ {dur_str}"
-        f" &nbsp;·&nbsp; 👥 {counts['accounts_processed']} IDs processed"
-        f" &nbsp;·&nbsp; 🎁 Live promotional scan attempted where login succeeded</p>"
-        f"</div>"
-        f"<div class='hero-nums'>"
-        f"<div class='hnum'><span class='hv g'>{tall}</span>"
-        f"<span class='hl'>Total Claimed</span></div>"
-        f"<div class='hnum'><span class='hv b'>{eff_display}</span>"
-        f"<span class='hl'>Efficiency</span></div>"
-        f"<div class='hnum'><span class='hv a'>🔥 {s_cur}</span>"
-        f"<span class='hl'>Day Streak</span></div>"
-        f"</div></div></div>"
-
-        # KPI Row
-        f"<div class='kpi-row'>"
-        f"<div class='kpi'><div class='kl'>🎁 Daily claimed this run</div>"
-        f"<div class='kv'>{daily_kpi_value}</div>"
-        f"<div class='ks'>{dlt_d} · accounts with live Daily checks</div>{daily_bar}</div>"
-
-        f"<div class='kpi'><div class='kl'>🏪 Daily Store claimed this run</div>"
-        f"<div class='kv'>{store_kpi_value}</div>"
-        f"<div class='ks'>{dlt_s} · 3 standard Store cards per account checked</div>{store_bar}</div>"
-
-        f"<div class='kpi'><div class='kl'>🎯 Progression</div>"
-        f"<div class='kv'>{progression_kpi_value}</div>"
-        f"<div class='ks'>{progression_kpi_subtitle}</div>"
-        f"{progression_bar}</div>"
-
-        f"<div class='kpi'><div class='kl'>🏆 Loyalty</div>"
-        f"<div class='kv'>{loyalty_kpi_value}</div>"
-        f"<div class='ks'>{loyalty_kpi_subtitle}</div>{loyalty_bar}</div>"
-        f"</div>"
-
-        # Strip
-        f"<div class='strip'>"
-        f"<span class='si'>⏱️ <strong>{dur_str}</strong> total</span>"
-        f"<span class='si'>👤 Avg <strong>{avg_t}s</strong>/ID</span>"
-        f"<span class='si'>🐢 Slowest: <strong>{slowest_str}</strong></span>"
-        f"<span class='si'>🔥 Best streak: <strong>{s_best} days</strong></span>"
-        f"<span class='si'>📊 Efficiency: <strong>{eff_display}</strong> {dlt_eff}</span>"
-        f"<span class='si'>📦 Claims made: <strong>{tall}</strong> {dlt_tot}</span>"
-        f"<span class='si'>👥 Accounts processed: <strong>{counts['accounts_processed']}</strong></span>"
-        f"<span class='si'>⏸ Standard rewards on cooldown: <strong>{standard_cooldown_display}</strong></span>"
-        f"<span class='si'>⚠️ Partial / unresolved results: <strong>{partial_count}</strong></span>"
-        f"<span class='si'>❌ Actual failures: <strong>{failure_count}</strong></span>"
-        f"</div>"
-
-        # Desktop table
-        f"<div class='tbx'>"
-        f"<div class='tbh'><span>👥 {n} Accounts Processed</span>"
-        f"<small>⏩ = already claimed &nbsp;|&nbsp; 🆕 = new ID this run</small></div>"
-        f"<div class='tsc'><table>"
-        f"<tr>"
-        f"<th class='idh'>Player</th>"
-        f"<th>Mode</th>"
-        f"<th style='border-left:1px solid #e5e7eb;'>🎁 Daily</th>"
-        f"<th style='border-left:1px solid #e5e7eb;'>🥇 Gold</th>"
-        f"<th>💵 Cash</th><th>🍀 Lucky</th>"
-        f"<th style='border-left:1px solid #e5e7eb;'>🎯 Prog</th>"
-        f"<th style='border-left:1px solid #e5e7eb;'>🏆 Loyal</th>"
-        f"<th style='border-left:1px solid #e5e7eb;'>⏱️ Time</th>"
-        f"<th>Status</th>"
-        f"</tr>"
-        f"{table_rows}"
-        f"</table></div></div>"
-
-        # Mobile stacked cards (hidden on desktop)
-        f"{mob_section}"
-
-        # Standard claim failures are separated from promotional/event observations.
-        f"{standard_attention_html}"
-
-        # Promotional rewards appear only when a card was discovered on a live Store page.
-        f"{promo_section_html}"
-
-        # Detail cards
-        f"{detail_sec}"
-
-        # Footer
-        f"<div class='foot'>"
-        f"<div class='ft'>🗓️ Scheduled Runs (IST)</div>"
-        f"<div class='nr-grid'>{nr_html}</div>"
-        f"<div class='leg'>"
-        f"<span>✅ Claimed this run</span>"
-        f"<span>⏰ Already claimed / on cooldown</span>"
-        f"<span>⏳ Pending (dependency)</span>"
-        f"<span>🔒 LP threshold not met</span>"
-        f"<span>❌ Failed</span>"
-        f"<span>— Not enrolled</span>"
-        f"<span>🆕 New ID (first run)</span>"
-        f"</div>"
-        f"<div class='leg' style='margin-top:8px;'>"
-        f"<span>📌 Daily rewards &amp; the 3 standard Store cards reset at 5:30 AM IST</span>"
-        f"<span>📌 Progression: monthly reset, grenade-dependent</span>"
-        f"<span>📌 Loyalty: 24h rolling, LP-dependent</span>"
-        f"</div>"
-        f"<div class='ver'>CS Rewards Bot {VERSION} &nbsp;·&nbsp; "
-        f"Automated via GitHub Actions &nbsp;·&nbsp; "
-        f"Slot label derived from the scheduled cron; actual start time may be delayed</div>"
-        f"</div>"
-        f"</div></body></html>"
+        "<style>"
+        "*{box-sizing:border-box}body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
+        ".v2-shell{max-width:760px;margin:0 auto}.v2-hero{padding:22px;border-radius:16px;background:linear-gradient(135deg,#17365d,#2459a6);color:#fff}"
+        ".v2-brand{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.82}.v2-hero h1{font-size:23px;margin:8px 0}.v2-meta{font-size:12px;color:#dbeafe}"
+        ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background:#fff}"
+        ".v2-healthy{color:#166534}.v2-warn{color:#92400e}.v2-failed{color:#991b1b}"
+        ".v2-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px}"
+        ".v2-kpi{padding:15px}.v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.7px}"
+        ".v2-kpi strong{display:block;font-size:25px;margin:7px 0 2px;color:#172033}.v2-kpi small,.v2-category small{font-size:10px;color:#94a3b8}"
+        ".v2-category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.v2-category{padding:12px}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
+        ".v2-section{padding:15px;margin:0 0 12px}.v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.v2-section-head h2{font-size:14px;margin:0}.v2-section-head span{font-size:10px;color:#64748b;text-align:right}"
+        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px}.v2-item:first-of-type{border-top:0}.v2-item strong{display:block}.v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px}.v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px}.v2-good{color:#166534}"
+        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
+        ".v2-footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px}"
+        "@media(max-width:560px){body{padding:9px}.v2-hero{padding:17px}.v2-hero h1{font-size:20px}.v2-kpis{grid-template-columns:1fr 1fr}.v2-kpi:first-child{grid-column:span 2}.v2-category-grid{grid-template-columns:1fr 1fr}.v2-item{display:block}.v2-result{display:block;max-width:none;text-align:left;margin-top:6px}.v2-section-head{align-items:flex-start}}"
+        "</style></head><body><main class='v2-shell'>"
+        "<header class='v2-hero'><div class='v2-brand'>CS Rewards Bot · Run Report</div>"
+        "<h1>Rewards Summary</h1>"
+        f"<div class='v2-meta'>{safe_run_label} · {generated} · Duration {duration_text}</div>"
+        f"<span class='v2-health {health_class}'>{health_label}</span></header>"
+        "<section class='v2-kpis'>"
+        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>Portal-confirmed this run</small></div>"
+        f"<div class='v2-kpi'><span>Accounts processed</span><strong>{account_count}</strong><small>Accounts included in this run</small></div>"
+        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with exceptions or unresolved items</small></div>"
+        "</section>"
+        "<div class='v2-category-grid'>" + category_html + "</div>"
+        + (standard_attention_html or "")
+        + (promotion_html or "")
+        + (event_html or "")
+        + (attention_html or "")
+        + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · Automated report · {duration_text} total run time</footer>"
+        + "</main></body></html>"
     )
-    return email_html
 
-
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# LOGIN DIAGNOSTICS — read-only snapshots; does not type an ID or claim rewards
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def _is_cloudflare_interstitial(driver):
     """Detect an actually visible Cloudflare challenge, not incidental page source.
