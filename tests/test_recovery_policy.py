@@ -1,7 +1,11 @@
 import unittest
 from datetime import datetime, timedelta
 
-from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery
+from recovery_policy import (
+    full_claim_retry_ids,
+    has_complete_full_roster_coverage,
+    is_recent_full_claim_recovery,
+)
 
 
 class RecoveryPolicyTests(unittest.TestCase):
@@ -82,6 +86,76 @@ class RecoveryPolicyTests(unittest.TestCase):
             self.last_run,
             last_end=self.last_end,
             last_start=self.reset_at - timedelta(seconds=1),
+            now=self.now,
+            reset_at=self.reset_at,
+        ))
+
+    def test_complete_full_roster_cycle_after_reset_is_covered(self):
+        full_run = {
+            "run_label": "Primary Run",
+            "player_count": 35,
+            "full_claim_accounts": 35,
+        }
+        self.assertTrue(has_complete_full_roster_coverage(
+            full_run,
+            player_count=35,
+            full_end=datetime(2026, 11, 7, 7, 20, 0),
+            full_start=datetime(2026, 11, 7, 5, 40, 0),
+            now=self.now,
+            reset_at=self.reset_at,
+        ))
+
+    def test_manual_full_roster_cycle_after_reset_is_covered(self):
+        full_run = {
+            "run_label": "Manual Run",
+            "player_count": 35,
+            "full_claim_accounts": 35,
+        }
+        self.assertTrue(has_complete_full_roster_coverage(
+            full_run,
+            player_count=35,
+            full_end=datetime(2026, 11, 7, 7, 20, 0),
+            full_start=datetime(2026, 11, 7, 5, 40, 0),
+            now=self.now,
+            reset_at=self.reset_at,
+        ))
+
+    def test_full_roster_cycle_started_before_reset_is_not_covered(self):
+        full_run = {
+            "run_label": "Primary Run",
+            "player_count": 35,
+            "full_claim_accounts": 35,
+        }
+        self.assertFalse(has_complete_full_roster_coverage(
+            full_run,
+            player_count=35,
+            full_end=datetime(2026, 11, 7, 7, 20, 0),
+            full_start=self.reset_at - timedelta(seconds=1),
+            now=self.now,
+            reset_at=self.reset_at,
+        ))
+
+    def test_incomplete_roster_or_claim_path_is_not_covered(self):
+        full_run = {
+            "run_label": "Primary Run",
+            "player_count": 34,
+            "full_claim_accounts": 35,
+        }
+        self.assertFalse(has_complete_full_roster_coverage(
+            full_run,
+            player_count=35,
+            full_end=datetime(2026, 11, 7, 7, 20, 0),
+            full_start=datetime(2026, 11, 7, 5, 40, 0),
+            now=self.now,
+            reset_at=self.reset_at,
+        ))
+        full_run["player_count"] = 35
+        full_run["full_claim_accounts"] = 34
+        self.assertFalse(has_complete_full_roster_coverage(
+            full_run,
+            player_count=35,
+            full_end=datetime(2026, 11, 7, 7, 20, 0),
+            full_start=datetime(2026, 11, 7, 5, 40, 0),
             now=self.now,
             reset_at=self.reset_at,
         ))
