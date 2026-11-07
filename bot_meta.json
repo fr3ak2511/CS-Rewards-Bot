@@ -53,8 +53,8 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-07T20:44:59.018116",
-    "run_label": "Promotional Check #2",
+    "timestamp": "2026-11-07T23:24:25.863551",
+    "run_label": "Promotional Check #3",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
@@ -63,7 +63,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1422,
+    "duration_seconds": 1465,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -74,8 +74,8 @@
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "A6DA56D3C46DF31B",
-    "avg_time_per_player": 39.6,
+    "slowest_player": "86CD85689FAE9549",
+    "avg_time_per_player": 40.9,
     "accounts_processed": 35,
     "claims_made": 0,
     "unavailable_rewards": 147,
@@ -91,7 +91,7 @@
     "promotion_followups_open": 0,
     "promotion_followups_still_blocked": 0,
     "promotion_followups_pending_recheck": 0,
-    "promotion_followups_legacy_seeded": 5,
+    "promotion_followups_legacy_seeded": 0,
     "promotional_only_accounts": 35,
     "backup_reconciliation_accounts": 0,
     "full_claim_accounts": 0,
