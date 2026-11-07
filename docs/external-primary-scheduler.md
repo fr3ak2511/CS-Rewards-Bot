@@ -67,7 +67,7 @@ The external dispatch is explicitly marked with `external_primary=true`.
 - If a scheduled dispatcher is merely sleeping in that wait, the external dispatch is allowed to proceed. Its dependent, queued claim job does not yet hold the claimer concurrency slot.
 - A genuinely queued or running claim job blocks another external dispatch.
 - The external run-mode gate rechecks production state immediately before the claim job starts; if today's post-reset full-roster cycle is already complete, it skips safely.
-- The run-mode gate checks `bot_meta.json` and `players.csv` again after the wait. If a complete 35/35 full-claim roster cycle already started after today's 05:30 reset, it skips without claiming.
+- The run-mode gate uses `bot_meta.json` and `players.csv` to verify 35/35 full-roster coverage against today's 05:30 reset; if that cycle is already complete, it skips without claiming.
 - The claimer labels this run `Primary Run`, not `Manual Run`.
 - The existing GitHub scheduled dispatcher and fallback remain active. Their own run-mode checks suppress a second full roster cycle after the external run completes.
 
