@@ -44,15 +44,22 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("from recovery_policy import full_claim_retry_ids", source)
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
 
-    def test_external_primary_dispatch_waits_and_respects_duplicate_guards(self):
+    def test_external_primary_dispatch_starts_after_0535_without_randomized_wait(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("external_primary:", workflow)
-        self.assertIn("inputs.external_primary == true", workflow)
+        self.assertIn("context.payload.inputs?.external_primary", workflow)
         self.assertIn("isExternalPrimary", workflow)
         self.assertIn("isBlockingClaimJob", workflow)
         self.assertIn("primaryDelayStatus", workflow)
         self.assertIn("has_complete_full_roster_coverage", workflow)
         self.assertIn("EXTERNAL_PRIMARY:", workflow)
+
+        primary_delay = workflow.split("  primary_delay:", 1)[1].split("  run-claimer:", 1)[0]
+        self.assertIn("github.event_name == 'schedule'", primary_delay)
+        self.assertNotIn("inputs.external_primary == true", primary_delay)
+
+        run_claimer = workflow.split("  run-claimer:", 1)[1]
+        self.assertIn("needs.primary_delay.result == 'skipped'", run_claimer)
 
     def test_external_primary_is_labeled_as_the_normal_primary_run(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
