@@ -2,8 +2,10 @@ import unittest
 from datetime import timedelta
 
 from master_claimer import (
+    _full_claim_recovery_candidate,
     _player_claim_total,
     _promotion_detail_worthy,
+    _record_full_claim_coverage,
     _summary_counts,
     build_email,
     build_event_rewards_section,
@@ -13,6 +15,111 @@ from master_claimer import (
 
 
 class ClaimCountAndEmailReportingTests(unittest.TestCase):
+    def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
+        result = {
+            "pid": "PROMO0001",
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+            "promotions_observed": [{"status": "popup_blocked"}],
+            "event_rewards_retry_required": False,
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+
+    def test_full_claim_with_only_promotion_detection_failure_is_not_full_claim_retry(self):
+        result = {
+            "pid": "FULLPROMO0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_detection_failed": True,
+            "promotion_popup_blocked": True,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+
+    def test_full_claim_standard_daily_failure_remains_recoverable(self):
+        result = {
+            "pid": "FULLDAILY0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_backup_reconciliation_standard_store_failure_remains_recoverable(self):
+        result = {
+            "pid": "BACKUPSTORE0001",
+            "processing_mode": "backup_reconciliation",
+            "status": "Partial",
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [1],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_event_reward_verification_failure_remains_recoverable(self):
+        result = {
+            "pid": "EVENT0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "event_rewards_retry_required": True,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_promotional_only_result_does_not_overwrite_full_claim_coverage(self):
+        meta = {
+            "full_claim_coverage": {
+                "PROMO0002": {
+                    "reset_date": "2026-11-07",
+                    "status": "complete",
+                    "retry_required": False,
+                    "standard_rewards_audited_reset": "2026-11-07",
+                }
+            }
+        }
+        original = dict(meta["full_claim_coverage"]["PROMO0002"])
+        result = {
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+        }
+        self.assertFalse(_record_full_claim_coverage(meta, "PROMO0002", result, "Promotional Check #1"))
+        self.assertEqual(meta["full_claim_coverage"]["PROMO0002"], original)
+
+    def test_full_claim_promotion_failure_keeps_clean_standard_coverage(self):
+        meta = {}
+        result = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_detection_failed": True,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "standard_rewards_checked": True,
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_record_full_claim_coverage(meta, "FULLPROMO0002", result, "Primary Run"))
+        entry = meta["full_claim_coverage"]["FULLPROMO0002"]
+        self.assertEqual(entry["status"], "complete")
+        self.assertFalse(entry["retry_required"])
+        self.assertEqual(entry["standard_rewards_audited_reset"], entry["reset_date"])
+
     @staticmethod
     def event_results():
         return [{

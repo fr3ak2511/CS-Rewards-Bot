@@ -13,10 +13,22 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("SELECTED_BRANCH: ${{ github.ref_name }}", workflow)
         self.assertIn("selected_branch != 'prod'", workflow)
 
-    def test_regression_workflow_covers_stable_and_short_lived_branches(self):
+    def test_regression_workflow_covers_two_permanent_and_short_lived_branches(self):
         workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
-        for branch in ("prod", "dev", "test", "'feature/**'", "'fix/**'", "'chore/**'"):
+        for branch in ("prod", "dev", "'feature/**'", "'fix/**'", "'chore/**'"):
             self.assertIn(branch, workflow)
+        self.assertNotIn("      - test\n", workflow)
+
+    def test_recovery_workflow_requires_full_claim_scope_and_no_legacy_fallback(self):
+        workflow = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
+        self.assertIn("last.retry_candidate_scope !== 'full_claim_only'", workflow)
+        self.assertIn("retry candidate count does not match unique candidate IDs", workflow)
+        self.assertNotIn("last.failed_player_ids", workflow)
+
+    def test_regression_path_filters_cover_promotion_tracker_and_recovery_workflow(self):
+        workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
+        self.assertEqual(workflow.count("'promotion_followups.py'"), 2)
+        self.assertEqual(workflow.count("'.github/workflows/recovery.yml'"), 2)
 
 
 if __name__ == "__main__":

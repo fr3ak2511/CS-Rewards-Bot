@@ -5,7 +5,6 @@ on:
     branches:
       - prod
       - dev
-      - test
       - 'feature/**'
       - 'fix/**'
       - 'chore/**'
@@ -14,29 +13,32 @@ on:
       - 'event_rewards.py'
       - 'event_rewards_config.json'
       - 'master_claimer.py'
+      - 'promotion_followups.py'
       - 'progression_claim_safety.py'
       - 'reward_popup_guard.py'
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
       - '.github/workflows/schedule.yml'
+      - '.github/workflows/recovery.yml'
 
   pull_request:
     branches:
       - prod
       - dev
-      - test
     paths:
       - 'event_closeout.py'
       - 'event_rewards.py'
       - 'event_rewards_config.json'
       - 'master_claimer.py'
+      - 'promotion_followups.py'
       - 'progression_claim_safety.py'
       - 'reward_popup_guard.py'
       - 'requirements.txt'
       - 'tests/**'
       - '.github/workflows/event-tests.yml'
       - '.github/workflows/schedule.yml'
+      - '.github/workflows/recovery.yml'
 
   workflow_dispatch:
 

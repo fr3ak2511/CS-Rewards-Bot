@@ -2,35 +2,37 @@
 
 ## Permanent branches
 
-- `prod` — production source of truth and repository default branch. Scheduled reward claiming and automatic recovery are allowed only here.
-- `dev` — integration branch. Feature and fix pull requests are integrated here before release validation.
-- `test` — QA/release-candidate branch. Run regression tests and safe diagnostics here; the production claimer must not execute.
+- `prod` — production source of truth and repository default branch. Scheduled reward claiming, immediate recovery and runtime-state commits are allowed only here.
+- `dev` — the single development and validation branch. Feature work, integration, automated regression tests and safe diagnostics happen here.
+
+The legacy `test` branch is no longer part of the ongoing development or release flow. Retire it only after the two-branch transition has been completed and verified.
 
 ## Short-lived branches
 
-- `feature/<short-description>` — new functionality, for example `feature/email-v2`.
+- `feature/<short-description>` — new functionality.
 - `fix/<short-description>` — defect corrections.
 - `chore/<short-description>` — repository maintenance.
 
-Create feature/fix branches from `dev`. Keep each branch focused and delete it after its pull request merges, unless it is intentionally retained for active work.
+Create short-lived branches from `dev`. Keep each change focused, run regression tests and review the change before integrating it into `dev`. Delete the working branch after its pull request merges.
 
-## Release flow
+## Development and release flow
 
-1. Feature/fix branch → pull request into `dev`.
-2. Run the full regression suite on the pull request and integration branch.
-3. Promote the reviewed `dev` state to `test`.
-4. Validate the release candidate on `test` using regression tests and safe diagnostics.
-5. Open a release pull request from `test` into `prod`.
-6. Merge into `prod` only after review and successful tests.
+1. Develop and integrate source changes on `dev`.
+2. Run the complete regression suite on the pull request and on `dev`; perform safe diagnostics and review the resulting reports.
+3. When the release is approved, open one release pull request from `dev` into `prod`.
+4. Review the release diff. It must not replace `players.csv`, `bot_meta.json` or `claim_history.json` with development copies.
+5. Merge into `prod` only after regression checks pass and preservation of current production runtime state is confirmed.
+
+Use Squash and merge for short-lived feature/fix pull requests into `dev`. Use Create a merge commit for the permanent `dev` to `prod` release so the two permanent branch histories retain their ancestry.
 
 ## Production safety
 
-- `.github/workflows/schedule.yml` is production-only. Its preflight, job condition and Python run-mode gate require the selected branch to be `prod`.
-- Never run the full-roster claimer or live reward-claim workflow from `dev`, `test` or a short-lived feature branch.
-- Regression tests are safe to run on development branches and pull requests.
-- `players.csv`, `bot_meta.json` and `claim_history.json` are runtime-critical. Do not replace them with stale copies from another branch.
+- `.github/workflows/schedule.yml` and `.github/workflows/recovery.yml` must remain production-only. Their branch, event, timestamp and recovery-candidate gates must fail closed.
+- Never run the full-roster claimer or live reward-claim workflow from `dev` or a short-lived feature branch.
+- Regression tests are safe on development branches and pull requests.
+- `players.csv`, `bot_meta.json` and `claim_history.json` are runtime-critical. Do not copy stale versions between branches.
 - Production automation commits runtime state back to `prod`. Any future branch protection must explicitly account for those GitHub Actions commits.
 
 ## Retired event workflow
 
-The one-off Halloween 2026 closeout workflow has expired. Its workflow definition is retained under `docs/archive/` for reference, outside the active GitHub Actions workflow directory. Reusable event-closeout code and tests remain in the repository.
+The one-off Halloween 2026 closeout workflow has expired. Its workflow definition is retained under `docs/archive/` outside the active GitHub Actions workflow directory. Reusable event-closeout code and tests remain in the repository.
