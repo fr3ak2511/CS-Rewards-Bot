@@ -17,6 +17,51 @@ ALLOWED_RECOVERY_RUN_LABELS = {
 }
 
 
+ALLOWED_FULL_ROSTER_RUN_LABELS = {
+    "Primary Run",
+    "Manual Run",
+    "Promotional Check #1",
+    "Promotional Check #2",
+    "Promotional Check #3",
+    "Promotional Check #4",
+    "Backup Run #1",
+    "Backup Run #2",
+    "Backup Run #3",
+    "Backup Run #4",
+}
+
+
+def has_complete_full_roster_coverage(
+    full_run: Any,
+    *,
+    player_count: int,
+    full_end: datetime | None,
+    full_start: datetime | None,
+    now: datetime,
+    reset_at: datetime,
+) -> bool:
+    """Return whether a complete full-claim roster cycle already ran after reset."""
+    if not isinstance(full_run, dict):
+        return False
+    if full_run.get("run_label") not in ALLOWED_FULL_ROSTER_RUN_LABELS:
+        return False
+    if not all(isinstance(value, datetime) for value in (full_end, full_start, now, reset_at)):
+        return False
+
+    try:
+        recorded_player_count = int(full_run.get("player_count", 0) or 0)
+        full_claim_accounts = int(full_run.get("full_claim_accounts", recorded_player_count) or 0)
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+    return bool(
+        full_start >= reset_at
+        and full_end <= now
+        and recorded_player_count == player_count
+        and full_claim_accounts == player_count
+    )
+
+
 def full_claim_retry_ids(last_run: Any) -> list[str]:
     """Return eligible full-claim IDs only when scope, counts and run mode agree.
 
