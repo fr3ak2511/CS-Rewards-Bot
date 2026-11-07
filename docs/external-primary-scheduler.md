@@ -2,9 +2,9 @@
 
 ## Purpose
 
-GitHub scheduled events are best-effort and have repeatedly arrived hours late. This external trigger starts the existing production `schedule.yml` workflow through GitHub's `workflow_dispatch` API at 05:30 IST. GitHub Actions then retains the existing randomized 05:35–06:00 IST wait, full-roster state check, claim concurrency group, reporting, and runtime-state commit.
+GitHub scheduled events are best-effort and have repeatedly arrived hours late. The independent external trigger starts the existing production `schedule.yml` workflow through GitHub's `workflow_dispatch` API at **05:35 IST**, allowing five minutes after the 05:30 server reboot.
 
-The existing GitHub cron schedule and five-minute reset-window fallback remain enabled as backups.
+For this external path, GitHub Actions proceeds after its preflight checks without the randomized wait. The existing native GitHub dispatcher retains its randomized 05:35–06:00 IST wait, and the five-minute reset-window fallback remains enabled as a backup. Both paths share the same full-roster coverage gate and claim concurrency protection.
 
 ## External service
 
@@ -31,7 +31,7 @@ Create one enabled job with these settings:
 - Request method: `POST`
 - Time zone: `Asia/Kolkata`
 - Hours: `5`
-- Minutes: `30`
+- Minutes: `35`
 - Days of month: every day
 - Months: every month
 - Days of week: every day
@@ -63,9 +63,10 @@ A successful GitHub dispatch returns HTTP 200 with run details when requested (o
 The external dispatch is explicitly marked with `external_primary=true`.
 
 - It uses the existing `prod` branch only.
-- It waits until the same deterministic 05:35–06:00 IST primary target as the existing scheduled dispatcher.
+- It is dispatched at 05:35 IST, five minutes after the server reboot, and proceeds after preflight rather than waiting for the native dispatcher's randomized window.
 - If a scheduled dispatcher is merely sleeping in that wait, the external dispatch is allowed to proceed. Its dependent, queued claim job does not yet hold the claimer concurrency slot.
 - A genuinely queued or running claim job blocks another external dispatch.
+- The external run-mode gate rechecks production state immediately before the claim job starts; if today's post-reset full-roster cycle is already complete, it skips safely.
 - The run-mode gate checks `bot_meta.json` and `players.csv` again after the wait. If a complete 35/35 full-claim roster cycle already started after today's 05:30 reset, it skips without claiming.
 - The claimer labels this run `Primary Run`, not `Manual Run`.
 - The existing GitHub scheduled dispatcher and fallback remain active. Their own run-mode checks suppress a second full roster cycle after the external run completes.
@@ -74,7 +75,7 @@ The external dispatch is explicitly marked with `external_primary=true`.
 
 After this change has been merged into `prod`, execute the cron-job.org job once manually while a complete post-reset full-roster cycle is already recorded for the current day. The expected outcome is a successful workflow dispatch whose `Run Master Claimer` job reports that external primary was skipped because today's full-roster cycle already ran. It must not perform any reward claims during this test.
 
-After confirming the dispatch and skip in GitHub Actions, leave the daily 05:30 IST external schedule enabled. Check the next morning's run and confirm that it starts within the existing 05:35–06:00 IST window.
+After confirming the dispatch and skip in GitHub Actions, leave the daily 05:35 IST external schedule enabled. Check the next morning's run and confirm that the claim job starts shortly after the external dispatch and preflight.
 
 ## Operational caveat
 
