@@ -35,6 +35,11 @@ on:
         required: false
         type: boolean
         default: false
+      external_primary:
+        description: "Start the normal production primary full-roster run from the independent morning scheduler"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -56,6 +61,11 @@ jobs:
       should_run: ${{ steps.gate.outputs.should_run }}
       reason: ${{ steps.gate.outputs.reason }}
     steps:
+      - name: Check out the production scheduler policy
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
       - name: Decide whether this trigger should proceed
         id: gate
         uses: actions/github-script@v7
@@ -63,6 +73,12 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const crypto = require('crypto');
+            const path = require('path');
+            const { isBlockingClaimJob } = require(path.join(
+              process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
+            ));
+            const isExternalPrimary = context.eventName === 'workflow_dispatch' &&
+              String(context.payload.inputs?.external_primary || '').toLowerCase() === 'true';
             const launcherCron = '30 21 * * *';
             const retryCron = '0-30/5 0 * * *';
             const backupCrons = ['5 4 * * *', '5 8 * * *', '5 12 * * *', '5 16 * * *'];
@@ -79,37 +95,41 @@ jobs:
               return;
             }
 
-            if (context.eventName !== 'schedule') {
+            if (context.eventName !== 'schedule' && !isExternalPrimary) {
               out(true, `${context.eventName} request on prod`);
               return;
             }
 
-            const cron = context.payload.schedule || '';
-            if (![launcherCron, retryCron, ...backupCrons].includes(cron)) {
-              out(false, `unrecognised schedule '${cron}'; fail closed`);
-              return;
-            }
-
-            // Let the daily dispatcher run its wait job. It cannot claim until the target time.
-            if (cron === launcherCron) {
-              out(true, 'daily primary dispatcher; wait job enforces the randomized target');
-              return;
-            }
-
-            // Compute today's target in IST consistently with the Python wait/run-mode steps.
-            if (cron === retryCron) {
-              const istNow = new Date(Date.now() + 330 * 60 * 1000);
-              const year = istNow.getUTCFullYear();
-              const month = istNow.getUTCMonth();
-              const day = istNow.getUTCDate();
-              const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const offsetSeconds = parseInt(crypto.createHash('sha256').update(dateKey).digest('hex').slice(0, 8), 16) % 1501;
-              const targetIstClock = Date.UTC(year, month, day, 5, 35, 0) + offsetSeconds * 1000;
-              if (istNow.getTime() < targetIstClock) {
-                const target = new Date(targetIstClock);
-                out(false, `before randomized target (${String(target.getUTCHours()).padStart(2, '0')}:${String(target.getUTCMinutes()).padStart(2, '0')}:${String(target.getUTCSeconds()).padStart(2, '0')} IST)`);
+            if (context.eventName === 'schedule') {
+              const cron = context.payload.schedule || '';
+              if (![launcherCron, retryCron, ...backupCrons].includes(cron)) {
+                out(false, `unrecognised schedule '${cron}'; fail closed`);
                 return;
               }
+
+              // Let the daily scheduled dispatcher run its wait job.
+              if (cron === launcherCron) {
+                out(true, 'daily primary dispatcher; wait job enforces the randomized target');
+                return;
+              }
+
+              // Compute today's target in IST consistently with the Python wait/run-mode steps.
+              if (cron === retryCron) {
+                const istNow = new Date(Date.now() + 330 * 60 * 1000);
+                const year = istNow.getUTCFullYear();
+                const month = istNow.getUTCMonth();
+                const day = istNow.getUTCDate();
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const offsetSeconds = parseInt(crypto.createHash('sha256').update(dateKey).digest('hex').slice(0, 8), 16) % 1501;
+                const targetIstClock = Date.UTC(year, month, day, 5, 35, 0) + offsetSeconds * 1000;
+                if (istNow.getTime() < targetIstClock) {
+                  const target = new Date(targetIstClock);
+                  out(false, `before randomized target (${String(target.getUTCHours()).padStart(2, '0')}:${String(target.getUTCMinutes()).padStart(2, '0')}:${String(target.getUTCSeconds()).padStart(2, '0')} IST)`);
+                  return;
+                }
+              }
+            } else {
+              core.info('external morning primary request; check for a real competing claim job');
             }
 
             // Avoid queuing duplicate claims while a previous claim job is queued/running.
@@ -128,10 +148,19 @@ jobs:
               const jobResponse = await github.rest.actions.listJobsForWorkflowRun({
                 owner, repo, run_id: run.id, per_page: 100
               });
-              const claimJob = (jobResponse.data.jobs || []).find(job => job.name === 'Run Master Claimer');
-              if (claimJob && ['queued', 'in_progress'].includes(claimJob.status)) {
+              const jobs = jobResponse.data.jobs || [];
+              const claimJob = jobs.find(job => job.name === 'Run Master Claimer');
+              const primaryDelayJob = jobs.find(job => job.name === 'Wait for randomized primary window');
+              if (isBlockingClaimJob({
+                isExternalPrimary,
+                claimJobStatus: claimJob?.status || '',
+                primaryDelayStatus: primaryDelayJob?.status || '',
+              })) {
                 out(false, `claim job in run #${run.run_number} is already ${claimJob.status}`);
                 return;
+              }
+              if (isExternalPrimary && claimJob?.status === 'queued' && primaryDelayJob?.status === 'in_progress') {
+                core.info(`Allow external primary alongside run #${run.run_number}: that run is only sleeping until its randomized start window.`);
               }
             }
 
@@ -140,7 +169,13 @@ jobs:
   primary_delay:
     name: Wait for randomized primary window
     needs: preflight
-    if: github.ref_name == 'prod' && github.event_name == 'schedule' && github.event.schedule == '30 21 * * *' && needs.preflight.outputs.should_run == 'true'
+    if: >-
+      github.ref_name == 'prod' &&
+      needs.preflight.outputs.should_run == 'true' &&
+      (
+        (github.event_name == 'schedule' && github.event.schedule == '30 21 * * *') ||
+        (github.event_name == 'workflow_dispatch' && inputs.external_primary == true)
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
@@ -198,6 +233,7 @@ jobs:
           RUN_EVENT: ${{ github.event_name }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           DISPATCH_TYPE: ${{ github.event.action }}
+          EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
           SELECTED_BRANCH: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
@@ -206,11 +242,16 @@ jobs:
           import json
           import os
           from datetime import datetime, timedelta, time as dt_time, timezone
-          from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery
+          from recovery_policy import (
+              full_claim_retry_ids,
+              has_complete_full_roster_coverage,
+              is_recent_full_claim_recovery,
+          )
 
           event = os.environ.get('RUN_EVENT', '')
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
           dispatch_type = os.environ.get('DISPATCH_TYPE', '')
+          external_primary = os.environ.get('EXTERNAL_PRIMARY', '').strip().lower() == 'true'
           selected_branch = os.environ.get('SELECTED_BRANCH', '')
           out_path = os.environ['GITHUB_OUTPUT']
           launcher_cron = '30 21 * * *'
@@ -257,7 +298,7 @@ jobs:
               emit(False, False, f"production-only claimer; selected branch '{selected_branch or 'unknown'}' is not 'prod'")
               raise SystemExit(0)
 
-          if event == 'workflow_dispatch':
+          if event == 'workflow_dispatch' and not external_primary:
               emit(True, False, 'manual workflow_dispatch request on prod; run the selected manual mode')
               raise SystemExit(0)
 
@@ -315,15 +356,21 @@ jobs:
           except Exception:
               full_duration = 0
           full_start = full_end - timedelta(seconds=full_duration) if full_end else None
-          full_count = int(full.get('player_count', 0) or 0)
-          full_claim_count = int(full.get('full_claim_accounts', full_count) or 0)
-          full_label = str(full.get('run_label') or '')
-          allowed_full_labels = {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
-          covered_since_reset = bool(
-              full_end and full_start and full_start >= reset_at and full_end <= now
-              and full_count == len(player_ids) and full_claim_count == len(player_ids)
-              and full_label in allowed_full_labels
+          covered_since_reset = has_complete_full_roster_coverage(
+              full,
+              player_count=len(player_ids),
+              full_end=full_end,
+              full_start=full_start,
+              now=now,
+              reset_at=reset_at,
           )
+
+          if event == 'workflow_dispatch' and external_primary:
+              if covered_since_reset:
+                  emit(False, False, 'external primary skipped: a complete full-roster cycle already started after today\'s 05:30 reset')
+              else:
+                  emit(True, False, 'external morning primary: no complete full-roster cycle has started after today\'s 05:30 reset')
+              raise SystemExit(0)
 
           eligible_recent_recovery = is_recent_full_claim_recovery(
               last, last_end=last_end, last_start=last_start, now=now, reset_at=reset_at
@@ -393,6 +440,7 @@ jobs:
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
+          EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
         run: |
           if { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$LOGIN_TEST_ONLY" == "true" ]]; } \
             || { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; } \
