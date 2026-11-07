@@ -53,16 +53,17 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-07T16:52:33.204887",
-    "run_label": "Promotional Check #1",
+    "timestamp": "2026-11-07T20:44:59.018116",
+    "run_label": "Promotional Check #2",
     "failed_player_ids": [],
     "failed_player_count": 0,
+    "retry_candidate_scope": "full_claim_only",
     "retry_player_ids": [],
     "retry_player_count": 0,
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 1423,
+    "duration_seconds": 1422,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -73,7 +74,7 @@
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
+    "slowest_player": "A6DA56D3C46DF31B",
     "avg_time_per_player": 39.6,
     "accounts_processed": 35,
     "claims_made": 0,
@@ -87,6 +88,10 @@
     "actual_failures": 0,
     "unconfirmed_claims": 0,
     "promotion_detection_failures": 0,
+    "promotion_followups_open": 0,
+    "promotion_followups_still_blocked": 0,
+    "promotion_followups_pending_recheck": 0,
+    "promotion_followups_legacy_seeded": 5,
     "promotional_only_accounts": 35,
     "backup_reconciliation_accounts": 0,
     "full_claim_accounts": 0,
@@ -541,5 +546,89 @@
       "unresolved_reason": null,
       "standard_rewards_audited_reset": "2026-11-07"
     }
+  },
+  "promotional_followups": {
+    "188A50EA1ABE0765": {
+      "store-popup-blocked": {
+        "player_id": "188A50EA1ABE0765",
+        "key": "store-popup-blocked",
+        "title": "Store promotion popup",
+        "status": "resolved",
+        "reason": "The Store popup blocker was absent during a completed safe recheck.",
+        "attempts": 0,
+        "first_seen_at": "2026-11-07T07:19:16.290477",
+        "last_checked_at": "2026-11-07T20:44:59.018116",
+        "last_run_label": "Promotional Check #2",
+        "resolved_at": "2026-11-07T20:44:59.018116"
+      }
+    },
+    "3D9A901755C3B2D8": {
+      "store-popup-blocked": {
+        "player_id": "3D9A901755C3B2D8",
+        "key": "store-popup-blocked",
+        "title": "Store promotion popup",
+        "status": "resolved",
+        "reason": "The Store popup blocker was absent during a completed safe recheck.",
+        "attempts": 0,
+        "first_seen_at": "2026-11-07T07:19:16.290477",
+        "last_checked_at": "2026-11-07T20:44:59.018116",
+        "last_run_label": "Promotional Check #2",
+        "resolved_at": "2026-11-07T20:44:59.018116"
+      }
+    },
+    "46C57810F646B91F": {
+      "store-popup-blocked": {
+        "player_id": "46C57810F646B91F",
+        "key": "store-popup-blocked",
+        "title": "Store promotion popup",
+        "status": "resolved",
+        "reason": "The Store popup blocker was absent during a completed safe recheck.",
+        "attempts": 0,
+        "first_seen_at": "2026-11-07T07:19:16.290477",
+        "last_checked_at": "2026-11-07T20:44:59.018116",
+        "last_run_label": "Promotional Check #2",
+        "resolved_at": "2026-11-07T20:44:59.018116"
+      }
+    },
+    "6163D9F946C4BD48": {
+      "store-popup-blocked": {
+        "player_id": "6163D9F946C4BD48",
+        "key": "store-popup-blocked",
+        "title": "Store promotion popup",
+        "status": "resolved",
+        "reason": "The Store popup blocker was absent during a completed safe recheck.",
+        "attempts": 0,
+        "first_seen_at": "2026-11-07T07:19:16.290477",
+        "last_checked_at": "2026-11-07T20:44:59.018116",
+        "last_run_label": "Promotional Check #2",
+        "resolved_at": "2026-11-07T20:44:59.018116"
+      }
+    },
+    "5429611A24A8F01A": {
+      "store-popup-blocked": {
+        "player_id": "5429611A24A8F01A",
+        "key": "store-popup-blocked",
+        "title": "Store promotion popup",
+        "status": "resolved",
+        "reason": "The Store popup blocker was absent during a completed safe recheck.",
+        "attempts": 0,
+        "first_seen_at": "2026-11-07T07:19:16.290477",
+        "last_checked_at": "2026-11-07T20:44:59.018116",
+        "last_run_label": "Promotional Check #2",
+        "resolved_at": "2026-11-07T20:44:59.018116"
+      }
+    }
+  },
+  "promotion_followup_legacy_seed_v1": {
+    "source_run": 3796,
+    "source_date": "2026-11-07",
+    "seeded_at": "2026-11-07T20:44:59.018116",
+    "seeded_suffixes": [
+      "0765",
+      "B2D8",
+      "B91F",
+      "BD48",
+      "F01A"
+    ]
   }
 }
