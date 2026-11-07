@@ -50,3 +50,5 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# Post-reconciliation CI verification marker (no test behavior change).
