@@ -47,7 +47,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
     def test_external_primary_dispatch_starts_after_0535_without_randomized_wait(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("external_primary:", workflow)
-        self.assertIn("inputs.external_primary == true", workflow)
+        self.assertIn("context.payload.inputs?.external_primary", workflow)
         self.assertIn("isExternalPrimary", workflow)
         self.assertIn("isBlockingClaimJob", workflow)
         self.assertIn("primaryDelayStatus", workflow)
