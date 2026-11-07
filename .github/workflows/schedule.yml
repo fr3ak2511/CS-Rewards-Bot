@@ -251,6 +251,21 @@ jobs:
                   return []
               return list(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
 
+          def full_claim_retry_ids(last_run):
+              """Return only explicitly scoped, count-verified full-claim retry IDs."""
+              if not isinstance(last_run, dict):
+                  return []
+              if last_run.get('retry_candidate_scope') != 'full_claim_only':
+                  return []
+              retry_ids = dedupe_ids(last_run.get('retry_player_ids'))
+              try:
+                  recorded_count = int(last_run.get('retry_player_count', -1))
+              except (TypeError, ValueError):
+                  return []
+              if not retry_ids or recorded_count != len(retry_ids):
+                  return []
+              return retry_ids
+
           def daily_target(day):
               date_key = day.strftime('%Y-%m-%d')
               offset = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
@@ -283,9 +298,7 @@ jobs:
               if dispatch_type and dispatch_type != 'claim-recovery':
                   emit(False, False, f'unsupported repository dispatch {dispatch_type!r}; fail closed')
                   raise SystemExit(0)
-              retry_ids = dedupe_ids(last.get('retry_player_ids'))
-              if not retry_ids:
-                  retry_ids = dedupe_ids(last.get('failed_player_ids'))
+              retry_ids = full_claim_retry_ids(last)
               allowed_labels = {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
               age = (now - last_end).total_seconds() if last_end else None
               if (last.get('run_label') in allowed_labels and retry_ids and last_end and last_start
@@ -332,9 +345,7 @@ jobs:
               and full_label in allowed_full_labels
           )
 
-          retry_ids = dedupe_ids(last.get('retry_player_ids'))
-          if not retry_ids:
-              retry_ids = dedupe_ids(last.get('failed_player_ids'))
+          retry_ids = full_claim_retry_ids(last)
           last_age_hours = (now - last_end).total_seconds() / 3600 if last_end else None
           eligible_recent_recovery = bool(
               last.get('run_label') in {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
