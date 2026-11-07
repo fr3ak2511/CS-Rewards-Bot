@@ -17,7 +17,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
         for branch in ("prod", "dev", "'feature/**'", "'fix/**'", "'chore/**'"):
             self.assertIn(branch, workflow)
-        self.assertNotIn("      - test\\n", workflow)
+        self.assertNotIn("      - test\n", workflow)
 
     def test_recovery_workflow_uses_executable_immediate_recovery_policy(self):
         workflow = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
