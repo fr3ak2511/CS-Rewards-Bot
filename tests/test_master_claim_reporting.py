@@ -2,8 +2,10 @@ import unittest
 from datetime import timedelta
 
 from master_claimer import (
+    _full_claim_recovery_candidate,
     _player_claim_total,
     _promotion_detail_worthy,
+    _record_full_claim_coverage,
     _summary_counts,
     build_email,
     build_event_rewards_section,
@@ -13,6 +15,111 @@ from master_claimer import (
 
 
 class ClaimCountAndEmailReportingTests(unittest.TestCase):
+    def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
+        result = {
+            "pid": "PROMO0001",
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+            "promotions_observed": [{"status": "popup_blocked"}],
+            "event_rewards_retry_required": False,
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+
+    def test_full_claim_with_only_promotion_detection_failure_is_not_full_claim_retry(self):
+        result = {
+            "pid": "FULLPROMO0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_detection_failed": True,
+            "promotion_popup_blocked": True,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+
+    def test_full_claim_standard_daily_failure_remains_recoverable(self):
+        result = {
+            "pid": "FULLDAILY0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_backup_reconciliation_standard_store_failure_remains_recoverable(self):
+        result = {
+            "pid": "BACKUPSTORE0001",
+            "processing_mode": "backup_reconciliation",
+            "status": "Partial",
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [1],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_event_reward_verification_failure_remains_recoverable(self):
+        result = {
+            "pid": "EVENT0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "event_rewards_retry_required": True,
+            "event_rewards": [],
+        }
+        self.assertTrue(_full_claim_recovery_candidate(result))
+
+    def test_promotional_only_result_does_not_overwrite_full_claim_coverage(self):
+        meta = {
+            "full_claim_coverage": {
+                "PROMO0002": {
+                    "reset_date": "2026-11-07",
+                    "status": "complete",
+                    "retry_required": False,
+                    "standard_rewards_audited_reset": "2026-11-07",
+                }
+            }
+        }
+        original = dict(meta["full_claim_coverage"]["PROMO0002"])
+        result = {
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+        }
+        self.assertFalse(_record_full_claim_coverage(meta, "PROMO0002", result, "Promotional Check #1"))
+        self.assertEqual(meta["full_claim_coverage"]["PROMO0002"], original)
+
+    def test_full_claim_promotion_failure_keeps_clean_standard_coverage(self):
+        meta = {}
+        result = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_detection_failed": True,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "standard_rewards_checked": True,
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_record_full_claim_coverage(meta, "FULLPROMO0002", result, "Primary Run"))
+        entry = meta["full_claim_coverage"]["FULLPROMO0002"]
+        self.assertEqual(entry["status"], "complete")
+        self.assertFalse(entry["retry_required"])
+        self.assertEqual(entry["standard_rewards_audited_reset"], entry["reset_date"])
+
     @staticmethod
     def event_results():
         return [{
@@ -298,6 +405,135 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Standard Store</span><strong>16</strong><small>confirmed · 3 checked</small>", report)
         self.assertIn("<span>Progression</span><strong>12</strong><small>confirmed · 2 checked</small>", report)
         self.assertIn("<span>Loyalty</span><strong>4</strong><small>confirmed · 1 checked</small>", report)
+
+
+    def test_generic_popup_blocker_remains_reportable(self):
+        generic = {
+            "key": "store-popup-blocked",
+            "title": "Store promotion popup",
+            "status": "popup_blocked",
+            "claim_count": 0,
+        }
+        self.assertTrue(_promotion_detail_worthy(generic))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [generic],
+        }])
+        self.assertIn("Store Promotions", section)
+        self.assertIn("Store promotion popup", section)
+
+    def test_free_identified_popup_blocked_offer_remains_reportable(self):
+        free = {
+            "key": "free-weekly-reward",
+            "title": "Free Weekly Reward",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Free Weekly Reward · Free",
+        }
+        self.assertTrue(_promotion_detail_worthy(free))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [free],
+        }])
+        self.assertIn("Free Weekly Reward", section)
+
+    def test_paid_popup_blocked_offer_is_excluded_from_store_promotions(self):
+        paid = {
+            "key": "premium-pack",
+            "title": "Premium Pack",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Premium Pack · ₹499 · 30% off",
+        }
+        self.assertFalse(_promotion_detail_worthy(paid))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [paid],
+        }])
+        self.assertEqual(section, "")
+
+    def test_paid_popup_blocked_offer_does_not_create_email_attention_warning(self):
+        paid = {
+            "key": "premium-pack",
+            "title": "Premium Pack",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Premium Pack · ₹499 · 30% off",
+        }
+        player = {
+            "pid": "PAIDPROMO0001",
+            "display_name": "Paid Promo Player",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "progression_checked": True,
+            "status": "Partial",
+            "retry_required": True,
+            "fail_reason": "At least one observed promotional claim was not confirmed by the portal",
+            "daily": 0,
+            "store": 0,
+            "progression": 0,
+            "loyalty": 0,
+            "has_loyalty": False,
+            "promotions_observed": [paid],
+            "event_rewards": [],
+        }
+        report = build_email(
+            [player], "Manual Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+        )
+        self.assertIn("Healthy", report)
+        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertNotIn("Premium Pack", report)
+        self.assertNotIn("At least one observed promotional claim", report)
+
+    def test_free_popup_blocked_offer_still_creates_email_attention(self):
+        free = {
+            "key": "free-weekly-reward",
+            "title": "Free Weekly Reward",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Free Weekly Reward · Free",
+        }
+        player = {
+            "pid": "FREEPROMO0001",
+            "display_name": "Free Promo Player",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "progression_checked": True,
+            "status": "Partial",
+            "retry_required": True,
+            "fail_reason": "At least one observed promotional claim was not confirmed by the portal",
+            "daily": 0,
+            "store": 0,
+            "progression": 0,
+            "loyalty": 0,
+            "has_loyalty": False,
+            "promotions_observed": [free],
+            "event_rewards": [],
+        }
+        report = build_email(
+            [player], "Manual Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+        )
+        self.assertIn("Attention Required", report)
+        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("Free Weekly Reward", report)
+
+    def test_identified_popup_blocked_offer_without_card_text_is_not_assumed_free(self):
+        incomplete = {
+            "key": "unknown-specific-offer",
+            "title": "Unknown Offer",
+            "status": "popup_blocked",
+            "button_text": "Claim",
+        }
+        self.assertFalse(_promotion_detail_worthy(incomplete))
 
 
 if __name__ == "__main__":

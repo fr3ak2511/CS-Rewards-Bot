@@ -29,6 +29,11 @@ from event_rewards import (
 )
 from reward_popup_guard import dismiss_all_safe_popups
 from progression_claim_safety import claim_progression_rewards
+from promotion_followups import (
+    filter_followup_results, seed_legacy_popup_followups,
+    update_promotion_followups, build_promotional_followup_section,
+)
+from recovery_policy import full_claim_retry_ids
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
@@ -294,6 +299,16 @@ def needs_standard_backup_audit(pid, meta):
 
 
 def _result_needs_recovery(result):
+    """Return whether this result has an unresolved, mode-appropriate follow-up."""
+    mode = str(result.get("processing_mode") or "full_claim")
+    if mode == "promotional_only":
+        # Promotional-only checks are revisited by the promotional schedule.
+        # Their Store popup state must not trigger a normal full-claim retry.
+        return (
+            str(result.get("status") or "") in ("Login Failed", "Error", "Failed")
+            or bool(result.get("event_rewards_retry_required"))
+        )
+
     status = str(result.get("status") or "")
     if status in ("Login Failed", "Error", "Failed"):
         return True
@@ -315,12 +330,31 @@ def _result_needs_recovery(result):
     return possible > confirmed
 
 
+def _full_claim_recovery_candidate(result):
+    """Return true only for unresolved full-claim/standard-reconciliation work."""
+    mode = str(result.get("processing_mode") or "full_claim")
+    if mode not in ("full_claim", "backup_reconciliation"):
+        return False
+    if str(result.get("status") or "") in ("Login Failed", "Error", "Failed"):
+        return True
+    if (result.get("daily_unconfirmed")
+            or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
+            or result.get("event_rewards_retry_required")
+            or event_retry_required(result.get("event_rewards"))):
+        return True
+    return False
+
+
 def _record_full_claim_coverage(meta, pid, result, run_label):
-    """Persist full-path outcome and the reset date of the last clean standard-reward audit."""
-    retry_required = _result_needs_recovery(result)
-    reason = result.get("fail_reason")
+    """Persist full-claim coverage; promotional-only scans must never replace it."""
+    if str(result.get("processing_mode") or "full_claim") == "promotional_only":
+        return False
+
+    retry_required = _full_claim_recovery_candidate(result)
+    reason = result.get("fail_reason") if retry_required else None
     if not reason and retry_required:
-        reason = "One or more claim attempts were incomplete or unconfirmed"
+        reason = "One or more full-claim rewards remained unconfirmed"
     entry = {
         "reset_date": _current_reset_date(),
         "status": "pending" if retry_required else "complete",
@@ -330,8 +364,6 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
         "retry_required": bool(retry_required),
         "unresolved_reason": reason,
     }
-    # A clean live Daily + Store check is valid for this reset even if a separate
-    # event/promotion/Progression issue remains pending and needs its own recovery.
     standard_checked = bool(result.get("standard_rewards_checked"))
     standard_unconfirmed = bool(
         result.get("daily_unconfirmed")
@@ -340,7 +372,7 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
     if standard_checked and not standard_unconfirmed:
         entry["standard_rewards_audited_reset"] = _current_reset_date()
     meta.setdefault("full_claim_coverage", {})[pid] = entry
-
+    return True
 
 
 
@@ -352,8 +384,21 @@ def _promotion_detail_worthy(promo):
     """
     status = str(promo.get("status") or "unknown")
     if status == "popup_blocked":
-        return True
-    if status not in ("claimed_this_run", "claim_unconfirmed", "click_failed", "available"):
+        # The generic guard result has no individual offer/card details. Keep it
+        # reportable so the reader can see that the Store was obstructed.
+        # An identified offer must pass the normal free/actionable checks below.
+        is_generic_popup_blocker = (
+            str(promo.get("key") or "").strip() == "store-popup-blocked"
+            and not str(promo.get("card_text") or "").strip()
+            and not str(promo.get("button_text") or "").strip()
+        )
+        if is_generic_popup_blocker:
+            return True
+        # Without captured card text we cannot establish that an identified
+        # blocked offer is free. Fail closed for email presentation.
+        if not str(promo.get("card_text") or "").strip():
+            return False
+    if status not in ("claimed_this_run", "claim_unconfirmed", "click_failed", "available", "popup_blocked"):
         return False
 
     card_text = _normalize_promotion_text(promo.get("card_text") or "")
@@ -2452,6 +2497,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_temp_skipped": True,
         "store_temp_status": "not_found",
         "promotions_observed": [],
+        "promotion_scan_completed": False,
+        "promotion_popup_blocked": False,
         "event_rewards": [],
         "event_reward_claims": 0,
         "event_rewards_retry_required": False,
@@ -2517,6 +2564,8 @@ def process_player(pid, has_loyalty, is_new, run_label):
         stats["store_claimed_indices"] = list(store_claimed_indices)
         stats["standard_rewards_checked"] = True
         stats["promotions_observed"] = promotions
+        stats["promotion_scan_completed"] = True
+        stats["promotion_popup_blocked"] = any(promo.get("status") == "popup_blocked" for promo in promotions)
         stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
         stats["store_temp_skipped"] = not bool(promotions)
@@ -2644,6 +2693,8 @@ def process_player_promotions_only(pid, is_new, run_label):
         "event_reward_claims": 0,
         "event_rewards_retry_required": False,
         "promotion_detection_failed": False,
+        "promotion_scan_completed": False,
+        "promotion_popup_blocked": False,
         "retry_required": False,
         "progression": 0,
         "loyalty": 0,
@@ -2678,6 +2729,8 @@ def process_player_promotions_only(pid, is_new, run_label):
         # Do not run the legacy generic close_popup() before that safety check.
         promotions = discover_and_claim_promotions(driver, pid)
         stats["promotions_observed"] = promotions
+        stats["promotion_scan_completed"] = True
+        stats["promotion_popup_blocked"] = any(promo.get("status") == "popup_blocked" for promo in promotions)
         if any(promo.get("status") == "claimed_this_run" for promo in promotions):
             log("⏳ Waiting for Trick & Treat points to settle before checking event tiers...")
             time.sleep(3)
@@ -2760,6 +2813,8 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         "event_reward_claims": 0,
         "event_rewards_retry_required": False,
         "promotion_detection_failed": False,
+        "promotion_scan_completed": False,
+        "promotion_popup_blocked": False,
         "retry_required": False,
         "progression": 0,
         "progression_unconfirmed": False,
@@ -2808,6 +2863,8 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         stats["standard_rewards_checked"] = True
         stats["store_recovered_indices"] = list(getattr(driver, "_store_daily_recovered_indices", []) or [])
         stats["promotions_observed"] = promotions
+        stats["promotion_scan_completed"] = True
+        stats["promotion_popup_blocked"] = any(promo.get("status") == "popup_blocked" for promo in promotions)
         stats["promotion_detection_failed"] = bool(getattr(driver, "_promotion_discovery_failed", False))
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
         stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
@@ -3390,7 +3447,7 @@ def build_mobile_cards(results, n):
     )
 
 
-def build_email(results, run_label, run_index, job_start, meta):
+def build_email(results, run_label, run_index, job_start, meta, followup_summary=None):
     """Build the compact Email V2 report; streak remains internal in bot_meta.json."""
     ist_now = get_ist_time()
     duration_seconds = max(0, int((ist_now - job_start).total_seconds()))
@@ -3440,7 +3497,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         + reportable_promotion_claims + event_claims
     )
 
-    attention_accounts = 0
+    attention_player_ids = set()
     exception_cards = []
     for result in results:
         status = str(result.get("status") or "")
@@ -3451,7 +3508,7 @@ def build_email(results, run_label, run_index, job_start, meta):
             for promo in promotions
         )
         hidden_promo_unconfirmed = any(
-            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available")
+            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available", "popup_blocked")
             and not _promotion_detail_worthy(promo)
             for promo in promotions
         )
@@ -3485,7 +3542,7 @@ def build_email(results, run_label, run_index, job_start, meta):
             or event_attention
         )
         if needs_attention:
-            attention_accounts += 1
+            attention_player_ids.add(str(result.get("pid") or _display_label(result)))
             has_specific_detail = bool(
                 standard_attention
                 or result.get("promotion_detection_failed")
@@ -3501,6 +3558,11 @@ def build_email(results, run_label, run_index, job_start, meta):
                     f"<p>{html.escape(reason)}</p></div>"
                 )
 
+    for item in (followup_summary or {}).get("open_items", []):
+        player_id = str(item.get("player_key") or "").strip()
+        attention_player_ids.add(player_id or f"followup:{item.get('key', item.get('title', 'unknown'))}")
+    attention_accounts = len(attention_player_ids)
+
     actual_failures = int(counts.get("actual_failures", 0) or 0)
     if account_count == 0 or (actual_failures and actual_failures == account_count):
         health_label, health_class = "Failed", "v2-failed"
@@ -3511,6 +3573,7 @@ def build_email(results, run_label, run_index, job_start, meta):
 
     standard_attention_html = build_standard_attention_section(results)
     promotion_html = build_promotional_section(results)
+    followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
     attention_html = "".join(exception_cards)
     if attention_html:
@@ -3519,7 +3582,7 @@ def build_email(results, run_label, run_index, job_start, meta):
             f"<div class='v2-section-head'><h2>Exceptions &amp; Attention</h2><span>{attention_accounts} accounts</span></div>"
             + attention_html + "</section>"
         )
-    if not (standard_attention_html or promotion_html or event_html or attention_html):
+    if not (standard_attention_html or promotion_html or followup_html or event_html or attention_html):
         attention_html = "<p class='v2-all-clear'>No outstanding exceptions were recorded for this run.</p>"
 
     def _category_card(label, checked_results, claim_key, empty_note="Not checked in this run"):
@@ -3576,6 +3639,7 @@ def build_email(results, run_label, run_index, job_start, meta):
         "<div class='v2-category-grid'>" + category_html + "</div>"
         + (standard_attention_html or "")
         + (promotion_html or "")
+        + (followup_html or "")
         + (event_html or "")
         + (attention_html or "")
         + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · Automated report · {duration_text} total run time</footer>"
@@ -4111,7 +4175,7 @@ def _full_claim_efficiency(results):
     return round(confirmed / possible * 100, 1)
 
 
-def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None):
+def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None, promotional_followups=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
     daily = sum(int(r.get("daily", 0) or 0) for r in results)
@@ -4138,7 +4202,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
         status = r.get("status")
         if status in ("Login Failed", "Error", "Failed") and r.get("pid"):
             hard_failed_ids.append(str(r["pid"]))
-        if r.get("pid") and _result_needs_recovery(r):
+        if r.get("pid") and _full_claim_recovery_candidate(r):
             retry_ids.append(str(r["pid"]))
 
     counters = _summary_counts(results)
@@ -4166,6 +4230,20 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
             "all_claims_this_run": daily + store_daily + promotion_claims + progression + loyalty + event_reward_claims,
         },
         "promotions_observed_this_run": list(promotions_seen.values()),
+        "promotional_followups": {
+            "open_count": int((promotional_followups or {}).get("open_count", 0) or 0),
+            "still_blocked_count": int((promotional_followups or {}).get("still_blocked_count", 0) or 0),
+            "pending_recheck_count": int((promotional_followups or {}).get("pending_recheck_count", 0) or 0),
+            "resolved_this_run_count": int((promotional_followups or {}).get("resolved_this_run_count", 0) or 0),
+            "not_retryable_this_run_count": int((promotional_followups or {}).get("not_retryable_this_run_count", 0) or 0),
+            "legacy_seeded_count": int((promotional_followups or {}).get("legacy_seeded_count", 0) or 0),
+            "open_items": [{
+                "player_id_last4": str(item.get("player_key", ""))[-4:],
+                "title": item.get("title"), "status": item.get("status"),
+                "reason": item.get("reason"), "attempts": int(item.get("attempts", 0) or 0),
+                "first_seen_at": item.get("first_seen_at"), "last_checked_at": item.get("last_checked_at"),
+            } for item in (promotional_followups or {}).get("open_items", [])],
+        },
         "full_claim_efficiency": _full_claim_efficiency(results),
         "email_sent": bool(email_sent),
         "player_results": [
@@ -4175,6 +4253,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "status": r.get("status"),
                 "processing_mode": r.get("processing_mode", "full_claim"),
                 "retry_required": bool(_result_needs_recovery(r)),
+                "full_claim_recovery_candidate": bool(_full_claim_recovery_candidate(r)),
                 "fail_reason": r.get("fail_reason"),
                 "daily_claimed_this_run": int(r.get("daily", 0) or 0),
                 "daily_portal_status": r.get("daily_portal_status", "unknown"),
@@ -4185,6 +4264,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "progression_unconfirmed": bool(r.get("progression_unconfirmed", False)),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
+                "promotion_scan_completed": bool(r.get("promotion_scan_completed", False)),
                 "event_rewards": r.get("event_rewards", []),
                 "event_reward_claims_this_run": event_claim_count(r.get("event_rewards")),
                 "progression_claimed_this_run": int(r.get("progression", 0) or 0),
@@ -4286,12 +4366,9 @@ def main():
             log(f"⏭️ Recovery skipped: could not validate the source run ({type(exc).__name__}).")
             return 0
 
-        retry_ids = prior.get("retry_player_ids")
-        if not isinstance(retry_ids, list):
-            retry_ids = prior.get("failed_player_ids", [])
-        retry_ids = list(dict.fromkeys(str(pid).strip() for pid in retry_ids if str(pid).strip())) if isinstance(retry_ids, list) else []
+        retry_ids = full_claim_retry_ids(prior)
         if not retry_ids:
-            log("✅ Recovery not needed: source run recorded no retryable players.")
+            log("⏭️ Recovery skipped: full-claim scope, unique candidate count, or run-mode metadata failed validation.")
             return 0
         roster_ids = set(player_ids)
         unknown = [pid for pid in retry_ids if pid not in roster_ids]
@@ -4314,17 +4391,15 @@ def main():
         if is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
             if needs_standard_backup_audit(pid, meta):
                 r = process_player_backup_reconciliation(pid, new_id, run_label)
-                if _result_needs_recovery(r):
-                    # A live audit can disprove stale same-day coverage; keep the ID pending.
+                if _full_claim_recovery_candidate(r):
                     _record_full_claim_coverage(meta, pid, r, run_label)
                 elif r.get("standard_rewards_checked"):
                     meta.setdefault("full_claim_coverage", {}).setdefault(pid, {})[
                         "standard_rewards_audited_reset"
                     ] = _current_reset_date()
             else:
+                # Promotional-only rechecks never overwrite full-claim coverage.
                 r = process_player_promotions_only(pid, new_id, run_label)
-                if _result_needs_recovery(r):
-                    _record_full_claim_coverage(meta, pid, r, run_label)
         else:
             if is_promotional_backup:
                 if new_id:
@@ -4333,14 +4408,18 @@ def main():
                     log(f"🔁 {pid}: no complete full-claim coverage for today's reset; retrying full claim path.")
             r = process_player(pid, has_loyalty, new_id, run_label)
             _record_full_claim_coverage(meta, pid, r, run_label)
-        # The legacy seen list is bookkeeping only. Full-claim coverage above records
-        # the actual outcome and remains pending for failures/partial/unconfirmed claims.
         mark_id_seen(pid, meta)
         results.append(r)
         time.sleep(0.5)
 
     # Metrics
     job_end = get_ist_time()
+    legacy_followup_seed = seed_legacy_popup_followups(meta, results, now=job_end)
+    if legacy_followup_seed.get("unmatched_suffixes"):
+        log("⚠️ Legacy promotion follow-up bootstrap deferred; suffixes not matched uniquely: " + ", ".join(legacy_followup_seed["unmatched_suffixes"]))
+    followup_results = filter_followup_results(results, meta, _promotion_detail_worthy)
+    followup_summary = update_promotion_followups(meta, followup_results, run_label, now=job_end)
+    followup_summary["legacy_seeded_count"] = legacy_followup_seed["seeded_count"]
     dur_s   = int((job_end - job_start).total_seconds())
     td       = sum(r["daily"] for r in results)
     ts_daily = sum(r["store"] for r in results)
@@ -4389,7 +4468,7 @@ def main():
                        if r.get("status") in ("Login Failed", "Error", "Failed") and r.get("pid")]
     retryable_ids = [
         result["pid"] for result in results
-        if result.get("pid") and _result_needs_recovery(result)
+        if result.get("pid") and _full_claim_recovery_candidate(result)
     ]
     counts = _summary_counts(results)
 
@@ -4398,6 +4477,7 @@ def main():
         "run_label":           run_label,
         "failed_player_ids":   hard_failed_ids,
         "failed_player_count": len(hard_failed_ids),
+        "retry_candidate_scope": "full_claim_only",
         "retry_player_ids":    list(dict.fromkeys(retryable_ids)),
         "retry_player_count":  len(set(retryable_ids)),
         "total_claimed":       tall,
@@ -4422,6 +4502,10 @@ def main():
         "actual_failures": counts["actual_failures"],
         "unconfirmed_claims": counts["unconfirmed_claims"],
         "promotion_detection_failures": counts["promotion_detection_failures"],
+        "promotion_followups_open": followup_summary["open_count"],
+        "promotion_followups_still_blocked": followup_summary["still_blocked_count"],
+        "promotion_followups_pending_recheck": followup_summary["pending_recheck_count"],
+        "promotion_followups_legacy_seeded": legacy_followup_seed["seeded_count"],
         "promotional_only_accounts": counts["promotional_only_accounts"],
         "backup_reconciliation_accounts": counts.get("backup_reconciliation_accounts", 0),
         "full_claim_accounts": counts["full_claim_accounts"],
@@ -4432,7 +4516,7 @@ def main():
 
     save_bot_meta(meta)
 
-    html_body = build_email(results, run_label, run_index, job_start, meta_for_email)
+    html_body = build_email(results, run_label, run_index, job_start, meta_for_email, followup_summary=followup_summary)
 
     n_players = len(results)
     failure_count = counts["actual_failures"]
@@ -4462,7 +4546,7 @@ def main():
         # Mixed promotional backups and subset recovery never erase it.
         meta["last_full_run"] = dict(meta["last_run"])
     save_bot_meta(meta)
-    write_run_summary(results, run_label, job_start, job_end, email_sent, configured_player_count=configured_player_count)
+    write_run_summary(results, run_label, job_start, job_end, email_sent, configured_player_count=configured_player_count, promotional_followups=followup_summary)
     log("EMAIL_DELIVERY_RESULT=SUCCESS" if email_sent else "EMAIL_DELIVERY_RESULT=FAILED")
 
     if not email_sent:

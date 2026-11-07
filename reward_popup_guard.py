@@ -305,30 +305,31 @@ def _popup_context_diagnostics(driver) -> str:
 
     # Sanitize and cap once more in Python. Never include input values, HTML,
     # arbitrary attributes, or page-wide text in the diagnostic payload.
+    def safe_element(element):
+        if not isinstance(element, dict):
+            return {}
+        rect = element.get("rect") if isinstance(element.get("rect"), dict) else {}
+        return {
+            key: str(element.get(key) or "")[:limit]
+            for key, limit in (
+                ("tag", 16), ("role", 32), ("aria", 72), ("title", 72),
+                ("testid", 72), ("dataState", 40), ("dataSlot", 40),
+                ("className", 120), ("text", 80), ("position", 20),
+                ("zIndex", 20), ("cursor", 20), ("pointerEvents", 20),
+            )
+        } | {
+            "onclickPresent": bool(element.get("onclickPresent")),
+            "disabled": bool(element.get("disabled")),
+            "rect": {
+                key: int(rect.get(key) or 0)
+                for key in ("x", "y", "width", "height")
+            },
+        }
+
     safe_roots = []
     for item in (context.get("dialogRoots") or [])[:2]:
         if not isinstance(item, dict):
             continue
-        def safe_element(element):
-            if not isinstance(element, dict):
-                return {}
-            rect = element.get("rect") if isinstance(element.get("rect"), dict) else {}
-            return {
-                key: str(element.get(key) or "")[:limit]
-                for key, limit in (
-                    ("tag", 16), ("role", 32), ("aria", 72), ("title", 72),
-                    ("testid", 72), ("dataState", 40), ("dataSlot", 40),
-                    ("className", 120), ("text", 80), ("position", 20),
-                    ("zIndex", 20), ("cursor", 20), ("pointerEvents", 20),
-                )
-            } | {
-                "onclickPresent": bool(element.get("onclickPresent")),
-                "disabled": bool(element.get("disabled")),
-                "rect": {
-                    key: int(rect.get(key) or 0)
-                    for key in ("x", "y", "width", "height")
-                },
-            }
 
         ancestors = [safe_element(x) for x in (item.get("ancestors") or [])[:4]]
         controls = [safe_element(x) for x in (item.get("nearbyControls") or [])[:16]]
