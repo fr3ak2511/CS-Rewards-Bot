@@ -329,7 +329,10 @@ jobs:
                   emit(False, False, 'no eligible recent full-roster retry candidates; recovery dispatch is stale or already handled')
               raise SystemExit(0)
 
-          if event != 'schedule' or cron not in ({launcher_cron, retry_cron} | set(backup_crons)):
+          if event == 'schedule' and cron not in ({launcher_cron, retry_cron} | set(backup_crons)):
+              emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
+              raise SystemExit(0)
+          if event != 'schedule' and not (event == 'workflow_dispatch' and external_primary):
               emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
 
