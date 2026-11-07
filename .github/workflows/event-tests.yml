@@ -16,6 +16,7 @@ on:
       - 'promotion_followups.py'
       - 'recovery_policy.py'
       - '.github/scripts/recovery_policy.js'
+      - '.github/scripts/primary_dispatch_policy.js'
       - 'progression_claim_safety.py'
       - 'reward_popup_guard.py'
       - 'requirements.txt'
@@ -36,6 +37,7 @@ on:
       - 'promotion_followups.py'
       - 'recovery_policy.py'
       - '.github/scripts/recovery_policy.js'
+      - '.github/scripts/primary_dispatch_policy.js'
       - 'progression_claim_safety.py'
       - 'reward_popup_guard.py'
       - 'requirements.txt'
@@ -72,10 +74,10 @@ jobs:
       - name: Run complete repository test suite
         run: python -m unittest discover -s tests -v
 
-      - name: Set up Node.js for immediate-recovery policy tests
+      - name: Set up Node.js for scheduler and immediate-recovery policy tests
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Run immediate-recovery decision tests
-        run: node --test tests/test_recovery_policy.js
+      - name: Run scheduler and immediate-recovery decision tests
+        run: node --test tests/test_primary_dispatch_policy.js tests/test_recovery_policy.js

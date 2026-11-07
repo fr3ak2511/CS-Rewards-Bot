@@ -34,7 +34,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
     def test_schedule_recovery_uses_shared_scoped_count_validator(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
-        self.assertIn("from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery", workflow)
+        self.assertIn("full_claim_retry_ids", workflow)
+        self.assertIn("is_recent_full_claim_recovery", workflow)
         self.assertEqual(workflow.count("is_recent_full_claim_recovery("), 2)
         self.assertNotIn("failed_player_ids", workflow)
 
@@ -42,6 +43,21 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn("from recovery_policy import full_claim_retry_ids", source)
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
+
+    def test_external_primary_dispatch_waits_and_respects_duplicate_guards(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn("external_primary:", workflow)
+        self.assertIn("inputs.external_primary == true", workflow)
+        self.assertIn("isExternalPrimary", workflow)
+        self.assertIn("isBlockingClaimJob", workflow)
+        self.assertIn("primaryDelayStatus", workflow)
+        self.assertIn("has_complete_full_roster_coverage", workflow)
+        self.assertIn("EXTERNAL_PRIMARY:", workflow)
+
+    def test_external_primary_is_labeled_as_the_normal_primary_run(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn('os.getenv("EXTERNAL_PRIMARY", "").strip().lower() == "true"', source)
+        self.assertIn('return "Primary Run", 0', source)
 
     def test_schedule_keeps_the_full_roster_fallback(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
