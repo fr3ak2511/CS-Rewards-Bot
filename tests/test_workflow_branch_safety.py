@@ -30,6 +30,23 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertEqual(workflow.count("'promotion_followups.py'"), 2)
         self.assertEqual(workflow.count("'.github/workflows/recovery.yml'"), 2)
 
+    def test_schedule_recovery_requires_scoped_count_verified_full_claim_ids(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn("def full_claim_retry_ids(last_run):", workflow)
+        self.assertIn("last_run.get('retry_candidate_scope') != 'full_claim_only'", workflow)
+        self.assertIn("last_run.get('retry_player_count', -1)", workflow)
+        self.assertEqual(workflow.count("retry_ids = full_claim_retry_ids(last)"), 2)
+
+    def test_schedule_recovery_never_uses_legacy_failed_player_fallback(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertNotIn("failed_player_ids", workflow)
+
+    def test_schedule_and_recovery_workflows_both_enforce_full_claim_scope(self):
+        schedule = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        recovery = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
+        self.assertIn("last_run.get('retry_candidate_scope') != 'full_claim_only'", schedule)
+        self.assertIn("last.retry_candidate_scope !== 'full_claim_only'", recovery)
+
 
 if __name__ == "__main__":
     unittest.main()
