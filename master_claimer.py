@@ -160,6 +160,8 @@ _PROMOTIONAL_BACKUP_CRONS = {
 def determine_run_context():
     if RECOVERY_ONLY_FAILED:
         return "Recovery Run", -2
+    if os.getenv("EXTERNAL_PRIMARY", "").strip().lower() == "true":
+        return "Primary Run", 0
     event = os.getenv("GITHUB_EVENT_NAME") or "local"
     if event == "workflow_dispatch":
         return "Manual Run", -1
