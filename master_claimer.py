@@ -298,6 +298,16 @@ def needs_standard_backup_audit(pid, meta):
 
 
 def _result_needs_recovery(result):
+    """Return whether this result has an unresolved, mode-appropriate follow-up."""
+    mode = str(result.get("processing_mode") or "full_claim")
+    if mode == "promotional_only":
+        # Promotional-only checks are revisited by the promotional schedule.
+        # Their Store popup state must not trigger a normal full-claim retry.
+        return (
+            str(result.get("status") or "") in ("Login Failed", "Error", "Failed")
+            or bool(result.get("event_rewards_retry_required"))
+        )
+
     status = str(result.get("status") or "")
     if status in ("Login Failed", "Error", "Failed"):
         return True
@@ -319,12 +329,31 @@ def _result_needs_recovery(result):
     return possible > confirmed
 
 
+def _full_claim_recovery_candidate(result):
+    """Return true only for unresolved full-claim/standard-reconciliation work."""
+    mode = str(result.get("processing_mode") or "full_claim")
+    if mode not in ("full_claim", "backup_reconciliation"):
+        return False
+    if str(result.get("status") or "") in ("Login Failed", "Error", "Failed"):
+        return True
+    if (result.get("daily_unconfirmed")
+            or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
+            or result.get("event_rewards_retry_required")
+            or event_retry_required(result.get("event_rewards"))):
+        return True
+    return False
+
+
 def _record_full_claim_coverage(meta, pid, result, run_label):
-    """Persist full-path outcome and the reset date of the last clean standard-reward audit."""
-    retry_required = _result_needs_recovery(result)
-    reason = result.get("fail_reason")
+    """Persist full-claim coverage; promotional-only scans must never replace it."""
+    if str(result.get("processing_mode") or "full_claim") == "promotional_only":
+        return False
+
+    retry_required = _full_claim_recovery_candidate(result)
+    reason = result.get("fail_reason") if retry_required else None
     if not reason and retry_required:
-        reason = "One or more claim attempts were incomplete or unconfirmed"
+        reason = "One or more full-claim rewards remained unconfirmed"
     entry = {
         "reset_date": _current_reset_date(),
         "status": "pending" if retry_required else "complete",
@@ -334,8 +363,6 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
         "retry_required": bool(retry_required),
         "unresolved_reason": reason,
     }
-    # A clean live Daily + Store check is valid for this reset even if a separate
-    # event/promotion/Progression issue remains pending and needs its own recovery.
     standard_checked = bool(result.get("standard_rewards_checked"))
     standard_unconfirmed = bool(
         result.get("daily_unconfirmed")
@@ -344,7 +371,7 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
     if standard_checked and not standard_unconfirmed:
         entry["standard_rewards_audited_reset"] = _current_reset_date()
     meta.setdefault("full_claim_coverage", {})[pid] = entry
-
+    return True
 
 
 
@@ -4174,7 +4201,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
         status = r.get("status")
         if status in ("Login Failed", "Error", "Failed") and r.get("pid"):
             hard_failed_ids.append(str(r["pid"]))
-        if r.get("pid") and _result_needs_recovery(r):
+        if r.get("pid") and _full_claim_recovery_candidate(r):
             retry_ids.append(str(r["pid"]))
 
     counters = _summary_counts(results)
@@ -4225,6 +4252,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "status": r.get("status"),
                 "processing_mode": r.get("processing_mode", "full_claim"),
                 "retry_required": bool(_result_needs_recovery(r)),
+                "full_claim_recovery_candidate": bool(_full_claim_recovery_candidate(r)),
                 "fail_reason": r.get("fail_reason"),
                 "daily_claimed_this_run": int(r.get("daily", 0) or 0),
                 "daily_portal_status": r.get("daily_portal_status", "unknown"),
@@ -4337,9 +4365,12 @@ def main():
             log(f"⏭️ Recovery skipped: could not validate the source run ({type(exc).__name__}).")
             return 0
 
+        if prior.get("retry_candidate_scope") != "full_claim_only":
+            log("⏭️ Recovery skipped: saved candidates are not marked full-claim-only; legacy metadata fails closed.")
+            return 0
         retry_ids = prior.get("retry_player_ids")
         if not isinstance(retry_ids, list):
-            retry_ids = prior.get("failed_player_ids", [])
+            retry_ids = []
         retry_ids = list(dict.fromkeys(str(pid).strip() for pid in retry_ids if str(pid).strip())) if isinstance(retry_ids, list) else []
         if not retry_ids:
             log("✅ Recovery not needed: source run recorded no retryable players.")
@@ -4365,17 +4396,15 @@ def main():
         if is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
             if needs_standard_backup_audit(pid, meta):
                 r = process_player_backup_reconciliation(pid, new_id, run_label)
-                if _result_needs_recovery(r):
-                    # A live audit can disprove stale same-day coverage; keep the ID pending.
+                if _full_claim_recovery_candidate(r):
                     _record_full_claim_coverage(meta, pid, r, run_label)
                 elif r.get("standard_rewards_checked"):
                     meta.setdefault("full_claim_coverage", {}).setdefault(pid, {})[
                         "standard_rewards_audited_reset"
                     ] = _current_reset_date()
             else:
+                # Promotional-only rechecks never overwrite full-claim coverage.
                 r = process_player_promotions_only(pid, new_id, run_label)
-                if _result_needs_recovery(r):
-                    _record_full_claim_coverage(meta, pid, r, run_label)
         else:
             if is_promotional_backup:
                 if new_id:
@@ -4384,8 +4413,6 @@ def main():
                     log(f"🔁 {pid}: no complete full-claim coverage for today's reset; retrying full claim path.")
             r = process_player(pid, has_loyalty, new_id, run_label)
             _record_full_claim_coverage(meta, pid, r, run_label)
-        # The legacy seen list is bookkeeping only. Full-claim coverage above records
-        # the actual outcome and remains pending for failures/partial/unconfirmed claims.
         mark_id_seen(pid, meta)
         results.append(r)
         time.sleep(0.5)
@@ -4446,7 +4473,7 @@ def main():
                        if r.get("status") in ("Login Failed", "Error", "Failed") and r.get("pid")]
     retryable_ids = [
         result["pid"] for result in results
-        if result.get("pid") and _result_needs_recovery(result)
+        if result.get("pid") and _full_claim_recovery_candidate(result)
     ]
     counts = _summary_counts(results)
 
@@ -4455,6 +4482,7 @@ def main():
         "run_label":           run_label,
         "failed_player_ids":   hard_failed_ids,
         "failed_player_count": len(hard_failed_ids),
+        "retry_candidate_scope": "full_claim_only",
         "retry_player_ids":    list(dict.fromkeys(retryable_ids)),
         "retry_player_count":  len(set(retryable_ids)),
         "total_claimed":       tall,

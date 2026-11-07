@@ -55,10 +55,20 @@ jobs:
             }
             const meta = JSON.parse(Buffer.from(fileResponse.data.content, 'base64').toString('utf8'));
             const last = meta.last_run || {};
-            const candidateSource = Array.isArray(last.retry_player_ids) ? last.retry_player_ids : last.failed_player_ids;
-            const retryIds = Array.isArray(candidateSource)
-              ? [...new Set(candidateSource.map(x => String(x).trim()).filter(Boolean))]
-              : [];
+            if (last.retry_candidate_scope !== 'full_claim_only') {
+              out(false, 'saved retry candidates are not marked full-claim-only; legacy metadata fails closed');
+              return;
+            }
+            const candidateSource = Array.isArray(last.retry_player_ids) ? last.retry_player_ids : [];
+            const retryIds = [...new Set(candidateSource.map(x => String(x).trim()).filter(Boolean))];
+            if (!retryIds.length) {
+              out(false, 'no full-claim retry candidates were recorded');
+              return;
+            }
+            if (Number(last.retry_player_count || 0) !== retryIds.length) {
+              out(false, 'retry candidate count does not match unique candidate IDs');
+              return;
+            }
 
             const stamp = String(last.timestamp || '');
             const lastEpoch = stamp
