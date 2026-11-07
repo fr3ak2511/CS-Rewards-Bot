@@ -172,10 +172,8 @@ jobs:
     if: >-
       github.ref_name == 'prod' &&
       needs.preflight.outputs.should_run == 'true' &&
-      (
-        (github.event_name == 'schedule' && github.event.schedule == '30 21 * * *') ||
-        (github.event_name == 'workflow_dispatch' && inputs.external_primary == true)
-      )
+      github.event_name == 'schedule' &&
+      github.event.schedule == '30 21 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
