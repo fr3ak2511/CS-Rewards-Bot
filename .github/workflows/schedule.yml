@@ -206,6 +206,7 @@ jobs:
           import json
           import os
           from datetime import datetime, timedelta, time as dt_time, timezone
+from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery
 
           event = os.environ.get('RUN_EVENT', '')
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
@@ -246,25 +247,6 @@ jobs:
               except Exception:
                   return None
 
-          def dedupe_ids(value):
-              if not isinstance(value, list):
-                  return []
-              return list(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
-
-          def full_claim_retry_ids(last_run):
-              """Return only explicitly scoped, count-verified full-claim retry IDs."""
-              if not isinstance(last_run, dict):
-                  return []
-              if last_run.get('retry_candidate_scope') != 'full_claim_only':
-                  return []
-              retry_ids = dedupe_ids(last_run.get('retry_player_ids'))
-              try:
-                  recorded_count = int(last_run.get('retry_player_count', -1))
-              except (TypeError, ValueError):
-                  return []
-              if not retry_ids or recorded_count != len(retry_ids):
-                  return []
-              return retry_ids
 
           def daily_target(day):
               date_key = day.strftime('%Y-%m-%d')
@@ -299,10 +281,8 @@ jobs:
                   emit(False, False, f'unsupported repository dispatch {dispatch_type!r}; fail closed')
                   raise SystemExit(0)
               retry_ids = full_claim_retry_ids(last)
-              allowed_labels = {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
-              age = (now - last_end).total_seconds() if last_end else None
-              if (last.get('run_label') in allowed_labels and retry_ids and last_end and last_start
-                      and last_start >= reset_at and age is not None and 0 <= age <= 4 * 3600):
+              if is_recent_full_claim_recovery(
+                      last, last_end=last_end, last_start=last_start, now=now, reset_at=reset_at):
                   emit(True, True, f'immediate recovery dispatch for {len(retry_ids)} unresolved player ID(s)')
               else:
                   emit(False, False, 'no eligible recent full-roster retry candidates; recovery dispatch is stale or already handled')
@@ -345,12 +325,8 @@ jobs:
               and full_label in allowed_full_labels
           )
 
-          retry_ids = full_claim_retry_ids(last)
-          last_age_hours = (now - last_end).total_seconds() / 3600 if last_end else None
-          eligible_recent_recovery = bool(
-              last.get('run_label') in {'Primary Run', 'Manual Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3', 'Promotional Check #4', 'Backup Run #1', 'Backup Run #2', 'Backup Run #3', 'Backup Run #4'}
-              and retry_ids and last_end and last_start and last_start >= reset_at
-              and last_age_hours is not None and 0 <= last_age_hours <= 4
+          eligible_recent_recovery = is_recent_full_claim_recovery(
+              last, last_end=last_end, last_start=last_start, now=now, reset_at=reset_at
           )
 
           if cron == launcher_cron:

@@ -33,6 +33,7 @@ from promotion_followups import (
     filter_followup_results, seed_legacy_popup_followups,
     update_promotion_followups, build_promotional_followup_section,
 )
+from recovery_policy import full_claim_retry_ids
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
@@ -4365,15 +4366,9 @@ def main():
             log(f"⏭️ Recovery skipped: could not validate the source run ({type(exc).__name__}).")
             return 0
 
-        if prior.get("retry_candidate_scope") != "full_claim_only":
-            log("⏭️ Recovery skipped: saved candidates are not marked full-claim-only; legacy metadata fails closed.")
-            return 0
-        retry_ids = prior.get("retry_player_ids")
-        if not isinstance(retry_ids, list):
-            retry_ids = []
-        retry_ids = list(dict.fromkeys(str(pid).strip() for pid in retry_ids if str(pid).strip())) if isinstance(retry_ids, list) else []
+        retry_ids = full_claim_retry_ids(prior)
         if not retry_ids:
-            log("✅ Recovery not needed: source run recorded no retryable players.")
+            log("⏭️ Recovery skipped: full-claim scope, unique candidate count, or run-mode metadata failed validation.")
             return 0
         roster_ids = set(player_ids)
         unknown = [pid for pid in retry_ids if pid not in roster_ids]
