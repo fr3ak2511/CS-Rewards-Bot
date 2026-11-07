@@ -356,8 +356,21 @@ def _promotion_detail_worthy(promo):
     """
     status = str(promo.get("status") or "unknown")
     if status == "popup_blocked":
-        return True
-    if status not in ("claimed_this_run", "claim_unconfirmed", "click_failed", "available"):
+        # The generic guard result has no individual offer/card details. Keep it
+        # reportable so the reader can see that the Store was obstructed.
+        # An identified offer must pass the normal free/actionable checks below.
+        is_generic_popup_blocker = (
+            str(promo.get("key") or "").strip() == "store-popup-blocked"
+            and not str(promo.get("card_text") or "").strip()
+            and not str(promo.get("button_text") or "").strip()
+        )
+        if is_generic_popup_blocker:
+            return True
+        # Without captured card text we cannot establish that an identified
+        # blocked offer is free. Fail closed for email presentation.
+        if not str(promo.get("card_text") or "").strip():
+            return False
+    if status not in ("claimed_this_run", "claim_unconfirmed", "click_failed", "available", "popup_blocked"):
         return False
 
     card_text = _normalize_promotion_text(promo.get("card_text") or "")
@@ -3467,7 +3480,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             for promo in promotions
         )
         hidden_promo_unconfirmed = any(
-            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available")
+            str(promo.get("status") or "") in ("claim_unconfirmed", "click_failed", "available", "popup_blocked")
             and not _promotion_detail_worthy(promo)
             for promo in promotions
         )
