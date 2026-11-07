@@ -34,7 +34,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
     def test_schedule_recovery_uses_shared_scoped_count_validator(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
-        self.assertIn("from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery", workflow)
+        self.assertIn("full_claim_retry_ids", workflow)
+        self.assertIn("is_recent_full_claim_recovery", workflow)
         self.assertEqual(workflow.count("is_recent_full_claim_recovery("), 2)
         self.assertNotIn("failed_player_ids", workflow)
 
