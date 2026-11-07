@@ -72,6 +72,12 @@ test('matching full-claim candidates permit one bounded recovery dispatch', () =
   assert.match(result.reason, /1 unresolved full-claim player ID/);
 });
 
+test('explicit IST offset in saved metadata is parsed without double-appending a zone', () => {
+  const result = decide(validLastRun({ timestamp: '2026-11-07T07:20:00+05:30' }));
+  assert.equal(result.dispatch, true);
+  assert.deepEqual(result.retryIds, ['PLAYER-A']);
+});
+
 test('source run timestamp must match the saved metadata timestamp', () => {
   const result = decide(validLastRun(), { updated_at: '2026-11-07T00:00:00Z' });
   assert.equal(result.dispatch, false);

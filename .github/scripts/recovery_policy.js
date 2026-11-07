@@ -54,7 +54,7 @@ function fullClaimRetryIds(lastRun) {
 function parseIstTimestamp(value) {
   const stamp = String(value || '');
   if (!stamp) return NaN;
-  const hasZone = /(?:[zZ]|[+-]\\d{2}:\\d{2})$/.test(stamp);
+  const hasZone = /(?:[zZ]|[+-]\d{2}:\d{2})$/.test(stamp);
   return Date.parse(hasZone ? stamp : `${stamp}+05:30`);
 }
 

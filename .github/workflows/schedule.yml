@@ -206,7 +206,7 @@ jobs:
           import json
           import os
           from datetime import datetime, timedelta, time as dt_time, timezone
-from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery
+          from recovery_policy import full_claim_retry_ids, is_recent_full_claim_recovery
 
           event = os.environ.get('RUN_EVENT', '')
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
