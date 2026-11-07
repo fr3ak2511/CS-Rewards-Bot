@@ -300,5 +300,134 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Loyalty</span><strong>4</strong><small>confirmed · 1 checked</small>", report)
 
 
+    def test_generic_popup_blocker_remains_reportable(self):
+        generic = {
+            "key": "store-popup-blocked",
+            "title": "Store promotion popup",
+            "status": "popup_blocked",
+            "claim_count": 0,
+        }
+        self.assertTrue(_promotion_detail_worthy(generic))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [generic],
+        }])
+        self.assertIn("Store Promotions", section)
+        self.assertIn("Store promotion popup", section)
+
+    def test_free_identified_popup_blocked_offer_remains_reportable(self):
+        free = {
+            "key": "free-weekly-reward",
+            "title": "Free Weekly Reward",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Free Weekly Reward · Free",
+        }
+        self.assertTrue(_promotion_detail_worthy(free))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [free],
+        }])
+        self.assertIn("Free Weekly Reward", section)
+
+    def test_paid_popup_blocked_offer_is_excluded_from_store_promotions(self):
+        paid = {
+            "key": "premium-pack",
+            "title": "Premium Pack",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Premium Pack · ₹499 · 30% off",
+        }
+        self.assertFalse(_promotion_detail_worthy(paid))
+        section = build_promotional_section([{
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "promotions_observed": [paid],
+        }])
+        self.assertEqual(section, "")
+
+    def test_paid_popup_blocked_offer_does_not_create_email_attention_warning(self):
+        paid = {
+            "key": "premium-pack",
+            "title": "Premium Pack",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Premium Pack · ₹499 · 30% off",
+        }
+        player = {
+            "pid": "PAIDPROMO0001",
+            "display_name": "Paid Promo Player",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "progression_checked": True,
+            "status": "Partial",
+            "retry_required": True,
+            "fail_reason": "At least one observed promotional claim was not confirmed by the portal",
+            "daily": 0,
+            "store": 0,
+            "progression": 0,
+            "loyalty": 0,
+            "has_loyalty": False,
+            "promotions_observed": [paid],
+            "event_rewards": [],
+        }
+        report = build_email(
+            [player], "Manual Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+        )
+        self.assertIn("Healthy", report)
+        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertNotIn("Premium Pack", report)
+        self.assertNotIn("At least one observed promotional claim", report)
+
+    def test_free_popup_blocked_offer_still_creates_email_attention(self):
+        free = {
+            "key": "free-weekly-reward",
+            "title": "Free Weekly Reward",
+            "status": "popup_blocked",
+            "claim_count": 0,
+            "button_text": "Claim",
+            "card_text": "Free Weekly Reward · Free",
+        }
+        player = {
+            "pid": "FREEPROMO0001",
+            "display_name": "Free Promo Player",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "progression_checked": True,
+            "status": "Partial",
+            "retry_required": True,
+            "fail_reason": "At least one observed promotional claim was not confirmed by the portal",
+            "daily": 0,
+            "store": 0,
+            "progression": 0,
+            "loyalty": 0,
+            "has_loyalty": False,
+            "promotions_observed": [free],
+            "event_rewards": [],
+        }
+        report = build_email(
+            [player], "Manual Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+        )
+        self.assertIn("Attention Required", report)
+        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("Free Weekly Reward", report)
+
+    def test_identified_popup_blocked_offer_without_card_text_is_not_assumed_free(self):
+        incomplete = {
+            "key": "unknown-specific-offer",
+            "title": "Unknown Offer",
+            "status": "popup_blocked",
+            "button_text": "Claim",
+        }
+        self.assertFalse(_promotion_detail_worthy(incomplete))
+
+
 if __name__ == "__main__":
     unittest.main()
