@@ -73,8 +73,13 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const crypto = require('crypto');
+            const fs = require('fs');
             const path = require('path');
-            const { isBlockingClaimJob } = require(path.join(
+            const {
+              countConfiguredPlayers,
+              hasCompleteFullRosterCoverage,
+              isBlockingClaimJob,
+            } = require(path.join(
               process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
             ));
             const isExternalPrimary = context.eventName === 'workflow_dispatch' &&
@@ -107,10 +112,10 @@ jobs:
                 return;
               }
 
-              // Let the daily scheduled dispatcher run its wait job.
+              // The daily dispatcher must pass state/duplicate checks before starting
+              // its long randomized wait. It remains the backup if no external cycle ran.
               if (cron === launcherCron) {
-                out(true, 'daily primary dispatcher; wait job enforces the randomized target');
-                return;
+                core.info('daily primary dispatcher; validate committed coverage and active claim jobs before waiting');
               }
 
               // Compute today's target in IST consistently with the Python wait/run-mode steps.
@@ -132,8 +137,33 @@ jobs:
               core.info('external morning primary request; check for a real competing claim job');
             }
 
+            // If the external primary has already committed a complete full-roster cycle,
+            // skip the native dispatcher before it starts its three-hour randomized wait.
+            // Malformed or unavailable state fails open: the native backup remains enabled.
+            if (context.eventName === 'schedule' && context.payload.schedule === launcherCron) {
+              try {
+                const rosterCsv = fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'players.csv'), 'utf8');
+                const playerCount = countConfiguredPlayers(rosterCsv);
+                const metaPath = path.join(process.env.GITHUB_WORKSPACE, 'bot_meta.json');
+                const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                if (!playerCount) {
+                  core.warning('Could not validate configured roster; keep native primary backup enabled.');
+                } else if (hasCompleteFullRosterCoverage({
+                  fullRun: meta.last_full_run,
+                  playerCount,
+                  now: new Date(),
+                })) {
+                  out(false, 'complete full-roster cycle is already recorded for today; skip redundant native dispatcher before its wait');
+                  return;
+                }
+              } catch (error) {
+                core.warning(`Could not read production coverage state during preflight (${error.message}); keep native primary backup enabled.`);
+              }
+            }
+
             // Avoid queuing duplicate claims while a previous claim job is queued/running.
-            // The three-hour waiting dispatcher is harmless; only its claim job matters here.
+            // This check applies to the daily dispatcher too: an active external claim
+            // must prevent the native dispatcher from joining the concurrency queue.
             const response = await github.rest.actions.listWorkflowRunsForRepo({
               owner, repo, branch: context.ref.replace(/^refs\/heads\//, ''), per_page: 100
             });
@@ -176,29 +206,119 @@ jobs:
       github.event.schedule == '30 21 * * *'
     runs-on: ubuntu-latest
     timeout-minutes: 210
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      proceed: ${{ steps.wait.outputs.proceed }}
     steps:
-      - name: Sleep until today's randomized target (05:35–06:00 IST)
-        run: |
-          python3 - <<'PY'
-          import hashlib
-          import time
-          from datetime import datetime, timedelta, timezone
+      - name: Check out the production scheduler policy
+        uses: actions/checkout@v4
+        with:
+          ref: prod
 
-          ist_tz = timezone(timedelta(hours=5, minutes=30))
-          now = datetime.now(ist_tz)
-          date_key = now.strftime('%Y-%m-%d')
-          offset_seconds = int(hashlib.sha256(date_key.encode('utf-8')).hexdigest()[:8], 16) % 1501
-          target = now.replace(hour=5, minute=35, second=0, microsecond=0) + timedelta(seconds=offset_seconds)
+      - name: Wait for target unless another claim run takes ownership
+        id: wait
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const crypto = require('crypto');
+            const path = require('path');
+            const {
+              countConfiguredPlayers,
+              hasCompleteFullRosterCoverage,
+              isBlockingClaimJob,
+            } = require(path.join(
+              process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
+            ));
+            const { owner, repo } = context.repo;
+            const istNow = () => new Date(Date.now() + 330 * 60 * 1000);
+            const start = istNow();
+            const dateKey = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-${String(start.getUTCDate()).padStart(2, '0')}`;
+            const offsetSeconds = parseInt(crypto.createHash('sha256').update(dateKey).digest('hex').slice(0, 8), 16) % 1501;
+            const targetUtcMs = Date.UTC(
+              start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate(), 5, 35, 0
+            ) + offsetSeconds * 1000 - 330 * 60 * 1000;
 
-          print(f'Current IST time: {now:%Y-%m-%d %H:%M:%S}')
-          print(f'Shared randomized primary target: {target:%Y-%m-%d %H:%M:%S} IST')
-          if now < target:
-              delay = (target - now).total_seconds()
-              print(f'Sleeping for {int(delay)} seconds. The claim script will not start before 05:30 IST.')
-              time.sleep(delay)
-          else:
-              print('Launcher arrived after the target; proceeding now, never before the target.')
-          PY
+            const competingClaim = async () => {
+              const response = await github.rest.actions.listWorkflowRunsForRepo({
+                owner, repo, branch: 'prod', per_page: 100
+              });
+              const activeRuns = response.data.workflow_runs.filter(run =>
+                String(run.id) !== String(context.runId) &&
+                run.path === '.github/workflows/schedule.yml' &&
+                run.head_branch === 'prod' &&
+                ['queued', 'in_progress', 'waiting', 'pending', 'requested'].includes(run.status)
+              );
+              for (const run of activeRuns) {
+                const jobResponse = await github.rest.actions.listJobsForWorkflowRun({
+                  owner, repo, run_id: run.id, per_page: 100
+                });
+                const jobs = jobResponse.data.jobs || [];
+                const claimJob = jobs.find(job => job.name === 'Run Master Claimer');
+                const delayJob = jobs.find(job => job.name === 'Wait for randomized primary window');
+                if (isBlockingClaimJob({
+                  isExternalPrimary: false,
+                  claimJobStatus: claimJob?.status || '',
+                  primaryDelayStatus: delayJob?.status || '',
+                })) {
+                  return { run, claimJob };
+                }
+              }
+              return null;
+            };
+
+            const stopForCompetitor = async () => {
+              try {
+                const competitor = await competingClaim();
+                if (competitor) {
+                  core.setOutput('proceed', 'false');
+                  core.info(`SKIP: native primary wait stopped; claim job in run #${competitor.run.run_number} is already ${competitor.claimJob.status}.`);
+                  return true;
+                }
+              } catch (error) {
+                core.warning(`Could not inspect competing Actions runs (${error.message}); preserving the native backup path.`);
+              }
+              return false;
+            };
+
+            core.info(`Current IST: ${istNow().toISOString()}; randomized target: ${new Date(targetUtcMs).toISOString()} (UTC).`);
+            while (Date.now() < targetUtcMs) {
+              if (await stopForCompetitor()) return;
+              const remaining = targetUtcMs - Date.now();
+              await new Promise(resolve => setTimeout(resolve, Math.min(30000, remaining)));
+            }
+
+            // Recheck once after the wait to close the target-time race.
+            if (await stopForCompetitor()) return;
+
+            // If the external run completed before the randomized target, consult
+            // the latest committed state rather than relying on the initial checkout.
+            try {
+              const [metaResponse, rosterResponse] = await Promise.all([
+                github.rest.repos.getContent({ owner, repo, path: 'bot_meta.json', ref: 'prod' }),
+                github.rest.repos.getContent({ owner, repo, path: 'players.csv', ref: 'prod' }),
+              ]);
+              if (metaResponse.data.type === 'file' && rosterResponse.data.type === 'file') {
+                const meta = JSON.parse(Buffer.from(metaResponse.data.content, 'base64').toString('utf8'));
+                const rosterCsv = Buffer.from(rosterResponse.data.content, 'base64').toString('utf8');
+                const playerCount = countConfiguredPlayers(rosterCsv);
+                if (playerCount && hasCompleteFullRosterCoverage({
+                  fullRun: meta.last_full_run,
+                  playerCount,
+                  now: new Date(),
+                })) {
+                  core.setOutput('proceed', 'false');
+                  core.info('SKIP: native primary wait stopped; a complete full-roster cycle is already recorded for today.');
+                  return;
+                }
+              }
+            } catch (error) {
+              core.warning(`Could not refresh production coverage state after the wait (${error.message}); the in-job state gate remains authoritative.`);
+            }
+
+            core.setOutput('proceed', 'true');
+            core.info('Randomized target reached; no competing claim run or completed full-roster cycle found. Proceeding with native backup.');
 
   run-claimer:
     name: Run Master Claimer
@@ -207,7 +327,7 @@ jobs:
       github.ref_name == 'prod' &&
       always() &&
       needs.preflight.outputs.should_run == 'true' &&
-      (needs.primary_delay.result == 'success' || needs.primary_delay.result == 'skipped')
+      ((needs.primary_delay.result == 'success' && needs.primary_delay.outputs.proceed != 'false') || needs.primary_delay.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
