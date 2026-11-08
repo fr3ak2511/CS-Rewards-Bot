@@ -1,5 +1,9 @@
+import json
+import tempfile
 import unittest
 from datetime import timedelta
+from pathlib import Path
+from unittest.mock import patch
 
 from master_claimer import (
     _full_claim_recovery_candidate,
@@ -11,6 +15,7 @@ from master_claimer import (
     build_event_rewards_section,
     build_promotional_section,
     get_ist_time,
+    write_run_summary,
 )
 
 
@@ -295,7 +300,28 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("Attention Required", html)
         self.assertIn("Portal confirmation pending", html)
+        self.assertIn(".v2-warn{color:#92400e;background:#fef3c7}", html)
+        self.assertIn(".v2-exceptions{background:#fffbeb;border-color:#fcd34d}", html)
 
+
+
+    def test_run_summary_writes_the_separate_copyable_html_artifact(self):
+        started = get_ist_time() - timedelta(minutes=1)
+        finished = get_ist_time()
+        with tempfile.TemporaryDirectory() as folder:
+            with patch("master_claimer.RUN_ARTIFACTS_DIR", folder):
+                summary_path = write_run_summary(
+                    [], "Manual Run", started, finished, True,
+                    configured_player_count=0,
+                )
+            self.assertTrue(Path(summary_path).is_file())
+            report_path = Path(folder) / "report.html"
+            self.assertTrue(report_path.is_file())
+            report = report_path.read_text(encoding="utf-8")
+            self.assertIn("Copy Report", report)
+            self.assertIn("navigator.clipboard.write", report)
+            saved_summary = json.loads(Path(summary_path).read_text(encoding="utf-8"))
+            self.assertEqual(saved_summary["totals"]["all_claims_this_run"], 0)
 
     def test_hidden_paid_promotion_failure_does_not_trigger_email_attention(self):
         player = {
