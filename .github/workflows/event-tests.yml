@@ -15,6 +15,7 @@ on:
       - 'master_claimer.py'
       - 'report_export.py'
       - 'run_reconciliation.py'
+      - 'historical_claim_audit.py'
       - 'promotion_followups.py'
       - 'recovery_policy.py'
       - '.github/scripts/recovery_policy.js'
