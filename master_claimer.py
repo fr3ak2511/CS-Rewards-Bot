@@ -34,6 +34,7 @@ from promotion_followups import (
     update_promotion_followups, build_promotional_followup_section,
 )
 from recovery_policy import full_claim_retry_ids
+from report_export import build_copyable_report
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
@@ -3618,14 +3619,14 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         ".v2-shell{max-width:760px;margin:0 auto}.v2-hero{padding:22px;border-radius:16px;background:linear-gradient(135deg,#17365d,#2459a6);color:#fff}"
         ".v2-brand{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.82}.v2-hero h1{font-size:23px;margin:8px 0}.v2-meta{font-size:12px;color:#dbeafe}"
         ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background:#fff}"
-        ".v2-healthy{color:#166534}.v2-warn{color:#92400e}.v2-failed{color:#991b1b}"
+        ".v2-healthy{color:#166534;background:#dcfce7}.v2-warn{color:#92400e;background:#fef3c7}.v2-failed{color:#991b1b;background:#fee2e2}"
         ".v2-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px}"
         ".v2-kpi{padding:15px}.v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.7px}"
         ".v2-kpi strong{display:block;font-size:25px;margin:7px 0 2px;color:#172033}.v2-kpi small,.v2-category small{font-size:10px;color:#94a3b8}"
         ".v2-category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.v2-category{padding:12px}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
         ".v2-section{padding:15px;margin:0 0 12px}.v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.v2-section-head h2{font-size:14px;margin:0}.v2-section-head span{font-size:10px;color:#64748b;text-align:right}"
         ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px}.v2-item:first-of-type{border-top:0}.v2-item strong{display:block}.v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px}.v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px}.v2-good{color:#166534}"
-        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
+        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exceptions{background:#fffbeb;border-color:#fcd34d}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
         ".v2-footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px}"
         "@media(max-width:560px){body{padding:9px}.v2-hero{padding:17px}.v2-hero h1{font-size:20px}.v2-kpis{grid-template-columns:1fr 1fr}.v2-kpi:first-child{grid-column:span 2}.v2-category-grid{grid-template-columns:1fr 1fr}.v2-item{display:block}.v2-result{display:block;max-width:none;text-align:left;margin-top:6px}.v2-section-head{align-items:flex-start}}"
         "</style></head><body><main class='v2-shell'>"
@@ -4278,6 +4279,18 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
     path = os.path.join(RUN_ARTIFACTS_DIR, "run_summary.json")
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2, ensure_ascii=False)
+
+    # The email stays script-free for client compatibility. This separate browser
+    # artifact provides the rich/plain clipboard action for sharing the same run.
+    copyable_path = os.path.join(RUN_ARTIFACTS_DIR, "report.html")
+    try:
+        with open(copyable_path, "w", encoding="utf-8") as handle:
+            handle.write(build_copyable_report(summary))
+        log(f"📋 Copyable report saved: {copyable_path}")
+    except Exception as exc:
+        # Report export is supplementary; never invalidate claim results or email.
+        log(f"⚠️ Could not create copyable report: {type(exc).__name__}: {str(exc)[:160]}")
+
     log(f"📦 Run summary saved: {path}")
     return path
 
