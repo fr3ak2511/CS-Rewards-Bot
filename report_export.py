@@ -60,6 +60,11 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
             + _number(summary.get("unconfirmed_claims"))
         )
 
+    reconciliation = summary.get("reconciliation") if isinstance(summary.get("reconciliation"), dict) else {}
+    reconciliation_warnings = reconciliation.get("warnings") if isinstance(reconciliation.get("warnings"), list) else []
+    if reconciliation.get("status") == "attention_required":
+        attention = max(attention, len(reconciliation_warnings), 1)
+
     health = "ATTENTION REQUIRED" if attention else "HEALTHY"
     health_class = "warn" if attention else "healthy"
 
@@ -210,6 +215,14 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div>Unconfirmed claims: <strong>{_number(summary.get("unconfirmed_claims"))}</strong></div>
 <div>Retry candidates: <strong>{_number(summary.get("retry_candidate_count"))}</strong></div>
 <div>Email delivery: <strong>{email_state}</strong></div>
+</section>
+<section class="section">
+<h2>Reward reconciliation</h2>
+<div>Status: <strong>{_safe(reconciliation.get("status"), "Not available")}</strong></div>
+<div>Per-account claim sum: <strong>{_number((reconciliation.get("claim_counts") or {}).get("per_account_sum"))}</strong></div>
+<div>Category total: <strong>{_number((reconciliation.get("claim_counts") or {}).get("category_sum"))}</strong></div>
+<div>Recorded claim counter: <strong>{_number((reconciliation.get("claim_counts") or {}).get("recorded_claim_counter"))}</strong></div>
+{"<ul>" + "".join("<li>" + _safe(item) + "</li>" for item in reconciliation_warnings) + "</ul>" if reconciliation_warnings else "<p>All available arithmetic and roster-scope checks matched.</p>"}
 </section>
 </div>
 <footer class="footer">CS Rewards Bot · Automated report · Player IDs are masked to their last four characters.</footer>
