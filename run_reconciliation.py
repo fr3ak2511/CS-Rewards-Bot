@@ -63,6 +63,7 @@ def build_run_reconciliation(
         "loyalty_claimed_this_run",
     ))
     recorded_claims = _integer(counters.get("claims_made"))
+    summary_claims = _integer(totals.get("all_claims_this_run", category_claims))
 
     full_claim_accounts = _integer(counters.get("full_claim_accounts"))
     promotional_only_accounts = _integer(counters.get("promotional_only_accounts"))
@@ -72,6 +73,7 @@ def build_run_reconciliation(
     checks: dict[str, bool | None] = {
         "per_account_claims_match_category_totals": per_account_claims == category_claims,
         "category_totals_match_claim_counter": category_claims == recorded_claims,
+        "summary_all_claims_match_category_totals": summary_claims == category_claims,
         "processing_modes_match_processed_accounts": mode_total == processed,
         "primary_processed_full_configured_roster": (
             processed == configured and full_claim_accounts == configured
@@ -94,6 +96,7 @@ def build_run_reconciliation(
         "claim_counts": {
             "per_account_sum": per_account_claims,
             "category_sum": category_claims,
+            "summary_all_claims": summary_claims,
             "recorded_claim_counter": recorded_claims,
         },
         "checks": checks,
