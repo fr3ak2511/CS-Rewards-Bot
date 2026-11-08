@@ -1,6 +1,7 @@
 # Runtime state files: the existing tracked files remain version-controlled for state persistence.
 claim_history.json
 bot_meta.json
+grenade_balance_baselines.json
 
 # Screenshots, HTML email report, diagnostics and run artifacts
 *.png

@@ -66,6 +66,16 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn('os.getenv("EXTERNAL_PRIMARY", "").strip().lower() == "true"', source)
         self.assertIn('return "Primary Run", 0', source)
 
+    def test_schedule_persists_separate_grenade_balance_baselines(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            "git add -- claim_history.json bot_meta.json grenade_balance_baselines.json",
+            workflow,
+        )
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn('GRENADE_BALANCE_FILE = "grenade_balance_baselines.json"', source)
+        self.assertIn("save_grenade_balance_state", source)
+
     def test_schedule_keeps_the_full_roster_fallback(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
