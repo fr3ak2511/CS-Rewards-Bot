@@ -1,6 +1,9 @@
 name: Historical Claim History Audit
 
 on:
+  push:
+    branches:
+      - 'audit/**'
   workflow_dispatch:
 
 permissions:
