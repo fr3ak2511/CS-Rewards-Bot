@@ -36,6 +36,71 @@ def _player_claims(player: dict[str, Any]) -> int:
     ))
 
 
+def _grenade_balance_validation(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarise per-account portal balances without exposing full player IDs."""
+    records = []
+    for row in rows:
+        balance = row.get("grenade_balance")
+        if not isinstance(balance, dict):
+            continue
+        status = str(balance.get("status") or "not_validated")
+        records.append((row, balance, status))
+
+    if not records:
+        return {
+            "status": "not_available",
+            "accounts_observed": 0,
+            "accounts_passed": 0,
+            "accounts_below_minimum": 0,
+            "accounts_counter_regressed": 0,
+            "accounts_pending_baseline": 0,
+            "accounts_not_validated": 0,
+            "attention_accounts": [],
+        }
+
+    passed = sum(1 for _, _, status in records if status == "pass")
+    below = sum(1 for _, _, status in records if status == "below_minimum")
+    regressed = sum(1 for _, _, status in records if status == "counter_regressed")
+    pending = sum(1 for _, _, status in records if status == "pending_baseline")
+    not_validated = sum(1 for _, _, status in records if status == "not_validated")
+    attention_accounts = []
+    for row, balance, status in records:
+        if status not in {"below_minimum", "counter_regressed", "not_validated"}:
+            continue
+        attention_accounts.append({
+            "player_id_last4": str(row.get("pid") or "")[-4:],
+            "status": status,
+            "observed_count": balance.get("current_count"),
+            "expected_minimum": balance.get("expected_minimum"),
+            "deficit": _integer(balance.get("deficit")),
+            "reason": balance.get("reason"),
+        })
+
+    if below or regressed:
+        overall = "attention_required"
+    elif pending or not_validated:
+        overall = "partial"
+    else:
+        overall = "matched"
+
+    return {
+        "status": overall,
+        "accounts_observed": len(records),
+        "accounts_passed": passed,
+        "accounts_below_minimum": below,
+        "accounts_counter_regressed": regressed,
+        "accounts_pending_baseline": pending,
+        "accounts_not_validated": not_validated,
+        "attention_accounts": attention_accounts,
+        "daily_grenade_minimum": 3,
+        "note": (
+            "Minimum is baseline count plus three Grenades per completed 05:30 IST reset date. "
+            "Purchase bonuses are surplus and are not required. New-account baselines are "
+            "captured after all three daily Store rewards are portal-confirmed."
+        ),
+    }
+
+
 def build_run_reconciliation(
     results: list[dict[str, Any]],
     *,
@@ -81,6 +146,11 @@ def build_run_reconciliation(
         ),
     }
     warnings = [name for name, passed in checks.items() if passed is False]
+    grenade_balance = _grenade_balance_validation(rows)
+    if grenade_balance["status"] == "attention_required":
+        warnings.append("grenade_balance_minimum_not_met")
+    elif grenade_balance["status"] == "partial":
+        warnings.append("grenade_balance_validation_incomplete")
 
     return {
         "status": "matched" if not warnings else "attention_required",
@@ -101,9 +171,13 @@ def build_run_reconciliation(
         },
         "checks": checks,
         "warnings": warnings,
+        "grenade_balance_validation": grenade_balance,
         "progression_validation": {
             "claimed_count": _integer(totals.get("progression_claimed_this_run")),
             "expected_count": None,
-            "note": "No expected Progression count is inferred; rewards depend on each account's live portal state.",
+            "note": (
+                "The count of Progression rewards claimed this run is not an expected Grenade balance. "
+                "Cumulative Grenade minimums are validated separately against the portal Reward Chain."
+            ),
         },
     }
