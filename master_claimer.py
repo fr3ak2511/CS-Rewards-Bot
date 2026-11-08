@@ -35,6 +35,7 @@ from promotion_followups import (
 )
 from recovery_policy import full_claim_retry_ids
 from report_export import build_copyable_report
+from run_reconciliation import build_run_reconciliation
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
@@ -4276,6 +4277,19 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
             } for r in results
         ],
     }
+    summary["reconciliation"] = build_run_reconciliation(
+        results,
+        run_label=run_label,
+        configured_player_count=summary["configured_player_count"],
+        totals=summary["totals"],
+        counters=counters,
+    )
+    if summary["reconciliation"]["status"] != "matched":
+        log("⚠️ RUN_RECONCILIATION=ATTENTION_REQUIRED: "
+            + ", ".join(summary["reconciliation"]["warnings"]))
+    else:
+        log("✅ RUN_RECONCILIATION=MATCHED")
+
     path = os.path.join(RUN_ARTIFACTS_DIR, "run_summary.json")
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2, ensure_ascii=False)
