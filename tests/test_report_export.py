@@ -61,6 +61,8 @@ class CopyableReportTests(unittest.TestCase):
             "viewport",
             "@media(max-width:620px)",
             "navigator.clipboard.write",
+            "'image/png'",
+            "renderReportPng",
             "ClipboardItem",
             "document.execCommand('copy')",
             "text/html",
