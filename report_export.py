@@ -1,8 +1,8 @@
 """Self-contained, mobile-first run report with a rich-copy action.
 
 The email remains email-client-safe and script-free. This companion HTML artifact
-is intended to be opened in a browser, where its Copy Report button can write
-both formatted HTML and plain text to the clipboard.
+is intended to be opened in a browser, where its Copy Report button tries a PNG image,
+then formatted HTML and plain text, with a plain-text fallback.
 """
 
 from __future__ import annotations
