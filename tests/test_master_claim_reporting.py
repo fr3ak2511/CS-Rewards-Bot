@@ -322,6 +322,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             self.assertIn("navigator.clipboard.write", report)
             saved_summary = json.loads(Path(summary_path).read_text(encoding="utf-8"))
             self.assertEqual(saved_summary["totals"]["all_claims_this_run"], 0)
+            self.assertEqual(saved_summary["reconciliation"]["status"], "matched")
 
     def test_hidden_paid_promotion_failure_does_not_trigger_email_attention(self):
         player = {
