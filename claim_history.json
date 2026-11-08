@@ -1,24 +1,24 @@
 {
   "E1E9729A4885E6D9": {
     "daily": {
-      "last_claim": "2026-11-07T06:12:44.413872",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:36:18.984216",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:13:07.278865",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:36:41.491473",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:13:09.960315",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:36:44.098077",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:13:12.688136",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:36:46.712463",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -30,7 +30,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:11:22.321926",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:13:36.394377",
+      "last_visit": "2026-11-08T05:37:10.068321",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -44,28 +44,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:00:41.054322"
+        "last_seen_at": "2026-11-08T05:36:47.233145"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:00:41.093942"
+        "last_seen_at": "2026-11-08T05:36:47.276180"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:00:41.123615"
+        "last_seen_at": "2026-11-08T05:36:47.319946"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:00:41.154273"
+        "last_seen_at": "2026-11-08T05:36:47.358540"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -476,24 +476,24 @@
   },
   "4DC0E2AA7130D7E6": {
     "daily": {
-      "last_claim": "2026-11-07T06:14:36.161125",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:38:09.090223",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:14:58.477977",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:38:31.574131",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:15:01.216959",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:38:34.186219",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:15:04.022201",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:38:36.787732",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -506,7 +506,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:13:12.732485",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:15:27.668985",
+      "last_visit": "2026-11-08T05:39:00.257751",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -520,28 +520,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:01:22.679463"
+        "last_seen_at": "2026-11-08T05:38:37.359633"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:01:22.713731"
+        "last_seen_at": "2026-11-08T05:38:37.399154"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:01:22.741364"
+        "last_seen_at": "2026-11-08T05:38:37.427208"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:01:22.771715"
+        "last_seen_at": "2026-11-08T05:38:37.454461"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1062,24 +1062,24 @@
   },
   "46C57810F646B91F": {
     "daily": {
-      "last_claim": "2026-11-07T06:16:26.869660",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:39:58.834046",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:16:49.141706",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:40:21.220001",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:16:51.779296",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:40:23.903891",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:16:54.458219",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:40:26.536299",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -1091,7 +1091,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:15:03.465004",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:17:18.006050",
+      "last_visit": "2026-11-08T05:40:49.952106",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -1105,28 +1105,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:04.267413"
+        "last_seen_at": "2026-11-08T05:40:26.996411"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:04.298974"
+        "last_seen_at": "2026-11-08T05:40:27.031851"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:04.327837"
+        "last_seen_at": "2026-11-08T05:40:27.058635"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:04.361096"
+        "last_seen_at": "2026-11-08T05:40:27.099094"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -1530,24 +1530,24 @@
   },
   "8EE5A8F3D8CAD1F3": {
     "daily": {
-      "last_claim": "2026-11-07T06:18:17.228743",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:41:48.715591",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:18:39.378733",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:42:11.046507",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:18:42.050650",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:42:13.645582",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:18:44.674503",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:42:16.257830",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -1559,7 +1559,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:16:54.008899",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:19:08.262331",
+      "last_visit": "2026-11-08T05:42:39.808461",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -1573,28 +1573,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:46.666321"
+        "last_seen_at": "2026-11-08T05:42:16.902968"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:46.698244"
+        "last_seen_at": "2026-11-08T05:42:16.943199"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:46.729737"
+        "last_seen_at": "2026-11-08T05:42:16.982642"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:02:46.762124"
+        "last_seen_at": "2026-11-08T05:42:17.023110"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2108,24 +2108,24 @@
   },
   "5899855DAA167B36": {
     "daily": {
-      "last_claim": "2026-11-07T06:20:08.074310",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:43:38.173146",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:20:30.131502",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:44:00.673057",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:20:32.797657",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:44:03.341018",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:20:35.458785",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:44:05.962042",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -2137,7 +2137,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:18:45.603841",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:20:58.974856",
+      "last_visit": "2026-11-08T05:44:29.331783",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -2151,28 +2151,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:03:27.886440"
+        "last_seen_at": "2026-11-08T05:44:06.477588"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:03:27.918937"
+        "last_seen_at": "2026-11-08T05:44:06.516013"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:03:27.947186"
+        "last_seen_at": "2026-11-08T05:44:06.553243"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:03:27.977615"
+        "last_seen_at": "2026-11-08T05:44:06.582492"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -2561,24 +2561,24 @@
   },
   "5D14D66D5B6C7B8F": {
     "daily": {
-      "last_claim": "2026-11-07T06:21:57.812280",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:45:27.920270",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:22:19.958499",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:45:50.623059",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:22:22.609671",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:45:54.416942",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:22:25.344280",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:46:26.349047",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -2590,7 +2590,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:20:36.333626",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:22:48.768644",
+      "last_visit": "2026-11-08T05:46:49.796315",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -2604,28 +2604,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:09.541795"
+        "last_seen_at": "2026-11-08T05:46:26.985272"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:09.573837"
+        "last_seen_at": "2026-11-08T05:46:27.015219"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:09.602419"
+        "last_seen_at": "2026-11-08T05:46:27.046373"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:09.632275"
+        "last_seen_at": "2026-11-08T05:46:27.090567"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3036,24 +3036,24 @@
   },
   "5429611A24A8F01A": {
     "daily": {
-      "last_claim": "2026-11-07T06:23:47.669281",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:47:48.322258",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:24:09.913345",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:48:10.847634",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:24:12.639459",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:48:14.747487",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:24:15.290234",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:48:17.377686",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -3065,7 +3065,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:22:26.612681",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:24:38.752458",
+      "last_visit": "2026-11-08T05:48:40.838931",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -3079,35 +3079,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:51.284079"
+        "last_seen_at": "2026-11-08T05:48:17.920383"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:51.339667"
+        "last_seen_at": "2026-11-08T05:48:17.959006"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:51.371783"
+        "last_seen_at": "2026-11-08T05:48:17.996010"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:51.401514"
+        "last_seen_at": "2026-11-08T05:48:18.034920"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:04:51.433864"
+        "last_seen_at": "2026-11-08T05:48:18.073210"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3518,24 +3518,24 @@
   },
   "856EB1365FA9D02E": {
     "daily": {
-      "last_claim": "2026-11-07T06:25:38.059357",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:49:39.696190",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:26:00.224603",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:50:02.282022",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:26:02.876249",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:50:04.910225",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:26:05.551507",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:50:07.515084",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -3547,7 +3547,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:24:17.043863",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:26:29.042593",
+      "last_visit": "2026-11-08T05:50:30.723928",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -3561,28 +3561,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:05:33.282222"
+        "last_seen_at": "2026-11-08T05:50:07.879951"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:05:33.313885"
+        "last_seen_at": "2026-11-08T05:50:07.924017"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:05:33.342835"
+        "last_seen_at": "2026-11-08T05:50:07.969977"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:05:33.373740"
+        "last_seen_at": "2026-11-08T05:50:08.012083"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -3993,24 +3993,24 @@
   },
   "F251D3D226496061": {
     "daily": {
-      "last_claim": "2026-11-07T06:27:27.853757",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:51:29.231911",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:27:49.990021",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:51:51.677442",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:27:52.669086",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:51:54.301681",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:27:55.306781",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:51:56.907501",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -4022,7 +4022,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:26:08.571620",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:28:18.731742",
+      "last_visit": "2026-11-08T05:52:20.326477",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -4036,28 +4036,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:14.767497"
+        "last_seen_at": "2026-11-08T05:51:57.495663"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:14.797523"
+        "last_seen_at": "2026-11-08T05:51:57.525208"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:14.827682"
+        "last_seen_at": "2026-11-08T05:51:57.555296"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:14.856510"
+        "last_seen_at": "2026-11-08T05:51:57.582984"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4468,24 +4468,24 @@
   },
   "3D9A901755C3B2D8": {
     "daily": {
-      "last_claim": "2026-11-07T06:29:18.171717",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:53:19.417000",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:29:40.393430",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:53:41.885559",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:29:43.088038",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:53:44.484725",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:29:45.726003",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:53:47.097209",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -4497,7 +4497,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:27:58.731909",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:30:09.833625",
+      "last_visit": "2026-11-08T05:54:10.404682",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -4511,28 +4511,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:56.395260"
+        "last_seen_at": "2026-11-08T05:53:47.525814"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:56.427426"
+        "last_seen_at": "2026-11-08T05:53:47.555361"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:56.455958"
+        "last_seen_at": "2026-11-08T05:53:47.585363"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:06:56.486622"
+        "last_seen_at": "2026-11-08T05:53:47.629319"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -4943,24 +4943,24 @@
   },
   "86CD85689FAE9549": {
     "daily": {
-      "last_claim": "2026-11-07T06:31:08.952810",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:55:08.825724",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:31:31.820862",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:55:31.275135",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:31:34.746958",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:55:33.890520",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:31:37.581203",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:55:36.662453",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -4972,7 +4972,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:29:48.684898",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:32:01.014191",
+      "last_visit": "2026-11-08T05:56:00.319540",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -4987,28 +4987,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:07:40.110872"
+        "last_seen_at": "2026-11-08T05:55:37.420070"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:07:40.143689"
+        "last_seen_at": "2026-11-08T05:55:37.457381"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:07:40.177943"
+        "last_seen_at": "2026-11-08T05:55:37.498090"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:07:40.208567"
+        "last_seen_at": "2026-11-08T05:55:37.534890"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5419,24 +5419,24 @@
   },
   "A32124B011061E03": {
     "daily": {
-      "last_claim": "2026-11-07T06:33:00.960418",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:56:59.199014",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:33:23.253308",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:57:21.634861",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:33:25.908572",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:57:24.246324",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:33:28.633655",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:57:26.848196",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -5449,7 +5449,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:32:07.856608",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:33:52.210225",
+      "last_visit": "2026-11-08T05:57:50.208892",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -5464,28 +5464,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:08:22.167753"
+        "last_seen_at": "2026-11-08T05:57:27.309004"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:08:22.199716"
+        "last_seen_at": "2026-11-08T05:57:27.352798"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:08:22.228859"
+        "last_seen_at": "2026-11-08T05:57:27.382790"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:08:22.257851"
+        "last_seen_at": "2026-11-08T05:57:27.410580"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -5896,24 +5896,24 @@
   },
   "63989CEF5D15F053": {
     "daily": {
-      "last_claim": "2026-11-07T06:34:51.078094",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T05:58:48.885445",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:35:13.313241",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:59:11.354520",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:35:15.963834",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:59:14.004276",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:35:18.647366",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T05:59:16.625643",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -5925,7 +5925,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:34:28.668951",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:35:42.007064",
+      "last_visit": "2026-11-08T05:59:40.101080",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -5940,28 +5940,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:03.479083"
+        "last_seen_at": "2026-11-08T05:59:17.198698"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:03.521468"
+        "last_seen_at": "2026-11-08T05:59:17.238414"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:03.550150"
+        "last_seen_at": "2026-11-08T05:59:17.276375"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:03.581320"
+        "last_seen_at": "2026-11-08T05:59:17.315457"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6350,24 +6350,24 @@
   },
   "B0036841F0183A12": {
     "daily": {
-      "last_claim": "2026-11-07T06:36:41.106639",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:00:38.628430",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:37:03.212738",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:01:01.065695",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:37:05.883973",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:01:03.738924",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:37:08.546066",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:01:06.476480",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -6379,7 +6379,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:36:18.629423",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:37:32.150133",
+      "last_visit": "2026-11-08T06:01:29.951486",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -6394,28 +6394,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:45.146237"
+        "last_seen_at": "2026-11-08T06:01:07.070336"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:45.175231"
+        "last_seen_at": "2026-11-08T06:01:07.099400"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:45.204812"
+        "last_seen_at": "2026-11-08T06:01:07.136034"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:09:45.235346"
+        "last_seen_at": "2026-11-08T06:01:07.174673"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -6826,24 +6826,24 @@
   },
   "A6DA56D3C46DF31B": {
     "daily": {
-      "last_claim": "2026-11-07T06:38:31.007405",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:02:28.270140",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:38:53.225523",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:02:50.773327",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:38:55.866318",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:02:53.381417",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:38:58.546006",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:02:55.994913",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -6856,7 +6856,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:38:09.892399",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:39:22.015129",
+      "last_visit": "2026-11-08T06:03:19.545660",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -6871,28 +6871,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:10:26.463403"
+        "last_seen_at": "2026-11-08T06:02:56.645209"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:10:26.498743"
+        "last_seen_at": "2026-11-08T06:02:56.688923"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:10:26.531294"
+        "last_seen_at": "2026-11-08T06:02:56.725106"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:10:26.561414"
+        "last_seen_at": "2026-11-08T06:02:56.752477"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7303,24 +7303,24 @@
   },
   "7E53CF9C948CED45": {
     "daily": {
-      "last_claim": "2026-11-07T06:40:20.799529",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:04:18.252427",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:40:43.301704",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:04:40.963680",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:40:46.180949",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:04:43.859459",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:40:48.822955",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:04:46.603554",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -7332,7 +7332,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:40:00.536381",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:41:12.384111",
+      "last_visit": "2026-11-08T06:05:09.924711",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -7347,28 +7347,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:08.185752"
+        "last_seen_at": "2026-11-08T06:04:47.067622"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:08.215730"
+        "last_seen_at": "2026-11-08T06:04:47.096495"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:08.248203"
+        "last_seen_at": "2026-11-08T06:04:47.132181"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:08.282931"
+        "last_seen_at": "2026-11-08T06:04:47.167350"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -7779,24 +7779,24 @@
   },
   "E796C81690AB75C0": {
     "daily": {
-      "last_claim": "2026-11-07T06:42:11.443754",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:06:08.904573",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:42:33.452069",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:06:31.412893",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:42:36.097704",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:06:34.047221",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:42:38.795923",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:06:36.656510",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -7808,7 +7808,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:41:50.725203",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:43:02.308020",
+      "last_visit": "2026-11-08T06:07:00.077803",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -7823,28 +7823,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:50.211964"
+        "last_seen_at": "2026-11-08T06:06:37.298309"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:50.242769"
+        "last_seen_at": "2026-11-08T06:06:37.327183"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:50.273800"
+        "last_seen_at": "2026-11-08T06:06:37.355413"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:11:50.303504"
+        "last_seen_at": "2026-11-08T06:06:37.384122"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8255,26 +8255,26 @@
   },
   "F820398935D2C403": {
     "daily": {
-      "last_claim": "2026-11-07T06:44:01.169305",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:07:58.440660",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed",
       "last_attempt_at": "2026-11-02T07:17:27.387305",
       "unconfirmed_attempts": 1
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:44:23.360113",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:08:20.768677",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:44:25.999397",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:08:23.473141",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:44:30.405235",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:08:26.053794",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -8286,7 +8286,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:44:11.112446",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:44:53.433534",
+      "last_visit": "2026-11-08T06:08:49.382478",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -8301,28 +8301,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:12:31.876758"
+        "last_seen_at": "2026-11-08T06:08:26.500661"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:12:31.907137"
+        "last_seen_at": "2026-11-08T06:08:26.529920"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:12:31.937264"
+        "last_seen_at": "2026-11-08T06:08:26.565068"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:12:31.966897"
+        "last_seen_at": "2026-11-08T06:08:26.601963"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -8733,24 +8733,24 @@
   },
   "C3960960443AF932": {
     "daily": {
-      "last_claim": "2026-11-07T06:45:52.640342",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:09:48.047136",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:46:14.872287",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:10:10.535543",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:46:19.878429",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:10:13.141808",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:46:51.589627",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:10:15.771778",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -8762,7 +8762,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:46:30.173172",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:47:15.015063",
+      "last_visit": "2026-11-08T06:10:39.254902",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -8777,28 +8777,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:13.493453"
+        "last_seen_at": "2026-11-08T06:10:16.345006"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:13.536006"
+        "last_seen_at": "2026-11-08T06:10:16.390147"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:13.563275"
+        "last_seen_at": "2026-11-08T06:10:16.434522"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:13.596422"
+        "last_seen_at": "2026-11-08T06:10:16.477621"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9209,24 +9209,24 @@
   },
   "2B50290C73E02027": {
     "daily": {
-      "last_claim": "2026-11-07T06:48:13.736383",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:11:38.095243",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:48:35.897420",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:12:00.841785",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:48:39.876134",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:12:03.473210",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:48:42.614863",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:12:06.242146",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -9238,7 +9238,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:48:21.166588",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:49:07.545658",
+      "last_visit": "2026-11-08T06:12:29.658496",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -9253,35 +9253,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:54.889835"
+        "last_seen_at": "2026-11-08T06:12:06.744546"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:54.920637"
+        "last_seen_at": "2026-11-08T06:12:06.779907"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:54.952756"
+        "last_seen_at": "2026-11-08T06:12:06.842752"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:54.981063"
+        "last_seen_at": "2026-11-08T06:12:06.875061"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:13:55.013012"
+        "last_seen_at": "2026-11-08T06:12:06.905705"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -9692,24 +9692,24 @@
   },
   "188A50EA1ABE0765": {
     "daily": {
-      "last_claim": "2026-11-07T06:50:06.746576",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:13:28.252290",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:50:28.888396",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:13:51.055354",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:50:32.627776",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:13:53.771335",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:51:04.503352",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:13:56.424183",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -9721,7 +9721,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:50:12.216832",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:51:27.669164",
+      "last_visit": "2026-11-08T06:14:19.702736",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -9736,35 +9736,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:14:36.166498"
+        "last_seen_at": "2026-11-08T06:13:56.868397"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:14:36.200432"
+        "last_seen_at": "2026-11-08T06:13:56.899089"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:14:36.232210"
+        "last_seen_at": "2026-11-08T06:13:56.928523"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:14:36.265256"
+        "last_seen_at": "2026-11-08T06:13:56.957297"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:14:36.294800"
+        "last_seen_at": "2026-11-08T06:13:56.986659"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -10175,24 +10175,24 @@
   },
   "4D1AA8C2C628E73F": {
     "daily": {
-      "last_claim": "2026-11-07T06:52:27.181093",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:15:18.483663",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:52:49.372759",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:15:40.940336",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:52:52.112974",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:15:43.547373",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:52:54.841666",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:15:46.150400",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -10204,7 +10204,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:52:02.618561",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:53:18.536860",
+      "last_visit": "2026-11-08T06:16:09.753685",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -10219,35 +10219,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:17.327129"
+        "last_seen_at": "2026-11-08T06:15:46.774414"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:17.361380"
+        "last_seen_at": "2026-11-08T06:15:46.803263"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:17.390254"
+        "last_seen_at": "2026-11-08T06:15:46.845661"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:17.420137"
+        "last_seen_at": "2026-11-08T06:15:46.888883"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:17.447249"
+        "last_seen_at": "2026-11-08T06:15:46.920419"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -10658,24 +10658,24 @@
   },
   "B4BAE5FC4CACA8F7": {
     "daily": {
-      "last_claim": "2026-11-07T06:54:17.951437",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:17:09.061727",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:54:40.221442",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:17:31.771191",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:54:42.904613",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:17:34.392924",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:54:45.548673",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:17:37.042356",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -10687,7 +10687,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:53:55.552127",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:55:09.130355",
+      "last_visit": "2026-11-08T06:18:01.243359",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -10702,35 +10702,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:59.218909"
+        "last_seen_at": "2026-11-08T06:17:37.669513"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:59.251277"
+        "last_seen_at": "2026-11-08T06:17:37.714773"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:59.280945"
+        "last_seen_at": "2026-11-08T06:17:37.755789"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:59.309738"
+        "last_seen_at": "2026-11-08T06:17:37.784124"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:15:59.341422"
+        "last_seen_at": "2026-11-08T06:17:37.813293"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -11439,24 +11439,24 @@
   },
   "8FC80EF0CC5B9D39": {
     "daily": {
-      "last_claim": "2026-11-07T06:56:09.813597",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:18:59.975050",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:56:31.902068",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:19:22.544154",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:56:34.554704",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:19:25.177542",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:56:37.266046",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:19:27.812551",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -11468,7 +11468,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:55:45.917012",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:57:01.025386",
+      "last_visit": "2026-11-08T06:19:51.385326",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -11482,28 +11482,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:16:41.321910"
+        "last_seen_at": "2026-11-08T06:19:28.444249"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:16:41.352535"
+        "last_seen_at": "2026-11-08T06:19:28.475477"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:16:41.396854"
+        "last_seen_at": "2026-11-08T06:19:28.504376"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:16:41.427400"
+        "last_seen_at": "2026-11-08T06:19:28.545030"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -11914,24 +11914,24 @@
   },
   "1956988E56026BA7": {
     "daily": {
-      "last_claim": "2026-11-07T06:58:00.073775",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:20:50.060710",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T06:58:23.975933",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:21:12.549358",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T06:58:55.856530",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:21:15.511402",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T06:58:58.666097",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:21:18.724553",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -11943,7 +11943,7 @@
     "progression": {
       "last_claim": "2026-11-06T06:57:36.877741",
       "last_count": 1,
-      "last_visit": "2026-11-07T06:59:21.921847",
+      "last_visit": "2026-11-08T06:21:41.752408",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -11957,28 +11957,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:17:22.810097"
+        "last_seen_at": "2026-11-08T06:21:18.789307"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:17:22.840544"
+        "last_seen_at": "2026-11-08T06:21:18.826261"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:17:22.869750"
+        "last_seen_at": "2026-11-08T06:21:18.855225"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:17:22.899994"
+        "last_seen_at": "2026-11-08T06:21:18.883765"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -12389,24 +12389,24 @@
   },
   "631FEB500E5C1EB7": {
     "daily": {
-      "last_claim": "2026-11-07T07:00:21.416843",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:22:40.822117",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:00:44.058855",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:23:03.502350",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:00:46.942268",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:23:06.190021",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:00:49.673120",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:23:10.070150",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -12418,7 +12418,7 @@
     "progression": {
       "last_claim": "2026-11-03T07:33:48.482803",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:01:13.154772",
+      "last_visit": "2026-11-08T06:23:33.049578",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -12432,28 +12432,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:04.764353"
+        "last_seen_at": "2026-11-08T06:23:10.128370"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:04.794807"
+        "last_seen_at": "2026-11-08T06:23:10.164294"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:04.824746"
+        "last_seen_at": "2026-11-08T06:23:10.193994"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:04.854689"
+        "last_seen_at": "2026-11-08T06:23:10.234735"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -12850,24 +12850,24 @@
   },
   "6163D9F946C4BD48": {
     "daily": {
-      "last_claim": "2026-11-07T07:02:12.022438",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:24:32.546495",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:02:37.758203",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:24:55.407765",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:03:09.568524",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:24:58.436218",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:03:12.244722",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:25:30.575500",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -12879,7 +12879,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:01:48.008326",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:03:35.471310",
+      "last_visit": "2026-11-08T06:25:54.461105",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -12893,35 +12893,35 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:46.477177"
+        "last_seen_at": "2026-11-08T06:25:31.347885"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:46.508330"
+        "last_seen_at": "2026-11-08T06:25:31.391866"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:46.536818"
+        "last_seen_at": "2026-11-08T06:25:31.462143"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:46.569702"
+        "last_seen_at": "2026-11-08T06:25:31.503789"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:18:46.600959"
+        "last_seen_at": "2026-11-08T06:25:31.542240"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -13332,24 +13332,24 @@
   },
   "B3ED965EAECB6F7C": {
     "daily": {
-      "last_claim": "2026-11-07T07:04:34.838980",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:26:54.140924",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:04:57.123363",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:27:16.820261",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:04:59.833583",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:27:19.459616",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:05:04.515131",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:27:22.089175",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -13361,7 +13361,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:03:38.765234",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:05:28.582892",
+      "last_visit": "2026-11-08T06:27:45.677505",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -13375,28 +13375,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:19:28.404592"
+        "last_seen_at": "2026-11-08T06:27:22.708088"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:19:28.433158"
+        "last_seen_at": "2026-11-08T06:27:22.748155"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:19:28.465535"
+        "last_seen_at": "2026-11-08T06:27:22.791230"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:19:28.498276"
+        "last_seen_at": "2026-11-08T06:27:22.831932"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -13913,24 +13913,24 @@
   },
   "BB382E889AA37C4F": {
     "daily": {
-      "last_claim": "2026-11-07T07:06:28.225885",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:28:45.266751",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:06:50.419265",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:29:08.320721",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:06:53.128169",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:29:10.976391",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:06:55.807173",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:29:13.633186",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -13943,7 +13943,7 @@
     "progression": {
       "last_claim": "2026-11-05T07:03:13.910983",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:07:19.399292",
+      "last_visit": "2026-11-08T06:29:37.006933",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -13957,28 +13957,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:10.203080"
+        "last_seen_at": "2026-11-08T06:29:14.048918"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:10.234043"
+        "last_seen_at": "2026-11-08T06:29:14.085049"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:10.263562"
+        "last_seen_at": "2026-11-08T06:29:14.124742"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:10.295159"
+        "last_seen_at": "2026-11-08T06:29:14.164381"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -14586,24 +14586,24 @@
   },
   "DA4C269DB53172C5": {
     "daily": {
-      "last_claim": "2026-11-07T07:08:18.700637",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:30:36.709273",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:08:41.332847",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:30:59.423655",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:08:44.319486",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:31:02.084532",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:08:47.632656",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:31:04.680995",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -14616,7 +14616,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:07:48.202485",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:09:10.667503",
+      "last_visit": "2026-11-08T06:31:28.187586",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -14630,28 +14630,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:52.993629"
+        "last_seen_at": "2026-11-08T06:31:05.249958"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:53.033313"
+        "last_seen_at": "2026-11-08T06:31:05.292659"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:53.084688"
+        "last_seen_at": "2026-11-08T06:31:05.332583"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:20:53.117802"
+        "last_seen_at": "2026-11-08T06:31:05.371643"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -15062,26 +15062,26 @@
   },
   "51001A5D6014F2DD": {
     "daily": {
-      "last_claim": "2026-11-07T07:10:09.753924",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:32:27.782316",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed",
       "last_attempt_at": "2026-11-02T09:19:43.793755",
       "unconfirmed_attempts": 2
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:10:33.968664",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:32:50.363150",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:11:06.044974",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:32:52.976846",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:11:08.683967",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:32:55.599955",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -15094,7 +15094,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:09:38.254365",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:11:32.101900",
+      "last_visit": "2026-11-08T06:33:19.280992",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -15108,28 +15108,28 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:21:35.153244"
+        "last_seen_at": "2026-11-08T06:32:56.441626"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:21:35.185473"
+        "last_seen_at": "2026-11-08T06:32:56.488180"
       },
       "promo_8924e66672433d676375": {
         "title": "500",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:21:35.219302"
+        "last_seen_at": "2026-11-08T06:32:56.530045"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:21:35.253797"
+        "last_seen_at": "2026-11-08T06:32:56.573427"
       },
       "promo_e22b4cb643f6644b4c1d": {
         "title": "Dual Uzi Card",
@@ -15526,24 +15526,24 @@
   },
   "4443B75C454AEFF8": {
     "daily": {
-      "last_claim": "2026-11-07T07:12:30.921290",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:34:18.443947",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:12:53.196808",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:34:40.904958",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:12:55.850519",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:34:43.499107",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:12:58.508197",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:34:46.119265",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -15555,7 +15555,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:11:28.860748",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:13:21.880000",
+      "last_visit": "2026-11-08T06:35:09.725450",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -15569,7 +15569,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:17.910660"
+        "last_seen_at": "2026-11-08T06:34:46.872705"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
@@ -15590,7 +15590,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:17.812001"
+        "last_seen_at": "2026-11-08T06:34:46.731639"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -15613,21 +15613,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:17.844453"
+        "last_seen_at": "2026-11-08T06:34:46.802182"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:17.879979"
+        "last_seen_at": "2026-11-08T06:34:46.843555"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:17.947297"
+        "last_seen_at": "2026-11-08T06:34:46.901328"
       }
     },
     "event_rewards": {
@@ -15994,24 +15994,24 @@
   },
   "809109186A2962E4": {
     "daily": {
-      "last_claim": "2026-11-07T07:14:21.168979",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:36:08.707807",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:14:45.456457",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:36:31.384021",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:14:48.084978",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:36:34.022250",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:14:50.812244",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:36:36.781212",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -16023,7 +16023,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:13:19.442056",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:15:14.225882",
+      "last_visit": "2026-11-08T06:37:00.121857",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -16037,7 +16037,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:59.968135"
+        "last_seen_at": "2026-11-08T06:36:37.306060"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
@@ -16067,21 +16067,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:59.903276"
+        "last_seen_at": "2026-11-08T06:36:37.247387"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:22:59.935148"
+        "last_seen_at": "2026-11-08T06:36:37.276818"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:23:00.001085"
+        "last_seen_at": "2026-11-08T06:36:37.334070"
       }
     },
     "event_rewards": {
@@ -16441,26 +16441,26 @@
   },
   "90A110C58E410DDF": {
     "daily": {
-      "last_claim": "2026-11-07T07:16:13.593715",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:38:00.163401",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed",
       "last_attempt_at": "2026-11-02T08:01:33.977203",
       "unconfirmed_attempts": 1
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:16:35.681017",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:38:23.644652",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:16:38.342810",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:38:27.351699",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:16:44.344224",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:38:29.973092",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -16472,7 +16472,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:15:11.703756",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:17:07.341932",
+      "last_visit": "2026-11-08T06:38:53.395783",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -16486,7 +16486,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:23:42.673215"
+        "last_seen_at": "2026-11-08T06:38:30.627882"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
@@ -16516,21 +16516,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:23:42.598884"
+        "last_seen_at": "2026-11-08T06:38:30.544896"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:23:42.638413"
+        "last_seen_at": "2026-11-08T06:38:30.587182"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:23:42.706971"
+        "last_seen_at": "2026-11-08T06:38:30.665201"
       }
     },
     "event_rewards": {
@@ -16890,24 +16890,24 @@
   },
   "3F493D8C327FAF81": {
     "daily": {
-      "last_claim": "2026-11-07T07:18:06.748293",
-      "next_available": "2026-11-08T05:30:00",
+      "last_claim": "2026-11-08T06:39:52.431199",
+      "next_available": "2026-11-09T05:30:00",
       "status": "claimed"
     },
     "store": {
       "reward_1": {
-        "last_claim": "2026-11-07T07:18:28.874842",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:40:15.153717",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_2": {
-        "last_claim": "2026-11-07T07:18:31.533072",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:40:17.771428",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_3": {
-        "last_claim": "2026-11-07T07:18:34.189724",
-        "next_available": "2026-11-08T05:30:00",
+        "last_claim": "2026-11-08T06:40:20.614072",
+        "next_available": "2026-11-09T05:30:00",
         "status": "claimed"
       },
       "reward_4": {
@@ -16919,7 +16919,7 @@
     "progression": {
       "last_claim": "2026-11-06T07:17:02.913624",
       "last_count": 1,
-      "last_visit": "2026-11-07T07:18:57.769832",
+      "last_visit": "2026-11-08T06:40:43.957249",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
@@ -16933,7 +16933,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:24:24.805098"
+        "last_seen_at": "2026-11-08T06:40:21.224448"
       },
       "promo_7032d017b82589e15d2b": {
         "title": "1,000",
@@ -16963,21 +16963,21 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:24:24.744283"
+        "last_seen_at": "2026-11-08T06:40:21.156539"
       },
       "promo_96a148d930185122b907": {
         "title": "50,000",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:24:24.775426"
+        "last_seen_at": "2026-11-08T06:40:21.194718"
       },
       "promo_0660c4d08e55fbad77dd": {
         "title": "Super Chest",
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-07T23:24:24.840470"
+        "last_seen_at": "2026-11-08T06:40:21.253805"
       }
     },
     "event_rewards": {
