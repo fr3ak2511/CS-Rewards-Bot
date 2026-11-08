@@ -68,9 +68,11 @@ The external dispatch is explicitly marked with `external_primary=true`.
 - A genuinely queued or running claim job blocks another external dispatch.
 - The external run-mode gate rechecks production state immediately before the claim job starts; if today's post-reset full-roster cycle is already complete, it skips safely.
 - The run-mode gate uses `bot_meta.json` and `players.csv` to verify the current configured roster against today's 05:30 reset; if that cycle is already complete, it skips without claiming.
-- The native 03:00 dispatcher now performs the same committed-coverage check before starting its long randomized wait. If today's full-roster cycle has already completed, it exits during preflight instead of creating a redundant delayed run.
-- The native preflight also checks queued/running claim jobs, including an active external primary. If runtime state is unreadable or malformed, it fails open and retains the native backup; the in-job run-mode gate remains the final safety check.
-- The external primary is still allowed to pass a native dispatcher whose claim job is queued only because its randomized delay is actively running.
+- The native 03:00 dispatcher performs the committed-coverage check before starting its randomized wait. If today's full-roster cycle has already completed, it exits during preflight.
+- The native wait is no longer a blind sleep: it polls active scheduled-workflow runs while waiting. If another claimer job becomes queued or running, the native wait exits and its dependent claim job is skipped.
+- At the randomized target, the native wait refreshes `bot_meta.json` and `players.csv` from `prod`. If a full-roster cycle completed while it was waiting, it exits without launching the claim job.
+- If an Actions API/state read fails, the native path fails open and remains available. The in-job Python run-mode gate is still the final state check.
+- The external primary is allowed to pass a native dispatcher whose claim job is queued only because its randomized delay is actively running; the native wait then detects the external claim job and exits.
 - The claimer labels the external run `Primary Run`, not `Manual Run`.
 - The native GitHub dispatcher and reset-window fallback remain enabled when the external trigger has not completed a full-roster cycle.
 
