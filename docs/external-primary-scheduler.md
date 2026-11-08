@@ -67,9 +67,12 @@ The external dispatch is explicitly marked with `external_primary=true`.
 - If a scheduled dispatcher is merely sleeping in that wait, the external dispatch is allowed to proceed. Its dependent, queued claim job does not yet hold the claimer concurrency slot.
 - A genuinely queued or running claim job blocks another external dispatch.
 - The external run-mode gate rechecks production state immediately before the claim job starts; if today's post-reset full-roster cycle is already complete, it skips safely.
-- The run-mode gate uses `bot_meta.json` and `players.csv` to verify 35/35 full-roster coverage against today's 05:30 reset; if that cycle is already complete, it skips without claiming.
-- The claimer labels this run `Primary Run`, not `Manual Run`.
-- The existing GitHub scheduled dispatcher and fallback remain active. Their own run-mode checks suppress a second full roster cycle after the external run completes.
+- The run-mode gate uses `bot_meta.json` and `players.csv` to verify the current configured roster against today's 05:30 reset; if that cycle is already complete, it skips without claiming.
+- The native 03:00 dispatcher now performs the same committed-coverage check before starting its long randomized wait. If today's full-roster cycle has already completed, it exits during preflight instead of creating a redundant delayed run.
+- The native preflight also checks queued/running claim jobs, including an active external primary. If runtime state is unreadable or malformed, it fails open and retains the native backup; the in-job run-mode gate remains the final safety check.
+- The external primary is still allowed to pass a native dispatcher whose claim job is queued only because its randomized delay is actively running.
+- The claimer labels the external run `Primary Run`, not `Manual Run`.
+- The native GitHub dispatcher and reset-window fallback remain enabled when the external trigger has not completed a full-roster cycle.
 
 ## Safe initial test
 
