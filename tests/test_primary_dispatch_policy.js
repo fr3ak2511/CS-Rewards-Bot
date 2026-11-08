@@ -89,7 +89,7 @@ test('a full-roster label without full-claim account coverage is rejected', () =
   }), false);
 });
 
-test('a cycle from before today's reset does not suppress the native backup', () => {
+test("a cycle from before today's reset does not suppress the native backup", () => {
   assert.equal(hasCompleteFullRosterCoverage({
     fullRun: { ...completeRun, timestamp: '2026-11-07T06:41:02.812639' },
     playerCount: 35,
