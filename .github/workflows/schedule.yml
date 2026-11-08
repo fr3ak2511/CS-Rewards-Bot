@@ -73,8 +73,13 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const crypto = require('crypto');
+            const fs = require('fs');
             const path = require('path');
-            const { isBlockingClaimJob } = require(path.join(
+            const {
+              countConfiguredPlayers,
+              hasCompleteFullRosterCoverage,
+              isBlockingClaimJob,
+            } = require(path.join(
               process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
             ));
             const isExternalPrimary = context.eventName === 'workflow_dispatch' &&
@@ -107,10 +112,10 @@ jobs:
                 return;
               }
 
-              // Let the daily scheduled dispatcher run its wait job.
+              // The daily dispatcher must pass state/duplicate checks before starting
+              // its long randomized wait. It remains the backup if no external cycle ran.
               if (cron === launcherCron) {
-                out(true, 'daily primary dispatcher; wait job enforces the randomized target');
-                return;
+                core.info('daily primary dispatcher; validate committed coverage and active claim jobs before waiting');
               }
 
               // Compute today's target in IST consistently with the Python wait/run-mode steps.
@@ -132,8 +137,33 @@ jobs:
               core.info('external morning primary request; check for a real competing claim job');
             }
 
+            // If the external primary has already committed a complete full-roster cycle,
+            // skip the native dispatcher before it starts its three-hour randomized wait.
+            // Malformed or unavailable state fails open: the native backup remains enabled.
+            if (context.eventName === 'schedule' && context.payload.schedule === launcherCron) {
+              try {
+                const rosterCsv = fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'players.csv'), 'utf8');
+                const playerCount = countConfiguredPlayers(rosterCsv);
+                const metaPath = path.join(process.env.GITHUB_WORKSPACE, 'bot_meta.json');
+                const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                if (!playerCount) {
+                  core.warning('Could not validate configured roster; keep native primary backup enabled.');
+                } else if (hasCompleteFullRosterCoverage({
+                  fullRun: meta.last_full_run,
+                  playerCount,
+                  now: new Date(),
+                })) {
+                  out(false, 'complete full-roster cycle is already recorded for today; skip redundant native dispatcher before its wait');
+                  return;
+                }
+              } catch (error) {
+                core.warning(`Could not read production coverage state during preflight (${error.message}); keep native primary backup enabled.`);
+              }
+            }
+
             // Avoid queuing duplicate claims while a previous claim job is queued/running.
-            // The three-hour waiting dispatcher is harmless; only its claim job matters here.
+            // This check applies to the daily dispatcher too: an active external claim
+            // must prevent the native dispatcher from joining the concurrency queue.
             const response = await github.rest.actions.listWorkflowRunsForRepo({
               owner, repo, branch: context.ref.replace(/^refs\/heads\//, ''), per_page: 100
             });
