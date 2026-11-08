@@ -33,6 +33,8 @@ The HTML report includes all processed account rows, per-account processing mode
 
 Each normal run also creates `run_artifacts/report.html`, a self-contained browser report with a **Copy Report** action. It attempts to copy both formatted HTML and plain text, then falls back to plain text if rich clipboard access is unavailable. Open this artifact in a browser; clipboard access may require browser permission. The emailed report remains script-free for email-client compatibility and is sent as HTML only, without a PNG attachment.
 
+The JSON summary also contains a read-only reconciliation record. It independently compares per-account reward sums, category totals, the recorded claim counter, processing-mode counts, and configured-roster coverage for a primary run. Mismatches are recorded as attention items in the browser report; the reconciler never changes claim history, repeats a click, or guesses an expected Progression/Grenade count.
+
 The streak remains in `bot_meta.json` as an internal continuity metric: it increments only when every configured player has a portal-confirmed Daily claim and all three standard Store claims since the 05:30 IST reset. It is intentionally omitted from the email because it is operational state, not an additional reward or claim count.
 
 ## Schedule and recovery
@@ -47,7 +49,7 @@ The main schedule has one full-claim primary cycle and four promotional-check ba
 | Promotional Check #3 | 17:35 | Same per-ID coverage rule |
 | Promotional Check #4 | 21:35 | Same per-ID coverage rule |
 
-The 03:00 IST dispatcher retains its sleep until the shared primary target, and five-minute fallback triggers in the 05:30–06:00 window check the same target/state guards. A central Python guard also refuses all claim-capable entry points before 05:30 IST; read-only login diagnostics and login-only tests are exempt. Scheduled events are best-effort and may still be delayed or dropped by GitHub Actions.
+The 03:00 IST dispatcher retains its randomized 05:35–06:00 target, but it no longer sleeps blindly. During the wait it checks for another queued/running claimer and exits if one takes ownership; after the target it refreshes committed production state and skips if a complete full-roster cycle already finished. The native dispatcher and five-minute 05:30–06:00 fallback remain available when the external primary has not completed a cycle. If a state/API inspection fails, the native path fails open and the in-job Python state gate remains authoritative. A central Python guard also refuses all claim-capable entry points before 05:30 IST; read-only login diagnostics and login-only tests are exempt. Scheduled events are best-effort and may still be delayed or dropped by GitHub Actions.
 
 Per-ID full-claim coverage is stored separately from `new_ids_seen`. A backup uses the full claim path whenever the ID has no clean full-claim coverage for the current reset date or still has unresolved claims. A login failure, partial result, or unconfirmed claim remains pending and eligible for recovery; marking an ID as seen is not proof of successful processing. The immediate recovery workflow can retry unresolved IDs, while live portal state/history helps prevent redundant claims. Overlapping runs are serialized by a workflow concurrency group.
 
