@@ -13,6 +13,8 @@ on:
       - 'event_rewards.py'
       - 'event_rewards_config.json'
       - 'master_claimer.py'
+      - 'report_export.py'
+      - 'run_reconciliation.py'
       - 'promotion_followups.py'
       - 'recovery_policy.py'
       - '.github/scripts/recovery_policy.js'
