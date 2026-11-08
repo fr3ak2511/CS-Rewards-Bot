@@ -87,6 +87,45 @@ class GrenadeBalanceTests(unittest.TestCase):
         self.assertEqual(result["next_milestone"], 56)
         self.assertEqual(result["remaining_to_next_milestone"], 22)
 
+    def test_30_day_and_31_day_months_use_actual_calendar_days(self):
+        cases = [
+            ("2026-04", "2026-04-01", date(2026, 4, 30), 90),
+            ("2026-05", "2026-05-01", date(2026, 5, 31), 93),
+        ]
+        for cycle_id, tracking_start, reset_date, expected in cases:
+            with self.subTest(cycle=cycle_id):
+                snapshot = {
+                    **self.snapshot,
+                    "cycle_id": cycle_id,
+                    "cycle_start_date": tracking_start,
+                    "current_count": expected,
+                }
+                state = {
+                    "schema_version": 1,
+                    "cycles": {
+                        cycle_id: {
+                            "players": {
+                                "ACCOUNT_A": {
+                                    "baseline_status": "active",
+                                    "baseline_count": 0,
+                                    "baseline_date": tracking_start,
+                                    "tracking_start_date": tracking_start,
+                                    "baseline_source": "cycle_start_existing_account",
+                                }
+                            }
+                        }
+                    },
+                }
+                _, result = evaluate_progression_balance(
+                    snapshot, state, "ACCOUNT_A",
+                    reset_date=reset_date,
+                    is_new_account=False,
+                    store_rewards_fully_checked=True,
+                )
+                self.assertEqual(result["eligible_days"], expected // 3)
+                self.assertEqual(result["expected_minimum"], expected)
+                self.assertEqual(result["status"], "pass")
+
     def test_existing_account_below_minimum_is_flagged(self):
         snapshot = {**self.snapshot, "current_count": 22}
         state = {
