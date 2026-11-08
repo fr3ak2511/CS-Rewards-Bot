@@ -372,7 +372,7 @@ def evaluate_progression_balance(
         "surplus": max(0, current_count - expected_minimum),
         "deficit": max(0, expected_minimum - current_count),
         "historical_gap": (
-            entry.get("baseline_source") == "first_observation_after_rollout"
+            entry.get("baseline_source") == "first_verified_observation_after_rollout"
         ),
         "historical_gap_from": entry.get("join_date"),
     }
