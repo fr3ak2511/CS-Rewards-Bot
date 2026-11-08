@@ -293,11 +293,14 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
     button.disabled = true;
     status.textContent = 'Preparing report image…';
     const reportNode = document.querySelector('.report-shell');
-    const docClone = document.documentElement.cloneNode(true);
-    const toolbar = docClone.querySelector('.toolbar');
+    const contentClone = reportNode.cloneNode(true);
+    const toolbar = contentClone.querySelector('.toolbar');
     if (toolbar) toolbar.remove();
-    const richHtml = '<!doctype html>' + docClone.outerHTML;
-    const plainText = document.getElementById('report-content').innerText.trim();
+    const styles = Array.from(document.querySelectorAll('style'))
+      .map(style => style.textContent || '').join('\\n');
+    const richHtml = '<!doctype html><html><head><meta charset="utf-8"><style>'
+      + styles + '</style></head><body>' + contentClone.outerHTML + '</body></html>';
+    const plainText = contentClone.innerText.trim();
 
     try {{
       if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {{
