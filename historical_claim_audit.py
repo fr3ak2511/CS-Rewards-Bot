@@ -203,6 +203,17 @@ def _classification(category: str, record: dict[str, Any]) -> tuple[str, str]:
     status = str(record.get("status") or "unknown")
     if status == "claimed":
         return "bot_confirmed", status
+
+    # Older production code recorded Progression success using last_claim and
+    # last_count without a status field. Recognise only that exact legacy shape.
+    if (
+        category == "progression"
+        and "status" not in record
+        and record.get("last_claim")
+        and _safe_int(record.get("last_count")) > 0
+    ):
+        return "bot_confirmed_legacy_schema", "legacy_claimed_no_status"
+
     return "recorded_but_not_bot_confirmed", status
 
 
@@ -503,13 +514,96 @@ def _extract_run_summaries(meta_snapshots: Iterable[dict[str, Any]]) -> list[dic
     return runs
 
 
+def _resolve_unconfirmed_flags(
+    anomalies: list[dict[str, Any]], events: list[dict[str, Any]]
+) -> dict[str, int]:
+    """Link unconfirmed transitions to a later recorded successful claim."""
+    resolved = 0
+    open_count = 0
+    confirmed_events = [
+        event for event in events
+        if event.get("classification") in {
+            "bot_confirmed", "bot_confirmed_legacy_schema", "portal_confirmed_delivered"
+        }
+    ]
+    for anomaly in anomalies:
+        if anomaly.get("type") != "record_became_unconfirmed":
+            continue
+        attempted_at = _normalise_datetime(anomaly.get("last_attempt_at"))
+        later = []
+        for event in confirmed_events:
+            if event.get("account") != anomaly.get("account") or event.get("category") != anomaly.get("category"):
+                continue
+            event_at = _normalise_datetime(event.get("recorded_at"))
+            if attempted_at and event_at and event_at > attempted_at:
+                later.append((event_at, event))
+        if later:
+            event_at, event = min(later, key=lambda item: item[0])
+            anomaly["resolution_status"] = "subsequently_confirmed"
+            anomaly["resolved_by_claim_at"] = event.get("recorded_at")
+            anomaly["resolution_lag_hours"] = round(
+                (event_at - attempted_at).total_seconds() / 3600, 2
+            )
+            resolved += 1
+        else:
+            anomaly["resolution_status"] = "open_at_audit_cutoff"
+            open_count += 1
+    return {
+        "unconfirmed_transitions_subsequently_confirmed": resolved,
+        "unconfirmed_transitions_open": open_count,
+    }
+
+
+def _run_window_integrity(
+    runs: list[dict[str, Any]], events: list[dict[str, Any]]
+) -> dict[str, int]:
+    """Count overlapping run windows and claim events assigned to more than one run."""
+    windows = []
+    for index, run in enumerate(runs):
+        end = _normalise_datetime(run.get("timestamp"))
+        if end is None:
+            continue
+        start = end - timedelta(seconds=max(0, _safe_int(run.get("duration_seconds"))))
+        windows.append((start, end, index))
+    windows.sort(key=lambda item: (item[0], item[1]))
+
+    overlap_pairs = 0
+    for i, left in enumerate(windows):
+        for right in windows[i + 1:]:
+            if right[0] >= left[1]:
+                break
+            if max(left[0], right[0]) < min(left[1], right[1]):
+                overlap_pairs += 1
+
+    confirmed_events = [
+        event for event in events
+        if event.get("classification") in {
+            "bot_confirmed", "bot_confirmed_legacy_schema", "portal_confirmed_delivered"
+        }
+    ]
+    multiply_assigned = 0
+    for event in confirmed_events:
+        event_at = _normalise_datetime(event.get("recorded_at"))
+        if event_at is not None:
+            matches = sum(1 for start, end, _ in windows if start <= event_at <= end)
+            if matches > 1:
+                multiply_assigned += 1
+
+    return {
+        "overlapping_run_window_pairs": overlap_pairs,
+        "claim_events_assigned_to_multiple_run_windows": multiply_assigned,
+    }
+
+
 def _reconcile_runs(
     runs: list[dict[str, Any]], events: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     confirmed = [
         event
         for event in events
-        if event.get("classification") in {"bot_confirmed", "portal_confirmed_delivered"}
+        if event.get("classification") in {
+            "bot_confirmed", "bot_confirmed_legacy_schema", "portal_confirmed_delivered"
+        }
         and _normalise_datetime(event.get("recorded_at")) is not None
     ]
     output: list[dict[str, Any]] = []
@@ -619,7 +713,11 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"| Run metadata records | {summary['run_metadata_records']} |",
         f"| Run checks matched | {summary['run_checks_matched']} |",
         f"| Run checks requiring attention | {summary['run_checks_attention_required']} |",
-        f"| Audit anomalies | {summary['anomaly_count']} |",
+        f"| Audit review flags | {summary['anomaly_count']} |",
+        f"| Unconfirmed transitions later confirmed | {summary['unconfirmed_transitions_subsequently_confirmed']} |",
+        f"| Unconfirmed transitions still open | {summary['unconfirmed_transitions_open']} |",
+        f"| Overlapping run-window pairs | {summary['overlapping_run_window_pairs']} |",
+        f"| Claim events assigned to multiple runs | {summary['claim_events_assigned_to_multiple_run_windows']} |",
         "",
         "## Claim events by category",
         "",
@@ -735,6 +833,8 @@ def run_audit(repo_path: Path, ref: str, output_dir: Path) -> dict[str, Any]:
         raise AuditError(f"{HISTORY_PATH} at {ref} is not a JSON object.")
     runs = _extract_run_summaries(_record_snapshots(repo_path, ref, META_PATH))
     run_checks = _reconcile_runs(runs, events)
+    review_resolution = _resolve_unconfirmed_flags(anomalies, events)
+    window_integrity = _run_window_integrity(runs, events)
 
     by_category = Counter()
     units_by_category = Counter()
@@ -778,6 +878,8 @@ def run_audit(repo_path: Path, ref: str, output_dir: Path) -> dict[str, Any]:
             "run_checks_matched": matched_runs,
             "run_checks_attention_required": len(run_checks) - matched_runs,
             "anomaly_count": len(anomalies),
+            **review_resolution,
+            **window_integrity,
             "malformed_history_snapshots": coverage["malformed_snapshot_count"],
         },
         "account_coverage": account_coverage,
@@ -792,6 +894,9 @@ def run_audit(repo_path: Path, ref: str, output_dir: Path) -> dict[str, Any]:
             "The first available snapshot is a baseline; events already present there have no earlier transition in the available Git evidence.",
             "A claim absent from every committed snapshot cannot be proven by this audit.",
             "Portal-observed states are reported separately and are never counted as bot-made claims.",
+            "Legacy Progression records without a status field are treated as bot-confirmed only when both last_claim and a positive last_count are present; this matches the historical production write path.",
+            "Unconfirmed state transitions are linked to later successful records for the same account and reward category when available.",
+            "Run-window overlaps are measured explicitly; an overlapping event must be reviewed before interpreting per-run counters.",
             "Run-counter comparisons are evidence checks and may require manual review where snapshots or historical metadata are incomplete.",
             "No production file is changed by this utility.",
         ],

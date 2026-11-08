@@ -12,6 +12,7 @@ claim_history.json is a mutable state file. For most reward categories it stores
 
 The output separates:
 - **Bot-confirmed transitions**: a new last_claim value whose record status is claimed.
+- **Legacy Progression confirmations**: historical Master Claimer versions wrote a positive last_count and last_claim without a status field. These are considered confirmed only when both values are present.
 - **Portal observations**: portal_observed_at values, reported separately and never counted as bot-made claims.
 - **Event-program ledger deliveries**: entries in event_rewards[*].claim_ledger, classified as delivered only when ledger verification says delivered.
 - **Unconfirmed or uncertain records**: retained as review evidence, not promoted to successful claims.
@@ -46,7 +47,7 @@ The workflow uses fetch-depth: 0 so the production commit history is available t
 
 For each historical bot_meta.json last-run record, the audit derives the run window from its timestamp and duration, then compares claim-history transitions inside that window with available per_type counters.
 
-A mismatch is a review flag, not automatic proof of a missing or duplicate reward. Differences can result from incomplete historical snapshots, legacy counter naming, or data recorded outside the metadata run window. Review the underlying commits and run records before drawing conclusions.
+A mismatch is a review flag, not automatic proof of a missing or duplicate reward. Differences can result from incomplete historical snapshots, legacy counter naming, or data recorded outside the metadata run window. The audit also measures overlap between run windows and flags any claim event that would be assigned to more than one run. Review the underlying commits and run records before drawing conclusions.
 
 ## Safety and acceptance criteria
 

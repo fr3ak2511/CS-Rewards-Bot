@@ -7,6 +7,7 @@ from pathlib import Path
 from historical_claim_audit import (
     _record_snapshots,
     _reconcile_runs,
+    _run_window_integrity,
     _summarise_record_events,
     build_account_coverage,
     run_audit,
@@ -160,6 +161,49 @@ class HistoricalClaimAuditTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["status"], "matched")
         self.assertEqual(result[0]["mismatches"], [])
+
+    def test_legacy_progression_without_status_is_bot_confirmed_when_count_is_positive(self):
+        first_history = {
+            PLAYER_A: {
+                "progression": {
+                    "last_claim": "2026-05-31T05:36:00",
+                    "last_count": 2,
+                    "last_visit": "2026-05-31T05:36:30",
+                }
+            }
+        }
+        second_history = {
+            PLAYER_A: {
+                "progression": {
+                    "last_claim": "2026-06-01T05:36:00",
+                    "last_count": 3,
+                    "last_visit": "2026-06-01T05:36:30",
+                }
+            }
+        }
+        events, _, _, _ = _summarise_record_events(
+            [
+                snapshot(COMMIT_1, "2026-05-31T00:10:00Z", first_history),
+                snapshot(COMMIT_2, "2026-06-01T00:10:00Z", second_history),
+            ]
+        )
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[-1]["classification"], "bot_confirmed_legacy_schema")
+        self.assertEqual(events[-1]["record_status"], "legacy_claimed_no_status")
+        self.assertEqual(events[-1]["claim_units"], 3)
+
+    def test_run_window_overlap_integrity_is_reported(self):
+        runs = [
+            {"timestamp": "2026-06-01T05:10:00", "duration_seconds": 600},
+            {"timestamp": "2026-06-01T05:15:00", "duration_seconds": 600},
+        ]
+        events = [{
+            "classification": "bot_confirmed_legacy_schema",
+            "recorded_at": "2026-06-01T05:12:00",
+        }]
+        result = _run_window_integrity(runs, events)
+        self.assertEqual(result["overlapping_run_window_pairs"], 1)
+        self.assertEqual(result["claim_events_assigned_to_multiple_run_windows"], 1)
 
     def test_account_coverage_preserves_historical_only_accounts(self):
         result = build_account_coverage(
