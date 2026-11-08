@@ -31,6 +31,10 @@ Every normal run builds and sends the HTML email after processing the selected a
 
 The HTML report includes all processed account rows, per-account processing mode, confirmed claims, visible unavailable offers, partial or unresolved results, unconfirmed promotions, dynamic-scan failures, actual failures, efficiency for full-claim accounts, run timing, and portal-observed statuses. Promotional-only rows explicitly mark daily Store, progression, and loyalty rewards as not checked; aggregate daily/store denominators exclude those rows. The uploaded JSON summary masks player IDs to their last four characters.
 
+Each normal run also creates `run_artifacts/report.html`, a self-contained browser report with a **Copy Report** action. It attempts to copy both formatted HTML and plain text, then falls back to plain text if rich clipboard access is unavailable. Open this artifact in a browser; clipboard access may require browser permission. The emailed report remains script-free for email-client compatibility and is sent as HTML only, without a PNG attachment.
+
+The streak remains in `bot_meta.json` as an internal continuity metric: it increments only when every configured player has a portal-confirmed Daily claim and all three standard Store claims since the 05:30 IST reset. It is intentionally omitted from the email because it is operational state, not an additional reward or claim count.
+
 ## Schedule and recovery
 
 The main schedule has one full-claim primary cycle and four promotional-check backups:
