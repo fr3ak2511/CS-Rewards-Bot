@@ -199,7 +199,7 @@ class HistoricalClaimAuditTests(unittest.TestCase):
         ]
         events = [{
             "classification": "bot_confirmed_legacy_schema",
-            "recorded_at": "2026-06-01T05:12:00",
+            "recorded_at": "2026-06-01T05:07:00",
         }]
         result = _run_window_integrity(runs, events)
         self.assertEqual(result["overlapping_run_window_pairs"], 1)
