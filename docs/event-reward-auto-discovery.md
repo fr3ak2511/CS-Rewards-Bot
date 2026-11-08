@@ -2,11 +2,11 @@
 
 ## Current verified state
 
-The reusable event claimant is already separate from the permanent grenade-based Progression Program. It accepts multiple active entries from \`event_rewards_config.json\`, enforces start/end windows, reads the balance and tier ladder, checks the exact tier/button before clicking, and counts a claim only after the portal shows the tier as Delivered.
+The reusable event claimant is already separate from the permanent grenade-based Progression Program. It accepts multiple active entries from `event_rewards_config.json`, enforces start/end windows, reads the balance and tier ladder, checks the exact tier/button before clicking, and counts a claim only after the portal shows the tier as Delivered.
 
-The current event integration is **configuration-driven, not auto-discovered**. The configuration must supply the programme name, slug, programme ID, points label, start/end timestamps, cycle and optional expected tier count. The current page adapter also uses the verified Halloween card selector (\`div.relative.rounded-lp-card\`). \`event_closeout.py\` is a one-time Halloween closeout and is not a generic event lifecycle manager.
+The current event integration is **configuration-driven, not auto-discovered**. The configuration must supply the programme name, slug, programme ID, points label, start/end timestamps, cycle and optional expected tier count. The current page adapter also uses the verified Halloween card selector (`div.relative.rounded-lp-card`). `event_closeout.py` is a one-time Halloween closeout and is not a generic event lifecycle manager.
 
-The public \`https://hub.vertigogames.co/events\` page is a news/announcement listing. It is not evidence of an authenticated account reward-programme directory or of a programme discovery API.
+The public `https://hub.vertigogames.co/events` page is a news/announcement listing. It is not evidence of an authenticated account reward-programme directory or of a programme discovery API.
 
 ## Why automatic discovery is not enabled yet
 
