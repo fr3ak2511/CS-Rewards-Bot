@@ -19,6 +19,8 @@ Automated CS Hub rewards claimer using Python, Selenium, and GitHub Actions.
 
 Promotional cards are **not** attached to the three daily Store indices and are **not** a daily-streak requirement. The live scanner records claimable, already-claimed, and unavailable card states without relying on a fixed offer title. If a claim cannot be confirmed, the report distinguishes that state and the account remains eligible for recovery. A dispatched click is never enough to count a promotion as claimed.
 
+Temporary point-event rewards currently use the reusable, configuration-driven event engine; automatic discovery of future event programmes is not yet enabled. The portal's authenticated event registry/page metadata has not been verified, and the current tier-card adapter is based on the Halloween 2026 layout. Unknown event routes or layouts must not be guessed. See [the event auto-discovery acceptance contract](docs/event-reward-auto-discovery.md).
+
 ## Existing/manual claims and history migration
 
 On the first run after deployment, each ID is inspected live. If Daily or any of the three standard Store cards shows a timer or a `Claimed` state, the bot records a **portal-observed claim/cooldown** with an observation timestamp and suppresses another attempt until the daily reset. It does not falsify that event as a claim made by the bot. Legacy `store.reward_4` state is preserved for compatibility, while the dynamic promotional scanner records each live offer in the separate per-promotion history and records a portal-confirmed already-claimed state as `portal_claimed`.
