@@ -37,7 +37,7 @@ Each normal run also creates `run_artifacts/report.html`, a self-contained brows
 
 The JSON summary also contains a read-only reconciliation record. It independently compares per-account reward sums, category totals, the recorded claim counter, processing-mode counts, and configured-roster coverage for a primary run. Mismatches are recorded as attention items in the browser report; the reconciler never changes claim history, repeats a click, or guesses an expected Progression/Grenade count.
 
-The streak remains in `bot_meta.json` as an internal continuity metric: it increments only when every configured player has a portal-confirmed Daily claim and all three standard Store claims since the 05:30 IST reset. It is intentionally omitted from the email because it is operational state, not an additional reward or claim count.
+The streak remains in `bot_meta.json` as an internal continuity metric: it increments only when every configured player has a Daily claim and each of the three standard Store rewards recorded since the 05:30 IST reset, whether recorded by this bot or observed already claimed in the portal. Loyalty and separately tracked promotional rewards are excluded. It is intentionally omitted from the email because it is operational state, not an additional reward or claim count.
 
 ## Schedule and recovery
 
