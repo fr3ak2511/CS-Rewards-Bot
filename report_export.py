@@ -239,7 +239,7 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
       const toolbar = clone.querySelector('.toolbar');
       if (toolbar) toolbar.remove();
       const css = Array.from(document.querySelectorAll('style'))
-        .map(style => style.textContent || '').join('\\n');
+        .map(style => style.textContent || '').join('\n');
       const width = Math.max(320, Math.ceil(reportNode.scrollWidth));
       const height = Math.max(200, Math.ceil(reportNode.scrollHeight));
       const markup = '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + width
