@@ -1,0 +1,38 @@
+name: Historical Claim History Audit
+
+on:
+  push:
+    branches:
+      - 'audit/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  historical-claim-audit:
+    name: Read-only production history audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out audit code and full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run read-only audit against production history
+        run: |
+          git show-ref --verify refs/remotes/origin/prod
+          python historical_claim_audit.py \
+            --ref origin/prod \
+            --output-dir historical-audit-output
+      - name: Upload historical audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: historical-claim-audit
+          path: historical-audit-output/
+          if-no-files-found: error
+          retention-days: 90
