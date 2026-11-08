@@ -233,38 +233,99 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
   const status = document.getElementById('copy-status');
   if (!button || !status) return;
 
+  const renderReportPng = reportNode => new Promise((resolve, reject) => {{
+    try {{
+      const clone = reportNode.cloneNode(true);
+      const toolbar = clone.querySelector('.toolbar');
+      if (toolbar) toolbar.remove();
+      const css = Array.from(document.querySelectorAll('style'))
+        .map(style => style.textContent || '').join('\\n');
+      const width = Math.max(320, Math.ceil(reportNode.scrollWidth));
+      const height = Math.max(200, Math.ceil(reportNode.scrollHeight));
+      const markup = '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + width
+        + 'px;background:#fff"><style>' + css + '</style>' + clone.outerHTML + '</div>';
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml"'
+        + ' width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">'
+        + '<foreignObject x="0" y="0" width="100%" height="100%">' + markup + '</foreignObject></svg>';
+      const url = URL.createObjectURL(new Blob([svg], {{type:'image/svg+xml;charset=utf-8'}}));
+      const image = new Image();
+      image.onload = () => {{
+        try {{
+          const scale = 2;
+          const canvas = document.createElement('canvas');
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Canvas context unavailable.');
+          context.scale(scale, scale);
+          context.drawImage(image, 0, 0, width, height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png');
+        }} catch (error) {{
+          URL.revokeObjectURL(url);
+          reject(error);
+        }}
+      }};
+      image.onerror = () => {{
+        URL.revokeObjectURL(url);
+        reject(new Error('Report image rendering failed.'));
+      }};
+      image.src = url;
+    }} catch (error) {{
+      reject(error);
+    }}
+  }});
+
+  const copyPlainText = text => {{
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    if (!copied) throw new Error('Text copy command was not accepted.');
+  }};
+
   button.addEventListener('click', async () => {{
     button.disabled = true;
-    status.textContent = 'Preparing report…';
-    const clone = document.documentElement.cloneNode(true);
-    const toolbar = clone.querySelector('.toolbar');
+    status.textContent = 'Preparing report image…';
+    const reportNode = document.querySelector('.report-shell');
+    const docClone = document.documentElement.cloneNode(true);
+    const toolbar = docClone.querySelector('.toolbar');
     if (toolbar) toolbar.remove();
-    const richHtml = '<!doctype html>' + clone.outerHTML;
+    const richHtml = '<!doctype html>' + docClone.outerHTML;
     const plainText = document.getElementById('report-content').innerText.trim();
 
     try {{
       if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {{
-        const item = new ClipboardItem({{
-          'text/html': new Blob([richHtml], {{type:'text/html'}}),
-          'text/plain': new Blob([plainText], {{type:'text/plain'}})
-        }});
-        await navigator.clipboard.write([item]);
-        status.textContent = 'Report copied with formatting.';
-        return;
+        try {{
+          const pngBlob = await renderReportPng(reportNode);
+          const item = new ClipboardItem({{
+            'image/png': pngBlob,
+            'text/html': new Blob([richHtml], {{type:'text/html'}}),
+            'text/plain': new Blob([plainText], {{type:'text/plain'}})
+          }});
+          await navigator.clipboard.write([item]);
+          status.textContent = 'Report copied as an image.';
+          return;
+        }} catch (imageError) {{
+          status.textContent = 'Image copy unavailable; trying formatted report…';
+          const htmlItem = new ClipboardItem({{
+            'text/html': new Blob([richHtml], {{type:'text/html'}}),
+            'text/plain': new Blob([plainText], {{type:'text/plain'}})
+          }});
+          await navigator.clipboard.write([htmlItem]);
+          status.textContent = 'Report copied with formatting (image copy was unavailable).';
+          return;
+        }}
       }}
       throw new Error('Rich clipboard is not available in this browser context.');
     }} catch (richError) {{
       try {{
-        const textarea = document.createElement('textarea');
-        textarea.value = plainText;
-        textarea.setAttribute('readonly', '');
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        const copied = document.execCommand('copy');
-        textarea.remove();
-        if (!copied) throw new Error('Text copy command was not accepted.');
+        copyPlainText(plainText);
         status.textContent = 'Report copied as plain text (rich copy was unavailable).';
       }} catch (plainError) {{
         status.textContent = 'Clipboard access was blocked. Select the report and press Ctrl+C.';
