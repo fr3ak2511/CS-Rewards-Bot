@@ -18,6 +18,18 @@ class CopyableReportTests(unittest.TestCase):
             "retry_candidate_count": 0,
             "full_claim_efficiency": 100,
             "email_sent": True,
+            "reconciliation": {
+                "status": "matched",
+                "warnings": [],
+                "grenade_balance_validation": {
+                    "status": "matched",
+                    "accounts_observed": 2,
+                    "accounts_passed": 2,
+                    "accounts_below_minimum": 0,
+                    "accounts_pending_baseline": 0,
+                    "accounts_not_validated": 0,
+                },
+            },
             "totals": {
                 "daily_claimed_this_run": 2,
                 "standard_store_claimed_this_run": 6,
@@ -38,6 +50,10 @@ class CopyableReportTests(unittest.TestCase):
                     "loyalty_claimed_this_run": 0,
                     "event_reward_claims_this_run": 0,
                     "retry_required": False,
+                    "grenade_balance": {
+                        "status": "pass", "current_count": 34,
+                        "expected_minimum": 24, "next_milestone": 56,
+                    },
                 },
                 {
                     "player_id_last4": "CD34",
@@ -50,6 +66,10 @@ class CopyableReportTests(unittest.TestCase):
                     "loyalty_claimed_this_run": 0,
                     "event_reward_claims_this_run": 0,
                     "retry_required": True,
+                    "grenade_balance": {
+                        "status": "pass", "current_count": 28,
+                        "expected_minimum": 24, "next_milestone": 56,
+                    },
                 },
             ],
         }
@@ -89,6 +109,49 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(healthy)
         self.assertIn(">HEALTHY</span>", report)
         self.assertIn("<strong>0</strong><small>Accounts with unresolved items", report)
+
+    def test_report_includes_masked_progression_balance_validation(self):
+        report = build_copyable_report(self.summary)
+        self.assertIn("Progression / Grenade balance", report)
+        self.assertIn("<td>34</td><td>24</td><td>56</td>", report)
+        self.assertIn("Grenade balance", report)
+        self.assertNotIn("PLAYER0001", report)
+
+    def test_pending_grenade_baseline_is_not_reported_as_healthy(self):
+        pending = dict(self.summary)
+        pending["reconciliation"] = {
+            "status": "partial",
+            "warnings": ["grenade_balance_validation_incomplete"],
+            "grenade_balance_validation": {
+                "status": "partial",
+                "accounts_observed": 2,
+                "accounts_passed": 1,
+                "accounts_pending_baseline": 1,
+                "accounts_below_minimum": 0,
+                "accounts_not_validated": 0,
+            },
+        }
+        pending["player_results"] = [
+            {
+                "player_id_last4": "AB12",
+                "display_name": "Player A",
+                "grenade_balance": {
+                    "status": "pass", "current_count": 34,
+                    "expected_minimum": 24, "next_milestone": 56,
+                },
+            },
+            {
+                "player_id_last4": "CD34",
+                "display_name": "Player B",
+                "grenade_balance": {
+                    "status": "pending_baseline", "current_count": 20,
+                    "expected_minimum": None, "next_milestone": 56,
+                },
+            },
+        ]
+        report = build_copyable_report(pending)
+        self.assertIn("ATTENTION REQUIRED", report)
+        self.assertIn("pending baseline", report)
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
