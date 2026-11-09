@@ -13,6 +13,15 @@ class RunReconciliationTests(unittest.TestCase):
             "loyalty": 0,
             "event_rewards": [{"claims_this_run": [{"threshold": 400}, {"threshold": 900}]}],
             "processing_mode": "full_claim",
+            "pid": "PLAYER0001",
+            "grenade_balance": {
+                "status": "pass",
+                "current_count": 34,
+                "expected_minimum": 24,
+                "next_milestone": 56,
+                "surplus": 10,
+                "deficit": 0,
+            },
         }
 
     def _totals(self):
@@ -46,6 +55,36 @@ class RunReconciliationTests(unittest.TestCase):
         self.assertEqual(result["claim_counts"]["per_account_sum"], 8)
         self.assertTrue(result["checks"]["primary_processed_full_configured_roster"])
         self.assertIsNone(result["progression_validation"]["expected_count"])
+
+    def test_grenade_balance_below_minimum_is_an_attention_warning(self):
+        row = self._clean_row()
+        row["grenade_balance"] = {
+            "status": "below_minimum",
+            "current_count": 22,
+            "expected_minimum": 24,
+            "deficit": 2,
+        }
+        result = build_run_reconciliation(
+            [row], run_label="Primary Run", configured_player_count=1,
+            totals=self._totals(), counters=self._counters(),
+        )
+        self.assertEqual(result["status"], "attention_required")
+        self.assertIn("grenade_balance_minimum_not_met", result["warnings"])
+        self.assertEqual(result["grenade_balance_validation"]["accounts_below_minimum"], 1)
+        self.assertEqual(
+            result["grenade_balance_validation"]["attention_accounts"][0]["player_id_last4"],
+            "0001",
+        )
+
+    def test_pending_grenade_baseline_is_reported_as_partial_not_pass(self):
+        row = self._clean_row()
+        row["grenade_balance"] = {"status": "pending_baseline", "current_count": 34}
+        result = build_run_reconciliation(
+            [row], run_label="Primary Run", configured_player_count=1,
+            totals=self._totals(), counters=self._counters(),
+        )
+        self.assertEqual(result["grenade_balance_validation"]["status"], "partial")
+        self.assertIn("grenade_balance_validation_incomplete", result["warnings"])
 
     def test_claim_count_mismatch_is_reported_without_mutating_inputs(self):
         row = self._clean_row()

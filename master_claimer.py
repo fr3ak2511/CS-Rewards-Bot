@@ -36,6 +36,13 @@ from promotion_followups import (
 from recovery_policy import full_claim_retry_ids
 from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
+from grenade_balance import (
+    capture_progression_balance,
+    daily_reset_date,
+    evaluate_progression_balance,
+    load_grenade_balance_state,
+    save_grenade_balance_state,
+)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — CONSTANTS & CONFIG
@@ -45,6 +52,7 @@ VERSION        = "v3.3.3"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
 BOT_META_FILE  = "bot_meta.json"
+GRENADE_BALANCE_FILE = "grenade_balance_baselines.json"
 HEADLESS       = True
 LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
 CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
@@ -2310,6 +2318,69 @@ def claim_progression_program_rewards(driver, pid):
     return result
 
 
+def _record_grenade_balance_for_player(driver, pid, *, is_new_account, stats):
+    """Read the cumulative portal counter and update only its separate baseline file."""
+    observed_at = get_ist_time()
+    snapshot = capture_progression_balance(driver, observed_at=observed_at)
+    if not snapshot:
+        log(f"⚠️ GRENADE_BALANCE=NOT_VALIDATED for {pid}: Reward Chain counter was not readable.")
+        return {
+            "status": "not_validated",
+            "reason": "Authenticated Progression Reward Chain counter was not readable.",
+        }
+
+    claimed_indices = set()
+    for value in stats.get("store_claimed_indices", []) or []:
+        try:
+            claimed_indices.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    for index, skipped in enumerate(stats.get("store_skipped", []) or [], start=1):
+        if skipped:
+            claimed_indices.add(index)
+    store_fully_checked = bool(
+        stats.get("standard_rewards_checked")
+        and not (stats.get("store_unconfirmed_indices") or [])
+        and claimed_indices.issuperset({1, 2, 3})
+    )
+
+    try:
+        state = load_grenade_balance_state(GRENADE_BALANCE_FILE)
+        updated, result = evaluate_progression_balance(
+            snapshot,
+            state,
+            pid,
+            reset_date=daily_reset_date(observed_at),
+            is_new_account=bool(is_new_account),
+            store_rewards_fully_checked=store_fully_checked,
+        )
+        save_grenade_balance_state(updated, GRENADE_BALANCE_FILE)
+    except Exception as exc:
+        log(f"⚠️ GRENADE_BALANCE=NOT_VALIDATED for {pid}: tracker state error ({type(exc).__name__}).")
+        return {
+            "status": "not_validated",
+            "reason": f"Separate Grenade baseline state could not be read or saved ({type(exc).__name__}).",
+        }
+
+    result["store_rewards_fully_checked"] = store_fully_checked
+    status = result.get("status")
+    if status in {"below_minimum", "counter_regressed"}:
+        log(
+            f"🚩 GRENADE_BALANCE=ATTENTION for {pid}: "
+            f"observed={result.get('current_count')} minimum={result.get('expected_minimum')} "
+            f"deficit={result.get('deficit', 0)} status={status}"
+        )
+    elif status == "pass":
+        log(
+            f"✅ GRENADE_BALANCE=PASS for {pid}: "
+            f"observed={result.get('current_count')} minimum={result.get('expected_minimum')} "
+            f"next_milestone={result.get('next_milestone')}"
+        )
+    elif status == "pending_baseline":
+        log(f"⏳ GRENADE_BALANCE=BASELINE_PENDING for {pid}: three Store rewards are not yet fully verified.")
+    return result
+
+
 def run_event_reward_checks(driver, pid):
     """Check active temporary point programmes for the currently logged-in ID."""
     try:
@@ -2525,6 +2596,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_unconfirmed_indices": [],
         "store_claimed_indices": [],
         "progression_unconfirmed": False,
+        "grenade_balance": None,
         "standard_rewards_checked": False,
         "progression_checked": True,
     }
@@ -2587,6 +2659,9 @@ def process_player(pid, has_loyalty, is_new, run_label):
         p = claim_progression_program_rewards(driver, pid)
         stats["progression"] = p
         stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+        stats["grenade_balance"] = _record_grenade_balance_for_player(
+            driver, pid, is_new_account=is_new, stats=stats
+        )
 
         # Loyalty
         if has_loyalty:
@@ -2822,6 +2897,7 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         "retry_required": False,
         "progression": 0,
         "progression_unconfirmed": False,
+        "grenade_balance": None,
         "daily_unconfirmed": False,
         "store_unconfirmed_indices": [],
         "store_claimed_indices": [],
@@ -2888,6 +2964,9 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             p = claim_progression_program_rewards(driver, pid)
             stats["progression"] = p
             stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+            stats["grenade_balance"] = _record_grenade_balance_for_player(
+                driver, pid, is_new_account=is_new, stats=stats
+            )
         else:
             log("ℹ️ Progression not reopened: no standard Store bonus changed from available to portal-confirmed")
 
@@ -4266,6 +4345,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "standard_store_unconfirmed_indices": list(r.get("store_unconfirmed_indices", []) or []),
                 "standard_store_claimed_indices": list(r.get("store_claimed_indices", []) or []),
                 "progression_unconfirmed": bool(r.get("progression_unconfirmed", False)),
+                "grenade_balance": r.get("grenade_balance"),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
                 "promotion_scan_completed": bool(r.get("promotion_scan_completed", False)),
