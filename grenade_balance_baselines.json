@@ -1,0 +1,323 @@
+{
+  "schema_version": 1,
+  "initialized_from": "players.csv snapshot 2026-10-31",
+  "cycles": {
+    "2026-11": {
+      "players": {
+        "E1E9729A4885E6D9": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "4DC0E2AA7130D7E6": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "46C57810F646B91F": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "8EE5A8F3D8CAD1F3": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "5899855DAA167B36": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "5D14D66D5B6C7B8F": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "5429611A24A8F01A": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "856EB1365FA9D02E": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "F251D3D226496061": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "3D9A901755C3B2D8": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "86CD85689FAE9549": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "A32124B011061E03": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "63989CEF5D15F053": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "B0036841F0183A12": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "A6DA56D3C46DF31B": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "7E53CF9C948CED45": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "E796C81690AB75C0": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "F820398935D2C403": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "C3960960443AF932": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "2B50290C73E02027": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "188A50EA1ABE0765": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "4D1AA8C2C628E73F": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "B4BAE5FC4CACA8F7": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "8FC80EF0CC5B9D39": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "1956988E56026BA7": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "631FEB500E5C1EB7": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "6163D9F946C4BD48": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "B3ED965EAECB6F7C": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "BB382E889AA37C4F": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "DA4C269DB53172C5": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "51001A5D6014F2DD": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "4443B75C454AEFF8": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "809109186A2962E4": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "90A110C58E410DDF": {
+          "baseline_status": "active",
+          "baseline_count": 0,
+          "baseline_date": "2026-11-01",
+          "tracking_start_date": "2026-11-01",
+          "baseline_source": "roster_present_before_cycle_start",
+          "last_observed_count": null,
+          "last_observed_date": null
+        },
+        "3F493D8C327FAF81": {
+          "baseline_status": "pending_baseline",
+          "baseline_source": "late_joined_before_tracker_rollout",
+          "join_date": "2026-11-02",
+          "first_seen_date": "2026-11-02",
+          "note": "Added after the 2 November reset. No Progression counter snapshot exists for the joining-day Store check; establish a live baseline after the first verified Store check under this validator and begin tracking from the following reset date."
+        }
+      }
+    }
+  }
+}
