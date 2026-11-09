@@ -62,8 +62,54 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
 
     reconciliation = summary.get("reconciliation") if isinstance(summary.get("reconciliation"), dict) else {}
     reconciliation_warnings = reconciliation.get("warnings") if isinstance(reconciliation.get("warnings"), list) else []
-    if reconciliation.get("status") == "attention_required":
+    if reconciliation.get("status") in {"attention_required", "partial"}:
         attention = max(attention, len(reconciliation_warnings), 1)
+
+    grenade_validation = (
+        reconciliation.get("grenade_balance_validation")
+        if isinstance(reconciliation.get("grenade_balance_validation"), dict) else {}
+    )
+    grenade_status = str(grenade_validation.get("status") or "not_available")
+    grenade_rows = []
+    for player in players:
+        if not isinstance(player, dict):
+            continue
+        balance = player.get("grenade_balance")
+        if not isinstance(balance, dict):
+            continue
+        balance_status = str(balance.get("status") or "not_validated")
+        balance_class = (
+            "bad" if balance_status in {"below_minimum", "counter_regressed"}
+            else "warn" if balance_status in {"pending_baseline", "not_validated"}
+            else "good"
+        )
+        observed = "—" if balance.get("current_count") is None else str(_number(balance.get("current_count")))
+        minimum = "Pending" if balance.get("expected_minimum") is None else str(_number(balance.get("expected_minimum")))
+        milestone = "—" if balance.get("next_milestone") is None else str(_number(balance.get("next_milestone")))
+        suffix = (
+            "<small class='reason'>Baseline captured; prior joining days are not backfilled.</small>"
+            if balance.get("historical_gap") else ""
+        )
+        grenade_rows.append(
+            "<tr><td><strong>" + _safe(_player_label(player)) + "</strong>" + suffix
+            + "</td><td>" + observed + "</td><td>" + minimum
+            + "</td><td>" + milestone + "</td><td><span class='status " + balance_class + "'>"
+            + _safe(balance_status.replace("_", " ")) + "</span></td></tr>"
+        )
+    grenade_table = (
+        "<div class='table-wrap'><table><thead><tr><th>Account</th><th>Observed</th>"
+        "<th>Minimum</th><th>Next milestone</th><th>Status</th></tr></thead><tbody>"
+        + "".join(grenade_rows) + "</tbody></table></div>"
+        if grenade_rows else "<p>No Progression balance was captured in this run.</p>"
+    )
+    grenade_summary = (
+        "<p>Status: <strong>" + _safe(grenade_status.replace("_", " "))
+        + "</strong> · Accounts observed: <strong>" + str(_number(grenade_validation.get("accounts_observed")))
+        + "</strong> · Below minimum: <strong>" + str(_number(grenade_validation.get("accounts_below_minimum")))
+        + "</strong> · Pending baseline: <strong>" + str(_number(grenade_validation.get("accounts_pending_baseline")))
+        + "</strong></p>"
+    )
+    grenade_section = grenade_summary + grenade_table
 
     health = "ATTENTION REQUIRED" if attention else "HEALTHY"
     health_class = "warn" if attention else "healthy"
@@ -223,6 +269,10 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div>Category total: <strong>{_number((reconciliation.get("claim_counts") or {}).get("category_sum"))}</strong></div>
 <div>Recorded claim counter: <strong>{_number((reconciliation.get("claim_counts") or {}).get("recorded_claim_counter"))}</strong></div>
 {"<ul>" + "".join("<li>" + _safe(item) + "</li>" for item in reconciliation_warnings) + "</ul>" if reconciliation_warnings else "<p>All available arithmetic and roster-scope checks matched.</p>"}
+</section>
+<section class="section">
+<h2>Progression / Grenade balance</h2>
+{grenade_section}
 </section>
 </div>
 <footer class="footer">CS Rewards Bot · Automated report · Player IDs are masked to their last four characters.</footer>
