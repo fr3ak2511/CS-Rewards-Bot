@@ -1,11 +1,12 @@
 import json
 import tempfile
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 from master_claimer import (
+    _current_reset_date,
     _full_claim_recovery_candidate,
     _player_claim_total,
     _promotion_detail_worthy,
@@ -637,6 +638,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         }
         meta = {
             "daily_cycle_email_summary": {
+                "reset_date": _current_reset_date(),
                 "configured_player_count": 3,
                 "accounts_complete": 3,
                 "accounts_pending": 0,
@@ -673,6 +675,70 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
 
+
+    def test_recovery_email_ignores_cycle_summary_from_previous_reset(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        previous_reset = (
+            datetime.strptime(_current_reset_date(), "%Y-%m-%d") - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+        stale_meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": previous_reset,
+                "configured_player_count": 3,
+                "accounts_complete": 3,
+                "accounts_pending": 0,
+                "claim_totals": {
+                    "daily": 3, "store": 9, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "total_claims": 12,
+                "recovery_claims_added": 3,
+                "recovery_accounts_count": 1,
+                "pending_player_last4": [],
+                "cycle_complete": True,
+            }
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), stale_meta,
+            configured_player_count=3,
+        )
+        self.assertNotIn("Today's Reward Cycle", report)
+        self.assertNotIn("12 total confirmed claims", report)
+
+    def test_recovery_email_does_not_double_count_pending_account_in_current_results(self):
+        player = self.sample_player()
+        player["pid"] = "RECOVERY0001"
+        player["status"] = "Partial"
+        player["daily_unconfirmed"] = True
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": _current_reset_date(),
+                "configured_player_count": 3,
+                "accounts_complete": 2,
+                "accounts_pending": 1,
+                "claim_totals": {
+                    "daily": 3, "store": 8, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "total_claims": 11,
+                "recovery_claims_added": 2,
+                "recovery_accounts_count": 1,
+                "pending_player_last4": ["0001"],
+                "cycle_complete": False,
+            }
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), meta,
+            configured_player_count=3,
+        )
+        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("1 / 3 accounts complete", report)
 
 if __name__ == "__main__":
     unittest.main()
