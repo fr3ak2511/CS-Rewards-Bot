@@ -611,7 +611,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("1 account checked · 1 balances captured · 1 passed", report)
+        self.assertIn("1 account checked · 1 balance captured · 1 passed", report)
 
     def test_recovery_email_shows_combined_cycle_totals_and_completion(self):
         player = {
@@ -668,7 +668,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Confirmed claims</span><strong>12</strong>", report)
         self.assertIn("<span>Accounts complete</span><strong>3 / 3</strong>", report)
         self.assertIn("Today's Reward Cycle", report)
-        self.assertIn("Recovery added 3 confirmed claims across 1 account.", report)
+        self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
         self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
