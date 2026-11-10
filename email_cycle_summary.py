@@ -130,6 +130,10 @@ def update_daily_cycle_summary(
 
     cycle = meta.get("daily_cycle_email_summary")
     if not isinstance(cycle, dict) or cycle.get("reset_date") != reset_date:
+        # This is a latest-cycle email rollup, not a historical ledger. Remove an
+        # expired or malformed summary so a recovery run cannot reuse yesterday's
+        # totals when today's full-roster run is unavailable.
+        meta.pop("daily_cycle_email_summary", None)
         cycle = None
 
     if is_full_roster_run and run_label in {"Primary Run", "Manual Run"}:
