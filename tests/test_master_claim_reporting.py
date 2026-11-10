@@ -428,10 +428,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "Mixed Run", 1, get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("<span>Confirmed claims</span><strong>45</strong>", report)
-        self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>confirmed · 3 checked</small>", report)
-        self.assertIn("<span>Store Rewards</span><strong>16</strong><small>confirmed · 3 checked</small>", report)
-        self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>confirmed · 2 checked</small>", report)
-        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>confirmed · 1 checked</small>", report)
+        self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
+        self.assertIn("<span>Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
+        self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>2 accounts checked</small>", report)
+        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 accounts checked</small>", report)
 
 
     def test_generic_popup_blocker_remains_reportable(self):
