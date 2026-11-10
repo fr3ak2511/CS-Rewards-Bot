@@ -3619,11 +3619,12 @@ def build_daily_cycle_email_section(summary):
     else:
         state = f"{complete} / {configured} accounts complete"
     recovery_account_word = "account" if recovery_accounts == 1 else "accounts"
+    recovery_claim_word = "claim" if recovery_claims == 1 else "claims"
     recovery_note = (
-        f"Recovery added {recovery_claims} confirmed claims across "
-        f"{recovery_accounts} {recovery_account_word}."
+        f"Recovery checked {recovery_accounts} {recovery_account_word} and confirmed "
+        f"{recovery_claims} additional {recovery_claim_word}."
         if recovery_accounts or recovery_claims else
-        "No additional claims were needed in this recovery."
+        "No additional recovery claims were needed."
     )
     pending_ids = summary.get("pending_player_last4")
     pending_ids = [str(value) for value in pending_ids] if isinstance(pending_ids, list) else []
