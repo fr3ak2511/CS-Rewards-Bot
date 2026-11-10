@@ -431,7 +431,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>2 accounts checked</small>", report)
-        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 accounts checked</small>", report)
+        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 account checked</small>", report)
 
 
     def test_generic_popup_blocker_remains_reportable(self):
@@ -651,7 +651,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Confirmed claims</span><strong>12</strong>", report)
         self.assertIn("<span>Accounts complete</span><strong>3 / 3</strong>", report)
         self.assertIn("Today's Reward Cycle", report)
-        self.assertIn("Recovery added 3 confirmed claims across 1 account(s).", report)
+        self.assertIn("Recovery added 3 confirmed claims across 1 account.", report)
         self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
