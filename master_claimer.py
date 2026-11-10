@@ -3548,8 +3548,9 @@ def build_grenade_balance_email_section(results):
     pending = sum(1 for _, _, status in records if status == "pending_baseline")
     not_validated = sum(1 for _, _, status in records if status == "not_validated")
     captured = sum(1 for _, balance, _ in records if balance.get("current_count") is not None)
+    account_word = "account" if len(records) == 1 else "accounts"
     summary = (
-        f"{len(records)} accounts checked · {captured} balances captured · "
+        f"{len(records)} {account_word} checked · {captured} balances captured · "
         f"{passed} passed"
     )
     exceptions = []
