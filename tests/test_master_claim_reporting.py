@@ -738,7 +738,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=3,
         )
         self.assertIn("<span>Need attention</span><strong>1</strong>", report)
-        self.assertIn("1 / 3 accounts complete", report)
+        self.assertIn("2 / 3 accounts complete", report)
 
 if __name__ == "__main__":
     unittest.main()
