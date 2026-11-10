@@ -3659,6 +3659,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     is_recovery_rollup = bool(
         run_label == "Recovery Run"
         and cycle_summary
+        and cycle_summary.get("reset_date") == _current_reset_date()
         and int(cycle_summary.get("configured_player_count", 0) or 0) == configured_count
     )
     counts = _summary_counts(results)
@@ -3708,6 +3709,14 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         confirmed_claims = int(cycle_summary.get("total_claims", confirmed_claims) or 0)
 
     attention_player_ids = set()
+    # Recovery summaries retain only masked last-four identifiers. Build a lookup
+    # against this run's actual player IDs so the same account is not counted once
+    # by its full ID and again by its pending suffix.
+    result_pids_by_suffix = {}
+    for result in results:
+        result_pid = str(result.get("pid") or "").strip()
+        if result_pid:
+            result_pids_by_suffix.setdefault(result_pid[-4:], set()).add(result_pid)
     exception_cards = []
     for result in results:
         status = str(result.get("status") or "")
@@ -3779,8 +3788,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         player_id = str(item.get("player_key") or "").strip()
         attention_player_ids.add(player_id or f"followup:{item.get('key', item.get('title', 'unknown'))}")
     if is_recovery_rollup:
-        for suffix in (cycle_summary.get("pending_player_last4") or []):
-            attention_player_ids.add("pending:" + str(suffix)[-4:])
+        for raw_suffix in (cycle_summary.get("pending_player_last4") or []):
+            suffix = str(raw_suffix).strip()[-4:]
+            if not suffix:
+                continue
+            matching_pids = result_pids_by_suffix.get(suffix, set())
+            if len(matching_pids) == 1:
+                attention_player_ids.add(next(iter(matching_pids)))
+            elif not matching_pids or not matching_pids.intersection(attention_player_ids):
+                # When a suffix is ambiguous or was not processed in this run,
+                # retain one masked pending identity instead of double-counting it.
+                attention_player_ids.add("pending:" + suffix)
     attention_accounts = len(attention_player_ids)
 
     actual_failures = int(counts.get("actual_failures", 0) or 0)
