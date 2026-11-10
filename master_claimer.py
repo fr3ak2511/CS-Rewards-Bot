@@ -3617,9 +3617,10 @@ def build_daily_cycle_email_section(summary):
         state = f"{complete} / {configured} accounts complete · {pending} pending"
     else:
         state = f"{complete} / {configured} accounts complete"
+    recovery_account_word = "account" if recovery_accounts == 1 else "accounts"
     recovery_note = (
         f"Recovery added {recovery_claims} confirmed claims across "
-        f"{recovery_accounts} account(s)."
+        f"{recovery_accounts} {recovery_account_word}."
         if recovery_accounts or recovery_claims else
         "No additional claims were needed in this recovery."
     )
@@ -3811,7 +3812,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             value, note = "—", empty_note
         else:
             value = sum(int(result.get(claim_key, 0) or 0) for result in checked_results)
-            note = f"{len(checked_results)} accounts checked"
+            account_word = "account" if len(checked_results) == 1 else "accounts"
+            note = f"{len(checked_results)} {account_word} checked"
         return (
             f"<div class='v2-category'><span>{label}</span>"
             f"<strong>{value}</strong><small>{note}</small></div>"
@@ -4823,9 +4825,6 @@ def main():
     )
 
     n_players = len(results)
-    failure_count = counts["actual_failures"]
-    ist_label = job_start.strftime('%d-%b %I:%M %p')
-    streak_d  = meta["streak"].get("current", 0)
     run_subject_labels = {
         "Primary Run": "Primary",
         "Manual Run": "Manual",
