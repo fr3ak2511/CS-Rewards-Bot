@@ -596,6 +596,23 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Need attention", report)
         self.assertIn("<strong>1</strong>", report)
 
+    def test_grenade_balance_email_uses_singular_account_count(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        player["grenade_balance"] = {
+            "status": "pass",
+            "current_count": 30,
+            "expected_minimum": 30,
+            "next_milestone": 56,
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=35,
+        )
+        self.assertIn("1 account checked · 1 balances captured · 1 passed", report)
+
     def test_recovery_email_shows_combined_cycle_totals_and_completion(self):
         player = {
             "pid": "RECOVERY0001",
