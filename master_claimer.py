@@ -4786,11 +4786,6 @@ def main():
         "full_claim_accounts": counts["full_claim_accounts"],
         "configured_player_count": configured_player_count,
     }
-    meta_for_email = dict(meta)
-    meta_for_email["last_run"] = prev_run   # email delta uses previous run
-
-    save_bot_meta(meta)
-
     cycle_claim_totals = {
         "daily": td,
         "store": ts_daily,
