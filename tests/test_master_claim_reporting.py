@@ -1,11 +1,12 @@
 import json
 import tempfile
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 from master_claimer import (
+    _current_reset_date,
     _full_claim_recovery_candidate,
     _player_claim_total,
     _promotion_detail_worthy,
@@ -281,7 +282,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Accounts processed", html)
         self.assertIn("Need attention", html)
         self.assertIn("Daily", html)
-        self.assertIn("Standard Store", html)
+        self.assertIn("Store Rewards", html)
         self.assertNotIn("Day Streak", html)
         self.assertNotIn("Best streak", html)
         self.assertNotIn("Scheduled Runs", html)
@@ -388,7 +389,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Promo Backup", 1,
             get_ist_time() - timedelta(seconds=30), {},
         )
-        for label in ("Daily", "Standard Store", "Progression", "Loyalty"):
+        for label in ("Daily Rewards", "Store Rewards", "Progression Rewards", "Loyalty Rewards"):
             self.assertIn(
                 f"<span>{label}</span><strong>—</strong><small>Not checked in this run</small>",
                 report,
@@ -428,10 +429,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "Mixed Run", 1, get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("<span>Confirmed claims</span><strong>45</strong>", report)
-        self.assertIn("<span>Daily</span><strong>13</strong><small>confirmed · 3 checked</small>", report)
-        self.assertIn("<span>Standard Store</span><strong>16</strong><small>confirmed · 3 checked</small>", report)
-        self.assertIn("<span>Progression</span><strong>12</strong><small>confirmed · 2 checked</small>", report)
-        self.assertIn("<span>Loyalty</span><strong>4</strong><small>confirmed · 1 checked</small>", report)
+        self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
+        self.assertIn("<span>Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
+        self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>2 accounts checked</small>", report)
+        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 account checked</small>", report)
 
 
     def test_generic_popup_blocker_remains_reportable(self):
@@ -562,6 +563,182 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         }
         self.assertFalse(_promotion_detail_worthy(incomplete))
 
+
+    def test_email_shows_processed_accounts_against_configured_roster_and_uses_game_store_name(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        report = build_email(
+            [player], "Manual Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=35,
+        )
+        self.assertIn("<span>Accounts processed</span><strong>1 / 35</strong>", report)
+        self.assertIn("<span>Store Rewards</span>", report)
+        self.assertNotIn("Standard Store", report)
+
+    def test_email_includes_compact_grenade_balance_result_and_flags_shortfall(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        player["grenade_balance"] = {
+            "status": "below_minimum",
+            "current_count": 27,
+            "expected_minimum": 30,
+            "deficit": 3,
+        }
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=35,
+        )
+        self.assertIn("Grenade Balance Check", report)
+        self.assertIn("27 / 30 · short 3", report)
+        self.assertIn("Need attention", report)
+        self.assertIn("<strong>1</strong>", report)
+
+    def test_grenade_balance_email_uses_singular_account_count(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        player["grenade_balance"] = {
+            "status": "pass",
+            "current_count": 30,
+            "expected_minimum": 30,
+            "next_milestone": 56,
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=35,
+        )
+        self.assertIn("1 account checked · 1 balance captured · 1 passed", report)
+
+    def test_recovery_email_shows_combined_cycle_totals_and_completion(self):
+        player = {
+            "pid": "RECOVERY0001",
+            "display_name": "Recovered Player",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "progression_checked": True,
+            "status": "Claims Made",
+            "daily": 0,
+            "store": 3,
+            "progression": 0,
+            "loyalty": 0,
+            "has_loyalty": False,
+            "promotions_observed": [],
+            "event_rewards": [],
+            "grenade_balance": {
+                "status": "pass",
+                "current_count": 30,
+                "expected_minimum": 30,
+                "next_milestone": 56,
+            },
+        }
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": _current_reset_date(),
+                "configured_player_count": 3,
+                "accounts_complete": 3,
+                "accounts_pending": 0,
+                "claim_totals": {
+                    "daily": 3, "store": 9, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "total_claims": 12,
+                "primary_claim_totals": {
+                    "daily": 3, "store": 6, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "recovery_claim_totals": {
+                    "daily": 0, "store": 3, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "recovery_claims_added": 3,
+                "recovery_runs_count": 1,
+                "recovery_accounts_count": 1,
+                "pending_player_last4": [],
+                "cycle_complete": True,
+            }
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), meta,
+            configured_player_count=3,
+        )
+        self.assertIn("<span>Confirmed claims</span><strong>12</strong>", report)
+        self.assertIn("<span>Accounts complete</span><strong>3 / 3</strong>", report)
+        self.assertIn("Today's Reward Cycle", report)
+        self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
+        self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
+        self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
+
+
+
+    def test_recovery_email_ignores_cycle_summary_from_previous_reset(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        previous_reset = (
+            datetime.strptime(_current_reset_date(), "%Y-%m-%d") - timedelta(days=1)
+        ).strftime("%Y-%m-%d")
+        stale_meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": previous_reset,
+                "configured_player_count": 3,
+                "accounts_complete": 3,
+                "accounts_pending": 0,
+                "claim_totals": {
+                    "daily": 3, "store": 9, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "total_claims": 12,
+                "recovery_claims_added": 3,
+                "recovery_accounts_count": 1,
+                "pending_player_last4": [],
+                "cycle_complete": True,
+            }
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), stale_meta,
+            configured_player_count=3,
+        )
+        self.assertNotIn("Today's Reward Cycle", report)
+        self.assertNotIn("12 total confirmed claims", report)
+
+    def test_recovery_email_does_not_double_count_pending_account_in_current_results(self):
+        player = self.sample_player()
+        player["pid"] = "RECOVERY0001"
+        player["status"] = "Partial"
+        player["daily_unconfirmed"] = True
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": _current_reset_date(),
+                "configured_player_count": 3,
+                "accounts_complete": 2,
+                "accounts_pending": 1,
+                "claim_totals": {
+                    "daily": 3, "store": 8, "promotions": 0,
+                    "progression": 0, "loyalty": 0, "events": 0,
+                },
+                "total_claims": 11,
+                "recovery_claims_added": 2,
+                "recovery_accounts_count": 1,
+                "pending_player_last4": ["0001"],
+                "cycle_complete": False,
+            }
+        }
+        report = build_email(
+            [player], "Recovery Run", 1,
+            get_ist_time() - timedelta(seconds=30), meta,
+            configured_player_count=3,
+        )
+        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("2 / 3 accounts complete", report)
 
 if __name__ == "__main__":
     unittest.main()

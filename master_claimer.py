@@ -36,6 +36,7 @@ from promotion_followups import (
 from recovery_policy import full_claim_retry_ids
 from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
+from email_cycle_summary import update_daily_cycle_summary
 from grenade_balance import (
     capture_progression_balance,
     daily_reset_date,
@@ -3530,12 +3531,137 @@ def build_mobile_cards(results, n):
     )
 
 
-def build_email(results, run_label, run_index, job_start, meta, followup_summary=None):
+def build_grenade_balance_email_section(results):
+    """Render a short aggregate plus exception-only detail for live Grenade checks."""
+    records = []
+    for result in results:
+        balance = result.get("grenade_balance")
+        if isinstance(balance, dict):
+            records.append((result, balance, str(balance.get("status") or "not_validated")))
+
+    if not records:
+        return ""
+
+    passed = sum(1 for _, _, status in records if status == "pass")
+    below = sum(1 for _, _, status in records if status == "below_minimum")
+    regressed = sum(1 for _, _, status in records if status == "counter_regressed")
+    pending = sum(1 for _, _, status in records if status == "pending_baseline")
+    not_validated = sum(1 for _, _, status in records if status == "not_validated")
+    captured = sum(1 for _, balance, _ in records if balance.get("current_count") is not None)
+    account_word = "account" if len(records) == 1 else "accounts"
+    balance_word = "balance" if captured == 1 else "balances"
+    summary = (
+        f"{len(records)} {account_word} checked · {captured} {balance_word} captured · "
+        f"{passed} passed"
+    )
+    exceptions = []
+    for result, balance, status in records:
+        if status == "pass":
+            continue
+        label = html.escape(_display_label(result))
+        observed = balance.get("current_count")
+        minimum = balance.get("expected_minimum")
+        observed_text = "—" if observed is None else str(int(observed))
+        minimum_text = "Pending baseline" if minimum is None else str(int(minimum))
+        if status == "below_minimum":
+            detail = f"{observed_text} / {minimum_text} · short {int(balance.get('deficit', 0) or 0)}"
+            status_text = "Below minimum"
+        elif status == "counter_regressed":
+            detail = f"{observed_text} observed · expected at least {minimum_text}"
+            status_text = "Counter regressed"
+        elif status == "pending_baseline":
+            detail = f"{observed_text} observed · baseline pending"
+            status_text = "Baseline pending"
+        else:
+            detail = str(balance.get("reason") or "Balance could not be validated")
+            status_text = "Not validated"
+        exceptions.append(
+            "<div class='v2-item v2-attention'>"
+            f"<div><strong>{label}</strong><small>{html.escape(status_text)}</small></div>"
+            f"<span class='v2-result'>{html.escape(detail)}</span></div>"
+        )
+
+    flags = []
+    if below:
+        flags.append(f"{below} below minimum")
+    if regressed:
+        flags.append(f"{regressed} regressed")
+    if pending:
+        flags.append(f"{pending} baseline pending")
+    if not_validated:
+        flags.append(f"{not_validated} not validated")
+    if flags:
+        summary += " · " + " · ".join(flags)
+
+    return (
+        "<section class='v2-section v2-grenade'>"
+        "<div class='v2-section-head'><h2>Grenade Balance Check</h2>"
+        f"<span>{html.escape(summary)}</span></div>"
+        + ("".join(exceptions) if exceptions else
+           "<p class='v2-all-clear'>All captured Grenade balances meet their expected minimum.</p>")
+        + "</section>"
+    )
+
+
+def build_daily_cycle_email_section(summary):
+    """Show the overall reset-cycle outcome in recovery emails, not only the subset."""
+    if not isinstance(summary, dict):
+        return ""
+    configured = int(summary.get("configured_player_count", 0) or 0)
+    complete = int(summary.get("accounts_complete", 0) or 0)
+    pending = int(summary.get("accounts_pending", 0) or 0)
+    if configured <= 0:
+        return ""
+    recovery_claims = int(summary.get("recovery_claims_added", 0) or 0)
+    recovery_accounts = int(summary.get("recovery_accounts_count", 0) or 0)
+    total_claims = int(summary.get("total_claims", 0) or 0)
+    if pending:
+        state = f"{complete} / {configured} accounts complete · {pending} pending"
+    else:
+        state = f"{complete} / {configured} accounts complete"
+    recovery_account_word = "account" if recovery_accounts == 1 else "accounts"
+    recovery_claim_word = "claim" if recovery_claims == 1 else "claims"
+    recovery_note = (
+        f"Recovery checked {recovery_accounts} {recovery_account_word} and confirmed "
+        f"{recovery_claims} additional {recovery_claim_word}."
+        if recovery_accounts or recovery_claims else
+        "No additional recovery claims were needed."
+    )
+    pending_ids = summary.get("pending_player_last4")
+    pending_ids = [str(value) for value in pending_ids] if isinstance(pending_ids, list) else []
+    pending_note = (
+        "<small>Still pending: "
+        + ", ".join("…" + html.escape(value[-4:]) for value in pending_ids[:8])
+        + "</small>"
+        if pending_ids else ""
+    )
+    return (
+        "<section class='v2-section v2-cycle'>"
+        "<div class='v2-section-head'><h2>Today's Reward Cycle</h2>"
+        f"<span>{total_claims} total confirmed claims</span></div>"
+        f"<strong>{html.escape(state)}</strong>"
+        f"<p>{html.escape(recovery_note)}</p>{pending_note}"
+        "</section>"
+    )
+
+
+def build_email(results, run_label, run_index, job_start, meta, followup_summary=None, configured_player_count=None):
     """Build the compact Email V2 report; streak remains internal in bot_meta.json."""
     ist_now = get_ist_time()
     duration_seconds = max(0, int((ist_now - job_start).total_seconds()))
     duration_text = f"{duration_seconds // 60}m {duration_seconds % 60}s"
     account_count = len(results)
+    try:
+        configured_count = max(account_count, int(configured_player_count if configured_player_count is not None else account_count))
+    except (TypeError, ValueError, OverflowError):
+        configured_count = account_count
+    cycle_summary = meta.get("daily_cycle_email_summary") if isinstance(meta.get("daily_cycle_email_summary"), dict) else None
+    is_recovery_rollup = bool(
+        run_label == "Recovery Run"
+        and cycle_summary
+        and cycle_summary.get("reset_date") == _current_reset_date()
+        and int(cycle_summary.get("configured_player_count", 0) or 0) == configured_count
+    )
     counts = _summary_counts(results)
     hard_failures = {"Login Failed", "Error", "Failed"}
 
@@ -3579,8 +3705,18 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         daily_claims + store_claims + progression_claims + loyalty_claims
         + reportable_promotion_claims + event_claims
     )
+    if is_recovery_rollup:
+        confirmed_claims = int(cycle_summary.get("total_claims", confirmed_claims) or 0)
 
     attention_player_ids = set()
+    # Recovery summaries retain only masked last-four identifiers. Build a lookup
+    # against this run's actual player IDs so the same account is not counted once
+    # by its full ID and again by its pending suffix.
+    result_pids_by_suffix = {}
+    for result in results:
+        result_pid = str(result.get("pid") or "").strip()
+        if result_pid:
+            result_pids_by_suffix.setdefault(result_pid[-4:], set()).add(result_pid)
     exception_cards = []
     for result in results:
         status = str(result.get("status") or "")
@@ -3600,6 +3736,11 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             result.get("daily_unconfirmed")
             or result.get("store_unconfirmed_indices")
             or result.get("progression_unconfirmed")
+        )
+        grenade_balance = result.get("grenade_balance")
+        grenade_attention = bool(
+            isinstance(grenade_balance, dict)
+            and str(grenade_balance.get("status") or "not_validated") != "pass"
         )
         # The claim engine retains retry/status telemetry for every observed offer.
         # The email, however, must not expose a filtered paid/discounted offer
@@ -3623,6 +3764,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             or bool(result.get("promotion_detection_failed"))
             or promo_attention
             or event_attention
+            or grenade_attention
         )
         if needs_attention:
             attention_player_ids.add(str(result.get("pid") or _display_label(result)))
@@ -3631,6 +3773,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 or result.get("promotion_detection_failed")
                 or promo_attention
                 or event_attention
+                or grenade_attention
             )
             if status in hard_failures or not has_specific_detail:
                 reason = str(result.get("fail_reason") or "One or more items need review")
@@ -3644,6 +3787,18 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     for item in (followup_summary or {}).get("open_items", []):
         player_id = str(item.get("player_key") or "").strip()
         attention_player_ids.add(player_id or f"followup:{item.get('key', item.get('title', 'unknown'))}")
+    if is_recovery_rollup:
+        for raw_suffix in (cycle_summary.get("pending_player_last4") or []):
+            suffix = str(raw_suffix).strip()[-4:]
+            if not suffix:
+                continue
+            matching_pids = result_pids_by_suffix.get(suffix, set())
+            if len(matching_pids) == 1:
+                attention_player_ids.add(next(iter(matching_pids)))
+            elif not matching_pids or not matching_pids.intersection(attention_player_ids):
+                # When a suffix is ambiguous or was not processed in this run,
+                # retain one masked pending identity instead of double-counting it.
+                attention_player_ids.add("pending:" + suffix)
     attention_accounts = len(attention_player_ids)
 
     actual_failures = int(counts.get("actual_failures", 0) or 0)
@@ -3658,6 +3813,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
+    grenade_html = build_grenade_balance_email_section(results)
+    daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
     attention_html = "".join(exception_cards)
     if attention_html:
         attention_html = (
@@ -3665,31 +3822,60 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             f"<div class='v2-section-head'><h2>Exceptions &amp; Attention</h2><span>{attention_accounts} accounts</span></div>"
             + attention_html + "</section>"
         )
-    if not (standard_attention_html or promotion_html or followup_html or event_html or attention_html):
+    if not (standard_attention_html or promotion_html or followup_html or event_html or grenade_html or daily_cycle_html or attention_html):
         attention_html = "<p class='v2-all-clear'>No outstanding exceptions were recorded for this run.</p>"
 
-    def _category_card(label, checked_results, claim_key, empty_note="Not checked in this run"):
-        if not checked_results:
+    def _category_card(label, checked_results, claim_key, cycle_key, empty_note="Not checked in this run"):
+        if is_recovery_rollup:
+            value = int((cycle_summary.get("claim_totals") or {}).get(cycle_key, 0) or 0)
+            note = "confirmed in today's cycle"
+        elif not checked_results:
             value, note = "—", empty_note
         else:
             value = sum(int(result.get(claim_key, 0) or 0) for result in checked_results)
-            note = f"confirmed · {len(checked_results)} checked"
+            account_word = "account" if len(checked_results) == 1 else "accounts"
+            note = f"{len(checked_results)} {account_word} checked"
         return (
             f"<div class='v2-category'><span>{label}</span>"
             f"<strong>{value}</strong><small>{note}</small></div>"
         )
 
-    category_html = "".join((
-        _category_card("Daily", standard_checked_results, "daily"),
-        _category_card("Standard Store", standard_checked_results, "store"),
-        _category_card("Progression", progression_checked_results, "progression"),
+    promotions_checked_results = [
+        result for result in results
+        if result.get("promotion_scan_completed") or result.get("promotions_observed")
+    ]
+    event_checked_results = [
+        result for result in results
+        if isinstance(result.get("event_rewards"), list) and result.get("event_rewards")
+    ]
+    category_cards = [
+        _category_card("Daily Rewards", standard_checked_results, "daily", "daily"),
+        _category_card("Store Rewards", standard_checked_results, "store", "store"),
+        _category_card("Progression Rewards", progression_checked_results, "progression", "progression"),
         _category_card(
-            "Loyalty", loyalty_checked_results, "loyalty",
+            "Loyalty Rewards", loyalty_checked_results, "loyalty", "loyalty",
             "No enrolled accounts" if full_claim_results else "Not checked in this run",
         ),
-    ))
+    ]
+    if is_recovery_rollup:
+        category_cards.append(_category_card("Store Promotions", [], "store_temp", "promotions"))
+        if cycle_summary.get("claim_totals", {}).get("events") or cycle_summary.get("primary_claim_totals", {}).get("events", 0):
+            category_cards.append(_category_card("Event Rewards", [], "event_reward_claims", "events"))
+    else:
+        if promotions_checked_results:
+            category_cards.append(_category_card("Store Promotions", promotions_checked_results, "store_temp", "promotions"))
+        if event_checked_results:
+            category_cards.append(_category_card("Event Rewards", event_checked_results, "event_reward_claims", "events"))
+    category_html = "".join(category_cards)
     generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
     safe_run_label = html.escape(str(run_label or "Reward Run"))
+    confirmed_note = "Total confirmed in today's cycle" if is_recovery_rollup else "Portal-confirmed during this run"
+    accounts_kpi_label = "Accounts complete" if is_recovery_rollup else "Accounts processed"
+    accounts_kpi_value = (
+        f"{int(cycle_summary.get('accounts_complete', 0) or 0)} / {configured_count}"
+        if is_recovery_rollup else f"{account_count} / {configured_count}"
+    )
+    accounts_kpi_note = "Today's full-roster cycle" if is_recovery_rollup else "Of configured roster"
 
     return (
         "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>"
@@ -3703,10 +3889,11 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         ".v2-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px}"
         ".v2-kpi{padding:15px}.v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.7px}"
         ".v2-kpi strong{display:block;font-size:25px;margin:7px 0 2px;color:#172033}.v2-kpi small,.v2-category small{font-size:10px;color:#94a3b8}"
-        ".v2-category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}.v2-category{padding:12px}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
+        ".v2-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.v2-category{padding:12px;min-width:0}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
         ".v2-section{padding:15px;margin:0 0 12px}.v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.v2-section-head h2{font-size:14px;margin:0}.v2-section-head span{font-size:10px;color:#64748b;text-align:right}"
         ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px}.v2-item:first-of-type{border-top:0}.v2-item strong{display:block}.v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px}.v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px}.v2-good{color:#166534}"
         ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exceptions{background:#fffbeb;border-color:#fcd34d}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
+        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}.v2-grenade .v2-item{margin:5px 0}.v2-grenade .v2-item small{font-size:10px;color:#64748b}"
         ".v2-footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px}"
         "@media(max-width:560px){body{padding:9px}.v2-hero{padding:17px}.v2-hero h1{font-size:20px}.v2-kpis{grid-template-columns:1fr 1fr}.v2-kpi:first-child{grid-column:span 2}.v2-category-grid{grid-template-columns:1fr 1fr}.v2-item{display:block}.v2-result{display:block;max-width:none;text-align:left;margin-top:6px}.v2-section-head{align-items:flex-start}}"
         "</style></head><body><main class='v2-shell'>"
@@ -3715,11 +3902,13 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         f"<div class='v2-meta'>{safe_run_label} · {generated} · Duration {duration_text}</div>"
         f"<span class='v2-health {health_class}'>{health_label}</span></header>"
         "<section class='v2-kpis'>"
-        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>Portal-confirmed this run</small></div>"
-        f"<div class='v2-kpi'><span>Accounts processed</span><strong>{account_count}</strong><small>Accounts included in this run</small></div>"
+        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
+        f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
         f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with exceptions or unresolved items</small></div>"
         "</section>"
         "<div class='v2-category-grid'>" + category_html + "</div>"
+        + (daily_cycle_html or "")
+        + (grenade_html or "")
         + (standard_attention_html or "")
         + (promotion_html or "")
         + (followup_html or "")
@@ -4620,26 +4809,69 @@ def main():
         "full_claim_accounts": counts["full_claim_accounts"],
         "configured_player_count": configured_player_count,
     }
+    cycle_claim_totals = {
+        "daily": td,
+        "store": ts_daily,
+        "promotions": counts.get("promotional_claims_made", 0),
+        "progression": tp,
+        "loyalty": tl,
+        "events": event_reward_claims,
+    }
+    cycle_summary = update_daily_cycle_summary(
+        meta,
+        reset_date=_current_reset_date(),
+        run_label=run_label,
+        configured_player_ids=player_ids,
+        claim_totals=cycle_claim_totals,
+        processed_player_ids=[str(result.get("pid") or "") for result in results],
+        run_key=f"{os.getenv('GITHUB_RUN_ID', 'local')}:{os.getenv('GITHUB_RUN_ATTEMPT', '1')}",
+        run_timestamp=job_end.isoformat(),
+        is_full_roster_run=(
+            not RECOVERY_ONLY_FAILED
+            and len(results) == configured_player_count
+            and counts.get("full_claim_accounts", 0) == configured_player_count
+        ),
+    )
     meta_for_email = dict(meta)
     meta_for_email["last_run"] = prev_run   # email delta uses previous run
+    if cycle_summary is not None:
+        meta_for_email["daily_cycle_email_summary"] = cycle_summary
 
     save_bot_meta(meta)
 
-    html_body = build_email(results, run_label, run_index, job_start, meta_for_email, followup_summary=followup_summary)
+    html_body = build_email(
+        results, run_label, run_index, job_start, meta_for_email,
+        followup_summary=followup_summary,
+        configured_player_count=configured_player_count,
+    )
 
     n_players = len(results)
-    failure_count = counts["actual_failures"]
-    ist_label = job_start.strftime('%d-%b %I:%M %p')
-    streak_d  = meta["streak"].get("current", 0)
-    cooldown_subject = (str(counts["standard_rewards_on_cooldown"])
-                        if counts["full_claim_accounts"] or counts.get("backup_reconciliation_accounts", 0)
-                        else "N/A promo-only")
-    subject = (
-        f"🎮 CS Hub | {ist_label} IST | {counts['accounts_processed']} accounts "
-        f"| {counts['claims_made']} claims | {cooldown_subject} standard cooldowns "
-        f"| {counts['promotional_claims_made']} promo claims | {counts['partial_results']} partial "
-        f"| {failure_count} failures"
-    )
+    run_subject_labels = {
+        "Primary Run": "Primary",
+        "Manual Run": "Manual",
+        "Recovery Run": "Recovery",
+        "Promotional Check #1": "Store Promo Check #1",
+        "Promotional Check #2": "Store Promo Check #2",
+        "Promotional Check #3": "Store Promo Check #3",
+        "Promotional Check #4": "Store Promo Check #4",
+    }
+    subject_date = job_start.strftime("%d %b")
+    if run_label == "Recovery Run" and cycle_summary is not None:
+        if cycle_summary.get("cycle_complete"):
+            subject = (
+                f"✅ CS Hub | {subject_date} | Recovery Complete | "
+                f"{cycle_summary['accounts_complete']}/{configured_player_count} Accounts"
+            )
+        else:
+            subject = (
+                f"⚠️ CS Hub | {subject_date} | Recovery Update | "
+                f"{cycle_summary['accounts_complete']}/{configured_player_count} Accounts Complete"
+            )
+    else:
+        subject = (
+            f"🎮 CS Hub | {subject_date} | {run_subject_labels.get(run_label, run_label)} | "
+            f"{len(results)}/{configured_player_count} Accounts"
+        )
 
     log(f"📧 Sending email: {subject}")
     email_sent = send_email(html_body, subject)
