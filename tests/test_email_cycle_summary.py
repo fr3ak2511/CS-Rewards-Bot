@@ -124,6 +124,11 @@ class DailyCycleEmailSummaryTests(unittest.TestCase):
         self.assertEqual(view["total_claims"], 5)
 
         prior_day_meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": "2026-11-09",
+                "configured_player_count": 1,
+                "primary_claim_totals": {"daily": 1, "store": 3},
+            },
             "last_full_run": {
                 **base_meta["last_full_run"],
                 "timestamp": "2026-11-09T06:30:00",
