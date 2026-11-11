@@ -2,9 +2,9 @@
   "current_streak": 0,
   "last_run_date": "2026-03-30",
   "streak": {
-    "current": 31,
+    "current": 32,
     "best": 70,
-    "last_success_date": "2026-11-10",
+    "last_success_date": "2026-11-11",
     "last_checked_date": "2026-11-11"
   },
   "new_ids_seen": [
@@ -53,22 +53,19 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-11T06:46:36.004975",
-    "run_label": "Recovery Run",
+    "timestamp": "2026-11-11T17:44:51.380230",
+    "run_label": "Promotional Check #1",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
-    "retry_player_ids": [
-      "E1E9729A4885E6D9",
-      "4DC0E2AA7130D7E6"
-    ],
-    "retry_player_count": 2,
-    "total_claimed": 0,
-    "efficiency": 0.0,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
+    "total_claimed": 1,
+    "efficiency": 100.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 256,
+    "duration_seconds": 1580,
     "per_type": {
-      "daily": 0,
+      "daily": 1,
       "store": 0,
       "store_daily": 0,
       "store_temp": 0,
@@ -78,29 +75,29 @@
       "event_rewards": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 127.0,
-    "accounts_processed": 2,
-    "claims_made": 0,
-    "unavailable_rewards": 8,
-    "standard_rewards_on_cooldown": 8,
-    "promotional_unavailable_observations": 0,
-    "distinct_promotional_offer_types": 0,
+    "avg_time_per_player": 44.1,
+    "accounts_processed": 35,
+    "claims_made": 1,
+    "unavailable_rewards": 16,
+    "standard_rewards_on_cooldown": 9,
+    "promotional_unavailable_observations": 7,
+    "distinct_promotional_offer_types": 1,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
-    "partial_results": 2,
+    "partial_results": 0,
     "actual_failures": 0,
-    "unconfirmed_claims": 2,
+    "unconfirmed_claims": 0,
     "promotion_detection_failures": 0,
     "promotion_followups_open": 0,
     "promotion_followups_still_blocked": 0,
     "promotion_followups_pending_recheck": 0,
     "promotion_followups_legacy_seeded": 0,
-    "promotional_only_accounts": 0,
+    "promotional_only_accounts": 33,
     "backup_reconciliation_accounts": 0,
     "full_claim_accounts": 2,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 2
+    "player_count": 35
   },
   "last_full_run": {
     "timestamp": "2026-11-11T06:41:21.033316",
@@ -155,21 +152,23 @@
   "full_claim_coverage": {
     "E1E9729A4885E6D9": {
       "reset_date": "2026-11-11",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-11T06:44:46.228227",
-      "last_run_label": "Recovery Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards were not confirmed by the live portal"
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-11T17:20:18.424189",
+      "last_run_label": "Promotional Check #1",
+      "last_status": "All Skipped (Cooldown)",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-11"
     },
     "4DC0E2AA7130D7E6": {
       "reset_date": "2026-11-11",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-11T06:46:35.504747",
-      "last_run_label": "Recovery Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards were not confirmed by the live portal"
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-11T17:21:56.919092",
+      "last_run_label": "Promotional Check #1",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-11"
     },
     "FBF717E3BFDF5E94": {
       "reset_date": "2026-10-22",
