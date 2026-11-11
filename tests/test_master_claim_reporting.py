@@ -209,7 +209,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
 
     def test_free_claimed_promotion_appears_under_store_promotions(self):
         section = build_promotional_section([self.sample_player()])
-        self.assertIn("Store Promotions", section)
+        self.assertIn("Promotional Offers", section)
         self.assertIn("Free Weekly Reward", section)
         self.assertNotIn("Trick &amp; Treat", section)
 
@@ -277,7 +277,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2),
             {"streak": {"current": 99, "best": 100}},
         )
-        self.assertIn("Healthy", html)
+        self.assertIn("Completed", html)
         self.assertIn("Confirmed claims", html)
         self.assertIn("Accounts processed", html)
         self.assertIn("Need attention", html)
@@ -347,7 +347,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Manual Run", 1,
             get_ist_time() - timedelta(seconds=30), {},
         )
-        self.assertIn("Healthy", report)
+        self.assertIn("Completed", report)
         self.assertIn("<span>Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Premium Pack", report)
         self.assertNotIn("At least one observed promotional claim", report)
@@ -448,7 +448,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "display_name": "Test Player",
             "promotions_observed": [generic],
         }])
-        self.assertIn("Store Promotions", section)
+        self.assertIn("Promotional Offers", section)
         self.assertIn("Store promotion popup", section)
 
     def test_free_identified_popup_blocked_offer_remains_reportable(self):
@@ -515,7 +515,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Manual Run", 1,
             get_ist_time() - timedelta(seconds=30), {},
         )
-        self.assertIn("Healthy", report)
+        self.assertIn("Completed", report)
         self.assertIn("<span>Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Premium Pack", report)
         self.assertNotIn("At least one observed promotional claim", report)
@@ -739,6 +739,95 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("<span>Need attention</span><strong>1</strong>", report)
         self.assertIn("2 / 3 accounts complete", report)
+
+    def test_email_dashboard_distinguishes_processing_scope_and_unchecked_categories(self):
+        players = [
+            {
+                "pid": f"PROMOONLY{i:04d}", "display_name": f"Promo Player {i}",
+                "processing_mode": "promotional_only", "status": "Promotional Check Complete",
+                "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+                "has_loyalty": False, "promotion_scan_completed": True,
+                "promotions_observed": [], "event_rewards": [],
+            }
+            for i in range(35)
+        ]
+        report = build_email(
+            players, "Promotional Check #2", 2,
+            get_ist_time() - timedelta(minutes=20), {},
+            configured_player_count=35,
+        )
+        self.assertIn("<span>Accounts processed</span><strong>35 / 35</strong>", report)
+        self.assertIn("<span>Confirmed claims</span><strong>0</strong>", report)
+        self.assertIn("<span>In-run recovery</span><strong>0</strong>", report)
+        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("Full Claim Path", report)
+        self.assertIn("Promotional-only", report)
+        self.assertIn("35</strong><small>Store promotional scans; core rewards not checked</small>", report)
+        self.assertIn("Not performed for this promotional-only run", report)
+        self.assertIn("Run Reconciliation", report)
+        self.assertIn("Matched", report)
+        self.assertIn("Partial / mixed run", report)
+        self.assertIn("Not checked in this run", report)
+        self.assertIn("Completed", report)
+        self.assertNotIn("Healthy", report)
+        self.assertNotIn("Next Run", report)
+
+    def test_grenade_balance_summary_is_separate_from_heading_on_desktop(self):
+        player = self.sample_player()
+        player["grenade_balance"] = {
+            "status": "below_minimum",
+            "current_count": 27,
+            "expected_minimum": 30,
+            "deficit": 3,
+        }
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=35,
+        )
+        self.assertIn("<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>", report)
+        self.assertIn("<div class='v2-grenade-summary'>", report)
+        self.assertIn("27 / 30 · short 3", report)
+        self.assertIn(".v2-grenade-summary{display:block", report)
+        self.assertIn("flex-wrap:wrap", report)
+
+    def test_promotional_offer_summary_groups_free_unavailable_offers(self):
+        players = [
+            {
+                "pid": "PROMO0001", "display_name": "Promo Player",
+                "promotion_scan_completed": True,
+                "promotions_observed": [{
+                    "title": "First Purchaser Pack", "status": "unavailable",
+                    "button_text": "free", "card_text": "First Purchaser Pack x1 Free",
+                }],
+            },
+            {
+                "pid": "PROMO0002", "display_name": "Second Player",
+                "promotion_scan_completed": True,
+                "promotions_observed": [{
+                    "title": "First Purchaser Pack", "status": "unavailable",
+                    "button_text": "free", "card_text": "First Purchaser Pack x1 Free",
+                }],
+            },
+        ]
+        section = build_promotional_section(players)
+        self.assertIn("Promotional Offers", section)
+        self.assertIn("Seen on 2 accounts", section)
+        self.assertIn("2 unavailable", section)
+        self.assertNotIn("PROMO0001", section)
+        self.assertNotIn("PROMO0002", section)
+
+    def test_promo_summary_does_not_surface_paid_unavailable_offer(self):
+        section = build_promotional_section([{
+            "pid": "PAID0001", "promotion_scan_completed": True,
+            "promotions_observed": [{
+                "title": "Premium Pack", "status": "unavailable",
+                "button_text": "unavailable", "card_text": "Premium Pack ₹499",
+            }],
+        }])
+        self.assertNotIn("Premium Pack", section)
+        self.assertIn("No reportable free promotional offers", section)
+
 
 if __name__ == "__main__":
     unittest.main()
