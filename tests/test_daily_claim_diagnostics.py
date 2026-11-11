@@ -75,7 +75,9 @@ class DailyClaimDiagnosticCaptureTests(unittest.TestCase):
             self.assertEqual(payload["player_id_last4"], "0001")
             self.assertEqual(payload["run_id"], "12345")
             self.assertEqual(payload["run_attempt"], "2")
-            self.assertNotIn("PLAYER-SECRET", open(json_path, encoding="utf-8").read())
+            with open(json_path, encoding="utf-8") as json_file:
+                payload_text = json_file.read()
+            self.assertNotIn("PLAYER-SECRET", payload_text)
             screenshot_name = payload["stages"][0]["screenshot_file"]
             self.assertTrue(screenshot_name.endswith(".png"))
             with open(os.path.join(temp_dir, screenshot_name), "rb") as image_file:
@@ -95,6 +97,26 @@ class DailyClaimDiagnosticCaptureTests(unittest.TestCase):
         self.assertEqual(
             driver._last_physical_click_trace["attempted"],
             ["webdriver_element_click"],
+        )
+
+    def test_physical_click_trace_records_action_chains_route(self):
+        driver = Mock()
+        element = Mock()
+        element.click.side_effect = RuntimeError("element click failed")
+        action_chain = Mock()
+        action_chain.move_to_element.return_value = action_chain
+        action_chain.click.return_value = action_chain
+        with patch.object(bot, "ActionChains", return_value=action_chain), \
+             patch.object(bot.time, "sleep"):
+            self.assertTrue(bot.physical_click(driver, element))
+
+        self.assertEqual(
+            driver._last_physical_click_trace["method"],
+            "action_chains_click",
+        )
+        self.assertEqual(
+            driver._last_physical_click_trace["attempted"],
+            ["webdriver_element_click", "action_chains_click"],
         )
 
     def test_physical_click_trace_records_javascript_fallback_route(self):
