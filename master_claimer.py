@@ -5063,7 +5063,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
         f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
         f"<div class='v2-kpi'><span>In-run recovery</span><strong>{immediate_attempted}</strong><small>{html.escape(recovery_note)}</small></div>"
-        f"<div class='v2-kpi'><span>Accounts needing attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
+        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
         "</section>"
         + processing_html
         + "<section class='v2-section v2-rewards'>"
