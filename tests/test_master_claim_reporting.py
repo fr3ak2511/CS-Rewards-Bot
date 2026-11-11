@@ -829,5 +829,48 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("No reportable free promotional offers", section)
 
 
+    def test_run_level_reconciliation_warning_marks_execution_attention(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        reconciliation = {
+            "status": "attention_required",
+            "scope": "partial_or_mixed_run",
+            "configured_player_count": 1,
+            "accounts_processed": 1,
+            "checks": {"processing_modes_match_processed_accounts": False},
+            "warnings": ["processing_modes_match_processed_accounts"],
+        }
+        with patch("master_claimer.build_run_reconciliation", return_value=reconciliation):
+            report = build_email(
+                [player], "Manual Run", 1,
+                get_ist_time() - timedelta(seconds=30), {},
+                configured_player_count=1,
+            )
+        self.assertIn("<span class='v2-health v2-warn'>Attention Required</span>", report)
+        self.assertIn("Run Reconciliation", report)
+        self.assertIn("processing modes match processed accounts", report)
+        self.assertIn("<span>Accounts needing attention</span><strong>0</strong>", report)
+
+    def test_confirmed_promotional_claims_are_aggregated_not_repeated_per_account(self):
+        players = []
+        for index in range(3):
+            players.append({
+                "pid": f"CLAIMEDPROMO{index:04d}",
+                "display_name": f"Promo Player {index}",
+                "promotion_scan_completed": True,
+                "promotions_observed": [{
+                    "title": "Free Weekly Reward", "status": "claimed_this_run",
+                    "claim_count": 1, "button_text": "free",
+                    "card_text": "Free Weekly Reward · Free",
+                }],
+            })
+        section = build_promotional_section(players)
+        self.assertIn("Seen on 3 accounts", section)
+        self.assertIn("3 claimed", section)
+        self.assertNotIn("Promo Player 0", section)
+        self.assertNotIn("Promo Player 1", section)
+        self.assertNotIn("Promo Player 2", section)
+
 if __name__ == "__main__":
     unittest.main()
