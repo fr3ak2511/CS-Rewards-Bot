@@ -12,7 +12,8 @@ class BrowserStub:
 
 
 class ProgressionSafetyTests(unittest.TestCase):
-    def _run(self, snapshots, *, dismiss_results=None, verify_polls=3):
+    def _run(self, snapshots, *, dismiss_results=None, verify_polls=3,
+             target_card_signature=None, max_claims_per_visit=6):
         driver = BrowserStub()
         click_calls = []
         history_calls = []
@@ -43,6 +44,8 @@ class ProgressionSafetyTests(unittest.TestCase):
             update_history=lambda *args, **kwargs: history_calls.append((args, kwargs)),
             dismiss_popups=dismiss, scroll_carousel=lambda _d: False,
             sleep=lambda _seconds: None, verify_polls=verify_polls,
+            target_card_signature=target_card_signature,
+            max_claims_per_visit=max_claims_per_visit,
         )
         return claimed, driver, click_calls, history_calls
 
@@ -135,6 +138,61 @@ class ProgressionSafetyTests(unittest.TestCase):
         claimed, _driver, clicks, _history = self._run([before] + [after] * 5)
         self.assertEqual(claimed, 0)
         self.assertEqual(len(clicks), 1)
+
+
+    def test_recovery_clicks_only_the_matching_failed_card(self):
+        target_button, other_button = object(), object()
+        before = {
+            "valid_page": True, "claimable_count": 2, "delivered_count": 0,
+            "button": other_button, "button_text": "claim",
+            "card_signature": "Other reward", "card_text": "Other reward",
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Other reward", "card_text": "Other reward"},
+                {"button": target_button, "button_text": "claim",
+                 "card_signature": "Failed reward", "card_text": "Failed reward"},
+            ],
+        }
+        after = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 1,
+            "button": other_button, "button_text": "claim",
+            "card_signature": "Other reward", "card_text": "Other reward",
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Other reward", "card_text": "Other reward"}
+            ],
+            "delivered_signatures": ["Failed reward"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            [before, after],
+            target_card_signature="Failed reward",
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 1)
+        self.assertEqual(clicks, [target_button])
+        self.assertFalse(driver._progression_unconfirmed)
+
+    def test_recovery_does_not_click_another_card_when_failed_card_is_already_delivered(self):
+        other_button = object()
+        snapshot = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 1,
+            "button": other_button, "button_text": "claim",
+            "card_signature": "Other reward", "card_text": "Other reward",
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Other reward", "card_text": "Other reward"}
+            ],
+            "delivered_signatures": ["Failed reward"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            [snapshot],
+            target_card_signature="Failed reward",
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertFalse(driver._progression_unconfirmed)
+
 
 
 if __name__ == "__main__":

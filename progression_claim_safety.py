@@ -108,10 +108,12 @@ def claim_progression_rewards(
     verify_polls: int = 16,
     poll_seconds: float = 0.5,
     max_claims_per_visit: int = 6,
+    target_card_signature: str | None = None,
 ) -> int:
-    """Claim visible Progression rewards, one card at a time, with portal proof."""
+    """Claim visible Progression rewards, optionally restricting recovery to one exact card."""
     claimed = 0
     unconfirmed = False
+    unconfirmed_card_signature = None
     max_claims_per_visit = max(1, min(12, int(max_claims_per_visit)))
     verify_polls = max(1, min(40, int(verify_polls)))
 
@@ -149,6 +151,42 @@ def claim_progression_rewards(
                         f"title={str(before.get('title') or '')[:100]!r})"
                     )
                     break
+
+                if target_card_signature:
+                    target_signature = str(target_card_signature).strip()
+                    claimable_cards = [
+                        card for card in (before.get("claimable_cards") or [])
+                        if isinstance(card, dict)
+                        and str(card.get("card_signature") or "").strip() == target_signature
+                    ]
+                    if len(claimable_cards) == 1:
+                        target_card = claimable_cards[0]
+                        before = dict(before)
+                        before["button"] = target_card.get("button")
+                        before["button_text"] = target_card.get("button_text") or "claim"
+                        before["card_signature"] = target_signature
+                        before["card_text"] = target_card.get("card_text") or target_signature
+                        before["claimable_count"] = 1
+                    else:
+                        target_identity = _normalise_card_identity(target_signature)
+                        delivered = [
+                            str(item).strip()
+                            for item in list(before.get("delivered_signatures") or []) + list(before.get("terminal_card_signatures") or [])
+                            if str(item).strip()
+                        ]
+                        delivered_matches = [
+                            item for item in delivered
+                            if item == target_signature
+                            or (target_identity and _normalise_card_identity(item) == target_identity)
+                        ]
+                        if len(delivered_matches) == 1:
+                            log("✅ Progression recovery: the exact previously unconfirmed card is now portal-confirmed Delivered")
+                            unconfirmed = False
+                            break
+                        unconfirmed = True
+                        unconfirmed_card_signature = target_signature
+                        log("🚩 Progression recovery: the previously unconfirmed card could not be uniquely identified as claimable or Delivered; refusing to click another card")
+                        break
 
                 claimable_count = int(before.get("claimable_count", 0) or 0)
                 if claimable_count <= 0:
@@ -196,6 +234,7 @@ def claim_progression_rewards(
                     log(f"⚠️ Progression native click failed: {type(exc).__name__}")
                 if not clicked:
                     unconfirmed = True
+                    unconfirmed_card_signature = str(before.get("card_signature") or target_card_signature or "").strip() or None
                     log("🚩 Progression click was not safely dispatched; leaving reward retryable")
                     break
 
@@ -227,6 +266,7 @@ def claim_progression_rewards(
 
                 if not confirmed:
                     unconfirmed = True
+                    unconfirmed_card_signature = signature or str(target_card_signature or "").strip() or None
                     after_count = (last_after or {}).get("claimable_count", "unknown")
                     delivered_count = (last_after or {}).get("delivered_count", "unknown")
                     log(
@@ -255,6 +295,7 @@ def claim_progression_rewards(
             log(f"⚠️ Could not save Progression history: {type(exc).__name__}")
         try:
             driver._progression_unconfirmed = bool(unconfirmed)
+            driver._progression_unconfirmed_card_signature = unconfirmed_card_signature if unconfirmed else None
         except Exception:
             pass
 
