@@ -4604,6 +4604,10 @@ def build_processing_overview_section(counts):
          "Store promotional scans; core rewards not checked"),
     ]
     total = sum(value for _, value, _ in modes)
+    active_paths = sum(1 for _, value, _ in modes if value)
+    account_word = "account" if total == 1 else "accounts"
+    path_word = "path" if active_paths == 1 else "paths"
+    header_summary = f"{total} {account_word} · {active_paths} active {path_word}"
     cards = "".join(
         "<div class='v2-mode-card'>"
         f"<div class='v2-mode-title'>{html.escape(label)}</div>"
@@ -4615,7 +4619,7 @@ def build_processing_overview_section(counts):
     return (
         "<section class='v2-section v2-processing'>"
         "<div class='v2-section-head'><h2>Processing Overview</h2>"
-        f"<span>{total} accounts across {sum(1 for _, value, _ in modes if value)} active path(s)</span></div>"
+        f"<span>{header_summary}</span></div>"
         f"<div class='v2-mode-grid'>{cards}</div>"
         "</section>"
     )
@@ -4865,13 +4869,16 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
             + exception_details + "</section>"
         )
-    else:
+    elif attention_accounts:
         attention_html = (
-            "<section class='v2-section v2-exceptions v2-all-clear-section'>"
-            "<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>0 accounts</span></div>"
-            "<p class='v2-all-clear'>No unresolved exceptions were recorded for this run.</p>"
+            "<section class='v2-section v2-exceptions'>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            "<p class='v2-muted-note'>Review the highlighted items in the reward, validation, promotion or event sections above.</p>"
             "</section>"
         )
+    else:
+        # The zero-attention state is already clear from the KPI; omit a redundant section.
+        attention_html = ""
 
     def _category_card(label, checked_results, claim_key, cycle_key, empty_note="Not checked in this run"):
         if is_recovery_rollup:
@@ -4933,10 +4940,19 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         and result["immediate_recovery"].get("attempted")
         and result["immediate_recovery"].get("status") != "resolved"
     )
-    recovery_note = (
-        f"{immediate_resolved} resolved · {immediate_unresolved} pending"
-        if immediate_attempted else "No in-run retries were needed"
-    )
+    if is_recovery_rollup:
+        recovery_kpi_value = int(cycle_summary.get("recovery_accounts_count", 0) or 0)
+        recovery_kpi_label = "Recovery accounts"
+        recovery_kpi_note = (
+            f"{int(cycle_summary.get('recovery_claims_added', 0) or 0)} additional claims confirmed"
+        )
+    else:
+        recovery_kpi_value = immediate_attempted
+        recovery_kpi_label = "In-run recovery"
+        recovery_kpi_note = (
+            f"{immediate_resolved} resolved · {immediate_unresolved} pending"
+            if immediate_attempted else "No in-run retries were needed"
+        )
     processing_html = build_processing_overview_section(counts)
     run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
     repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
@@ -5062,7 +5078,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         "<section class='v2-kpis'>"
         f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
         f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
-        f"<div class='v2-kpi'><span>In-run recovery</span><strong>{immediate_attempted}</strong><small>{html.escape(recovery_note)}</small></div>"
+        f"<div class='v2-kpi'><span>{recovery_kpi_label}</span><strong>{recovery_kpi_value}</strong><small>{html.escape(recovery_kpi_note)}</small></div>"
         f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
         "</section>"
         + processing_html
