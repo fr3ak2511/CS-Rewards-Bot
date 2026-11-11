@@ -63,3 +63,17 @@ No changes are included for `players.csv`, `claim_history.json`, `bot_meta.json`
 After the replacement is uploaded to the default branch, the first scheduled backup for already-covered accounts should perform the one-time standard-reward audit. The still-Free Cash (Daily) reward for the first roster ID is the primary live recovery test. Confirm the Store card changes to Claimed and the Progression counter increments before considering that recovery successful.
 
 The unclaimed 900-point Halloween reward for `63989CEF5D15F053` is not changed by this patch and remains a separate investigation.
+
+
+### 6. Immediate in-run recovery
+
+- After each full-claim or backup-reconciliation account completes its first pass, unresolved reward targets are evaluated before the roster loop proceeds to the next ID.
+- A fresh browser session rechecks only the affected Daily reward, standard Store card indices, exact Progression card signature, or temporary-event programme/tier thresholds.
+- Daily and standard Store recovery passes are limited to one additional click per target. The live portal is checked before clicking; already-claimed/cooldown states are recorded without a click.
+- Progression recovery is restricted to the original failed card signature. If the signature is absent or ambiguous, the recovery pass refuses to click another card.
+- Event recovery is restricted to the original programme IDs and tier thresholds. Unidentified event failures remain pending for the post-run observer.
+- An initial login failure may receive one fresh full-account pass because no reward page was reached during the failed login.
+- Promotional-only processing and recovery-only workflows do not recursively invoke immediate full-claim recovery.
+- The primary workflow remains the only claim-session owner; the existing rewards-claimer concurrency group is unchanged. No parallel claimant or extra workflow concurrency group is introduced.
+- The existing post-run Failed-ID Recovery observer remains in place as the second-line backstop.
+- The run email and run_artifacts/run_summary.json include immediate recovery attempts, successful resolutions, and unresolved targets.

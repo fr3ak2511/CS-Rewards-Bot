@@ -568,7 +568,8 @@ def _claim_one_event_tier(driver, tier: dict[str, Any], physical_click: Callable
 
 def claim_event_program(driver, program: dict[str, Any], *, physical_click: Callable,
                         bypass_cloudflare: Callable, close_popup: Callable,
-                        log: Callable) -> dict[str, Any]:
+                        log: Callable, only_thresholds: list[int] | None = None,
+                        max_claims_override: int | None = None) -> dict[str, Any]:
     """Inspect and claim currently eligible tiers for one signed-in account."""
     name, slug = str(program["name"]), str(program["slug"])
     url = f"https://hub.vertigogames.co/{slug}"
@@ -578,7 +579,7 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
         "cycle": int(program.get("cycle", 0) or 0), "status": "checking",
         "balance": None, "next_threshold": None, "tiers_total": 0,
         "tiers_delivered": 0, "claims_this_run": [], "tiers": [],
-        "retry_required": False, "error": None, "end_at": program["end_at_epoch"],
+        "retry_required": False, "retry_thresholds": [], "error": None, "end_at": program["end_at_epoch"],
     }
 
     driver.get(url)
@@ -631,8 +632,17 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
 
     claims = 0
     max_claims = min(int(program["max_claims_per_run"]), len(state["tiers"]))
+    if max_claims_override is not None:
+        max_claims = min(max_claims, max(1, int(max_claims_override)))
+    allowed_thresholds = None
+    if only_thresholds is not None:
+        allowed_thresholds = {int(value) for value in only_thresholds}
     while claims < max_claims and not result["retry_required"]:
-        candidate = next((tier for tier in state["tiers"] if tier["status"] == "available"), None)
+        candidate = next((
+            tier for tier in state["tiers"]
+            if tier["status"] == "available"
+            and (allowed_thresholds is None or int(tier["threshold"]) in allowed_thresholds)
+        ), None)
         if candidate is None:
             break
         outcome, updated = _claim_one_event_tier(
@@ -650,6 +660,7 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
             continue
         candidate["status"] = outcome
         result["retry_required"] = True
+        result["retry_thresholds"] = [int(candidate["threshold"])]
         result["error"] = f"{outcome.replace('_', ' ')} at {candidate['threshold']} points"
         log(f"⚠️ Event reward needs review: {result['error']}")
         break
@@ -660,6 +671,24 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
     result["tiers"] = final_state["tiers"]
     result["tiers_total"] = len(final_state["tiers"])
     result["tiers_delivered"] = sum(1 for tier in final_state["tiers"] if tier["status"] == "delivered")
+    if only_thresholds is not None:
+        targeted = {int(value) for value in only_thresholds}
+        final_by_threshold = {
+            int(tier["threshold"]): tier
+            for tier in final_state["tiers"]
+            if isinstance(tier, dict) and tier.get("threshold") is not None
+        }
+        unresolved_targets = [
+            threshold for threshold in targeted
+            if threshold not in final_by_threshold
+            or final_by_threshold[threshold].get("status") != "delivered"
+        ]
+        result["retry_thresholds"] = sorted(unresolved_targets)
+        result["retry_required"] = bool(unresolved_targets)
+        if not unresolved_targets:
+            result["error"] = None
+        elif not result.get("error"):
+            result["error"] = "One or more targeted event reward tiers remain unconfirmed"
     result["status"] = "attention_required" if result["retry_required"] else "checked"
     log(f"🎃 {name}: {result['balance']} points, {len(result['claims_this_run'])} tier(s) claimed this run, {result['tiers_delivered']}/{result['tiers_total']} delivered")
     return result
@@ -668,17 +697,28 @@ def claim_event_program(driver, program: dict[str, Any], *, physical_click: Call
 def claim_configured_event_rewards(driver, pid: str, *, log: Callable,
                                    physical_click: Callable, bypass_cloudflare: Callable,
                                    close_popup: Callable,
-                                   config_path: str | Path | None = None) -> list[dict[str, Any]]:
-    """Run active configured event programmes for the current authenticated ID."""
+                                   config_path: str | Path | None = None,
+                                   only_program_ids: set[str] | list[str] | None = None,
+                                   retry_thresholds_by_program: dict[str, list[int]] | None = None,
+                                   max_claims_per_program: int | None = None) -> list[dict[str, Any]]:
+    """Run configured event programmes, optionally restricted to failed programme/tier pairs."""
     config = load_event_config(config_path)
     programs = get_active_event_programs(config)
+    if only_program_ids is not None:
+        selected_ids = {str(value).strip() for value in only_program_ids if str(value).strip()}
+        programs = [program for program in programs if str(program.get("program_id") or "") in selected_ids]
     results = []
     for program in programs:
         try:
             log(f"🎃 Checking event rewards for {pid}: {program['name']}")
+            target_thresholds = None
+            if retry_thresholds_by_program is not None:
+                target_thresholds = retry_thresholds_by_program.get(str(program["program_id"]), [])
             results.append(claim_event_program(
                 driver, program, physical_click=physical_click,
                 bypass_cloudflare=bypass_cloudflare, close_popup=close_popup, log=log,
+                only_thresholds=target_thresholds,
+                max_claims_override=max_claims_per_program,
             ))
         except Exception as exc:
             error = f"{type(exc).__name__}: {str(exc)[:180]}"
@@ -688,7 +728,7 @@ def claim_configured_event_rewards(driver, pid: str, *, log: Callable,
                 "slug": program["slug"], "status": "error", "balance": None,
                 "next_threshold": None, "tiers_total": 0, "tiers_delivered": 0,
                 "claims_this_run": [], "tiers": [], "retry_required": True,
-                "error": error, "end_at": program["end_at_epoch"],
+                "retry_thresholds": [], "error": error, "end_at": program["end_at_epoch"],
             })
     return results
 

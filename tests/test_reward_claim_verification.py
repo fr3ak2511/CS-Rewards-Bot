@@ -289,6 +289,134 @@ class DailyClaimVerificationTests(unittest.TestCase):
         persist.assert_called_once()
 
 
+
+class ImmediateRecoveryTests(unittest.TestCase):
+    def _failed_daily_result(self):
+        return {
+            "pid": "TESTPLAYER0001",
+            "display_name": "Test Player",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 0,
+            "daily_skipped": False,
+            "daily_unconfirmed": True,
+            "store": 0,
+            "store_skipped": [True, True, True],
+            "store_unconfirmed_indices": [],
+            "store_claimed_indices": [],
+            "store_possible": 0,
+            "possible": 1,
+            "progression": 0,
+            "progression_unconfirmed": False,
+            "event_rewards": [],
+            "event_reward_claims": 0,
+            "event_rewards_retry_required": False,
+            "retry_required": True,
+            "duration_s": 10,
+        }
+
+    def test_immediate_daily_recovery_uses_one_fresh_session_and_one_attempt(self):
+        driver = Mock()
+        result = self._failed_daily_result()
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "claim_daily_rewards", return_value=(1, False, False)) as daily, \
+             patch.object(bot, "claim_store_rewards") as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed"] * 3, "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Primary Run", result
+            )
+        daily.assert_called_once_with(driver, "TESTPLAYER0001", max_attempts=1)
+        store.assert_not_called()
+        progression.assert_not_called()
+        self.assertEqual(recovered["daily"], 1)
+        self.assertFalse(recovered["daily_unconfirmed"])
+        self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
+        driver.quit.assert_called_once()
+
+    def test_immediate_recovery_does_not_click_when_fresh_login_fails(self):
+        driver = Mock()
+        result = self._failed_daily_result()
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=False), \
+             patch.object(bot, "claim_daily_rewards") as daily:
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Primary Run", result
+            )
+        daily.assert_not_called()
+        self.assertTrue(recovered["daily_unconfirmed"])
+        self.assertEqual(recovered["immediate_recovery"]["status"], "unresolved")
+        driver.quit.assert_called_once()
+
+    def test_promotional_only_result_never_enters_full_claim_immediate_recovery(self):
+        result = {
+            "pid": "PROMO0001", "processing_mode": "promotional_only",
+            "status": "Partial", "promotion_detection_failed": True,
+        }
+        with patch.object(bot, "create_driver") as create_driver:
+            unchanged = bot.immediate_recover_player_claims(
+                "PROMO0001", False, False, "Promotional Check #1", result
+            )
+        create_driver.assert_not_called()
+        self.assertNotIn("immediate_recovery", unchanged)
+
+    def test_failed_progression_without_card_identity_is_deferred_safely(self):
+        result = {
+            "pid": "PROG0001", "processing_mode": "full_claim", "status": "Partial",
+            "progression_unconfirmed": True, "progression_unconfirmed_card_signature": None,
+            "daily_unconfirmed": False, "store_unconfirmed_indices": [],
+            "event_rewards": [], "event_rewards_retry_required": False,
+        }
+        with patch.object(bot, "create_driver") as create_driver:
+            recovered = bot.immediate_recover_player_claims(
+                "PROG0001", False, False, "Primary Run", result
+            )
+        create_driver.assert_not_called()
+        self.assertEqual(recovered["immediate_recovery"]["status"], "deferred")
+        self.assertTrue(recovered["progression_unconfirmed"])
+
+
+class BoundedRewardRetryTests(unittest.TestCase):
+    def test_daily_max_attempts_one_never_dispatches_a_second_click(self):
+        driver = FakeDriver()
+        with patch.object(bot, "bypass_cloudflare"), \
+             patch.object(bot, "close_popup"), \
+             patch.object(bot.time, "sleep"), \
+             patch.object(bot, "_daily_portal_confirms_claim", return_value=False), \
+             patch.object(bot, "_find_daily_claim_button", return_value=(object(), "available")), \
+             patch.object(bot, "physical_click", return_value=True) as click, \
+             patch.object(bot, "_wait_for_daily_claim_confirmation", return_value=False), \
+             patch.object(bot, "_capture_daily_claim_diagnostic", return_value={"metadata": {}, "screenshot": None}), \
+             patch.object(bot, "_persist_daily_claim_diagnostics"), \
+             patch.object(bot, "update_claim_history"):
+            result = bot.claim_daily_rewards(driver, "TESTPLAYER0001", max_attempts=1)
+        self.assertEqual(result, (0, False, True))
+        self.assertEqual(click.call_count, 1)
+
+    def test_store_recovery_only_inspects_requested_card_and_skips_promotions(self):
+        driver = FakeDriver()
+        with patch.object(bot, "bypass_cloudflare"), \
+             patch.object(bot, "close_popup"), \
+             patch.object(bot.time, "sleep"), \
+             patch.object(bot, "_find_store_daily_button", return_value=(None, "claimed")) as lookup, \
+             patch.object(bot, "discover_and_claim_promotions") as promotions, \
+             patch.object(bot, "update_claim_history"):
+            result = bot.claim_store_rewards(
+                driver, "TESTPLAYER0001", reward_indices=[2],
+                max_attempts=1, scan_promotions=False,
+            )
+        self.assertEqual(len(lookup.call_args_list), 1)
+        self.assertEqual(lookup.call_args_list[0].args[1], 2)
+        promotions.assert_not_called()
+        self.assertEqual(result[3], [])
+
+
+
 class ProgressionVerificationTests(unittest.TestCase):
     def test_progression_click_counts_only_when_portal_state_changes(self):
         driver = FakeDriver()

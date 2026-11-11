@@ -19,6 +19,7 @@ from event_rewards import (
     _tier_status,
     _validate_claim_button,
     claim_event_program,
+    claim_configured_event_rewards,
     event_claim_count,
     event_retry_required,
     get_active_event_programs,
@@ -678,6 +679,76 @@ class ClaimExecutionTests(unittest.TestCase):
         self.assertEqual(driver.click_count, 0)
         self.assertTrue(result["retry_required"])
         self.assertIn("button validation failed", result["error"])
+
+
+class EventRecoveryTargetingTests(unittest.TestCase):
+    def test_configured_recovery_filters_to_failed_program_and_passes_threshold(self):
+        driver = object()
+        programs = [
+            {"program_id": "event-a", "name": "Event A"},
+            {"program_id": "event-b", "name": "Event B"},
+        ]
+        with patch("event_rewards.load_event_config", return_value={}), \
+             patch("event_rewards.get_active_event_programs", return_value=programs), \
+             patch("event_rewards.claim_event_program", return_value={
+                 "program_id": "event-b", "retry_required": False, "claims_this_run": []
+             }) as claim:
+            result = claim_configured_event_rewards(
+                driver, "PLAYER0001",
+                log=lambda _m: None, physical_click=lambda *_a: True,
+                bypass_cloudflare=lambda _d: None, close_popup=lambda _d: None,
+                only_program_ids={"event-b"},
+                retry_thresholds_by_program={"event-b": [800]},
+                max_claims_per_program=1,
+            )
+        self.assertEqual(len(result), 1)
+        claim.assert_called_once()
+        self.assertEqual(claim.call_args.kwargs["only_thresholds"], [800])
+        self.assertEqual(claim.call_args.kwargs["max_claims_override"], 1)
+
+    @patch("event_rewards.time.sleep", return_value=None)
+    def test_event_recovery_only_clicks_the_requested_threshold(self, _sleep):
+        driver = FakeDriver(popup=False)
+        program = {
+            "program_id": "event-a", "name": "Event A", "slug": "event-a",
+            "points_label": "points", "cycle": 0, "end_at_epoch": None,
+            "max_claims_per_run": 5,
+        }
+        before = {
+            "title": "Event A", "url": "https://hub.vertigogames.co/event-a",
+            "body_text": "event a", "balance": 900, "next_threshold": 1200,
+            "tiers": [
+                {"threshold": 400, "status": "available", "reward": ["Other"], "button_text": "Claim"},
+                {"threshold": 800, "status": "available", "reward": ["Failed target"], "button_text": "Claim"},
+            ],
+        }
+        after = {
+            "title": "Event A", "url": "https://hub.vertigogames.co/event-a",
+            "body_text": "event a", "balance": 900, "next_threshold": 1200,
+            "tiers": [
+                {"threshold": 400, "status": "available", "reward": ["Other"], "button_text": "Claim"},
+                {"threshold": 800, "status": "delivered", "reward": ["Failed target"], "button_text": "Delivered"},
+            ],
+        }
+        with patch("event_rewards._dismiss_event_promotion_popup", return_value=(True, "clear")), \
+             patch("event_rewards._read_page_state", side_effect=[before, after, after]), \
+             patch("event_rewards._claim_one_event_tier", return_value=("claimed_this_run", {
+                 "threshold": 800, "status": "delivered", "reward": ["Failed target"]
+             })) as claim_one:
+            result = claim_event_program(
+                driver, program,
+                physical_click=lambda *_a: True,
+                bypass_cloudflare=lambda _d: None,
+                close_popup=lambda _d: None,
+                log=lambda _m: None,
+                only_thresholds=[800],
+                max_claims_override=1,
+            )
+        claim_one.assert_called_once()
+        self.assertEqual(claim_one.call_args.args[1]["threshold"], 800)
+        self.assertFalse(result["retry_required"])
+        self.assertEqual(result["retry_thresholds"], [])
+
 
 
 class ClaimButtonGuardTests(unittest.TestCase):
