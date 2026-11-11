@@ -1470,7 +1470,7 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
     try:
         page_snapshot = driver.execute_script(r"""
             const controls = Array.from(document.querySelectorAll('button,[role="button"]'));
-            const norm = value => (value || '').replace(/\\s+/g, ' ').trim();
+            const norm = value => (value || '').replace(/\s+/g, ' ').trim();
             const visible = el => {
                 if (!el) return false;
                 const style = getComputedStyle(el);
@@ -1480,7 +1480,7 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
             };
             const bodyText = norm(document.body && document.body.innerText);
             const lines = (document.body && document.body.innerText || '')
-                .split(/\\n+/).map(line => norm(line)).filter(Boolean);
+                .split(/\n+/).map(line => norm(line)).filter(Boolean);
             return {
                 total_button_count: controls.length,
                 claim_button_count: controls.filter(el =>
