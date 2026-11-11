@@ -631,7 +631,7 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
             "cycle": 2,
             "retry_required": True,
             "retry_thresholds": [800],
-            "claims_this_run": [],
+            "claims_this_run": [{"threshold": 400, "reward": "Earlier confirmed tier"}],
             "tiers": [
                 {"threshold": 800, "status": "claim_unconfirmed", "reward": ["Failed target"]}
             ],
@@ -659,7 +659,7 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
             targets["event_thresholds_by_program"],
             {"event-a": [800]},
         )
-        self.assertEqual(targets["event_rewards"][0]["claims_this_run"], [])
+        self.assertEqual(targets["event_rewards"][0]["claims_this_run"], [{"threshold": 400, "reward": "Earlier confirmed tier"}])
 
     def test_saved_targets_reconstruct_only_the_failed_reward_categories(self):
         targets = {

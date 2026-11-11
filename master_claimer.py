@@ -3035,7 +3035,8 @@ def _recovery_result_from_saved_targets(pid, targets):
     """Reconstruct a minimal result object from persisted, exact reward targets."""
     targets = targets if isinstance(targets, dict) else {}
     event_results = [
-        dict(item) for item in (targets.get("event_rewards") or [])
+        {**dict(item), "claims_this_run": []}
+        for item in (targets.get("event_rewards") or [])
         if isinstance(item, dict)
     ]
     event_thresholds = targets.get("event_thresholds_by_program")
