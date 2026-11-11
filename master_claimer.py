@@ -4146,49 +4146,112 @@ def build_standard_attention_section(results):
     )
 
 
+def _promotion_unavailable_is_reportable_free(promo):
+    """Show unavailable offers only when the captured card proves they are free."""
+    if str(promo.get("status") or "") not in ("unavailable", "portal_claimed"):
+        return False
+    card_text = _normalize_promotion_text(promo.get("card_text") or "")
+    button_text = _normalize_promotion_text(promo.get("button_text") or "")
+    paid_patterns = (
+        r"(?:₹|rs\.?|inr|usd|eur|gbp|aud|cad|\$|€|£)\s*[1-9][0-9,]*(?:\.[0-9]{1,2})?",
+        r"\b[1-9][0-9,]*(?:\.[0-9]{1,2})?\s*(?:inr|usd|eur|gbp|aud|cad)\b",
+        r"\b[1-9][0-9]*(?:\.[0-9]+)?\s*%\s*(?:off|discount|discounted|saving)\b",
+        r"\bsave\s+[1-9][0-9]*(?:\.[0-9]+)?\s*%",
+        r"\b(?:discount|discounted|sale|buy\s+now|purchase|paid|price)\b",
+    )
+    if any(re.search(pattern, f"{card_text} {button_text}", flags=re.IGNORECASE) for pattern in paid_patterns):
+        return False
+    return "free" in card_text or button_text in ("free", "claim", "claim reward", "claim now", "claimed")
+
+
 def build_promotional_section(results):
-    """Render only free, actionable Store promotion outcomes and scan exceptions."""
-    rows = []
-    claimed_count = 0
-    attention_count = 0
+    """Render grouped, free Store offer outcomes and only the actionable details."""
+    offers = {}
+    detail_rows = []
+    scan_accounts = sum(1 for result in results if result.get("promotion_scan_completed"))
 
     for result in results:
         player = html.escape(_display_label(result))
         for promo in (result.get("promotions_observed", []) or []):
-            if not _promotion_detail_worthy(promo):
-                continue
             status = str(promo.get("status") or "unknown")
-            title = html.escape(str(promo.get("title") or "Store promotion"))
-            label = html.escape(_promotion_status_label(status))
-            if status == "claimed_this_run":
-                claimed_count += max(1, int(promo.get("claim_count", 0) or 0))
-            else:
-                attention_count += 1
-            rows.append(
-                "<div class='v2-item'>"
-                f"<div><strong>{title}</strong><small>{player}</small></div>"
-                f"<span class='v2-result'>{label}</span></div>"
-            )
+            detail_worthy = _promotion_detail_worthy(promo)
+            summary_worthy = detail_worthy or _promotion_unavailable_is_reportable_free(promo)
+            if summary_worthy:
+                title_raw = str(promo.get("title") or "Store promotion").strip()
+                title = html.escape(title_raw)
+                key = _promotion_offer_type_key(promo) or title_raw.casefold()
+                item = offers.setdefault(key, {
+                    "title": title, "players": set(), "unavailable": 0,
+                    "already_claimed": 0, "actionable": 0, "claimed": 0,
+                })
+                pid = str(result.get("pid") or "").strip()
+                item["players"].add(pid or player)
+                if status == "unavailable":
+                    item["unavailable"] += 1
+                elif status == "portal_claimed":
+                    item["already_claimed"] += 1
+                elif status == "claimed_this_run":
+                    item["claimed"] += max(1, int(promo.get("claim_count", 0) or 0))
+                elif status in ("claim_unconfirmed", "click_failed", "available", "popup_blocked"):
+                    item["actionable"] += 1
+
+            # Confirmed offers are already represented by aggregate counts above.
+            # Per-account rows are reserved for outcomes that need inspection.
+            if detail_worthy and status != "claimed_this_run":
+                title = html.escape(str(promo.get("title") or "Store promotion"))
+                label = html.escape(_promotion_status_label(status))
+                detail_rows.append(
+                    "<div class='v2-item'>"
+                    f"<div><strong>{title}</strong><small>{player}</small></div>"
+                    f"<span class='v2-result'>{label}</span></div>"
+                )
 
         if result.get("promotion_detection_failed"):
-            attention_count += 1
             reason = html.escape(str(result.get("fail_reason") or "Live Store scan did not complete"))
-            rows.append(
+            detail_rows.append(
                 "<div class='v2-item v2-attention'>"
-                f"<div><strong>Store promotion scan</strong><small>{player}</small></div>"
+                f"<div><strong>Promotion scan</strong><small>{player}</small></div>"
                 f"<span class='v2-result'>⚠️ {reason}</span></div>"
             )
 
-    if not rows:
+    if not scan_accounts and not offers and not detail_rows:
         return ""
 
+    summary_rows = []
+    for item in offers.values():
+        people = len(item["players"])
+        seen_label = f"Seen on {people} account" + ("" if people == 1 else "s")
+        counts = []
+        if item["unavailable"]:
+            counts.append(f"{item['unavailable']} unavailable")
+        if item["actionable"]:
+            counts.append(f"{item['actionable']} actionable")
+        if item["claimed"]:
+            counts.append(f"{item['claimed']} claimed")
+        if item["already_claimed"]:
+            counts.append(f"{item['already_claimed']} already claimed")
+        outcome = " · ".join(counts) if counts else "No claimable outcome recorded"
+        summary_rows.append(
+            "<div class='v2-offer-row'>"
+            f"<div><strong>{item['title']}</strong><small>{seen_label}</small></div>"
+            f"<span>{html.escape(outcome)}</span></div>"
+        )
+
+    if not offers and scan_accounts:
+        summary_rows.append(
+            "<p class='v2-muted-note'>No reportable free promotional offers were observed during these scans.</p>"
+        )
+
+    scan_word = "account scan" if scan_accounts == 1 else "account scans"
     return (
-        "<section class='v2-section'>"
-        "<div class='v2-section-head'><h2>Store Promotions</h2>"
-        f"<span>{claimed_count} claimed · {attention_count} needing attention</span></div>"
-        + "".join(rows)
+        "<section class='v2-section v2-promotions'>"
+        "<div class='v2-section-head'><h2>Promotional Offers</h2>"
+        f"<span>{scan_accounts} {scan_word} · {len(offers)} offer types</span></div>"
+        + "".join(summary_rows)
+        + ("<div class='v2-promo-details'>" + "".join(detail_rows) + "</div>" if detail_rows else "")
         + "</section>"
     )
+
 
 
 def build_event_rewards_section(results):
@@ -4360,7 +4423,7 @@ def build_mobile_cards(results, n):
 
 
 def build_grenade_balance_email_section(results):
-    """Render a short aggregate plus exception-only detail for live Grenade checks."""
+    """Render a clear balance status; absence of a snapshot is never called a pass."""
     records = []
     for result in results:
         balance = result.get("grenade_balance")
@@ -4368,7 +4431,20 @@ def build_grenade_balance_email_section(results):
             records.append((result, balance, str(balance.get("status") or "not_validated")))
 
     if not records:
-        return ""
+        modes = {str(result.get("processing_mode") or "full_claim") for result in results}
+        if modes and modes <= {"promotional_only"}:
+            note = "Not performed for this promotional-only run; core reward balances were not checked."
+        elif not results:
+            note = "No account balance snapshots were available in this run."
+        else:
+            note = "No portal balance snapshot was captured. This is not a validation pass."
+        return (
+            "<section class='v2-section v2-grenade v2-validation-card'>"
+            "<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>"
+            "<span class='v2-state v2-state-neutral'>Not performed</span></div>"
+            f"<p class='v2-muted-note'>{html.escape(note)}</p>"
+            "</section>"
+        )
 
     passed = sum(1 for _, _, status in records if status == "pass")
     below = sum(1 for _, _, status in records if status == "below_minimum")
@@ -4418,17 +4494,21 @@ def build_grenade_balance_email_section(results):
         flags.append(f"{pending} baseline pending")
     if not_validated:
         flags.append(f"{not_validated} not validated")
+    state = "Attention Required" if below or regressed or pending or not_validated else "Passed"
+    state_class = "v2-state-warning" if state == "Attention Required" else "v2-state-success"
     if flags:
         summary += " · " + " · ".join(flags)
 
     return (
-        "<section class='v2-section v2-grenade'>"
-        "<div class='v2-section-head'><h2>Grenade Balance Check</h2>"
-        f"<span>{html.escape(summary)}</span></div>"
+        "<section class='v2-section v2-grenade v2-validation-card'>"
+        "<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>"
+        f"<span class='v2-state {state_class}'>{state}</span></div>"
+        f"<div class='v2-grenade-summary'>{html.escape(summary)}</div>"
         + ("".join(exceptions) if exceptions else
            "<p class='v2-all-clear'>All captured Grenade balances meet their expected minimum.</p>")
         + "</section>"
     )
+
 
 
 
@@ -4509,6 +4589,94 @@ def build_daily_cycle_email_section(summary):
         f"<span>{total_claims} total confirmed claims</span></div>"
         f"<strong>{html.escape(state)}</strong>"
         f"<p>{html.escape(recovery_note)}</p>{pending_note}"
+        "</section>"
+    )
+
+
+def build_processing_overview_section(counts):
+    """Show which processing paths ran without implying that unchecked rewards were tested."""
+    modes = [
+        ("Full Claim Path", int(counts.get("full_claim_accounts", 0) or 0),
+         "Daily, Store and eligible Progression / Loyalty / Event checks"),
+        ("Backup Reconciliation", int(counts.get("backup_reconciliation_accounts", 0) or 0),
+         "Targeted Daily / Store checks; Progression only when reopened"),
+        ("Promotional-only", int(counts.get("promotional_only_accounts", 0) or 0),
+         "Store promotional scans; core rewards not checked"),
+    ]
+    total = sum(value for _, value, _ in modes)
+    active_paths = sum(1 for _, value, _ in modes if value)
+    account_word = "account" if total == 1 else "accounts"
+    path_word = "path" if active_paths == 1 else "paths"
+    header_summary = f"{total} {account_word} · {active_paths} active {path_word}"
+    cards = "".join(
+        "<div class='v2-mode-card'>"
+        f"<div class='v2-mode-title'>{html.escape(label)}</div>"
+        f"<strong>{value}</strong>"
+        f"<small>{html.escape(note)}</small>"
+        "</div>"
+        for label, value, note in modes
+    )
+    return (
+        "<section class='v2-section v2-processing'>"
+        "<div class='v2-section-head'><h2>Processing Overview</h2>"
+        f"<span>{header_summary}</span></div>"
+        f"<div class='v2-mode-grid'>{cards}</div>"
+        "</section>"
+    )
+
+
+def build_run_reconciliation_email_section(results, run_label, configured_player_count):
+    """Use the same read-only reconciliation logic as run_summary.json."""
+    daily = sum(int(result.get("daily", 0) or 0) for result in results)
+    store = sum(int(result.get("store", 0) or 0) for result in results)
+    promotions = sum(int(result.get("store_temp", 0) or 0) for result in results)
+    progression = sum(int(result.get("progression", 0) or 0) for result in results)
+    loyalty = sum(int(result.get("loyalty", 0) or 0) for result in results)
+    events = sum(event_claim_count(result.get("event_rewards")) for result in results)
+    totals = {
+        "daily_claimed_this_run": daily,
+        "standard_store_claimed_this_run": store,
+        "promotional_claims_this_run": promotions,
+        "event_reward_claims_this_run": events,
+        "progression_claimed_this_run": progression,
+        "loyalty_claimed_this_run": loyalty,
+        "all_claims_this_run": daily + store + promotions + progression + loyalty + events,
+    }
+    counters = _summary_counts(results)
+    reconciliation = build_run_reconciliation(
+        results,
+        run_label=run_label,
+        configured_player_count=configured_player_count,
+        totals=totals,
+        counters=counters,
+    )
+    checks = reconciliation.get("checks") or {}
+    evaluated_checks = [value for value in checks.values() if value is not None]
+    passed = sum(1 for value in evaluated_checks if value is True)
+    checked = len(evaluated_checks)
+    status = str(reconciliation.get("status") or "attention_required")
+    matched = status == "matched"
+    label = "Matched" if matched else "Attention Required"
+    badge_class = "v2-state-success" if matched else "v2-state-warning"
+    scope = (
+        "Full-roster primary run" if reconciliation.get("scope") == "full_roster_primary"
+        else "Partial / mixed run"
+    )
+    detail = (
+        f"{passed}/{checked} consistency checks passed · "
+        f"{int(reconciliation.get('accounts_processed', 0) or 0)} / "
+        f"{int(reconciliation.get('configured_player_count', configured_player_count) or 0)} accounts represented"
+    )
+    if matched and reconciliation.get("scope") != "full_roster_primary":
+        detail += " · This does not certify a full-roster reward cycle"
+    warnings = reconciliation.get("warnings") or []
+    if warnings:
+        detail += " · " + ", ".join(str(item).replace("_", " ") for item in warnings)
+    return (
+        "<section class='v2-section v2-reconciliation v2-validation-card'>"
+        "<div class='v2-section-head'><h2>Run Reconciliation</h2>"
+        f"<span class='v2-state {badge_class}'>{label}</span></div>"
+        f"<p class='v2-muted-note'><strong>{scope}</strong> · {html.escape(detail)}</p>"
         "</section>"
     )
 
@@ -4675,24 +4843,42 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     elif attention_accounts:
         health_label, health_class = "Attention Required", "v2-warn"
     else:
-        health_label, health_class = "Healthy", "v2-healthy"
+        health_label, health_class = "Completed", "v2-healthy"
 
     standard_attention_html = build_standard_attention_section(results)
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
     grenade_html = build_grenade_balance_email_section(results)
+    reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
+    validation_html = (
+        "<div class='v2-validation-grid'>"
+        + grenade_html + reconciliation_html
+        + "</div>"
+    )
+    # A run-level reconciliation mismatch is an execution attention state even
+    # when no individual account was attributed as the cause.
+    if "v2-state-warning" in reconciliation_html and health_label != "Failed":
+        health_label, health_class = "Attention Required", "v2-warn"
     immediate_recovery_html = build_immediate_recovery_email_section(results)
     daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
-    attention_html = "".join(exception_cards)
-    if attention_html:
+    exception_details = standard_attention_html + "".join(exception_cards)
+    if exception_details:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Exceptions &amp; Attention</h2><span>{attention_accounts} accounts</span></div>"
-            + attention_html + "</section>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            + exception_details + "</section>"
         )
-    if not (standard_attention_html or promotion_html or followup_html or event_html or grenade_html or immediate_recovery_html or daily_cycle_html or attention_html):
-        attention_html = "<p class='v2-all-clear'>No outstanding exceptions were recorded for this run.</p>"
+    elif attention_accounts:
+        attention_html = (
+            "<section class='v2-section v2-exceptions'>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            "<p class='v2-muted-note'>Review the highlighted items in the reward, validation, promotion or event sections above.</p>"
+            "</section>"
+        )
+    else:
+        # The zero-attention state is already clear from the KPI; omit a redundant section.
+        attention_html = ""
 
     def _category_card(label, checked_results, claim_key, cycle_key, empty_note="Not checked in this run"):
         if is_recovery_rollup:
@@ -4726,15 +4912,6 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             "No enrolled accounts" if full_claim_results else "Not checked in this run",
         ),
     ]
-    if is_recovery_rollup:
-        category_cards.append(_category_card("Store Promotions", [], "store_temp", "promotions"))
-        if cycle_summary.get("claim_totals", {}).get("events") or cycle_summary.get("primary_claim_totals", {}).get("events", 0):
-            category_cards.append(_category_card("Event Rewards", [], "event_reward_claims", "events"))
-    else:
-        if promotions_checked_results:
-            category_cards.append(_category_card("Store Promotions", promotions_checked_results, "store_temp", "promotions"))
-        if event_checked_results:
-            category_cards.append(_category_card("Event Rewards", event_checked_results, "event_reward_claims", "events"))
     category_html = "".join(category_cards)
     generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
     safe_run_label = html.escape(str(run_label or "Reward Run"))
@@ -4746,46 +4923,180 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     )
     accounts_kpi_note = "Today's full-roster cycle" if is_recovery_rollup else "Of configured roster"
 
+    immediate_attempted = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+    )
+    immediate_resolved = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+        and result["immediate_recovery"].get("status") == "resolved"
+    )
+    immediate_unresolved = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+        and result["immediate_recovery"].get("status") != "resolved"
+    )
+    if is_recovery_rollup:
+        recovery_kpi_value = int(cycle_summary.get("recovery_accounts_count", 0) or 0)
+        recovery_kpi_label = "Recovery accounts"
+        recovery_kpi_note = (
+            f"{int(cycle_summary.get('recovery_claims_added', 0) or 0)} additional claims confirmed"
+        )
+    else:
+        recovery_kpi_value = immediate_attempted
+        recovery_kpi_label = "In-run recovery"
+        recovery_kpi_note = (
+            f"{immediate_resolved} resolved · {immediate_unresolved} pending"
+            if immediate_attempted else "No in-run retries were needed"
+        )
+    processing_html = build_processing_overview_section(counts)
+    run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
+    repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
+    commit_sha = str(os.getenv("GITHUB_SHA") or "").strip()
+    run_link_html = ""
+    if run_id.isdigit() and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        run_url = f"https://github.com/{repository}/actions/runs/{run_id}"
+        safe_url = html.escape(run_url, quote=True)
+        run_link_html = (
+            f"<a href='{safe_url}'>View run details &amp; logs</a> · "
+            f"<a href='{safe_url}#artifacts'>Artifacts</a>"
+        )
+    run_meta = []
+    if run_id.isdigit():
+        run_meta.append(f"Run #{html.escape(run_id)}")
+    if re.fullmatch(r"[0-9a-fA-F]{7,40}", commit_sha):
+        run_meta.append(f"Commit {html.escape(commit_sha[:7])}")
+    run_meta.append(f"Duration {duration_text}")
+    footer_meta = " · ".join(run_meta)
+
     return (
         "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
         "<style>"
-        "*{box-sizing:border-box}body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
-        ".v2-shell{max-width:760px;margin:0 auto}.v2-hero{padding:22px;border-radius:16px;background:linear-gradient(135deg,#17365d,#2459a6);color:#fff}"
-        ".v2-brand{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.82}.v2-hero h1{font-size:23px;margin:8px 0}.v2-meta{font-size:12px;color:#dbeafe}"
+        "*{box-sizing:border-box}"
+        "body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
+        ".v2-shell{max-width:780px;margin:0 auto}"
+        ".v2-hero{padding:22px 24px;border-radius:16px;background:linear-gradient(135deg,#172b4d,#234d88);color:#fff}"
+        ".v2-brand{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;opacity:.82}"
+        ".v2-hero h1{font-size:23px;margin:8px 0 6px;line-height:1.2}"
+        ".v2-meta{font-size:12px;color:#dbeafe;line-height:1.5}"
         ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background:#fff}"
-        ".v2-healthy{color:#166534;background:#dcfce7}.v2-warn{color:#92400e;background:#fef3c7}.v2-failed{color:#991b1b;background:#fee2e2}"
-        ".v2-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px}"
-        ".v2-kpi{padding:15px}.v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.7px}"
-        ".v2-kpi strong{display:block;font-size:25px;margin:7px 0 2px;color:#172033}.v2-kpi small,.v2-category small{font-size:10px;color:#94a3b8}"
-        ".v2-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.v2-category{padding:12px;min-width:0}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
-        ".v2-section{padding:15px;margin:0 0 12px}.v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.v2-section-head h2{font-size:14px;margin:0}.v2-section-head span{font-size:10px;color:#64748b;text-align:right}"
-        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px}.v2-item:first-of-type{border-top:0}.v2-item strong{display:block}.v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px}.v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px}.v2-good{color:#166534}"
-        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exceptions{background:#fffbeb;border-color:#fcd34d}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
-        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}.v2-grenade .v2-item{margin:5px 0}.v2-grenade .v2-item small{font-size:10px;color:#64748b}"
-        ".v2-footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px}"
-        "@media(max-width:560px){body{padding:9px}.v2-hero{padding:17px}.v2-hero h1{font-size:20px}.v2-kpis{grid-template-columns:1fr 1fr}.v2-kpi:first-child{grid-column:span 2}.v2-category-grid{grid-template-columns:1fr 1fr}.v2-item{display:block}.v2-result{display:block;max-width:none;text-align:left;margin-top:6px}.v2-section-head{align-items:flex-start}}"
+        ".v2-healthy{color:#166534;background:#dcfce7}"
+        ".v2-warn{color:#92400e;background:#fef3c7}"
+        ".v2-failed{color:#991b1b;background:#fee2e2}"
+        ".v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}"
+        ".v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;min-width:0}"
+        ".v2-kpi{padding:14px 13px;box-shadow:0 1px 3px rgba(15,23,42,.04)}"
+        ".v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.55px;line-height:1.35}"
+        ".v2-kpi strong{display:block;font-size:24px;margin:7px 0 2px;color:#172033;line-height:1.15;overflow-wrap:anywhere}"
+        ".v2-kpi small,.v2-category small{font-size:10px;color:#64748b;line-height:1.4;display:block}"
+        ".v2-section{padding:15px;margin:0 0 12px;box-shadow:0 1px 2px rgba(15,23,42,.03)}"
+        ".v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;min-width:0}"
+        ".v2-section-head h2{font-size:14px;margin:0;line-height:1.35;flex:1 1 180px;min-width:0}"
+        ".v2-section-head>span{font-size:10px;color:#64748b;text-align:right;line-height:1.4;max-width:100%;overflow-wrap:anywhere;white-space:normal}"
+        ".v2-processing{padding-bottom:14px}"
+        ".v2-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}"
+        ".v2-mode-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px;min-width:0}"
+        ".v2-mode-title{font-size:11px;font-weight:700;color:#334155;line-height:1.35}"
+        ".v2-mode-card strong{display:block;font-size:21px;color:#172033;margin:5px 0 3px}"
+        ".v2-mode-card small{display:block;font-size:10px;color:#64748b;line-height:1.4}"
+        ".v2-reward-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}"
+        ".v2-category{padding:12px;min-width:0}"
+        ".v2-category strong{display:block;font-size:21px;margin:6px 0 2px;color:#172033}"
+        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px;min-width:0}"
+        ".v2-item:first-of-type{border-top:0}"
+        ".v2-item strong{display:block;overflow-wrap:anywhere}"
+        ".v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px;line-height:1.4}"
+        ".v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
+        ".v2-good{color:#166534}"
+        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
+        ".v2-exceptions{background:#fffbeb;border-color:#fcd34d}"
+        ".v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
+        ".v2-exception div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}"
+        ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
+        ".v2-status{font-size:10px;color:#92400e}"
+        ".v2-all-clear{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:11px;color:#166534;font-size:12px;line-height:1.45}"
+        ".v2-all-clear-section{background:#fff}"
+        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.45}"
+        ".v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}"
+        ".v2-validation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}"
+        ".v2-validation-card{margin-bottom:12px}"
+        ".v2-validation-card .v2-section-head{align-items:flex-start}"
+        ".v2-state{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}"
+        ".v2-state-success{background:#dcfce7;color:#166534}"
+        ".v2-state-warning{background:#fef3c7;color:#92400e}"
+        ".v2-state-neutral{background:#eef2f7;color:#475569}"
+        ".v2-muted-note{margin:0;color:#64748b;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-grenade-summary{display:block;margin:3px 0 8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#475569;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-grenade .v2-item{margin:5px 0}"
+        ".v2-grenade .v2-item small{font-size:10px;color:#64748b}"
+        ".v2-offer-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;border-top:1px solid #eef2f7;font-size:11px;min-width:0}"
+        ".v2-offer-row:first-of-type{border-top:0}"
+        ".v2-offer-row strong{display:block;color:#172033;overflow-wrap:anywhere}"
+        ".v2-offer-row small{display:block;color:#64748b;font-size:10px;margin-top:3px}"
+        ".v2-offer-row>span{max-width:58%;text-align:right;color:#475569;line-height:1.45;overflow-wrap:anywhere}"
+        ".v2-promo-details{margin-top:4px}"
+        ".v2-muted-note + .v2-item{border-top:0}"
+        ".v2-footer{text-align:center;color:#64748b;font-size:10px;line-height:1.55;padding:14px 8px}"
+        ".v2-footer a{color:#1d4ed8;text-decoration:underline}"
+        "@media(max-width:640px){"
+        " body{padding:9px}"
+        " .v2-shell{max-width:100%}"
+        " .v2-hero{padding:18px}"
+        " .v2-hero h1{font-size:20px}"
+        " .v2-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}"
+        " .v2-kpi{padding:12px}"
+        " .v2-kpi strong{font-size:21px}"
+        " .v2-mode-grid{grid-template-columns:1fr}"
+        " .v2-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"
+        " .v2-validation-grid{grid-template-columns:1fr;gap:0}"
+        " .v2-section{padding:12px}"
+        " .v2-section-head{align-items:flex-start}"
+        " .v2-section-head>span{text-align:left;flex:1 1 100%}"
+        " .v2-item{display:block}"
+        " .v2-result{display:block;max-width:none;text-align:left;margin-top:6px}"
+        " .v2-offer-row{display:block}"
+        " .v2-offer-row>span{display:block;max-width:none;text-align:left;margin-top:6px}"
+        "}"
+        "@media(max-width:360px){"
+        " .v2-kpis{grid-template-columns:1fr 1fr}"
+        " .v2-reward-grid{grid-template-columns:1fr 1fr}"
+        " .v2-hero{padding:15px}"
+        " .v2-kpi strong{font-size:19px}"
+        "}"
         "</style></head><body><main class='v2-shell'>"
-        "<header class='v2-hero'><div class='v2-brand'>CS Rewards Bot · Run Report</div>"
-        "<h1>Rewards Summary</h1>"
-        f"<div class='v2-meta'>{safe_run_label} · {generated} · Duration {duration_text}</div>"
-        f"<span class='v2-health {health_class}'>{health_label}</span></header>"
+        "<header class='v2-hero'>"
+        "<div class='v2-brand'>CS Rewards Bot · Automated Rewards Report</div>"
+        "<h1>Daily Rewards Report</h1>"
+        f"<div class='v2-meta'>{safe_run_label} · Started {job_start.strftime('%d %b %Y, %I:%M %p IST')} · Completed {generated} · Duration {duration_text}</div>"
+        f"<span class='v2-health {health_class}'>{health_label}</span>"
+        "</header>"
         "<section class='v2-kpis'>"
-        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
         f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
-        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with exceptions or unresolved items</small></div>"
+        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
+        f"<div class='v2-kpi'><span>{recovery_kpi_label}</span><strong>{recovery_kpi_value}</strong><small>{html.escape(recovery_kpi_note)}</small></div>"
+        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
         "</section>"
-        "<div class='v2-category-grid'>" + category_html + "</div>"
+        + processing_html
+        + "<section class='v2-section v2-rewards'>"
+        "<div class='v2-section-head'><h2>Reward Claims (This Run)</h2>"
+        "<span>Only checked categories are counted</span></div>"
+        f"<div class='v2-reward-grid'>{category_html}</div>"
+        "</section>"
         + (daily_cycle_html or "")
-        + (grenade_html or "")
+        + validation_html
         + (immediate_recovery_html or "")
-        + (standard_attention_html or "")
+        + attention_html
         + (promotion_html or "")
         + (followup_html or "")
         + (event_html or "")
-        + (attention_html or "")
-        + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · Automated report · {duration_text} total run time</footer>"
-        + "</main></body></html>"
+        + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · {html.escape(footer_meta)}"
+        + (f"<div>{run_link_html}</div>" if run_link_html else "")
+        + "</footer></main></body></html>"
     )
 
 
