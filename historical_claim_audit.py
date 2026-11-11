@@ -515,10 +515,13 @@ def _extract_run_summaries(meta_snapshots: Iterable[dict[str, Any]]) -> list[dic
 
 
 def _resolve_unconfirmed_flags(
-    anomalies: list[dict[str, Any]], events: list[dict[str, Any]]
+    anomalies: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    observations: list[dict[str, Any]],
 ) -> dict[str, int]:
-    """Link unconfirmed transitions to a later recorded successful claim."""
-    resolved = 0
+    """Resolve unconfirmed attempts using later bot claims or portal-observed state."""
+    bot_confirmed_count = 0
+    portal_observed_count = 0
     open_count = 0
     confirmed_events = [
         event for event in events
@@ -526,30 +529,51 @@ def _resolve_unconfirmed_flags(
             "bot_confirmed", "bot_confirmed_legacy_schema", "portal_confirmed_delivered"
         }
     ]
+    terminal_portal_states = {"portal_claimed", "claimed", "cooldown_detected"}
+    claimed_observations = [
+        observation for observation in observations
+        if str(observation.get("status") or "").lower() in terminal_portal_states
+    ]
+
     for anomaly in anomalies:
         if anomaly.get("type") != "record_became_unconfirmed":
             continue
         attempted_at = _normalise_datetime(anomaly.get("last_attempt_at"))
-        later = []
+        later_evidence = []
         for event in confirmed_events:
             if event.get("account") != anomaly.get("account") or event.get("category") != anomaly.get("category"):
                 continue
             event_at = _normalise_datetime(event.get("recorded_at"))
             if attempted_at and event_at and event_at > attempted_at:
-                later.append((event_at, event))
-        if later:
-            event_at, event = min(later, key=lambda item: item[0])
-            anomaly["resolution_status"] = "subsequently_confirmed"
-            anomaly["resolved_by_claim_at"] = event.get("recorded_at")
+                later_evidence.append((event_at, "bot", event))
+        for observation in claimed_observations:
+            if observation.get("account") != anomaly.get("account") or observation.get("category") != anomaly.get("category"):
+                continue
+            observed_at = _normalise_datetime(observation.get("observed_at"))
+            if attempted_at and observed_at and observed_at > attempted_at:
+                later_evidence.append((observed_at, "portal", observation))
+
+        if later_evidence:
+            evidence_at, evidence_type, evidence = min(later_evidence, key=lambda item: item[0])
             anomaly["resolution_lag_hours"] = round(
-                (event_at - attempted_at).total_seconds() / 3600, 2
+                (evidence_at - attempted_at).total_seconds() / 3600, 2
             )
-            resolved += 1
+            if evidence_type == "bot":
+                anomaly["resolution_status"] = "subsequently_bot_confirmed"
+                anomaly["resolved_by_claim_at"] = evidence.get("recorded_at")
+                bot_confirmed_count += 1
+            else:
+                anomaly["resolution_status"] = "subsequently_portal_observed_claimed"
+                anomaly["resolved_by_portal_observation_at"] = evidence.get("observed_at")
+                anomaly["portal_observation_status"] = evidence.get("status")
+                portal_observed_count += 1
         else:
             anomaly["resolution_status"] = "open_at_audit_cutoff"
             open_count += 1
+
     return {
-        "unconfirmed_transitions_subsequently_confirmed": resolved,
+        "unconfirmed_transitions_subsequently_confirmed": bot_confirmed_count,
+        "unconfirmed_transitions_subsequently_portal_observed": portal_observed_count,
         "unconfirmed_transitions_open": open_count,
     }
 
@@ -715,8 +739,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"| Run checks matched | {summary['run_checks_matched']} |",
         f"| Run checks requiring attention | {summary['run_checks_attention_required']} |",
         f"| Audit review flags | {summary['anomaly_count']} |",
-        f"| Unconfirmed transitions later confirmed | {summary['unconfirmed_transitions_subsequently_confirmed']} |",
-        f"| Unconfirmed transitions still open | {summary['unconfirmed_transitions_open']} |",
+        f"| Unconfirmed transitions later bot-confirmed | {summary['unconfirmed_transitions_subsequently_confirmed']} |",
+        f"| Unconfirmed transitions later portal-observed as claimed | {summary['unconfirmed_transitions_subsequently_portal_observed']} |",
+        f"| Unconfirmed transitions still open at cutoff | {summary['unconfirmed_transitions_open']} |",
         f"| Overlapping run-window pairs | {summary['overlapping_run_window_pairs']} |",
         f"| Claim events assigned to multiple runs | {summary['claim_events_assigned_to_multiple_run_windows']} |",
         "",
@@ -837,7 +862,7 @@ def run_audit(repo_path: Path, ref: str, output_dir: Path) -> dict[str, Any]:
         raise AuditError(f"{HISTORY_PATH} at {ref} is not a JSON object.")
     runs = _extract_run_summaries(_record_snapshots(repo_path, ref, META_PATH))
     run_checks = _reconcile_runs(runs, events)
-    review_resolution = _resolve_unconfirmed_flags(anomalies, events)
+    review_resolution = _resolve_unconfirmed_flags(anomalies, events, observations)
     window_integrity = _run_window_integrity(runs, events)
 
     by_category = Counter()
