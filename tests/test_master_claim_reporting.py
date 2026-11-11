@@ -872,5 +872,52 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("Promo Player 1", section)
         self.assertNotIn("Promo Player 2", section)
 
+    def test_clean_dashboard_omits_redundant_attention_section(self):
+        players = [
+            {
+                "pid": f"CLEAN{i:04d}", "display_name": f"Clean Player {i}",
+                "processing_mode": "promotional_only", "status": "Promotional Check Complete",
+                "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+                "has_loyalty": False, "promotion_scan_completed": True,
+                "promotions_observed": [], "event_rewards": [],
+            }
+            for i in range(2)
+        ]
+        report = build_email(
+            players, "Promotional Check #2", 2,
+            get_ist_time() - timedelta(minutes=3), {},
+            configured_player_count=2,
+        )
+        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertNotIn("Attention &amp; Exceptions", report)
+
+    def test_recovery_rollup_kpi_reports_actual_recovery_accounts(self):
+        players = [self.sample_player()]
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": "2026-11-11",
+                "configured_player_count": 1,
+                "accounts_complete": 1,
+                "accounts_pending": 0,
+                "total_claims": 7,
+                "recovery_accounts_count": 1,
+                "recovery_claims_added": 2,
+                "pending_player_last4": [],
+                "claim_totals": {
+                    "daily": 1, "store": 2, "progression": 1,
+                    "loyalty": 0, "promotions": 1, "events": 2,
+                },
+            }
+        }
+        with patch("master_claimer._current_reset_date", return_value="2026-11-11"):
+            report = build_email(
+                players, "Recovery Run", 2,
+                get_ist_time() - timedelta(minutes=1), meta,
+                configured_player_count=1,
+            )
+        self.assertIn("<span>Recovery accounts</span><strong>1</strong>", report)
+        self.assertIn("2 additional claims confirmed", report)
+        self.assertNotIn("<span>In-run recovery</span>", report)
+
 if __name__ == "__main__":
     unittest.main()
