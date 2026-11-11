@@ -619,6 +619,7 @@ jobs:
           name: cs-hub-run-report-${{ github.run_id }}
           path: |
             debug_email.html
+            daily_claim_diagnostics/
             run_artifacts/
           if-no-files-found: warn
           retention-days: 14

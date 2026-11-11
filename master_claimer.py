@@ -58,6 +58,7 @@ HEADLESS       = True
 LOGIN_DIAGNOSTICS_DIR = "login_diagnostics"
 CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
 RUN_ARTIFACTS_DIR = "run_artifacts"
+DAILY_CLAIM_DIAGNOSTICS_DIR = "daily_claim_diagnostics"
 RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
@@ -1230,25 +1231,48 @@ def _dismiss_store_promotion_popups(driver):
     return dismiss_all_safe_popups(driver, log=log, max_popups=8, timeout=2.5)
     
 def physical_click(driver, el, *, allow_js_fallback=True):
-    """Scroll and click; callers may forbid the JavaScript fallback."""
+    """Scroll and click; preserve the route used for optional diagnostics."""
+    trace = {"method": "not_dispatched", "attempted": []}
+
+    def store_trace():
+        try:
+            driver._last_physical_click_trace = dict(trace)
+        except Exception:
+            pass
+
     try:
         driver.execute_script(
             "arguments[0].scrollIntoView({behavior:'smooth',block:'center'});", el)
         time.sleep(0.5)
+        trace["attempted"].append("webdriver_element_click")
         el.click()
+        trace["method"] = "webdriver_element_click"
+        store_trace()
         return True
-    except Exception:
+    except Exception as webdriver_exc:
+        trace["webdriver_error"] = type(webdriver_exc).__name__
         try:
+            trace["attempted"].append("action_chains_click")
             ActionChains(driver).move_to_element(el).click().perform()
+            trace["method"] = "action_chains_click"
+            store_trace()
             return True
-        except Exception:
+        except Exception as action_exc:
+            trace["action_chains_error"] = type(action_exc).__name__
             if not allow_js_fallback:
+                store_trace()
                 return False
             try:
+                trace["attempted"].append("javascript_click_fallback")
                 driver.execute_script("arguments[0].click();", el)
+                trace["method"] = "javascript_click_fallback"
+                store_trace()
                 return True
-            except Exception:
+            except Exception as js_exc:
+                trace["javascript_error"] = type(js_exc).__name__
+                store_trace()
                 return False
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1423,6 +1447,132 @@ def detect_page_cooldowns(driver, pid, page_type):
 # SECTION 8 — CLAIMING FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=None):
+    """Capture browser evidence in memory; files are written only for unconfirmed Daily claims."""
+    metadata = {
+        "stage": str(stage),
+        "attempt": attempt,
+        "captured_at_utc": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+        "url": "",
+        "title": "",
+    }
+    try:
+        metadata["url"] = str(getattr(driver, "current_url", "") or "")
+    except Exception as exc:
+        metadata["url_error"] = type(exc).__name__
+    try:
+        metadata["title"] = str(getattr(driver, "title", "") or "")
+    except Exception as exc:
+        metadata["title_error"] = type(exc).__name__
+    if click_trace:
+        metadata["click_trace"] = click_trace
+
+    try:
+        page_snapshot = driver.execute_script(r"""
+            const controls = Array.from(document.querySelectorAll('button,[role="button"]'));
+            const norm = value => (value || '').replace(/\s+/g, ' ').trim();
+            const visible = el => {
+                if (!el) return false;
+                const style = getComputedStyle(el);
+                const rect = el.getBoundingClientRect();
+                return !!(el.getClientRects().length && style.display !== 'none'
+                    && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0);
+            };
+            const bodyText = norm(document.body && document.body.innerText);
+            const lines = (document.body && document.body.innerText || '')
+                .split(/\n+/).map(line => norm(line)).filter(Boolean);
+            return {
+                total_button_count: controls.length,
+                claim_button_count: controls.filter(el =>
+                    norm(el.innerText || el.textContent).toLowerCase() === 'claim').length,
+                buttons: controls.slice(0, 50).map((el, index) => {
+                    const rect = el.getBoundingClientRect();
+                    const label = norm(el.innerText || el.textContent);
+                    return {
+                        index,
+                        tag: el.tagName.toLowerCase(),
+                        role: el.getAttribute('role'),
+                        text: label.slice(0, 240),
+                        visible: visible(el),
+                        enabled: !el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                        disabled_property: !!el.disabled,
+                        aria_disabled: el.getAttribute('aria-disabled'),
+                        bounding_box: {
+                            x: Math.round(rect.x), y: Math.round(rect.y),
+                            width: Math.round(rect.width), height: Math.round(rect.height)
+                        },
+                        outer_html_excerpt: (el.outerHTML || '').slice(0, 1200)
+                    };
+                }),
+                visible_page_text: bodyText.slice(0, 5000),
+                timer_text_lines: lines.filter(line =>
+                    /daily|next in|next reward|cooldown|claimed|claim/i.test(line)
+                ).slice(0, 40)
+            };
+        """)
+        if isinstance(page_snapshot, dict):
+            metadata.update(page_snapshot)
+        else:
+            metadata["dom_capture_error"] = "unexpected_snapshot_type"
+    except Exception as exc:
+        metadata["dom_capture_error"] = type(exc).__name__
+
+    screenshot = None
+    try:
+        screenshot = driver.get_screenshot_as_png()
+        if not isinstance(screenshot, (bytes, bytearray)):
+            screenshot = None
+            metadata["screenshot_error"] = "unexpected_screenshot_type"
+    except Exception as exc:
+        metadata["screenshot_error"] = type(exc).__name__
+    metadata["screenshot_captured"] = screenshot is not None
+    return {"metadata": metadata, "screenshot": bytes(screenshot) if screenshot is not None else None}
+
+
+def _persist_daily_claim_diagnostics(pid, evidence, failure_reason):
+    """Persist collected evidence only after a Daily claim remains unconfirmed."""
+    if not evidence:
+        return None
+    try:
+        os.makedirs(DAILY_CLAIM_DIAGNOSTICS_DIR, exist_ok=True)
+        player_last4 = str(pid)[-4:]
+        run_id = re.sub(r"[^A-Za-z0-9_-]", "", os.getenv("GITHUB_RUN_ID", "local")) or "local"
+        run_attempt = re.sub(r"[^A-Za-z0-9_-]", "", os.getenv("GITHUB_RUN_ATTEMPT", "1")) or "1"
+        stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S%fZ")
+        basename = f"daily-{player_last4}-{run_id}-a{run_attempt}-{stamp}"
+        stages = []
+
+        for index, item in enumerate(evidence, start=1):
+            metadata = dict(item.get("metadata") or {})
+            screenshot = item.get("screenshot")
+            stage = re.sub(r"[^A-Za-z0-9_-]", "_", str(metadata.get("stage") or f"stage-{index}"))
+            screenshot_name = None
+            if isinstance(screenshot, (bytes, bytearray)):
+                screenshot_name = f"{basename}-{index:02d}-{stage}.png"
+                screenshot_path = os.path.join(DAILY_CLAIM_DIAGNOSTICS_DIR, screenshot_name)
+                with open(screenshot_path, "wb") as image_file:
+                    image_file.write(bytes(screenshot))
+            metadata["screenshot_file"] = screenshot_name
+            stages.append(metadata)
+
+        payload = {
+            "schema_version": 1,
+            "player_id_last4": player_last4,
+            "run_id": run_id,
+            "run_attempt": run_attempt,
+            "failure_reason": str(failure_reason)[:300],
+            "captured_at_utc": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+            "stages": stages,
+        }
+        json_path = os.path.join(DAILY_CLAIM_DIAGNOSTICS_DIR, f"{basename}.json")
+        with open(json_path, "w", encoding="utf-8") as json_file:
+            json.dump(payload, json_file, indent=2, ensure_ascii=False)
+        return json_path
+    except Exception as exc:
+        log(f"⚠️ Could not persist Daily claim diagnostics: {type(exc).__name__}: {str(exc)[:120]}")
+        return None
+
+
 def _daily_claim_is_already_visible_as_claimed(driver):
     """Recognize a manually-claimed Daily card even if its timer is unavailable."""
     try:
@@ -1509,6 +1659,7 @@ def _wait_for_daily_claim_confirmation(driver, timeout=6.0, poll_interval=0.5):
 def claim_daily_rewards(driver, pid):
     """Claim Daily only when live portal state says available; return (count, skipped, unconfirmed)."""
     log("🎁 Checking Daily Rewards against live portal state...")
+    diagnostic_evidence = []
     try:
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
@@ -1524,8 +1675,12 @@ def claim_daily_rewards(driver, pid):
 
         button, state = _find_daily_claim_button(driver)
         if state != "available" or button is None:
+            diagnostic_evidence.append(
+                _capture_daily_claim_diagnostic(driver, "initial_state_unconfirmed", attempt=0)
+            )
             update_claim_history(pid, "daily", unconfirmed=True)
             log(f"⚠️ Daily state could not be established (portal_state={state}); leaving it retryable")
+            _persist_daily_claim_diagnostics(pid, diagnostic_evidence, f"initial_portal_state_unconfirmed:{state}")
             driver.save_screenshot(f"daily_{pid}.png")
             return 0, False, True
 
@@ -1539,11 +1694,18 @@ def claim_daily_rewards(driver, pid):
             if state != "available" or button is None:
                 break
 
+            pre_click_evidence = _capture_daily_claim_diagnostic(
+                driver, "pre_click", attempt=attempt + 1
+            )
+            diagnostic_evidence.append(pre_click_evidence)
             clicked = bool(physical_click(driver, button))
+            click_trace = dict(getattr(driver, "_last_physical_click_trace", {}) or {})
+            pre_click_evidence["metadata"]["click_trace"] = click_trace
+            click_method = click_trace.get("method", "not_recorded")
             if clicked:
-                log(f"🖱️ Daily claim click dispatched (attempt {attempt + 1}); awaiting portal confirmation")
+                log(f"🖱️ Daily claim click dispatched (attempt {attempt + 1}, route={click_method}); awaiting portal confirmation")
             else:
-                log(f"⚠️ Daily click helper did not confirm dispatch (attempt {attempt + 1}); checking portal state")
+                log(f"⚠️ Daily click helper did not confirm dispatch (attempt {attempt + 1}, route={click_method}); checking portal state")
 
             if _wait_for_daily_claim_confirmation(driver):
                 if clicked:
@@ -1555,6 +1717,13 @@ def claim_daily_rewards(driver, pid):
                 log("✅ Daily portal state changed to claimed; dispatch result was ambiguous")
                 driver.save_screenshot(f"daily_{pid}.png")
                 return 0, True, False
+
+            diagnostic_evidence.append(
+                _capture_daily_claim_diagnostic(
+                    driver, "post_click_unconfirmed", attempt=attempt + 1,
+                    click_trace=click_trace,
+                )
+            )
 
             # A second attempt is permitted only when a fresh read still shows Claim.
             if attempt == 0:
@@ -1569,7 +1738,18 @@ def claim_daily_rewards(driver, pid):
                     refreshed = True
                 except Exception as refresh_exc:
                     log(f"⚠️ Daily refresh before retry failed: {type(refresh_exc).__name__}")
+                    diagnostic_evidence.append(
+                        _capture_daily_claim_diagnostic(
+                            driver, "refresh_error", attempt=attempt + 1,
+                            click_trace={"refresh_error": type(refresh_exc).__name__},
+                        )
+                    )
                 if refreshed:
+                    diagnostic_evidence.append(
+                        _capture_daily_claim_diagnostic(
+                            driver, "post_refresh", attempt=attempt + 1
+                        )
+                    )
                     fresh_button, fresh_state = _find_daily_claim_button(driver)
                     if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
                         update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
@@ -1582,6 +1762,11 @@ def claim_daily_rewards(driver, pid):
 
         update_claim_history(pid, "daily", unconfirmed=True)
         log("⚠️ Daily click was not confirmed by the portal; retry required")
+        diagnostic_path = _persist_daily_claim_diagnostics(
+            pid, diagnostic_evidence, "daily_click_not_confirmed_after_allowed_attempts"
+        )
+        if diagnostic_path:
+            log(f"🧪 Daily failure evidence saved: {diagnostic_path}")
         driver.save_screenshot(f"daily_{pid}.png")
         return 0, False, True
     except Exception as exc:
@@ -1590,6 +1775,13 @@ def claim_daily_rewards(driver, pid):
             update_claim_history(pid, "daily", unconfirmed=True)
         except Exception:
             pass
+        diagnostic_evidence.append(
+            _capture_daily_claim_diagnostic(
+                driver, "exception", attempt=None,
+                click_trace={"exception": type(exc).__name__},
+            )
+        )
+        _persist_daily_claim_diagnostics(pid, diagnostic_evidence, f"exception:{type(exc).__name__}")
         return 0, False, True
 
 
