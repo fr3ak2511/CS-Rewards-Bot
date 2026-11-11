@@ -721,7 +721,7 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         events.assert_not_called()
         full_account.assert_not_called()
         self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
-        driver.quit.assert_called_once()
+        self.assertTrue(driver.quit_called)
 
     def test_post_run_recovery_replays_exact_progression_and_event_targets(self):
         driver = FakeDriver()

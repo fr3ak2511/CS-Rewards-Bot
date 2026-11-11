@@ -3013,6 +3013,7 @@ def _recovery_targets_from_result(result):
         if isinstance(item, dict) and item.get("retry_required")
     ]
     event_targets = _event_retry_targets(event_results)
+    store_indices.sort()
     return {
         "login_retry": status == "Login Failed",
         "processing_error": status in ("Error", "Failed") and status != "Login Failed",
