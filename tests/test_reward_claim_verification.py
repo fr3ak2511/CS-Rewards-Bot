@@ -278,6 +278,27 @@ class DailyClaimVerificationTests(unittest.TestCase):
              ]), \
              patch.object(bot, "physical_click", return_value=True) as click, \
              patch.object(bot, "_wait_for_daily_claim_confirmation", side_effect=[False, False]), \
+             patch.object(bot, "_capture_daily_claim_diagnostic", return_value={"metadata": {}, "screenshot": None}), \
+             patch.object(bot, "_persist_daily_claim_diagnostics") as persist, \
+             patch.object(bot, "update_claim_history") as history_update:
+            result = bot.claim_daily_rewards(driver, "TESTPLAYER0001")
+
+        self.assertEqual(result, (0, False, True))
+        self.assertEqual(click.call_count, 2)  # exactly one retry, after a successful page refresh
+        history_update.assert_called_once_with("TESTPLAYER0001", "daily", unconfirmed=True)
+        persist.assert_called_once()
+
+        driver = FakeDriver()
+        with patch.object(bot, "bypass_cloudflare"), \
+             patch.object(bot, "close_popup"), \
+             patch.object(bot.time, "sleep"), \
+             patch.object(bot, "_daily_portal_confirms_claim", return_value=False), \
+             patch.object(bot, "_find_daily_claim_button", side_effect=[
+                 (object(), "available"), (object(), "available"),
+                 (object(), "available"), (object(), "available"),
+             ]), \
+             patch.object(bot, "physical_click", return_value=True) as click, \
+             patch.object(bot, "_wait_for_daily_claim_confirmation", side_effect=[False, False]), \
              patch.object(bot, "update_claim_history") as history_update:
             result = bot.claim_daily_rewards(driver, "TESTPLAYER0001")
 
