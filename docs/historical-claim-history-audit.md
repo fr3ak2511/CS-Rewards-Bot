@@ -55,6 +55,7 @@ A mismatch is a review flag, not automatic proof of a missing or duplicate rewar
 - Preserve all historical accounts, including accounts no longer present in the configured roster.
 - Do not infer missing claims or expected balances.
 - Do not treat portal-observed cooldown as a bot-made claim.
+- A later portal-observed Claimed/cooldown state can resolve an earlier unconfirmed attempt, but is classified separately from a later bot-confirmed claim.
 - Do not treat progression.last_count as a lifetime Grenade balance; it is a count associated with the recorded visit.
 - Treat malformed snapshots, invalid timestamps, cleared claims, timestamp regressions, and run-counter mismatches as review items.
 - The tool must fail rather than silently use an invalid Git ref or invalid current roster.
