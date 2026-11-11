@@ -4146,49 +4146,110 @@ def build_standard_attention_section(results):
     )
 
 
+def _promotion_unavailable_is_reportable_free(promo):
+    """Show unavailable offers only when the captured card proves they are free."""
+    if str(promo.get("status") or "") not in ("unavailable", "portal_claimed"):
+        return False
+    card_text = _normalize_promotion_text(promo.get("card_text") or "")
+    button_text = _normalize_promotion_text(promo.get("button_text") or "")
+    paid_patterns = (
+        r"(?:₹|rs\.?|inr|usd|eur|gbp|aud|cad|\$|€|£)\s*[1-9][0-9,]*(?:\.[0-9]{1,2})?",
+        r"\b[1-9][0-9,]*(?:\.[0-9]{1,2})?\s*(?:inr|usd|eur|gbp|aud|cad)\b",
+        r"\b[1-9][0-9]*(?:\.[0-9]+)?\s*%\s*(?:off|discount|discounted|saving)\b",
+        r"\bsave\s+[1-9][0-9]*(?:\.[0-9]+)?\s*%",
+        r"\b(?:discount|discounted|sale|buy\s+now|purchase|paid|price)\b",
+    )
+    if any(re.search(pattern, f"{card_text} {button_text}", flags=re.IGNORECASE) for pattern in paid_patterns):
+        return False
+    return "free" in card_text or button_text in ("free", "claim", "claim reward", "claim now", "claimed")
+
+
 def build_promotional_section(results):
-    """Render only free, actionable Store promotion outcomes and scan exceptions."""
-    rows = []
-    claimed_count = 0
-    attention_count = 0
+    """Render grouped, free Store offer outcomes and only the actionable details."""
+    offers = {}
+    detail_rows = []
+    scan_accounts = sum(1 for result in results if result.get("promotion_scan_completed"))
 
     for result in results:
         player = html.escape(_display_label(result))
         for promo in (result.get("promotions_observed", []) or []):
-            if not _promotion_detail_worthy(promo):
-                continue
             status = str(promo.get("status") or "unknown")
-            title = html.escape(str(promo.get("title") or "Store promotion"))
-            label = html.escape(_promotion_status_label(status))
-            if status == "claimed_this_run":
-                claimed_count += max(1, int(promo.get("claim_count", 0) or 0))
-            else:
-                attention_count += 1
-            rows.append(
-                "<div class='v2-item'>"
-                f"<div><strong>{title}</strong><small>{player}</small></div>"
-                f"<span class='v2-result'>{label}</span></div>"
-            )
+            detail_worthy = _promotion_detail_worthy(promo)
+            summary_worthy = detail_worthy or _promotion_unavailable_is_reportable_free(promo)
+            if summary_worthy:
+                title_raw = str(promo.get("title") or "Store promotion").strip()
+                title = html.escape(title_raw)
+                key = _promotion_offer_type_key(promo) or title_raw.casefold()
+                item = offers.setdefault(key, {
+                    "title": title, "players": set(), "unavailable": 0,
+                    "already_claimed": 0, "actionable": 0, "claimed": 0,
+                })
+                pid = str(result.get("pid") or "").strip()
+                item["players"].add(pid or player)
+                if status == "unavailable":
+                    item["unavailable"] += 1
+                elif status == "portal_claimed":
+                    item["already_claimed"] += 1
+                elif status == "claimed_this_run":
+                    item["claimed"] += max(1, int(promo.get("claim_count", 0) or 0))
+                elif status in ("claim_unconfirmed", "click_failed", "available", "popup_blocked"):
+                    item["actionable"] += 1
+
+            if detail_worthy:
+                title = html.escape(str(promo.get("title") or "Store promotion"))
+                label = html.escape(_promotion_status_label(status))
+                detail_rows.append(
+                    "<div class='v2-item'>"
+                    f"<div><strong>{title}</strong><small>{player}</small></div>"
+                    f"<span class='v2-result'>{label}</span></div>"
+                )
 
         if result.get("promotion_detection_failed"):
-            attention_count += 1
             reason = html.escape(str(result.get("fail_reason") or "Live Store scan did not complete"))
-            rows.append(
+            detail_rows.append(
                 "<div class='v2-item v2-attention'>"
-                f"<div><strong>Store promotion scan</strong><small>{player}</small></div>"
+                f"<div><strong>Promotion scan</strong><small>{player}</small></div>"
                 f"<span class='v2-result'>⚠️ {reason}</span></div>"
             )
 
-    if not rows:
+    if not scan_accounts and not offers and not detail_rows:
         return ""
 
+    summary_rows = []
+    for item in offers.values():
+        people = len(item["players"])
+        seen_label = f"Seen on {people} account" + ("" if people == 1 else "s")
+        counts = []
+        if item["unavailable"]:
+            counts.append(f"{item['unavailable']} unavailable")
+        if item["actionable"]:
+            counts.append(f"{item['actionable']} actionable")
+        if item["claimed"]:
+            counts.append(f"{item['claimed']} claimed")
+        if item["already_claimed"]:
+            counts.append(f"{item['already_claimed']} already claimed")
+        outcome = " · ".join(counts) if counts else "No claimable outcome recorded"
+        summary_rows.append(
+            "<div class='v2-offer-row'>"
+            f"<div><strong>{item['title']}</strong><small>{seen_label}</small></div>"
+            f"<span>{html.escape(outcome)}</span></div>"
+        )
+
+    if not offers and scan_accounts:
+        summary_rows.append(
+            "<p class='v2-muted-note'>No reportable free promotional offers were observed during these scans.</p>"
+        )
+
+    scan_word = "account scan" if scan_accounts == 1 else "account scans"
     return (
-        "<section class='v2-section'>"
-        "<div class='v2-section-head'><h2>Store Promotions</h2>"
-        f"<span>{claimed_count} claimed · {attention_count} needing attention</span></div>"
-        + "".join(rows)
+        "<section class='v2-section v2-promotions'>"
+        "<div class='v2-section-head'><h2>Promotional Offers</h2>"
+        f"<span>{scan_accounts} {scan_word} · {len(offers)} offer types</span></div>"
+        + "".join(summary_rows)
+        + ("<div class='v2-promo-details'>" + "".join(detail_rows) + "</div>" if detail_rows else "")
         + "</section>"
     )
+
 
 
 def build_event_rewards_section(results):
@@ -4360,7 +4421,7 @@ def build_mobile_cards(results, n):
 
 
 def build_grenade_balance_email_section(results):
-    """Render a short aggregate plus exception-only detail for live Grenade checks."""
+    """Render a clear balance status; absence of a snapshot is never called a pass."""
     records = []
     for result in results:
         balance = result.get("grenade_balance")
@@ -4368,7 +4429,20 @@ def build_grenade_balance_email_section(results):
             records.append((result, balance, str(balance.get("status") or "not_validated")))
 
     if not records:
-        return ""
+        modes = {str(result.get("processing_mode") or "full_claim") for result in results}
+        if modes and modes <= {"promotional_only"}:
+            note = "Not performed for this promotional-only run; core reward balances were not checked."
+        elif not results:
+            note = "No account balance snapshots were available in this run."
+        else:
+            note = "No portal balance snapshot was captured. This is not a validation pass."
+        return (
+            "<section class='v2-section v2-grenade v2-validation-card'>"
+            "<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>"
+            "<span class='v2-state v2-state-neutral'>Not performed</span></div>"
+            f"<p class='v2-muted-note'>{html.escape(note)}</p>"
+            "</section>"
+        )
 
     passed = sum(1 for _, _, status in records if status == "pass")
     below = sum(1 for _, _, status in records if status == "below_minimum")
@@ -4418,17 +4492,21 @@ def build_grenade_balance_email_section(results):
         flags.append(f"{pending} baseline pending")
     if not_validated:
         flags.append(f"{not_validated} not validated")
+    state = "Attention Required" if below or regressed or pending or not_validated else "Passed"
+    state_class = "v2-state-warning" if state == "Attention Required" else "v2-state-success"
     if flags:
         summary += " · " + " · ".join(flags)
 
     return (
-        "<section class='v2-section v2-grenade'>"
-        "<div class='v2-section-head'><h2>Grenade Balance Check</h2>"
-        f"<span>{html.escape(summary)}</span></div>"
+        "<section class='v2-section v2-grenade v2-validation-card'>"
+        "<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>"
+        f"<span class='v2-state {state_class}'>{state}</span></div>"
+        f"<div class='v2-grenade-summary'>{html.escape(summary)}</div>"
         + ("".join(exceptions) if exceptions else
            "<p class='v2-all-clear'>All captured Grenade balances meet their expected minimum.</p>")
         + "</section>"
     )
+
 
 
 
@@ -4509,6 +4587,90 @@ def build_daily_cycle_email_section(summary):
         f"<span>{total_claims} total confirmed claims</span></div>"
         f"<strong>{html.escape(state)}</strong>"
         f"<p>{html.escape(recovery_note)}</p>{pending_note}"
+        "</section>"
+    )
+
+
+def build_processing_overview_section(counts):
+    """Show which processing paths ran without implying that unchecked rewards were tested."""
+    modes = [
+        ("Full Claim Path", int(counts.get("full_claim_accounts", 0) or 0),
+         "Daily, Store and eligible Progression / Loyalty / Event checks"),
+        ("Backup Reconciliation", int(counts.get("backup_reconciliation_accounts", 0) or 0),
+         "Targeted Daily / Store checks; Progression only when reopened"),
+        ("Promotional-only", int(counts.get("promotional_only_accounts", 0) or 0),
+         "Store promotional scans; core rewards not checked"),
+    ]
+    total = sum(value for _, value, _ in modes)
+    cards = "".join(
+        "<div class='v2-mode-card'>"
+        f"<div class='v2-mode-title'>{html.escape(label)}</div>"
+        f"<strong>{value}</strong>"
+        f"<small>{html.escape(note)}</small>"
+        "</div>"
+        for label, value, note in modes
+    )
+    return (
+        "<section class='v2-section v2-processing'>"
+        "<div class='v2-section-head'><h2>Processing Overview</h2>"
+        f"<span>{total} accounts across {sum(1 for _, value, _ in modes if value)} active path(s)</span></div>"
+        f"<div class='v2-mode-grid'>{cards}</div>"
+        "</section>"
+    )
+
+
+def build_run_reconciliation_email_section(results, run_label, configured_player_count):
+    """Use the same read-only reconciliation logic as run_summary.json."""
+    daily = sum(int(result.get("daily", 0) or 0) for result in results)
+    store = sum(int(result.get("store", 0) or 0) for result in results)
+    promotions = sum(int(result.get("store_temp", 0) or 0) for result in results)
+    progression = sum(int(result.get("progression", 0) or 0) for result in results)
+    loyalty = sum(int(result.get("loyalty", 0) or 0) for result in results)
+    events = sum(event_claim_count(result.get("event_rewards")) for result in results)
+    totals = {
+        "daily_claimed_this_run": daily,
+        "standard_store_claimed_this_run": store,
+        "promotional_claims_this_run": promotions,
+        "event_reward_claims_this_run": events,
+        "progression_claimed_this_run": progression,
+        "loyalty_claimed_this_run": loyalty,
+        "all_claims_this_run": daily + store + promotions + progression + loyalty + events,
+    }
+    counters = _summary_counts(results)
+    reconciliation = build_run_reconciliation(
+        results,
+        run_label=run_label,
+        configured_player_count=configured_player_count,
+        totals=totals,
+        counters=counters,
+    )
+    checks = reconciliation.get("checks") or {}
+    evaluated_checks = [value for value in checks.values() if value is not None]
+    passed = sum(1 for value in evaluated_checks if value is True)
+    checked = len(evaluated_checks)
+    status = str(reconciliation.get("status") or "attention_required")
+    matched = status == "matched"
+    label = "Matched" if matched else "Attention Required"
+    badge_class = "v2-state-success" if matched else "v2-state-warning"
+    scope = (
+        "Full-roster primary run" if reconciliation.get("scope") == "full_roster_primary"
+        else "Partial / mixed run"
+    )
+    detail = (
+        f"{passed}/{checked} consistency checks passed · "
+        f"{int(reconciliation.get('accounts_processed', 0) or 0)} / "
+        f"{int(reconciliation.get('configured_player_count', configured_player_count) or 0)} accounts represented"
+    )
+    if matched and reconciliation.get("scope") != "full_roster_primary":
+        detail += " · This does not certify a full-roster reward cycle"
+    warnings = reconciliation.get("warnings") or []
+    if warnings:
+        detail += " · " + ", ".join(str(item).replace("_", " ") for item in warnings)
+    return (
+        "<section class='v2-section v2-reconciliation v2-validation-card'>"
+        "<div class='v2-section-head'><h2>Run Reconciliation</h2>"
+        f"<span class='v2-state {badge_class}'>{label}</span></div>"
+        f"<p class='v2-muted-note'><strong>{scope}</strong> · {html.escape(detail)}</p>"
         "</section>"
     )
 
@@ -4675,24 +4837,35 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     elif attention_accounts:
         health_label, health_class = "Attention Required", "v2-warn"
     else:
-        health_label, health_class = "Healthy", "v2-healthy"
+        health_label, health_class = "Completed", "v2-healthy"
 
     standard_attention_html = build_standard_attention_section(results)
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
     grenade_html = build_grenade_balance_email_section(results)
+    reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
+    validation_html = (
+        "<div class='v2-validation-grid'>"
+        + grenade_html + reconciliation_html
+        + "</div>"
+    )
     immediate_recovery_html = build_immediate_recovery_email_section(results)
     daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
-    attention_html = "".join(exception_cards)
-    if attention_html:
+    exception_details = standard_attention_html + "".join(exception_cards)
+    if exception_details:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Exceptions &amp; Attention</h2><span>{attention_accounts} accounts</span></div>"
-            + attention_html + "</section>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            + exception_details + "</section>"
         )
-    if not (standard_attention_html or promotion_html or followup_html or event_html or grenade_html or immediate_recovery_html or daily_cycle_html or attention_html):
-        attention_html = "<p class='v2-all-clear'>No outstanding exceptions were recorded for this run.</p>"
+    else:
+        attention_html = (
+            "<section class='v2-section v2-exceptions v2-all-clear-section'>"
+            "<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>0 accounts</span></div>"
+            "<p class='v2-all-clear'>No unresolved exceptions were recorded for this run.</p>"
+            "</section>"
+        )
 
     def _category_card(label, checked_results, claim_key, cycle_key, empty_note="Not checked in this run"):
         if is_recovery_rollup:
@@ -4726,15 +4899,6 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             "No enrolled accounts" if full_claim_results else "Not checked in this run",
         ),
     ]
-    if is_recovery_rollup:
-        category_cards.append(_category_card("Store Promotions", [], "store_temp", "promotions"))
-        if cycle_summary.get("claim_totals", {}).get("events") or cycle_summary.get("primary_claim_totals", {}).get("events", 0):
-            category_cards.append(_category_card("Event Rewards", [], "event_reward_claims", "events"))
-    else:
-        if promotions_checked_results:
-            category_cards.append(_category_card("Store Promotions", promotions_checked_results, "store_temp", "promotions"))
-        if event_checked_results:
-            category_cards.append(_category_card("Event Rewards", event_checked_results, "event_reward_claims", "events"))
     category_html = "".join(category_cards)
     generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
     safe_run_label = html.escape(str(run_label or "Reward Run"))
