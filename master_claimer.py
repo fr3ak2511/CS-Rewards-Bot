@@ -4910,46 +4910,171 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     )
     accounts_kpi_note = "Today's full-roster cycle" if is_recovery_rollup else "Of configured roster"
 
+    immediate_attempted = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+    )
+    immediate_resolved = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+        and result["immediate_recovery"].get("status") == "resolved"
+    )
+    immediate_unresolved = sum(
+        1 for result in results
+        if isinstance(result.get("immediate_recovery"), dict)
+        and result["immediate_recovery"].get("attempted")
+        and result["immediate_recovery"].get("status") != "resolved"
+    )
+    recovery_note = (
+        f"{immediate_resolved} resolved · {immediate_unresolved} pending"
+        if immediate_attempted else "No in-run retries were needed"
+    )
+    processing_html = build_processing_overview_section(counts)
+    run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
+    repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
+    commit_sha = str(os.getenv("GITHUB_SHA") or "").strip()
+    run_link_html = ""
+    if run_id.isdigit() and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
+        run_url = f"https://github.com/{repository}/actions/runs/{run_id}"
+        safe_url = html.escape(run_url, quote=True)
+        run_link_html = (
+            f"<a href='{safe_url}'>View run details &amp; logs</a> · "
+            f"<a href='{safe_url}#artifacts'>Artifacts</a>"
+        )
+    run_meta = []
+    if run_id.isdigit():
+        run_meta.append(f"Run #{html.escape(run_id)}")
+    if re.fullmatch(r"[0-9a-fA-F]{7,40}", commit_sha):
+        run_meta.append(f"Commit {html.escape(commit_sha[:7])}")
+    run_meta.append(f"Duration {duration_text}")
+    footer_meta = " · ".join(run_meta)
+
     return (
         "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
         "<style>"
-        "*{box-sizing:border-box}body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
-        ".v2-shell{max-width:760px;margin:0 auto}.v2-hero{padding:22px;border-radius:16px;background:linear-gradient(135deg,#17365d,#2459a6);color:#fff}"
-        ".v2-brand{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;opacity:.82}.v2-hero h1{font-size:23px;margin:8px 0}.v2-meta{font-size:12px;color:#dbeafe}"
+        "*{box-sizing:border-box}"
+        "body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
+        ".v2-shell{max-width:780px;margin:0 auto}"
+        ".v2-hero{padding:22px 24px;border-radius:16px;background:linear-gradient(135deg,#172b4d,#234d88);color:#fff}"
+        ".v2-brand{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;opacity:.82}"
+        ".v2-hero h1{font-size:23px;margin:8px 0 6px;line-height:1.2}"
+        ".v2-meta{font-size:12px;color:#dbeafe;line-height:1.5}"
         ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background:#fff}"
-        ".v2-healthy{color:#166534;background:#dcfce7}.v2-warn{color:#92400e;background:#fef3c7}.v2-failed{color:#991b1b;background:#fee2e2}"
-        ".v2-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px}"
-        ".v2-kpi{padding:15px}.v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.7px}"
-        ".v2-kpi strong{display:block;font-size:25px;margin:7px 0 2px;color:#172033}.v2-kpi small,.v2-category small{font-size:10px;color:#94a3b8}"
-        ".v2-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}.v2-category{padding:12px;min-width:0}.v2-category strong{display:block;font-size:20px;margin:6px 0 2px}"
-        ".v2-section{padding:15px;margin:0 0 12px}.v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.v2-section-head h2{font-size:14px;margin:0}.v2-section-head span{font-size:10px;color:#64748b;text-align:right}"
-        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px}.v2-item:first-of-type{border-top:0}.v2-item strong{display:block}.v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px}.v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px}.v2-good{color:#166534}"
-        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}.v2-exceptions{background:#fffbeb;border-color:#fcd34d}.v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}.v2-exception div{display:flex;justify-content:space-between;gap:10px}.v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-status{font-size:10px;color:#92400e}.v2-all-clear{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:13px;color:#64748b;font-size:12px}"
-        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px}.v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}.v2-grenade .v2-item{margin:5px 0}.v2-grenade .v2-item small{font-size:10px;color:#64748b}"
-        ".v2-footer{text-align:center;color:#94a3b8;font-size:10px;padding:12px}"
-        "@media(max-width:560px){body{padding:9px}.v2-hero{padding:17px}.v2-hero h1{font-size:20px}.v2-kpis{grid-template-columns:1fr 1fr}.v2-kpi:first-child{grid-column:span 2}.v2-category-grid{grid-template-columns:1fr 1fr}.v2-item{display:block}.v2-result{display:block;max-width:none;text-align:left;margin-top:6px}.v2-section-head{align-items:flex-start}}"
+        ".v2-healthy{color:#166534;background:#dcfce7}"
+        ".v2-warn{color:#92400e;background:#fef3c7}"
+        ".v2-failed{color:#991b1b;background:#fee2e2}"
+        ".v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}"
+        ".v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;min-width:0}"
+        ".v2-kpi{padding:14px 13px;box-shadow:0 1px 3px rgba(15,23,42,.04)}"
+        ".v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.55px;line-height:1.35}"
+        ".v2-kpi strong{display:block;font-size:24px;margin:7px 0 2px;color:#172033;line-height:1.15;overflow-wrap:anywhere}"
+        ".v2-kpi small,.v2-category small{font-size:10px;color:#64748b;line-height:1.4;display:block}"
+        ".v2-section{padding:15px;margin:0 0 12px;box-shadow:0 1px 2px rgba(15,23,42,.03)}"
+        ".v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;min-width:0}"
+        ".v2-section-head h2{font-size:14px;margin:0;line-height:1.35;flex:1 1 180px;min-width:0}"
+        ".v2-section-head>span{font-size:10px;color:#64748b;text-align:right;line-height:1.4;max-width:100%;overflow-wrap:anywhere;white-space:normal}"
+        ".v2-processing{padding-bottom:14px}"
+        ".v2-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}"
+        ".v2-mode-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px;min-width:0}"
+        ".v2-mode-title{font-size:11px;font-weight:700;color:#334155;line-height:1.35}"
+        ".v2-mode-card strong{display:block;font-size:21px;color:#172033;margin:5px 0 3px}"
+        ".v2-mode-card small{display:block;font-size:10px;color:#64748b;line-height:1.4}"
+        ".v2-reward-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}"
+        ".v2-category{padding:12px;min-width:0}"
+        ".v2-category strong{display:block;font-size:21px;margin:6px 0 2px;color:#172033}"
+        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px;min-width:0}"
+        ".v2-item:first-of-type{border-top:0}"
+        ".v2-item strong{display:block;overflow-wrap:anywhere}"
+        ".v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px;line-height:1.4}"
+        ".v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
+        ".v2-good{color:#166534}"
+        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
+        ".v2-exceptions{background:#fffbeb;border-color:#fcd34d}"
+        ".v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
+        ".v2-exception div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}"
+        ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
+        ".v2-status{font-size:10px;color:#92400e}"
+        ".v2-all-clear{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:11px;color:#166534;font-size:12px;line-height:1.45}"
+        ".v2-all-clear-section{background:#fff}"
+        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.45}"
+        ".v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}"
+        ".v2-validation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}"
+        ".v2-validation-card{margin-bottom:12px}"
+        ".v2-validation-card .v2-section-head{align-items:flex-start}"
+        ".v2-state{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}"
+        ".v2-state-success{background:#dcfce7;color:#166534}"
+        ".v2-state-warning{background:#fef3c7;color:#92400e}"
+        ".v2-state-neutral{background:#eef2f7;color:#475569}"
+        ".v2-muted-note{margin:0;color:#64748b;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-grenade-summary{display:block;margin:3px 0 8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#475569;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-grenade .v2-item{margin:5px 0}"
+        ".v2-grenade .v2-item small{font-size:10px;color:#64748b}"
+        ".v2-offer-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;border-top:1px solid #eef2f7;font-size:11px;min-width:0}"
+        ".v2-offer-row:first-of-type{border-top:0}"
+        ".v2-offer-row strong{display:block;color:#172033;overflow-wrap:anywhere}"
+        ".v2-offer-row small{display:block;color:#64748b;font-size:10px;margin-top:3px}"
+        ".v2-offer-row>span{max-width:58%;text-align:right;color:#475569;line-height:1.45;overflow-wrap:anywhere}"
+        ".v2-promo-details{margin-top:4px}"
+        ".v2-muted-note + .v2-item{border-top:0}"
+        ".v2-footer{text-align:center;color:#64748b;font-size:10px;line-height:1.55;padding:14px 8px}"
+        ".v2-footer a{color:#1d4ed8;text-decoration:underline}"
+        "@media(max-width:640px){"
+        " body{padding:9px}"
+        " .v2-shell{max-width:100%}"
+        " .v2-hero{padding:18px}"
+        " .v2-hero h1{font-size:20px}"
+        " .v2-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}"
+        " .v2-kpi{padding:12px}"
+        " .v2-kpi strong{font-size:21px}"
+        " .v2-mode-grid{grid-template-columns:1fr}"
+        " .v2-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"
+        " .v2-validation-grid{grid-template-columns:1fr;gap:0}"
+        " .v2-section{padding:12px}"
+        " .v2-section-head{align-items:flex-start}"
+        " .v2-section-head>span{text-align:left;flex:1 1 100%}"
+        " .v2-item{display:block}"
+        " .v2-result{display:block;max-width:none;text-align:left;margin-top:6px}"
+        " .v2-offer-row{display:block}"
+        " .v2-offer-row>span{display:block;max-width:none;text-align:left;margin-top:6px}"
+        "}"
+        "@media(max-width:360px){"
+        " .v2-kpis{grid-template-columns:1fr 1fr}"
+        " .v2-reward-grid{grid-template-columns:1fr 1fr}"
+        " .v2-hero{padding:15px}"
+        " .v2-kpi strong{font-size:19px}"
+        "}"
         "</style></head><body><main class='v2-shell'>"
-        "<header class='v2-hero'><div class='v2-brand'>CS Rewards Bot · Run Report</div>"
-        "<h1>Rewards Summary</h1>"
-        f"<div class='v2-meta'>{safe_run_label} · {generated} · Duration {duration_text}</div>"
-        f"<span class='v2-health {health_class}'>{health_label}</span></header>"
+        "<header class='v2-hero'>"
+        "<div class='v2-brand'>CS Rewards Bot · Automated Rewards Report</div>"
+        "<h1>Daily Rewards Report</h1>"
+        f"<div class='v2-meta'>{safe_run_label} · Started {job_start.strftime('%d %b %Y, %I:%M %p IST')} · Completed {generated} · Duration {duration_text}</div>"
+        f"<span class='v2-health {health_class}'>{health_label}</span>"
+        "</header>"
         "<section class='v2-kpis'>"
-        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
         f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
-        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with exceptions or unresolved items</small></div>"
+        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
+        f"<div class='v2-kpi'><span>In-run recovery</span><strong>{immediate_attempted}</strong><small>{html.escape(recovery_note)}</small></div>"
+        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with unresolved items or validation issues</small></div>"
         "</section>"
-        "<div class='v2-category-grid'>" + category_html + "</div>"
+        + processing_html
+        + "<section class='v2-section v2-rewards'>"
+        "<div class='v2-section-head'><h2>Reward Claims (This Run)</h2>"
+        "<span>Only checked categories are counted</span></div>"
+        f"<div class='v2-reward-grid'>{category_html}</div>"
+        "</section>"
         + (daily_cycle_html or "")
-        + (grenade_html or "")
+        + validation_html
         + (immediate_recovery_html or "")
-        + (standard_attention_html or "")
+        + attention_html
         + (promotion_html or "")
         + (followup_html or "")
         + (event_html or "")
-        + (attention_html or "")
-        + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · Automated report · {duration_text} total run time</footer>"
-        + "</main></body></html>"
+        + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · {html.escape(footer_meta)}"
+        + (f"<div>{run_link_html}</div>" if run_link_html else "")
+        + "</footer></main></body></html>"
     )
 
 
