@@ -623,5 +623,197 @@ class StandardBackupAuditCadenceTests(unittest.TestCase):
         self.assertNotIn("standard_rewards_audited_reset", entry)
 
 
+class SavedPostRunRecoveryTests(unittest.TestCase):
+    def _event_failure(self):
+        return {
+            "program_id": "event-a",
+            "name": "Event A",
+            "cycle": 2,
+            "retry_required": True,
+            "retry_thresholds": [800],
+            "claims_this_run": [],
+            "tiers": [
+                {"threshold": 800, "status": "claim_unconfirmed", "reward": ["Failed target"]}
+            ],
+        }
+
+    def test_saved_target_map_preserves_exact_failed_reward_identities(self):
+        result = {
+            "pid": "TARGET0001",
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [3, 2, 99],
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Grenade reward 3 | 500 points",
+            "event_rewards_retry_required": True,
+            "event_rewards": [self._event_failure()],
+        }
+        targets = bot._recovery_targets_from_result(result)
+        self.assertEqual(targets["store_unconfirmed_indices"], [2, 3])
+        self.assertTrue(targets["daily_unconfirmed"])
+        self.assertEqual(
+            targets["progression_card_signature"],
+            "Grenade reward 3 | 500 points",
+        )
+        self.assertEqual(
+            targets["event_thresholds_by_program"],
+            {"event-a": [800]},
+        )
+        self.assertEqual(targets["event_rewards"][0]["claims_this_run"], [])
+
+    def test_saved_targets_reconstruct_only_the_failed_reward_categories(self):
+        targets = {
+            "login_retry": False,
+            "processing_error": False,
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [2],
+            "progression_unconfirmed": True,
+            "progression_card_signature": "Original progression card",
+            "event_retry_required": True,
+            "event_thresholds_by_program": {"event-a": [800]},
+            "event_rewards": [self._event_failure()],
+        }
+        result = bot._recovery_result_from_saved_targets("TARGET0002", targets)
+        self.assertTrue(result["daily_unconfirmed"])
+        self.assertEqual(result["store_unconfirmed_indices"], [2])
+        self.assertTrue(result["progression_unconfirmed"])
+        self.assertEqual(result["progression_unconfirmed_card_signature"], "Original progression card")
+        self.assertTrue(result["event_rewards_retry_required"])
+        self.assertEqual(
+            bot._event_retry_targets(result["event_rewards"]),
+            {"event-a": [800]},
+        )
+        self.assertEqual(result["event_rewards"][0]["claims_this_run"], [])
+
+    def test_post_run_recovery_uses_saved_daily_target_without_full_account_processing(self):
+        driver = FakeDriver()
+        targets = {
+            "login_retry": False,
+            "processing_error": False,
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "progression_card_signature": None,
+            "event_retry_required": False,
+            "event_thresholds_by_program": {},
+            "event_rewards": [],
+        }
+        with patch.object(bot, "RECOVERY_ONLY_FAILED", True), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "claim_daily_rewards", return_value=(1, False, False)) as daily, \
+             patch.object(bot, "claim_store_rewards") as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks") as events, \
+             patch.object(bot, "process_player") as full_account, \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed"] * 3, "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0003", False, False, "Recovery Run", targets
+            )
+        self.assertTrue(coverage_rechecked)
+        daily.assert_called_once_with(driver, "TARGET0003", max_attempts=1)
+        store.assert_not_called()
+        progression.assert_not_called()
+        events.assert_not_called()
+        full_account.assert_not_called()
+        self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
+        driver.quit.assert_called_once()
+
+    def test_post_run_recovery_replays_exact_progression_and_event_targets(self):
+        driver = FakeDriver()
+        driver._progression_unconfirmed = False
+        event = self._event_failure()
+        targets = {
+            "login_retry": False,
+            "processing_error": False,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": True,
+            "progression_card_signature": "Original progression card",
+            "event_retry_required": True,
+            "event_thresholds_by_program": {"event-a": [800]},
+            "event_rewards": [event],
+        }
+        recovered_event = {
+            "program_id": "event-a",
+            "name": "Event A",
+            "cycle": 2,
+            "retry_required": False,
+            "retry_thresholds": [],
+            "claims_this_run": [],
+            "tiers": [{"threshold": 800, "status": "delivered"}],
+        }
+        with patch.object(bot, "RECOVERY_ONLY_FAILED", True), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "claim_progression_program_rewards", return_value=0) as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[recovered_event]) as events, \
+             patch.object(bot, "process_player") as full_account, \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed"] * 3, "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0004", False, False, "Recovery Run", targets
+            )
+        self.assertTrue(coverage_rechecked)
+        progression.assert_called_once_with(
+            driver, "TARGET0004",
+            target_card_signature="Original progression card",
+            max_claims_per_visit=1,
+        )
+        events.assert_called_once_with(
+            driver, "TARGET0004",
+            only_program_ids={"event-a"},
+            retry_thresholds_by_program={"event-a": [800]},
+            max_claims_per_program=1,
+        )
+        full_account.assert_not_called()
+        self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
+        driver.quit.assert_called_once()
+
+    def test_missing_saved_target_metadata_is_deferred_without_full_account_claims(self):
+        with patch.object(bot, "process_player") as full_account, \
+             patch.object(bot, "immediate_recover_player_claims") as recovery:
+            result, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0005", False, False, "Recovery Run", None
+            )
+        self.assertFalse(coverage_rechecked)
+        full_account.assert_not_called()
+        recovery.assert_not_called()
+        self.assertEqual(result["immediate_recovery"]["status"], "deferred")
+        self.assertTrue(result["recovery_deferred"])
+
+    def test_saved_generic_processing_error_is_deferred_not_replayed_as_full_account(self):
+        targets = {
+            "login_retry": False,
+            "processing_error": True,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "progression_card_signature": None,
+            "event_retry_required": False,
+            "event_thresholds_by_program": {},
+            "event_rewards": [],
+        }
+        with patch.object(bot, "RECOVERY_ONLY_FAILED", True), \
+             patch.object(bot, "create_driver") as create_driver, \
+             patch.object(bot, "process_player") as full_account:
+            result, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0006", False, False, "Recovery Run", targets
+            )
+        self.assertTrue(coverage_rechecked)
+        create_driver.assert_not_called()
+        full_account.assert_not_called()
+        self.assertEqual(result["immediate_recovery"]["status"], "deferred")
+
+
+
+
 if __name__ == "__main__":
     unittest.main()

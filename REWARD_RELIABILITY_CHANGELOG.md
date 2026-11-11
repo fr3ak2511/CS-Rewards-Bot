@@ -77,3 +77,6 @@ The unclaimed 900-point Halloween reward for `63989CEF5D15F053` is not changed b
 - The primary workflow remains the only claim-session owner; the existing rewards-claimer concurrency group is unchanged. No parallel claimant or extra workflow concurrency group is introduced.
 - The existing post-run Failed-ID Recovery observer remains in place as the second-line backstop.
 - The run email and run_artifacts/run_summary.json include immediate recovery attempts, successful resolutions, and unresolved targets.
+
+- The post-run Failed-ID Recovery worker now consumes `last_run.retry_targets_by_player` and uses the same targeted fresh-session recovery helper. Missing or malformed target metadata is deferred without calling the normal full-account claim routine; only a prior login failure may receive one full-account retry because the original session never reached reward pages.
+- Target metadata is persisted with each source run, including the Progression card signature, event programme/tier thresholds, Store indices, and Daily unconfirmed flag. Deferred items are shown in the recovery email instead of being hidden as unattempted.

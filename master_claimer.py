@@ -2994,6 +2994,207 @@ def _event_retry_targets(event_results):
     return targets
 
 
+
+def _recovery_targets_from_result(result):
+    """Serialize only the unresolved target identities needed by one later recovery pass."""
+    result = result if isinstance(result, dict) else {}
+    status = str(result.get("status") or "")
+    store_indices = []
+    for raw in result.get("store_unconfirmed_indices") or []:
+        try:
+            index = int(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if index in STORE_DAILY_LABELS and index not in store_indices:
+            store_indices.append(index)
+
+    event_results = [
+        dict(item) for item in (result.get("event_rewards") or [])
+        if isinstance(item, dict) and item.get("retry_required")
+    ]
+    event_targets = _event_retry_targets(event_results)
+    return {
+        "login_retry": status == "Login Failed",
+        "processing_error": status in ("Error", "Failed") and status != "Login Failed",
+        "daily_unconfirmed": bool(result.get("daily_unconfirmed")),
+        "store_unconfirmed_indices": store_indices,
+        "progression_unconfirmed": bool(result.get("progression_unconfirmed")),
+        "progression_card_signature": str(
+            result.get("progression_unconfirmed_card_signature") or ""
+        ).strip() or None,
+        "event_retry_required": bool(
+            result.get("event_rewards_retry_required") or event_results
+        ),
+        "event_thresholds_by_program": event_targets,
+        "event_rewards": event_results,
+    }
+
+
+def _recovery_result_from_saved_targets(pid, targets):
+    """Reconstruct a minimal result object from persisted, exact reward targets."""
+    targets = targets if isinstance(targets, dict) else {}
+    event_results = [
+        dict(item) for item in (targets.get("event_rewards") or [])
+        if isinstance(item, dict)
+    ]
+    event_thresholds = targets.get("event_thresholds_by_program")
+    if isinstance(event_thresholds, dict):
+        known_programs = {
+            str(item.get("program_id") or "") for item in event_results
+        }
+        for program_id, thresholds in event_thresholds.items():
+            program_id = str(program_id or "").strip()
+            if not program_id or program_id in known_programs:
+                continue
+            event_results.append({
+                "program_id": program_id,
+                "retry_required": True,
+                "retry_thresholds": list(thresholds or []),
+                "claims_this_run": [],
+                "tiers": [],
+            })
+
+    store_indices = []
+    for raw in targets.get("store_unconfirmed_indices") or []:
+        try:
+            index = int(raw)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if index in STORE_DAILY_LABELS and index not in store_indices:
+            store_indices.append(index)
+
+    login_retry = bool(targets.get("login_retry"))
+    processing_error = bool(targets.get("processing_error"))
+    daily_pending = bool(targets.get("daily_unconfirmed"))
+    progression_pending = bool(targets.get("progression_unconfirmed"))
+    progression_signature = str(targets.get("progression_card_signature") or "").strip() or None
+    event_pending = bool(targets.get("event_retry_required") or any(
+        item.get("retry_required") for item in event_results
+    ))
+    return {
+        "pid": pid,
+        "display_name": None,
+        "is_new": False,
+        "has_loyalty": False,
+        "processing_error": processing_error,
+        "processing_mode": "full_claim",
+        "status": "Login Failed" if login_retry else ("Error" if processing_error else "Partial"),
+        "fail_reason": "Targeted post-run recovery from the saved failure identities",
+        "daily": 0,
+        "daily_skipped": False,
+        "daily_unconfirmed": daily_pending,
+        "store": 0,
+        "store_skipped": [False, False, False],
+        "store_unconfirmed_indices": store_indices,
+        "store_claimed_indices": [],
+        "store_possible": len(store_indices),
+        "store_temp": 0,
+        "store_temp_possible": 0,
+        "store_temp_skipped": True,
+        "store_temp_status": "not_found",
+        "promotions_observed": [],
+        "promotion_scan_completed": False,
+        "promotion_detection_failed": False,
+        "progression": 0,
+        "progression_unconfirmed": progression_pending,
+        "progression_unconfirmed_card_signature": progression_signature,
+        "progression_checked": True,
+        "loyalty": 0,
+        "loyalty_skipped": True,
+        "event_rewards": event_results,
+        "event_reward_claims": event_claim_count(event_results),
+        "event_rewards_retry_required": event_pending,
+        "retry_required": True,
+        "standard_rewards_checked": True,
+        "possible": (
+            int(daily_pending) + len(store_indices) + int(progression_pending)
+            + sum(
+                len(item.get("retry_thresholds") or [])
+                for item in event_results if isinstance(item, dict)
+            )
+        ),
+        "duration_s": 0,
+        "daily_portal_status": "unknown",
+        "store_portal_status": ["unknown", "unknown", "unknown"],
+    }
+
+
+def recover_player_from_saved_targets(pid, has_loyalty, is_new, run_label, targets):
+    """Run post-primary recovery only from the target identities saved by that run.
+
+    Returns (result, coverage_was_rechecked). Missing/invalid target metadata is
+    explicitly deferred; it never falls back to process_player() or a full claim.
+    """
+    if not isinstance(targets, dict):
+        result = {
+            "pid": pid,
+            "display_name": None,
+            "is_new": is_new,
+            "has_loyalty": has_loyalty,
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "fail_reason": "Post-run recovery deferred: exact failed reward targets were not saved",
+            "retry_required": True,
+            "recovery_deferred": True,
+            "daily": 0,
+            "store": 0,
+            "store_temp": 0,
+            "progression": 0,
+            "loyalty": 0,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards": [],
+            "event_reward_claims": 0,
+            "event_rewards_retry_required": False,
+            "promotions_observed": [],
+            "duration_s": 0,
+            "immediate_recovery": {
+                "attempted": False,
+                "status": "deferred",
+                "categories": ["Saved target metadata missing"],
+                "resolved_categories": [],
+                "unresolved_categories": ["Saved target metadata missing"],
+                "reason": "The recovery worker refused to run the normal full-account claim path because exact failed targets were unavailable.",
+                "click_limit_per_target": 1,
+            },
+        }
+        log(f"⏭️ Post-run recovery deferred for {pid}: no saved target identities; no reward clicks attempted")
+        return result, False
+
+    target_result = _recovery_result_from_saved_targets(pid, targets)
+    has_safe_target = bool(
+        target_result.get("status") == "Login Failed"
+        or target_result.get("processing_error")
+        or target_result.get("daily_unconfirmed")
+        or target_result.get("store_unconfirmed_indices")
+        or target_result.get("progression_unconfirmed")
+        or target_result.get("event_rewards_retry_required")
+    )
+    if not has_safe_target:
+        target_result["status"] = "Partial"
+        target_result["recovery_deferred"] = True
+        target_result["immediate_recovery"] = {
+            "attempted": False,
+            "status": "deferred",
+            "categories": ["No actionable saved target"],
+            "resolved_categories": [],
+            "unresolved_categories": ["No actionable saved target"],
+            "reason": "Saved recovery metadata did not contain a recognized reward target; no reward clicks attempted.",
+            "click_limit_per_target": 1,
+        }
+        log(f"⏭️ Post-run recovery deferred for {pid}: saved target metadata contained no actionable target")
+        return target_result, False
+
+    # This invokes the same target-scoped fresh-session recovery as the immediate
+    # in-run pass. Login failure is the sole permitted full-account retry because
+    # the original attempt never reached a reward page.
+    recovered = immediate_recover_player_claims(
+        pid, has_loyalty, is_new, run_label, target_result
+    )
+    return recovered, True
+
+
 def _merge_immediate_event_results(original_results, recovered_results):
     """Merge targeted event results while preserving claims made earlier in this run."""
     merged = {
@@ -3061,6 +3262,9 @@ def _refresh_player_status_after_immediate_recovery(result):
             result["fail_reason"] = "Dynamic promotional-card detection remains inconclusive"
         else:
             result["fail_reason"] = "One or more promotional claims remain unconfirmed"
+    elif (result.get("immediate_recovery") or {}).get("status") == "resolved":
+        result["status"] = "Success"
+        result["fail_reason"] = None
     else:
         possible = max(0, int(result.get("possible", 0) or 0))
         claimed_now = (
@@ -3091,7 +3295,7 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
     """
     result = dict(result or {})
     mode = str(result.get("processing_mode") or "full_claim")
-    if RECOVERY_ONLY_FAILED or mode == "promotional_only":
+    if mode == "promotional_only":
         return result
 
     login_retry = str(result.get("status") or "") == "Login Failed"
@@ -3109,6 +3313,8 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
     progression_signature = str(result.get("progression_unconfirmed_card_signature") or "").strip()
     event_targets = _event_retry_targets(result.get("event_rewards"))
     deferred_categories = []
+    if str(result.get("status") or "") in ("Error", "Failed") and not login_retry:
+        deferred_categories.append("General processing error (no safe reward target)")
     if progression_pending and not progression_signature:
         deferred_categories.append("Progression (failed card identity unavailable)")
     if result.get("event_rewards_retry_required") and not event_targets:
@@ -4229,13 +4435,15 @@ def build_immediate_recovery_email_section(results):
     records = [
         result for result in results
         if isinstance(result.get("immediate_recovery"), dict)
-        and result["immediate_recovery"].get("attempted")
+        and (result["immediate_recovery"].get("attempted") or result["immediate_recovery"].get("status") == "deferred")
     ]
     if not records:
         return ""
+    attempted = sum(1 for item in records if item["immediate_recovery"].get("attempted"))
     resolved = sum(1 for item in records if item["immediate_recovery"].get("status") == "resolved")
-    unresolved = len(records) - resolved
-    summary = f"{len(records)} accounts attempted · {resolved} resolved immediately · {unresolved} still pending"
+    deferred = sum(1 for item in records if item["immediate_recovery"].get("status") == "deferred")
+    unresolved = sum(1 for item in records if item["immediate_recovery"].get("attempted") and item["immediate_recovery"].get("status") != "resolved")
+    summary = f"{attempted} attempted · {resolved} resolved · {deferred} deferred · {unresolved} still pending"
     rows = []
     for result in records:
         recovery = result["immediate_recovery"]
@@ -5307,6 +5515,7 @@ def main():
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
 
+    recovery_targets_by_player = {}
     if RECOVERY_ONLY_FAILED:
         prior = meta.get("last_run") or {}
         allowed_source_labels = {
@@ -5347,7 +5556,9 @@ def main():
             return 1
         retry_set = set(retry_ids)
         players = [(pid, loyalty) for pid, loyalty in players if pid in retry_set]
-        log(f"🔁 Recovery mode: retrying {len(players)} unresolved ID(s) using the normal claim path.")
+        raw_targets = prior.get("retry_targets_by_player")
+        recovery_targets_by_player = raw_targets if isinstance(raw_targets, dict) else {}
+        log(f"🔁 Recovery mode: checking {len(players)} unresolved ID(s) using saved reward targets only.")
 
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
@@ -5358,10 +5569,20 @@ def main():
     } and not RECOVERY_ONLY_FAILED
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
-        if is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
+        if RECOVERY_ONLY_FAILED:
+            # Post-run recovery must replay the exact failed targets saved by the
+            # source run. Missing metadata is deferred; it never falls back to
+            # process_player() or a broad full-account reward sweep.
+            targets = recovery_targets_by_player.get(pid)
+            r, coverage_rechecked = recover_player_from_saved_targets(
+                pid, has_loyalty, new_id, run_label, targets
+            )
+            if coverage_rechecked:
+                _record_full_claim_coverage(meta, pid, r, run_label)
+        elif is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
             if needs_standard_backup_audit(pid, meta):
                 r = process_player_backup_reconciliation(pid, new_id, run_label)
-                if not RECOVERY_ONLY_FAILED and _full_claim_recovery_candidate(r):
+                if _full_claim_recovery_candidate(r):
                     r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
                 if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
                     _record_full_claim_coverage(meta, pid, r, run_label)
@@ -5375,7 +5596,7 @@ def main():
                 else:
                     log(f"🔁 {pid}: no complete full-claim coverage for today's reset; retrying full claim path.")
             r = process_player(pid, has_loyalty, new_id, run_label)
-            if not RECOVERY_ONLY_FAILED and _full_claim_recovery_candidate(r):
+            if _full_claim_recovery_candidate(r):
                 r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
             _record_full_claim_coverage(meta, pid, r, run_label)
         mark_id_seen(pid, meta)
@@ -5440,6 +5661,11 @@ def main():
         result["pid"] for result in results
         if result.get("pid") and _full_claim_recovery_candidate(result)
     ]
+    retry_targets_by_player = {
+        result["pid"]: _recovery_targets_from_result(result)
+        for result in results
+        if result.get("pid") and _full_claim_recovery_candidate(result)
+    }
     counts = _summary_counts(results)
 
     meta["last_run"] = {
@@ -5450,6 +5676,7 @@ def main():
         "retry_candidate_scope": "full_claim_only",
         "retry_player_ids":    list(dict.fromkeys(retryable_ids)),
         "retry_player_count":  len(set(retryable_ids)),
+        "retry_targets_by_player": retry_targets_by_player,
         "total_claimed":       tall,
         "efficiency":          eff,
         "efficiency_scope":     "full_claim_accounts_only" if eff is not None else "not_applicable_promotional_only",
