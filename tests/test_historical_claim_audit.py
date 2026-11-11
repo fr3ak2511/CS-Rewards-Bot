@@ -7,6 +7,7 @@ from pathlib import Path
 from historical_claim_audit import (
     _record_snapshots,
     _reconcile_runs,
+    _resolve_unconfirmed_flags,
     _run_window_integrity,
     _summarise_record_events,
     build_account_coverage,
@@ -263,6 +264,49 @@ class HistoricalClaimAuditTests(unittest.TestCase):
                 snapshots[1]["data"]["account"]["daily"]["last_claim"],
                 "2026-06-01T05:30:00",
             )
+
+    def test_unconfirmed_attempt_can_resolve_from_later_portal_observation(self):
+        anomalies = [{
+            "type": "record_became_unconfirmed",
+            "account": "…E6D9",
+            "category": "daily",
+            "last_attempt_at": "2026-11-11T05:36:58",
+        }]
+        observations = [{
+            "account": "…E6D9",
+            "category": "daily",
+            "observed_at": "2026-11-11T17:19:20",
+            "status": "portal_claimed",
+        }]
+        result = _resolve_unconfirmed_flags(anomalies, [], observations)
+        self.assertEqual(result["unconfirmed_transitions_subsequently_confirmed"], 0)
+        self.assertEqual(result["unconfirmed_transitions_subsequently_portal_observed"], 1)
+        self.assertEqual(result["unconfirmed_transitions_open"], 0)
+        self.assertEqual(
+            anomalies[0]["resolution_status"],
+            "subsequently_portal_observed_claimed",
+        )
+        self.assertEqual(
+            anomalies[0]["resolved_by_portal_observation_at"],
+            "2026-11-11T17:19:20",
+        )
+
+    def test_unconfirmed_attempt_before_portal_observation_remains_open(self):
+        anomalies = [{
+            "type": "record_became_unconfirmed",
+            "account": "…E6D9",
+            "category": "daily",
+            "last_attempt_at": "2026-11-11T18:00:00",
+        }]
+        observations = [{
+            "account": "…E6D9",
+            "category": "daily",
+            "observed_at": "2026-11-11T17:19:20",
+            "status": "portal_claimed",
+        }]
+        result = _resolve_unconfirmed_flags(anomalies, [], observations)
+        self.assertEqual(result["unconfirmed_transitions_subsequently_portal_observed"], 0)
+        self.assertEqual(result["unconfirmed_transitions_open"], 1)
 
     def test_full_read_only_audit_writes_three_reports(self):
         with tempfile.TemporaryDirectory() as temp_dir:
