@@ -1783,6 +1783,17 @@ def claim_daily_rewards(driver, pid):
         )
         _persist_daily_claim_diagnostics(pid, diagnostic_evidence, f"exception:{type(exc).__name__}")
         return 0, False, True
+
+
+STORE_DAILY_LABELS = {
+    1: "Gold (Daily)",
+    2: "Cash (Daily)",
+    3: "Luckyloon (Daily)",
+}
+
+LEGACY_TEMP_STORE_REWARD_INDEX = 4  # Legacy state is preserved, never used to suppress live discovery.
+
+
 def _find_store_daily_button(driver, reward_index):
     """Find a claim button inside one named daily Store card only.
 
