@@ -850,7 +850,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span class='v2-health v2-warn'>Attention Required</span>", report)
         self.assertIn("Run Reconciliation", report)
         self.assertIn("processing modes match processed accounts", report)
-        self.assertIn("<span>Accounts needing attention</span><strong>0</strong>", report)
+        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
 
     def test_confirmed_promotional_claims_are_aggregated_not_repeated_per_account(self):
         players = []
