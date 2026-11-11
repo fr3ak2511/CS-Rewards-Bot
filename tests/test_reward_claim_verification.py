@@ -775,7 +775,7 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         )
         full_account.assert_not_called()
         self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
-        driver.quit.assert_called_once()
+        self.assertTrue(driver.quit_called)
 
     def test_missing_saved_target_metadata_is_deferred_without_full_account_claims(self):
         with patch.object(bot, "process_player") as full_account, \
