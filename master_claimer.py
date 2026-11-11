@@ -4195,7 +4195,9 @@ def build_promotional_section(results):
                 elif status in ("claim_unconfirmed", "click_failed", "available", "popup_blocked"):
                     item["actionable"] += 1
 
-            if detail_worthy:
+            # Confirmed offers are already represented by aggregate counts above.
+            # Per-account rows are reserved for outcomes that need inspection.
+            if detail_worthy and status != "claimed_this_run":
                 title = html.escape(str(promo.get("title") or "Store promotion"))
                 label = html.escape(_promotion_status_label(status))
                 detail_rows.append(
@@ -4850,6 +4852,10 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + grenade_html + reconciliation_html
         + "</div>"
     )
+    # A run-level reconciliation mismatch is an execution attention state even
+    # when no individual account was attributed as the cause.
+    if "v2-state-warning" in reconciliation_html and health_label != "Failed":
+        health_label, health_class = "Attention Required", "v2-warn"
     immediate_recovery_html = build_immediate_recovery_email_section(results)
     daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
     exception_details = standard_attention_html + "".join(exception_cards)
@@ -5057,7 +5063,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
         f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
         f"<div class='v2-kpi'><span>In-run recovery</span><strong>{immediate_attempted}</strong><small>{html.escape(recovery_note)}</small></div>"
-        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with unresolved items or validation issues</small></div>"
+        f"<div class='v2-kpi'><span>Accounts needing attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
         "</section>"
         + processing_html
         + "<section class='v2-section v2-rewards'>"
