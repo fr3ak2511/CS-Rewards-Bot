@@ -8,6 +8,11 @@ from unittest.mock import patch
 from master_claimer import (
     _current_reset_date,
     _full_claim_recovery_candidate,
+    _issue_identity_label,
+    _portal_claim_reset_day_count,
+    build_preexisting_portal_claim_section,
+    build_standard_attention_section,
+    record_preexisting_portal_claim,
     _player_claim_total,
     _promotion_detail_worthy,
     _record_full_claim_coverage,
@@ -985,6 +990,148 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Post-run Recovery", report)
         self.assertIn("35 / 35 accounts complete", report)
         self.assertIn("140 total confirmed claims", report)
+
+
+    def test_preexisting_portal_claim_audit_records_full_id_and_ign_once_per_reset(self):
+        player_id = "1234567890123456"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            driver = type("AuditDriver", (), {})()
+            driver._portal_claim_audit_enabled = True
+            driver._portal_claim_display_name = "FREAKv20"
+            driver._portal_claim_run_label = "Primary Run"
+            driver._preexisting_portal_claims = []
+
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 5, 42, 0)), \\
+                 patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 12, 5, 30, 0)):
+                first = record_preexisting_portal_claim(
+                    driver, player_id, "daily", "daily", "Daily Reward",
+                    "daily_initial_portal_state",
+                )
+                second = record_preexisting_portal_claim(
+                    driver, player_id, "daily", "daily", "Daily Reward",
+                    "daily_initial_portal_state",
+                )
+                audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                self.assertIsNotNone(first)
+                self.assertIsNone(second)
+                self.assertEqual(len(audit["observations"]), 1)
+                saved = next(iter(audit["observations"].values()))
+                self.assertEqual(saved["player_id"], player_id)
+                self.assertEqual(saved["display_name"], "FREAKv20")
+                self.assertEqual(saved["classification"], "pre_existing_portal_claim")
+                self.assertEqual(saved["actor"], "unknown_portal_actor")
+                self.assertEqual(saved["observation_count"], 2)
+                self.assertEqual(len(driver._preexisting_portal_claims), 1)
+
+    def test_preexisting_portal_claim_is_not_recorded_after_same_reset_bot_attempt(self):
+        player_id = "1234567890123456"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            history_path.write_text(json.dumps({
+                player_id: {
+                    "daily": {
+                        "status": "unconfirmed",
+                        "last_attempt_at": "2026-11-12T05:38:00",
+                        "last_claim": None,
+                    }
+                }
+            }), encoding="utf-8")
+            driver = type("AuditDriver", (), {
+                "_portal_claim_audit_enabled": True,
+                "_portal_claim_display_name": "FREAKv20",
+                "_portal_claim_run_label": "Backup Run #1",
+                "_preexisting_portal_claims": [],
+            })()
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 6, 0, 0)), \\
+                 patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 12, 5, 30, 0)):
+                event = record_preexisting_portal_claim(
+                    driver, player_id, "daily", "daily", "Daily Reward",
+                    "daily_initial_portal_state",
+                )
+                self.assertIsNone(event)
+                self.assertFalse(audit_path.exists())
+
+    def test_preexisting_portal_claim_repeat_count_uses_distinct_reset_days(self):
+        player_id = "1234567890123456"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            driver = type("AuditDriver", (), {
+                "_portal_claim_audit_enabled": True,
+                "_portal_claim_display_name": "FREAKv20",
+                "_portal_claim_run_label": "Primary Run",
+                "_preexisting_portal_claims": [],
+            })()
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)):
+                for day in (12, 13):
+                    current = datetime(2026, 11, day, 5, 42, 0)
+                    reset = datetime(2026, 11, day, 5, 30, 0)
+                    with patch("master_claimer.get_ist_time", return_value=current), \\
+                         patch("master_claimer.get_last_daily_reset", return_value=reset):
+                        event = record_preexisting_portal_claim(
+                            driver, player_id, "daily", "daily", "Daily Reward",
+                            "daily_initial_portal_state",
+                        )
+                        self.assertIsNotNone(event)
+                audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                self.assertEqual(_portal_claim_reset_day_count(player_id, audit), 2)
+
+    def test_preexisting_portal_email_section_shows_full_id_ign_and_recurrence(self):
+        player_id = "1234567890123456"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            driver = type("AuditDriver", (), {
+                "_portal_claim_audit_enabled": True,
+                "_portal_claim_display_name": "FREAKv20",
+                "_portal_claim_run_label": "Primary Run",
+                "_preexisting_portal_claims": [],
+            })()
+            events = []
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)):
+                for day in (12, 13):
+                    with patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, day, 5, 42, 0)), \\
+                         patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, day, 5, 30, 0)):
+                        event = record_preexisting_portal_claim(
+                            driver, player_id, "daily", "daily", "Daily Reward",
+                            "daily_initial_portal_state",
+                        )
+                        events.append(event)
+            result = {
+                "pid": player_id,
+                "display_name": "FREAKv20",
+                "preexisting_portal_claims": [events[-1]],
+            }
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)):
+                section = build_preexisting_portal_claim_section([result])
+            self.assertIn("FREAKv20", section)
+            self.assertIn(player_id, section)
+            self.assertIn("Observed on 2 separate reset days", section)
+            self.assertIn("portal does not identify who made the claim", section)
+
+    def test_issue_rows_include_full_player_id_and_captured_ign(self):
+        result = {
+            "pid": "1234567890123456",
+            "display_name": "FREAKv20",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+        }
+        row = build_standard_attention_section([result])
+        label = _issue_identity_label(result)
+        self.assertEqual(label, "FREAKv20 · Player ID 1234567890123456")
+        self.assertIn("FREAKv20", row)
+        self.assertIn("1234567890123456", row)
+        self.assertNotIn("…3456", row)
 
 if __name__ == "__main__":
     unittest.main()
