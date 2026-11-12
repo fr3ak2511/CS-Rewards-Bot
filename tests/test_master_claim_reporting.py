@@ -13,6 +13,8 @@ from master_claimer import (
     build_preexisting_portal_claim_section,
     build_standard_attention_section,
     record_preexisting_portal_claim,
+    _clear_promotion_unconfirmed_attempt,
+    _record_promotion_history,
     _player_claim_total,
     _promotion_detail_worthy,
     _record_full_claim_coverage,
@@ -1132,6 +1134,80 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("FREAKv20", row)
         self.assertIn("1234567890123456", row)
         self.assertNotIn("…3456", row)
+
+
+    def test_unconfirmed_promotion_click_is_not_reclassified_as_preexisting_claimed(self):
+        player_id = "1234567890123456"
+        campaign = {"key": "campaign:weekly-free", "title": "Weekly Free Reward"}
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            history_path.write_text(json.dumps({
+                player_id: {
+                    "promotions": {
+                        campaign["key"]: {
+                            "title": campaign["title"],
+                            "status": "claim_unconfirmed",
+                            "last_seen_at": "2026-11-12T05:40:00",
+                        }
+                    }
+                }
+            }), encoding="utf-8")
+            driver = type("AuditDriver", (), {
+                "_portal_claim_audit_enabled": True,
+                "_portal_claim_display_name": "FREAKv20",
+                "_portal_claim_run_label": "Backup Run #1",
+                "_preexisting_portal_claims": [],
+            })()
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 6, 0, 0)), \\
+                 patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 12, 5, 30, 0)):
+                _record_promotion_history(player_id, campaign, "portal_claimed")
+                event = record_preexisting_portal_claim(
+                    driver, player_id, "promotion", campaign["key"], campaign["title"],
+                    "promotion_initial_portal_state",
+                )
+                self.assertIsNone(event)
+                self.assertFalse(audit_path.exists())
+                saved = json.loads(history_path.read_text(encoding="utf-8"))[player_id]["promotions"][campaign["key"]]
+                self.assertEqual(saved["last_unconfirmed_attempt_at"], "2026-11-12T05:40:00")
+
+    def test_live_available_promotion_clears_old_ambiguous_attempt_before_manual_review(self):
+        player_id = "1234567890123456"
+        campaign = {"key": "campaign:weekly-free", "title": "Weekly Free Reward"}
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            history_path.write_text(json.dumps({
+                player_id: {
+                    "promotions": {
+                        campaign["key"]: {
+                            "title": campaign["title"],
+                            "status": "claim_unconfirmed",
+                            "last_seen_at": "2026-11-12T05:40:00",
+                        }
+                    }
+                }
+            }), encoding="utf-8")
+            driver = type("AuditDriver", (), {
+                "_portal_claim_audit_enabled": True,
+                "_portal_claim_display_name": "FREAKv20",
+                "_portal_claim_run_label": "Primary Run",
+                "_preexisting_portal_claims": [],
+            })()
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 13, 5, 42, 0)), \\
+                 patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 13, 5, 30, 0)):
+                cleared = _clear_promotion_unconfirmed_attempt(player_id, campaign)
+                event = record_preexisting_portal_claim(
+                    driver, player_id, "promotion", campaign["key"], campaign["title"],
+                    "promotion_initial_portal_state",
+                )
+            self.assertTrue(cleared)
+            self.assertIsNotNone(event)
+            self.assertEqual(event["reset_date"], "2026-11-13")
 
 if __name__ == "__main__":
     unittest.main()
