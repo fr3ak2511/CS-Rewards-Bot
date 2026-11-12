@@ -2955,6 +2955,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
     stats = {
         "pid":             pid,
         "display_name":    None,   # captured after login; replaces raw ID in email
+        "preexisting_portal_claims": [],
         "is_new":          is_new,
         "has_loyalty":     has_loyalty,
         "daily":           0,
@@ -3313,7 +3314,7 @@ def recover_player_from_saved_targets(pid, has_loyalty, is_new, run_label, targe
         result = {
             "pid": pid,
             "display_name": None,
-        "preexisting_portal_claims": [],
+            "preexisting_portal_claims": [],
             "is_new": is_new,
             "has_loyalty": has_loyalty,
             "processing_mode": "full_claim",
