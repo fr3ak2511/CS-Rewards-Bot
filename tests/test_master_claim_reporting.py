@@ -13,6 +13,7 @@ from master_claimer import (
     build_preexisting_portal_claim_section,
     build_standard_attention_section,
     record_preexisting_portal_claim,
+    record_player_display_name,
     _clear_promotion_unconfirmed_attempt,
     _record_promotion_history,
     _player_claim_total,
@@ -1208,6 +1209,89 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             self.assertTrue(cleared)
             self.assertIsNotNone(event)
             self.assertEqual(event["reset_date"], "2026-11-13")
+
+
+    def test_player_display_name_history_tracks_renames_without_changing_player_id(self):
+        player_id = "1234567890123456"
+        meta = {"player_display_names": {player_id: "FREAKv20"}}
+        first = record_player_display_name(
+            meta, player_id, "FREAKv2.0",
+            observed_at=datetime(2026, 11, 13, 5, 36, 12),
+        )
+        self.assertTrue(first["changed"])
+        self.assertEqual(first["previous_name"], "FREAKv20")
+        self.assertEqual(meta["player_display_names"][player_id], "FREAKv2.0")
+        names = meta["player_display_name_history"][player_id]["names"]
+        self.assertEqual([item["name"] for item in names], ["FREAKv20", "FREAKv2.0"])
+        legacy = names[0]
+        self.assertIsNone(legacy["first_seen_at_ist"])
+        self.assertIsNone(legacy["last_seen_at_ist"])
+        current = names[1]
+        self.assertEqual(current["first_seen_at_ist"], "2026-11-13T05:36:12")
+        self.assertEqual(current["last_seen_at_ist"], "2026-11-13T05:36:12")
+
+    def test_player_display_name_history_updates_last_seen_without_duplicate_alias(self):
+        player_id = "1234567890123456"
+        meta = {}
+        first = record_player_display_name(
+            meta, player_id, "FREAKv20",
+            observed_at=datetime(2026, 11, 12, 5, 36, 12),
+        )
+        second = record_player_display_name(
+            meta, player_id, "FREAKv20",
+            observed_at=datetime(2026, 11, 13, 5, 36, 12),
+        )
+        names = meta["player_display_name_history"][player_id]["names"]
+        self.assertFalse(first["changed"])
+        self.assertFalse(second["changed"])
+        self.assertEqual(len(names), 1)
+        self.assertEqual(names[0]["observation_count"], 2)
+        self.assertEqual(names[0]["first_seen_at_ist"], "2026-11-12T05:36:12")
+        self.assertEqual(names[0]["last_seen_at_ist"], "2026-11-13T05:36:12")
+
+    def test_player_display_name_history_reuses_alias_when_name_changes_back(self):
+        player_id = "1234567890123456"
+        meta = {}
+        record_player_display_name(meta, player_id, "FREAKv20", datetime(2026, 11, 12, 5, 36))
+        record_player_display_name(meta, player_id, "FREAKv2.0", datetime(2026, 11, 13, 5, 36))
+        result = record_player_display_name(meta, player_id, "FREAKv20", datetime(2026, 11, 14, 5, 36))
+        history = meta["player_display_name_history"][player_id]
+        self.assertTrue(result["changed"])
+        self.assertEqual(result["previous_name"], "FREAKv2.0")
+        self.assertEqual(history["current_name"], "FREAKv20")
+        self.assertEqual([item["name"] for item in history["names"]], ["FREAKv20", "FREAKv2.0"])
+        self.assertEqual(history["names"][0]["observation_count"], 2)
+
+    def test_portal_claim_audit_preserves_name_at_first_observation_after_rename(self):
+        player_id = "1234567890123456"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_path = Path(temp_dir) / "portal_claim_audit.json"
+            history_path = Path(temp_dir) / "claim_history.json"
+            driver = type("AuditDriver", (), {})()
+            driver._portal_claim_audit_enabled = True
+            driver._portal_claim_display_name = "FREAKv20"
+            driver._portal_claim_run_label = "Primary Run"
+            driver._preexisting_portal_claims = []
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 5, 42, 0)), \\
+                 patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 12, 5, 30, 0)):
+                first = record_preexisting_portal_claim(
+                    driver, player_id, "daily", "daily", "Daily Reward",
+                    "daily_initial_portal_state",
+                )
+                driver._portal_claim_display_name = "FREAKv2.0"
+                second = record_preexisting_portal_claim(
+                    driver, player_id, "daily", "daily", "Daily Reward",
+                    "daily_initial_portal_state",
+                )
+                audit = json.loads(audit_path.read_text(encoding="utf-8"))
+                saved = next(iter(audit["observations"].values()))
+            self.assertIsNotNone(first)
+            self.assertIsNone(second)
+            self.assertEqual(saved["display_name"], "FREAKv20")
+            self.assertEqual(saved["display_name_at_first_observation"], "FREAKv20")
+            self.assertEqual(saved["last_observed_display_name"], "FREAKv2.0")
 
 if __name__ == "__main__":
     unittest.main()
