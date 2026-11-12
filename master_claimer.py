@@ -3,6 +3,7 @@ import csv
 import time
 import os
 import json
+import hashlib
 import html
 import smtplib
 import re
@@ -52,6 +53,7 @@ from grenade_balance import (
 VERSION        = "v3.3.3"
 PLAYER_ID_FILE = "players.csv"
 HISTORY_FILE   = "claim_history.json"
+PORTAL_CLAIM_AUDIT_FILE = "portal_claim_audit.json"
 BOT_META_FILE  = "bot_meta.json"
 GRENADE_BALANCE_FILE = "grenade_balance_baselines.json"
 HEADLESS       = True
@@ -620,6 +622,166 @@ def save_claim_history(h):
             json.dump(h, f, indent=2)
     except Exception as e:
         log(f"⚠️ Error saving {HISTORY_FILE}: {e}")
+
+
+def load_portal_claim_audit():
+    """Load the durable pre-existing portal-claim audit without overwriting corruption."""
+    if not os.path.exists(PORTAL_CLAIM_AUDIT_FILE):
+        return {"schema_version": 1, "observations": {}}
+    try:
+        with open(PORTAL_CLAIM_AUDIT_FILE, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict) or not isinstance(data.get("observations"), dict):
+            raise ValueError("invalid portal-claim audit structure")
+        data.setdefault("schema_version", 1)
+        return data
+    except Exception as exc:
+        log(f"⚠️ Cannot safely read {PORTAL_CLAIM_AUDIT_FILE}; audit write skipped ({type(exc).__name__})")
+        return None
+
+
+def save_portal_claim_audit(data):
+    """Atomically persist portal-claim evidence; never replace the source on a failed write."""
+    if not isinstance(data, dict) or not isinstance(data.get("observations"), dict):
+        return False
+    temp_path = PORTAL_CLAIM_AUDIT_FILE + ".tmp"
+    try:
+        with open(temp_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+        os.replace(temp_path, PORTAL_CLAIM_AUDIT_FILE)
+        return True
+    except Exception as exc:
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        log(f"⚠️ Could not persist {PORTAL_CLAIM_AUDIT_FILE}: {type(exc).__name__}")
+        return False
+
+
+def _timestamp_is_in_reset_cycle(value, reset_at):
+    try:
+        parsed = datetime.fromisoformat(str(value))
+        if parsed.tzinfo is not None:
+            parsed = parsed.replace(tzinfo=None)
+        return parsed >= reset_at
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def record_preexisting_portal_claim(driver, pid, reward_category, reward_key, reward_name, source):
+    """Record a portal Claimed/cooldown state only when it predates this bot attempt.
+
+    The portal does not identify the actor. These records are review evidence, not
+    proof that a player manually claimed the reward. Standard Daily/Store incidents
+    are deduplicated once per player/reward/reset date. Promotional campaign
+    observations are deduplicated once per player/campaign.
+    """
+    if not bool(getattr(driver, "_portal_claim_audit_enabled", False)):
+        return None
+    player_id = str(pid or "").strip()
+    if not player_id:
+        return None
+
+    category = str(reward_category or "").strip().lower()
+    reward_key = str(reward_key or "").strip()
+    if category not in ("daily", "store", "promotion") or not reward_key:
+        return None
+
+    reset_at = get_last_daily_reset()
+    reset_date = reset_at.strftime("%Y-%m-%d")
+    history = load_claim_history()
+    player_history = history.get(player_id, {}) if isinstance(history, dict) else {}
+
+    # If the bot already confirmed this reward, or has an unresolved attempt in
+    # the current reset cycle, a later Claimed state is ambiguous and is not
+    # attributed as pre-existing/manual evidence.
+    if category == "daily":
+        reward_history = player_history.get("daily", {})
+        if any(_timestamp_is_in_reset_cycle(reward_history.get(field), reset_at)
+               for field in ("last_claim", "last_attempt_at")):
+            return None
+    elif category == "store":
+        reward_history = (player_history.get("store", {}) or {}).get(reward_key, {})
+        if any(_timestamp_is_in_reset_cycle(reward_history.get(field), reset_at)
+               for field in ("last_claim", "last_attempt_at")):
+            return None
+    else:
+        reward_history = (player_history.get("promotions", {}) or {}).get(reward_key, {})
+        # Any prior bot-confirmed claim for this specific campaign makes a later
+        # portal Claimed state expected, not a new manual-claim incident.
+        if reward_history.get("last_claim"):
+            return None
+
+    audit = load_portal_claim_audit()
+    if audit is None:
+        return None
+    observations = audit.setdefault("observations", {})
+    cycle_scope = "campaign_once" if category == "promotion" else "daily_reset"
+    cycle_token = "campaign" if category == "promotion" else reset_date
+    raw_key = "|".join((player_id, category, reward_key, cycle_token))
+    incident_id = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    now = get_ist_time()
+    now_text = now.isoformat()
+    run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
+    run_label = str(getattr(driver, "_portal_claim_run_label", "") or "")
+
+    existing = observations.get(incident_id)
+    if isinstance(existing, dict):
+        existing["last_observed_at_ist"] = now_text
+        existing["observation_count"] = int(existing.get("observation_count", 1) or 1) + 1
+        if getattr(driver, "_portal_claim_display_name", None):
+            existing["display_name"] = str(driver._portal_claim_display_name)
+        run_ids = list(existing.get("run_ids") or [])
+        if run_id and run_id not in run_ids:
+            run_ids.append(run_id)
+        existing["run_ids"] = run_ids
+        save_portal_claim_audit(audit)
+        return None
+
+    event = {
+        "incident_id": incident_id,
+        "player_id": player_id,
+        "display_name": str(getattr(driver, "_portal_claim_display_name", "") or "").strip() or None,
+        "reward_category": category,
+        "reward_key": reward_key,
+        "reward_name": str(reward_name or reward_key).strip(),
+        "classification": "pre_existing_portal_claim",
+        "actor": "unknown_portal_actor",
+        "source": str(source or "pre_attempt_portal_state"),
+        "cycle_scope": cycle_scope,
+        "reset_date": reset_date,
+        "first_observed_at_ist": now_text,
+        "last_observed_at_ist": now_text,
+        "observation_count": 1,
+        "run_label": run_label,
+        "run_ids": [run_id] if run_id else [],
+    }
+    observations[incident_id] = event
+    if not save_portal_claim_audit(audit):
+        return None
+
+    events = list(getattr(driver, "_preexisting_portal_claims", []) or [])
+    events.append(dict(event))
+    driver._preexisting_portal_claims = events
+    log(f"🧾 Pre-existing portal claim recorded for {player_id}: {event['reward_name']} ({reset_date})")
+    return event
+
+
+def _portal_claim_reset_day_count(player_id, audit=None):
+    audit = audit if isinstance(audit, dict) else load_portal_claim_audit()
+    if not isinstance(audit, dict):
+        return 0
+    days = {
+        str(item.get("reset_date") or "")
+        for item in (audit.get("observations") or {}).values()
+        if isinstance(item, dict)
+        and str(item.get("player_id") or "") == str(player_id or "")
+        and item.get("reset_date")
+    }
+    return len(days)
 
 
 def init_player_history(pid):
@@ -1672,6 +1834,9 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
 
         # Do not trust local history as proof. The live Daily page is authoritative.
         if _daily_portal_confirms_claim(driver):
+            record_preexisting_portal_claim(
+                driver, pid, "daily", "daily", "Daily Reward", "daily_initial_portal_state"
+            )
             update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
             log("⏩ Daily: portal confirms already claimed/on cooldown")
             driver.save_screenshot(f"daily_{pid}.png")
@@ -2091,6 +2256,11 @@ def discover_and_claim_promotions(driver, pid):
         }
         if card["state"] == "portal_claimed":
             entry["status"] = "portal_claimed"
+            record_preexisting_portal_claim(
+                driver, pid, "promotion", str(card.get("key") or ""),
+                str(card.get("title") or "Store promotion"),
+                "promotion_initial_portal_state",
+            )
             _record_promotion_history(pid, card, "portal_claimed")
             results.append(entry)
             log(f"🎁 Promotion observed as already claimed: {card['title']}")
@@ -2242,6 +2412,10 @@ def claim_store_rewards(driver, pid, *, reward_indices=None, max_attempts=2, sca
                 button, button_status = _find_store_daily_button(driver, reward_index)
 
                 if button_status in ("claimed", "cooldown"):
+                    record_preexisting_portal_claim(
+                        driver, pid, "store", f"reward_{reward_index}", label,
+                        "store_initial_portal_state",
+                    )
                     update_claim_history(
                         pid, "store", reward_index=reward_index,
                         detected_cooldown=timedelta(seconds=61)
@@ -2838,6 +3012,10 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
         # Capture display name right after login — used in email instead of raw player ID
         stats["display_name"] = capture_display_name(driver)
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = stats["display_name"]
+        driver._portal_claim_run_label = run_label
+        driver._preexisting_portal_claims = []
 
         # Daily
         d, d_skip, d_unconfirmed = claim_daily_rewards(driver, pid)
@@ -2954,6 +3132,9 @@ def process_player(pid, has_loyalty, is_new, run_label):
         stats["fail_reason"] = str(e)[:120]
     finally:
         if driver:
+            stats["preexisting_portal_claims"] = list(
+                getattr(driver, "_preexisting_portal_claims", []) or []
+            )
             try:
                 driver.quit()
             except:
@@ -3076,6 +3257,7 @@ def _recovery_result_from_saved_targets(pid, targets):
     return {
         "pid": pid,
         "display_name": None,
+        "preexisting_portal_claims": [],
         "is_new": False,
         "has_loyalty": False,
         "processing_error": processing_error,
@@ -3131,6 +3313,7 @@ def recover_player_from_saved_targets(pid, has_loyalty, is_new, run_label, targe
         result = {
             "pid": pid,
             "display_name": None,
+        "preexisting_portal_claims": [],
             "is_new": is_new,
             "has_loyalty": has_loyalty,
             "processing_mode": "full_claim",
@@ -3406,6 +3589,14 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
             recovery["reason"] = "Fresh recovery session could not authenticate; no reward clicks were attempted"
             log(f"🚩 Immediate recovery login failed for {pid}; no claim controls were clicked")
         else:
+            recovered_name = capture_display_name(driver)
+            if recovered_name:
+                result["display_name"] = recovered_name
+            driver._portal_claim_audit_enabled = False
+            driver._portal_claim_display_name = result.get("display_name")
+            driver._portal_claim_run_label = run_label
+            driver._preexisting_portal_claims = []
+
             if daily_pending:
                 try:
                     daily_count, daily_skipped, daily_unconfirmed = claim_daily_rewards(
@@ -3586,6 +3777,7 @@ def process_player_promotions_only(pid, is_new, run_label):
     stats = {
         "pid": pid,
         "display_name": None,
+        "preexisting_portal_claims": [],
         "is_new": is_new,
         "has_loyalty": False,
         "processing_mode": "promotional_only",
@@ -3630,6 +3822,10 @@ def process_player_promotions_only(pid, is_new, run_label):
             return stats
 
         stats["display_name"] = capture_display_name(driver)
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = stats["display_name"]
+        driver._portal_claim_run_label = run_label
+        driver._preexisting_portal_claims = []
         driver.get("https://hub.vertigogames.co/store")
         bypass_cloudflare(driver)
         time.sleep(2)
@@ -3685,6 +3881,9 @@ def process_player_promotions_only(pid, is_new, run_label):
         log(f"❌ Promotional-only check failed: {type(exc).__name__}: {str(exc)[:160]}")
     finally:
         if driver:
+            stats["preexisting_portal_claims"] = list(
+                getattr(driver, "_preexisting_portal_claims", []) or []
+            )
             try:
                 driver.quit()
             except Exception:
@@ -3704,6 +3903,7 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
     stats = {
         "pid": pid,
         "display_name": None,
+        "preexisting_portal_claims": [],
         "is_new": is_new,
         "has_loyalty": False,
         "processing_mode": "backup_reconciliation",
@@ -3756,6 +3956,10 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             return stats
 
         stats["display_name"] = capture_display_name(driver)
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = stats["display_name"]
+        driver._portal_claim_run_label = run_label
+        driver._preexisting_portal_claims = []
 
         # Recheck Daily live; local history is not allowed to suppress this portal read.
         daily_count, daily_skipped, daily_unconfirmed = claim_daily_rewards(driver, pid)
@@ -3847,6 +4051,9 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         log(f"❌ Backup reconciliation failed: {type(exc).__name__}: {str(exc)[:160]}")
     finally:
         if driver:
+            stats["preexisting_portal_claims"] = list(
+                getattr(driver, "_preexisting_portal_claims", []) or []
+            )
             try:
                 driver.quit()
             except Exception:
@@ -4064,6 +4271,90 @@ def _display_label(r):
     return f"Player …{pid[-4:]}" if len(pid) >= 4 else "Player"
 
 
+def _issue_identity_label(result, known_display_names=None):
+    """Show an actionable issue identity: full player ID plus captured in-game name."""
+    result = result if isinstance(result, dict) else {}
+    player_id = str(result.get("pid") or "").strip()
+    display_name = str(result.get("display_name") or "").strip()
+    if not display_name and isinstance(known_display_names, dict) and player_id:
+        display_name = str(known_display_names.get(player_id) or "").strip()
+    display_name = display_name or "IGN unavailable"
+    return f"{display_name} · Player ID {player_id}" if player_id else display_name
+
+
+def build_preexisting_portal_claim_section(results):
+    """List newly observed pre-existing claims with full ID, IGN and repeat-reset evidence."""
+    incidents = []
+    seen = set()
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        for event in (result.get("preexisting_portal_claims") or []):
+            if not isinstance(event, dict):
+                continue
+            incident_id = str(event.get("incident_id") or "")
+            key = incident_id or "|".join((
+                str(event.get("player_id") or result.get("pid") or ""),
+                str(event.get("reward_key") or ""),
+                str(event.get("reset_date") or ""),
+            ))
+            if key in seen:
+                continue
+            seen.add(key)
+            incidents.append((result, event))
+
+    if not incidents:
+        return ""
+
+    audit = load_portal_claim_audit()
+    account_ids = {str(event.get("player_id") or result.get("pid") or "") for result, event in incidents}
+    repeated_accounts = {
+        pid for pid in account_ids if _portal_claim_reset_day_count(pid, audit) > 1
+    }
+    rows = []
+    for result, event in incidents:
+        player_id = str(event.get("player_id") or result.get("pid") or "")
+        identity_source = {
+            "pid": player_id,
+            "display_name": event.get("display_name") or result.get("display_name"),
+        }
+        identity = html.escape(_issue_identity_label(identity_source))
+        reward = html.escape(str(event.get("reward_name") or "Reward"))
+        category = html.escape(str(event.get("reward_category") or "Reward").title())
+        observed = str(event.get("first_observed_at_ist") or "")
+        try:
+            observed_text = datetime.fromisoformat(observed).strftime("%d %b %Y · %I:%M %p IST")
+        except (TypeError, ValueError):
+            observed_text = observed or "Time unavailable"
+        reset_days = _portal_claim_reset_day_count(player_id, audit)
+        recurrence = (
+            f"Observed on {reset_days} separate reset days"
+            if reset_days > 1 else "First recorded reset-day observation"
+        )
+        run_id = str(event.get("run_ids", [""])[0] if event.get("run_ids") else "")
+        run_note = f" · Run #{html.escape(run_id)}" if run_id else ""
+        rows.append(
+            "<div class='v2-item v2-attention'>"
+            f"<div><strong>{identity}</strong>"
+            f"<small>{category} · {reward} · First observed {html.escape(observed_text)}{run_note}</small></div>"
+            f"<span class='v2-result'>{html.escape(recurrence)}</span></div>"
+        )
+
+    repeated_count = len(repeated_accounts)
+    account_word = "account" if len(account_ids) == 1 else "accounts"
+    reward_word = "reward" if len(incidents) == 1 else "rewards"
+    subtitle = f"{len(account_ids)} {account_word} · {len(incidents)} {reward_word} observed before bot interaction"
+    repeated_note = f" · {repeated_count} repeat account(s)" if repeated_count else ""
+    return (
+        "<section class='v2-section v2-portal-claims'>"
+        + _email_section_header("Pre-existing Portal Claims — Review", subtitle + repeated_note,
+                                "Review Required", "v2-state-warning")
+        + "<p class='v2-muted-note'>The portal already showed these rewards as claimed before this bot attempt. The portal does not identify who made the claim; treat this as supporting evidence, not proof of the actor.</p>"
+        + "".join(rows)
+        + "</section>"
+    )
+
+
 def _row_cls(status):
     return {"Success":"rs", "Claims Made":"rs", "Promotional Claims Made":"rs",
             "Partial":"rp", "Login Failed":"rf", "Error":"rf", "Failed":"rf"}.get(status, "rk")
@@ -4123,7 +4414,7 @@ def build_standard_attention_section(results):
     """Render standard Daily/Store/Progression claims that lack portal confirmation."""
     rows = []
     for result in results:
-        player = html.escape(_display_label(result))
+        player = html.escape(_issue_identity_label(result))
         if result.get("daily_unconfirmed"):
             rows.append((player, "Daily reward", "Portal did not confirm a Claimed/cooldown state"))
         for reward_index in (result.get("store_unconfirmed_indices", []) or []):
@@ -4171,7 +4462,7 @@ def build_promotional_section(results):
     scan_accounts = sum(1 for result in results if result.get("promotion_scan_completed"))
 
     for result in results:
-        player = html.escape(_display_label(result))
+        player = html.escape(_issue_identity_label(result))
         for promo in (result.get("promotions_observed", []) or []):
             status = str(promo.get("status") or "unknown")
             detail_worthy = _promotion_detail_worthy(promo)
@@ -4261,7 +4552,7 @@ def build_event_rewards_section(results):
     retry_total = 0
 
     for result in results:
-        player = html.escape(_display_label(result))
+        player = html.escape(_issue_identity_label(result))
         for event in (result.get("event_rewards", []) or []):
             name = html.escape(str(event.get("name") or "Limited-time event"))
             balance = event.get("balance")
@@ -4462,7 +4753,7 @@ def build_grenade_balance_email_section(results):
     for result, balance, status in records:
         if status == "pass":
             continue
-        label = html.escape(_display_label(result))
+        label = html.escape(_issue_identity_label(result))
         observed = balance.get("current_count")
         minimum = balance.get("expected_minimum")
         observed_text = "—" if observed is None else str(int(observed))
@@ -4549,7 +4840,7 @@ def build_immediate_recovery_email_section(results, run_label=''):
     rows = []
     for result in records:
         recovery = result["immediate_recovery"]
-        label = html.escape(_display_label(result))
+        label = html.escape(_issue_identity_label(result))
         is_resolved = recovery.get("status") == "resolved"
         details = []
         if recovery.get("resolved_categories"):
@@ -4571,7 +4862,7 @@ def build_immediate_recovery_email_section(results, run_label=''):
     )
 
 
-def build_daily_cycle_email_section(summary):
+def build_daily_cycle_email_section(summary, results=None, player_display_names=None):
     """Show the overall reset-cycle outcome in recovery emails, not only the subset."""
     if not isinstance(summary, dict):
         return ""
@@ -4596,12 +4887,40 @@ def build_daily_cycle_email_section(summary):
         "No additional recovery claims were needed."
     )
     pending_ids = summary.get("pending_player_last4")
-    pending_ids = [str(value) for value in pending_ids] if isinstance(pending_ids, list) else []
+    pending_ids = [str(value).strip()[-4:] for value in pending_ids if str(value).strip()] if isinstance(pending_ids, list) else []
+    result_by_suffix = {}
+    for result in (results or []):
+        pid = str(result.get("pid") or "").strip()
+        if pid:
+            result_by_suffix.setdefault(pid[-4:].upper(), []).append(result)
+    roster_by_suffix = {}
+    if pending_ids:
+        try:
+            with open(PLAYER_ID_FILE, "r", newline="", encoding="utf-8-sig") as handle:
+                for row in csv.DictReader(handle):
+                    pid = str(row.get("player_id") or "").strip()
+                    if pid:
+                        roster_by_suffix.setdefault(pid[-4:].upper(), []).append(pid)
+        except Exception as exc:
+            log(f"⚠️ Could not resolve full IDs for recovery-cycle pending list ({type(exc).__name__})")
+    pending_rows = []
+    for suffix in pending_ids[:12]:
+        matches = result_by_suffix.get(suffix.upper(), [])
+        if len(matches) == 1:
+            label = _issue_identity_label(matches[0], player_display_names)
+        else:
+            roster_matches = roster_by_suffix.get(suffix.upper(), [])
+            if len(roster_matches) == 1:
+                pid = roster_matches[0]
+                fake = {"pid": pid, "display_name": (player_display_names or {}).get(pid)}
+                label = _issue_identity_label(fake, player_display_names)
+            else:
+                label = f"Player ID suffix …{suffix} (full ID not uniquely resolved)"
+        pending_rows.append(f"<div class='attn-row'>{html.escape(label)}</div>")
     pending_note = (
-        "<small>Still pending: "
-        + ", ".join("…" + html.escape(value[-4:]) for value in pending_ids[:8])
-        + "</small>"
-        if pending_ids else ""
+        "<div class='v2-cycle-pending'><strong>Still pending:</strong>"
+        + "".join(pending_rows) + "</div>"
+        if pending_rows else ""
     )
     return (
         "<section class='v2-section v2-cycle'>"
@@ -4759,6 +5078,24 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     except (TypeError, ValueError, OverflowError):
         configured_count = account_count
     cycle_summary = meta.get("daily_cycle_email_summary") if isinstance(meta.get("daily_cycle_email_summary"), dict) else None
+    display_name_map = meta.get("player_display_names", {}) if isinstance(meta.get("player_display_names"), dict) else {}
+    for result in results:
+        pid = str(result.get("pid") or "").strip()
+        if pid and not result.get("display_name") and display_name_map.get(pid):
+            result["display_name"] = str(display_name_map[pid])
+    followup_summary = followup_summary if isinstance(followup_summary, dict) else {}
+    for collection_name in ("open_items", "updated_items"):
+        for item in (followup_summary.get(collection_name) or []):
+            if not isinstance(item, dict):
+                continue
+            player_id = str(item.get("player_key") or "").strip()
+            if player_id:
+                item["player_label"] = _issue_identity_label(
+                    {"pid": player_id, "display_name": display_name_map.get(player_id)},
+                    display_name_map,
+                )
+
+
     is_recovery_rollup = bool(
         run_label == "Recovery Run"
         and cycle_summary
@@ -4882,7 +5219,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 reason = str(result.get("fail_reason") or "One or more items need review")
                 exception_cards.append(
                     "<div class='v2-exception'>"
-                    f"<div><strong>{html.escape(_display_label(result))}</strong>"
+                    f"<div><strong>{html.escape(_issue_identity_label(result))}</strong>"
                     f"<span class='v2-status'>{html.escape(status or 'Needs review')}</span></div>"
                     f"<p>{html.escape(reason)}</p></div>"
                 )
@@ -4924,7 +5261,10 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     if "v2-state-warning" in reconciliation_html and health_label != "Failed":
         health_label, health_class = "Attention Required", "v2-warn"
     immediate_recovery_html = build_immediate_recovery_email_section(results, run_label)
-    daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
+    preexisting_portal_claim_html = build_preexisting_portal_claim_section(results)
+    daily_cycle_html = build_daily_cycle_email_section(
+        cycle_summary, results, display_name_map
+    ) if is_recovery_rollup else ""
     exception_details = standard_attention_html + "".join(exception_cards)
     if exception_details:
         attention_html = (
@@ -5181,6 +5521,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + validation_html
         + (immediate_recovery_html or "")
         + attention_html
+        + (preexisting_portal_claim_html or "")
         + (promotion_html or "")
         + (followup_html or "")
         + (event_html or "")
@@ -5799,6 +6140,12 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
         },
         "full_claim_efficiency": _full_claim_efficiency(results),
         "immediate_recovery": immediate_recovery_summary,
+        "preexisting_portal_claims": [
+            dict(event)
+            for result in results
+            for event in (result.get("preexisting_portal_claims") or [])
+            if isinstance(event, dict)
+        ],
         "email_sent": bool(email_sent),
         "player_results": [
             {
@@ -6014,6 +6361,15 @@ def main():
     followup_results = filter_followup_results(results, meta, _promotion_detail_worthy)
     followup_summary = update_promotion_followups(meta, followup_results, run_label, now=job_end)
     followup_summary["legacy_seeded_count"] = legacy_followup_seed["seeded_count"]
+    display_name_store = meta.setdefault("player_display_names", {})
+    if not isinstance(display_name_store, dict):
+        display_name_store = {}
+        meta["player_display_names"] = display_name_store
+    for player_result in results:
+        player_id = str(player_result.get("pid") or "").strip()
+        player_name = str(player_result.get("display_name") or "").strip()
+        if player_id and player_name:
+            display_name_store[player_id] = player_name
     dur_s   = int((job_end - job_start).total_seconds())
     td       = sum(r["daily"] for r in results)
     ts_daily = sum(r["store"] for r in results)
