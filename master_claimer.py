@@ -4670,10 +4670,11 @@ def build_promotional_section(results):
         )
 
     scan_word = "account scan" if scan_accounts == 1 else "account scans"
+    offer_type_word = "offer type" if len(offers) == 1 else "offer types"
     return (
         "<section class='v2-section v2-promotions'>"
         "<div class='v2-section-head'><h2>Promotional Offers</h2>"
-        f"<span>{scan_accounts} {scan_word} · {len(offers)} offer types</span></div>"
+        f"<span>{scan_accounts} {scan_word} · {len(offers)} {offer_type_word}</span></div>"
         + "".join(summary_rows)
         + ("<div class='v2-promo-details'>" + "".join(detail_rows) + "</div>" if detail_rows else "")
         + "</section>"
@@ -5643,7 +5644,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         "</style></head><body><div class='v2-shell'>"
         "<header class='v2-hero'>"
         "<div class='v2-brand'>🎮 CS Rewards Bot · Automated Rewards Report</div>"
-        "<h1>Daily Rewards Report</h1>"
+        "<h1>Rewards Run Report</h1>"
         f"<div class='v2-meta'>{safe_run_label} · Started {job_start.strftime('%d %b %Y, %I:%M %p IST')} · Completed {generated} · Duration {duration_text}</div>"
         f"<span class='v2-health {health_class}'>{health_label}</span>"
         "</header>"
