@@ -710,9 +710,13 @@ def record_preexisting_portal_claim(driver, pid, reward_category, reward_key, re
             return None
     else:
         reward_history = (player_history.get("promotions", {}) or {}).get(reward_key, {})
-        # Any prior bot-confirmed claim for this specific campaign makes a later
-        # portal Claimed state expected, not a new manual-claim incident.
-        if reward_history.get("last_claim"):
+        # A prior bot-confirmed claim or an unconfirmed bot click makes a later
+        # Claimed state ambiguous until a fresh live read shows the offer available.
+        if (
+            reward_history.get("last_claim")
+            or reward_history.get("last_unconfirmed_attempt_at")
+            or reward_history.get("status") in ("claim_unconfirmed", "click_failed")
+        ):
             return None
 
     audit = load_portal_claim_audit()
@@ -2200,6 +2204,10 @@ def _record_promotion_history(pid, card, status, claimed=False):
     key = card["key"]
     now = get_ist_time().isoformat()
     record = history.get(key, {}) if isinstance(history.get(key), dict) else {}
+    previous_status = str(record.get("status") or "")
+    if previous_status in ("claim_unconfirmed", "click_failed") and not record.get("last_unconfirmed_attempt_at"):
+        # Preserve a trace of legacy unconfirmed bot clicks before overwriting their status.
+        record["last_unconfirmed_attempt_at"] = record.get("last_seen_at") or now
     record.update({
         "title": card.get("title", "Unknown promotion"),
         "campaign_id": card.get("campaign_id") or None,
@@ -2209,10 +2217,34 @@ def _record_promotion_history(pid, card, status, claimed=False):
     })
     if claimed:
         record["last_claim"] = now
+        record.pop("last_unconfirmed_attempt_at", None)
+    elif status in ("claim_unconfirmed", "click_failed"):
+        record["last_unconfirmed_attempt_at"] = now
     elif status == "portal_claimed":
         record["portal_observed_at"] = now
     history[key] = record
     save_claim_history(h)
+
+
+def _clear_promotion_unconfirmed_attempt(pid, card):
+    """A live enabled Available card disproves an earlier pending bot click."""
+    key = str((card or {}).get("key") or "").strip()
+    if not key:
+        return False
+    history = init_player_history(pid)
+    record = (history.get(pid, {}).get("promotions", {}) or {}).get(key)
+    if not isinstance(record, dict):
+        return False
+    changed = False
+    if record.pop("last_unconfirmed_attempt_at", None) is not None:
+        changed = True
+    if record.get("status") in ("claim_unconfirmed", "click_failed"):
+        record["status"] = "available"
+        changed = True
+    if changed:
+        record["last_available_confirmed_at"] = get_ist_time().isoformat()
+        save_claim_history(history)
+    return changed
 
 
 def _same_promotion(candidate, expected):
@@ -2246,6 +2278,8 @@ def discover_and_claim_promotions(driver, pid):
     cards = discover_promotional_cards(driver)
     results = []
     for card in cards:
+        if card.get("state") == "available" and not card.get("disabled"):
+            _clear_promotion_unconfirmed_attempt(pid, card)
         entry = {
             "key": card["key"], "title": card["title"],
             "campaign_id": card.get("campaign_id") or None,
