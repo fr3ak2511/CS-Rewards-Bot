@@ -1,9 +1,9 @@
 {
   "E1E9729A4885E6D9": {
     "daily": {
-      "last_claim": "2026-11-10T05:36:10.303044",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-12T06:44:08.084265",
+      "next_available": "2026-11-13T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-12T05:39:13.255426",
       "unconfirmed_attempts": 4
     },
