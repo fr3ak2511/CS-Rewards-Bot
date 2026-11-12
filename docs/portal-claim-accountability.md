@@ -18,8 +18,10 @@ The feature is observational only. It does not change reward eligibility, make/s
 
 ## Evidence retained
 
+`bot_meta.json` maintains `player_display_names` as the current-IGN compatibility cache and `player_display_name_history` as the timestamped alias history keyed by immutable Player ID. Existing cached names are migrated with unknown historical timestamps rather than inventing dates. A later rename adds a new alias while retaining previous names; a return to an earlier IGN reuses that alias entry. The audit event preserves the IGN captured at first observation and stores the latest observed IGN separately.
+
 `portal_claim_audit.json` stores:
-- Full Player ID and captured in-game display name (IGN).
+- Full Player ID, IGN captured at the time of the event, and the latest observed IGN when that audit record is seen again.
 - Reward category, reward key and visible reward name.
 - Classification and portal-observation source.
 - Reset date and first/last observed IST timestamps.
