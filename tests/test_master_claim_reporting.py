@@ -789,7 +789,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<div class='v2-grenade-summary'>", report)
         self.assertIn("27 / 30 · short 3", report)
         self.assertIn(".v2-grenade-summary{display:block", report)
-        self.assertIn("flex-wrap:wrap", report)
+        self.assertIn("class='v2-section-head v2-grenade-head'", report)
+        self.assertNotIn("display:flex", report)
+        self.assertNotIn("grid-template-columns", report)
 
     def test_promotional_offer_summary_groups_free_unavailable_offers(self):
         players = [
