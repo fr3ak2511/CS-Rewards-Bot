@@ -302,7 +302,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Attention Required", html)
         self.assertIn("Portal confirmation pending", html)
         self.assertIn(".v2-warn{color:#92400e;background-color:#fef3c7}", html)
-        self.assertIn(".v2-exceptions{background:#fffbeb;border-color:#fcd34d}", html)
+        self.assertIn(".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}", html)
 
 
 
@@ -668,7 +668,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=3,
         )
         self.assertIn("<span>🎁 Confirmed claims</span><strong>12</strong>", report)
-        self.assertIn("<span>Accounts complete</span><strong>3 / 3</strong>", report)
+        self.assertIn("<span>👥 Accounts complete</span><strong>3 / 3</strong>", report)
         self.assertIn("Today's Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
         self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
@@ -762,7 +762,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertIn("Full Claim Path", report)
         self.assertIn("Promotional-only", report)
-        self.assertIn("35</strong><small>Store promotional scans; core rewards not checked</small>", report)
+        self.assertIn("<strong class='v2-mode-count'>35</strong>", report)
         self.assertIn("Not performed for this promotional-only run", report)
         self.assertIn("Run Reconciliation", report)
         self.assertIn("Matched", report)
@@ -976,7 +976,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             )
         self.assertIn("Targeted Recovery", report)
         self.assertIn("Replayed exact saved target(s): Daily Reward", report)
-        self.assertIn("Reward Claims (Today's Cycle)", report)
+        self.assertIn("Reward Claims (Today&#x27;s Cycle)", report)
         self.assertIn("Cumulative portal-confirmed totals from the primary and recovery runs", report)
         self.assertIn("Recovery Run Consistency", report)
         self.assertIn("1 targeted account(s) represented", report)
