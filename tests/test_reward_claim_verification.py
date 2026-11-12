@@ -822,11 +822,11 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         driver._portal_claim_display_name = "FREAKv20"
         driver._portal_claim_run_label = "Primary Run"
         driver._preexisting_portal_claims = []
-        with patch.object(bot, "bypass_cloudflare"), \\
-             patch.object(bot, "close_popup"), \\
-             patch.object(bot.time, "sleep"), \\
-             patch.object(bot, "_daily_portal_confirms_claim", return_value=True), \\
-             patch.object(bot, "record_preexisting_portal_claim") as record, \\
+        with patch.object(bot, "bypass_cloudflare"), \
+             patch.object(bot, "close_popup"), \
+             patch.object(bot.time, "sleep"), \
+             patch.object(bot, "_daily_portal_confirms_claim", return_value=True), \
+             patch.object(bot, "record_preexisting_portal_claim") as record, \
              patch.object(bot, "update_claim_history") as history_update:
             result = bot.claim_daily_rewards(driver, "1234567890123456")
         self.assertEqual(result, (0, True, False))
@@ -845,13 +845,13 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         driver._portal_claim_display_name = "FREAKv20"
         driver._portal_claim_run_label = "Primary Run"
         driver._preexisting_portal_claims = []
-        with patch.object(bot, "bypass_cloudflare"), \\
-             patch.object(bot, "close_popup"), \\
-             patch.object(bot.time, "sleep"), \\
-             patch.object(bot, "_find_store_daily_button", return_value=(object(), "available")), \\
-             patch.object(bot, "_wait_for_store_daily_state", return_value="claimed"), \\
-             patch.object(bot, "physical_click", return_value=True), \\
-             patch.object(bot, "record_preexisting_portal_claim") as record, \\
+        with patch.object(bot, "bypass_cloudflare"), \
+             patch.object(bot, "close_popup"), \
+             patch.object(bot.time, "sleep"), \
+             patch.object(bot, "_find_store_daily_button", return_value=(object(), "available")), \
+             patch.object(bot, "_wait_for_store_daily_state", return_value="claimed"), \
+             patch.object(bot, "physical_click", return_value=True), \
+             patch.object(bot, "record_preexisting_portal_claim") as record, \
              patch.object(bot, "update_claim_history"):
             result = bot.claim_store_rewards(
                 driver, "1234567890123456",
