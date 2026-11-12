@@ -669,7 +669,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("<span>🎁 Confirmed claims</span><strong>12</strong>", report)
         self.assertIn("<span>👥 Accounts complete</span><strong>3 / 3</strong>", report)
-        self.assertIn("Today's Reward Cycle", report)
+        self.assertIn("Today&#x27;s Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
         self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
@@ -705,7 +705,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), stale_meta,
             configured_player_count=3,
         )
-        self.assertNotIn("Today's Reward Cycle", report)
+        self.assertNotIn("Today&#x27;s Reward Cycle", report)
         self.assertNotIn("12 total confirmed claims", report)
 
     def test_recovery_email_does_not_double_count_pending_account_in_current_results(self):
