@@ -243,7 +243,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         # Daily 1 + Standard Store 2 + free promo 1 + Progression 1 + Event 2.
-        self.assertIn("<span>Confirmed claims</span><strong>7</strong>", report)
+        self.assertIn("<span>🎁 Confirmed claims</span><strong>7</strong>", report)
         self.assertNotIn("Paid Pack", report)
 
     def test_free_bundle_is_not_mistaken_for_a_paid_offer(self):
@@ -301,8 +301,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("Attention Required", html)
         self.assertIn("Portal confirmation pending", html)
-        self.assertIn(".v2-warn{color:#92400e;background:#fef3c7}", html)
-        self.assertIn(".v2-exceptions{background:#fffbeb;border-color:#fcd34d}", html)
+        self.assertIn(".v2-warn{color:#92400e;background-color:#fef3c7}", html)
+        self.assertIn(".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}", html)
 
 
 
@@ -348,7 +348,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("Completed", report)
-        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Premium Pack", report)
         self.assertNotIn("At least one observed promotional claim", report)
 
@@ -375,7 +375,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("Attention Required", report)
-        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("Free Weekly Reward", report)
 
     def test_promotional_only_run_marks_unchecked_reward_categories_as_not_checked(self):
@@ -428,7 +428,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [full, backup_not_reopened, backup_reopened, promo_only],
             "Mixed Run", 1, get_ist_time() - timedelta(seconds=30), {},
         )
-        self.assertIn("<span>Confirmed claims</span><strong>45</strong>", report)
+        self.assertIn("<span>🎁 Confirmed claims</span><strong>45</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>2 accounts checked</small>", report)
@@ -516,7 +516,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("Completed", report)
-        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Premium Pack", report)
         self.assertNotIn("At least one observed promotional claim", report)
 
@@ -551,7 +551,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("Attention Required", report)
-        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("Free Weekly Reward", report)
 
     def test_identified_popup_blocked_offer_without_card_text_is_not_assumed_free(self):
@@ -573,7 +573,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("<span>Accounts processed</span><strong>1 / 35</strong>", report)
+        self.assertIn("<span>👥 Accounts processed</span><strong>1 / 35</strong>", report)
         self.assertIn("<span>Store Rewards</span>", report)
         self.assertNotIn("Standard Store", report)
 
@@ -667,9 +667,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), meta,
             configured_player_count=3,
         )
-        self.assertIn("<span>Confirmed claims</span><strong>12</strong>", report)
-        self.assertIn("<span>Accounts complete</span><strong>3 / 3</strong>", report)
-        self.assertIn("Today's Reward Cycle", report)
+        self.assertIn("<span>🎁 Confirmed claims</span><strong>12</strong>", report)
+        self.assertIn("<span>👥 Accounts complete</span><strong>3 / 3</strong>", report)
+        self.assertIn("Today&#x27;s Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
         self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
@@ -705,7 +705,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), stale_meta,
             configured_player_count=3,
         )
-        self.assertNotIn("Today's Reward Cycle", report)
+        self.assertNotIn("Today&#x27;s Reward Cycle", report)
         self.assertNotIn("12 total confirmed claims", report)
 
     def test_recovery_email_does_not_double_count_pending_account_in_current_results(self):
@@ -737,7 +737,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), meta,
             configured_player_count=3,
         )
-        self.assertIn("<span>Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("2 / 3 accounts complete", report)
 
     def test_email_dashboard_distinguishes_processing_scope_and_unchecked_categories(self):
@@ -756,13 +756,13 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=20), {},
             configured_player_count=35,
         )
-        self.assertIn("<span>Accounts processed</span><strong>35 / 35</strong>", report)
-        self.assertIn("<span>Confirmed claims</span><strong>0</strong>", report)
-        self.assertIn("<span>In-run recovery</span><strong>0</strong>", report)
-        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("<span>👥 Accounts processed</span><strong>35 / 35</strong>", report)
+        self.assertIn("<span>🎁 Confirmed claims</span><strong>0</strong>", report)
+        self.assertIn("<span>🔄 In-run recovery</span><strong>0</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertIn("Full Claim Path", report)
         self.assertIn("Promotional-only", report)
-        self.assertIn("35</strong><small>Store promotional scans; core rewards not checked</small>", report)
+        self.assertIn("<strong class='v2-mode-count'>35</strong>", report)
         self.assertIn("Not performed for this promotional-only run", report)
         self.assertIn("Run Reconciliation", report)
         self.assertIn("Matched", report)
@@ -789,7 +789,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<div class='v2-grenade-summary'>", report)
         self.assertIn("27 / 30 · short 3", report)
         self.assertIn(".v2-grenade-summary{display:block", report)
-        self.assertIn("flex-wrap:wrap", report)
+        self.assertIn("class='v2-section-head v2-grenade-head'", report)
+        self.assertNotIn("display:flex", report)
+        self.assertNotIn("grid-template-columns", report)
 
     def test_promotional_offer_summary_groups_free_unavailable_offers(self):
         players = [
@@ -850,7 +852,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span class='v2-health v2-warn'>Attention Required</span>", report)
         self.assertIn("Run Reconciliation", report)
         self.assertIn("processing modes match processed accounts", report)
-        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
 
     def test_confirmed_promotional_claims_are_aggregated_not_repeated_per_account(self):
         players = []
@@ -888,7 +890,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=3), {},
             configured_player_count=2,
         )
-        self.assertIn("<span>Need attention</span><strong>0</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention &amp; Exceptions", report)
 
     def test_recovery_rollup_kpi_reports_actual_recovery_accounts(self):
@@ -915,9 +917,74 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 get_ist_time() - timedelta(minutes=1), meta,
                 configured_player_count=1,
             )
-        self.assertIn("<span>Recovery accounts</span><strong>1</strong>", report)
+        self.assertIn("<span>🔄 Recovery accounts</span><strong>1</strong>", report)
         self.assertIn("2 additional claims confirmed", report)
-        self.assertNotIn("<span>In-run recovery</span>", report)
+        self.assertNotIn("<span>🔄 In-run recovery</span>", report)
+
+    def test_email_uses_gmail_safe_table_layout_and_color_coded_cards(self):
+        player = self.sample_player()
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=1,
+        )
+        self.assertIn("class='v2-kpi-table'", report)
+        self.assertIn("class='v2-category-table'", report)
+        self.assertIn("v2-kpi-accounts", report)
+        self.assertIn("v2-kpi-claims", report)
+        self.assertIn("v2-kpi-recovery", report)
+        self.assertIn("v2-kpi-attention", report)
+        self.assertIn("v2-category-daily", report)
+        self.assertIn("v2-category-store", report)
+        self.assertIn("@media screen and (max-width:640px)", report)
+        self.assertNotIn("display:grid", report)
+        self.assertNotIn("display:flex", report)
+        self.assertNotIn("grid-template-columns", report)
+        self.assertNotIn("justify-content", report)
+
+    def test_recovery_email_labels_subset_scope_and_cycle_totals_correctly(self):
+        player = self.sample_player()
+        player["immediate_recovery"] = {
+            "attempted": True,
+            "status": "resolved",
+            "categories": ["Daily Reward"],
+            "resolved_categories": ["Daily Reward"],
+            "unresolved_categories": [],
+            "recovered_claims": 1,
+        }
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": "2026-11-12",
+                "configured_player_count": 35,
+                "accounts_complete": 35,
+                "accounts_pending": 0,
+                "total_claims": 140,
+                "recovery_accounts_count": 1,
+                "recovery_claims_added": 1,
+                "pending_player_last4": [],
+                "claim_totals": {
+                    "daily": 35, "store": 105, "progression": 0,
+                    "loyalty": 0, "promotions": 0, "events": 0,
+                },
+            }
+        }
+        with patch("master_claimer._current_reset_date", return_value="2026-11-12"):
+            report = build_email(
+                [player], "Recovery Run", 2,
+                get_ist_time() - timedelta(minutes=1), meta,
+                configured_player_count=35,
+            )
+        self.assertIn("Targeted Recovery", report)
+        self.assertIn("Replayed exact saved target(s): Daily Reward", report)
+        self.assertIn("Reward Claims (Today&#x27;s Cycle)", report)
+        self.assertIn("Cumulative portal-confirmed totals from the primary and recovery runs", report)
+        self.assertIn("Recovery Run Consistency", report)
+        self.assertIn("1 targeted account(s) represented", report)
+        self.assertNotIn("Full Claim Path", report)
+        self.assertNotIn("Reward Claims (This Run)", report)
+        self.assertIn("Post-run Recovery", report)
+        self.assertIn("35 / 35 accounts complete", report)
+        self.assertIn("140 total confirmed claims", report)
 
 if __name__ == "__main__":
     unittest.main()

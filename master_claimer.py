@@ -4512,7 +4512,26 @@ def build_grenade_balance_email_section(results):
 
 
 
-def build_immediate_recovery_email_section(results):
+def _email_section_header(title, subtitle="", badge_text=None, badge_class=""):
+    """Render an email-safe stacked section heading; avoid flex/grid positioning."""
+    badge_html = (
+        f"<span class='v2-state {html.escape(str(badge_class or 'v2-state-neutral'))}'>"
+        f"{html.escape(str(badge_text))}</span>"
+        if badge_text else ""
+    )
+    subtitle_html = (
+        f"<p class='v2-section-subtitle'>{html.escape(str(subtitle))}</p>"
+        if subtitle else ""
+    )
+    return (
+        "<div class='v2-section-head'>"
+        f"<h2>{html.escape(str(title))}</h2>"
+        + badge_html + subtitle_html
+        + "</div>"
+    )
+
+
+def build_immediate_recovery_email_section(results, run_label=''):
     """Summarise fresh-session, account-scoped recovery attempts."""
     records = [
         result for result in results
@@ -4526,6 +4545,7 @@ def build_immediate_recovery_email_section(results):
     deferred = sum(1 for item in records if item["immediate_recovery"].get("status") == "deferred")
     unresolved = sum(1 for item in records if item["immediate_recovery"].get("attempted") and item["immediate_recovery"].get("status") != "resolved")
     summary = f"{attempted} attempted · {resolved} resolved · {deferred} deferred · {unresolved} still pending"
+    section_title = "Post-run Recovery" if run_label == "Recovery Run" else "In-run Recovery"
     rows = []
     for result in records:
         recovery = result["immediate_recovery"]
@@ -4544,8 +4564,8 @@ def build_immediate_recovery_email_section(results):
         )
     return (
         "<section class='v2-section v2-recovery'>"
-        "<div class='v2-section-head'><h2>Immediate Recovery</h2>"
-        f"<span>{html.escape(summary)}</span></div>"
+        + _email_section_header(section_title, summary)
+
         + "".join(rows)
         + "</section>"
     )
@@ -4585,44 +4605,79 @@ def build_daily_cycle_email_section(summary):
     )
     return (
         "<section class='v2-section v2-cycle'>"
-        "<div class='v2-section-head'><h2>Today's Reward Cycle</h2>"
-        f"<span>{total_claims} total confirmed claims</span></div>"
-        f"<strong>{html.escape(state)}</strong>"
+        + _email_section_header("Today's Reward Cycle", f"{total_claims} total confirmed claims")
+        + f"<strong>{html.escape(state)}</strong>"
         f"<p>{html.escape(recovery_note)}</p>{pending_note}"
         "</section>"
     )
 
 
-def build_processing_overview_section(counts):
-    """Show which processing paths ran without implying that unchecked rewards were tested."""
-    modes = [
-        ("Full Claim Path", int(counts.get("full_claim_accounts", 0) or 0),
-         "Daily, Store and eligible Progression / Loyalty / Event checks"),
-        ("Backup Reconciliation", int(counts.get("backup_reconciliation_accounts", 0) or 0),
-         "Targeted Daily / Store checks; Progression only when reopened"),
-        ("Promotional-only", int(counts.get("promotional_only_accounts", 0) or 0),
-         "Store promotional scans; core rewards not checked"),
-    ]
-    total = sum(value for _, value, _ in modes)
-    active_paths = sum(1 for _, value, _ in modes if value)
-    account_word = "account" if total == 1 else "accounts"
-    path_word = "path" if active_paths == 1 else "paths"
-    header_summary = f"{total} {account_word} · {active_paths} active {path_word}"
-    cards = "".join(
-        "<div class='v2-mode-card'>"
-        f"<div class='v2-mode-title'>{html.escape(label)}</div>"
-        f"<strong>{value}</strong>"
-        f"<small>{html.escape(note)}</small>"
-        "</div>"
-        for label, value, note in modes
-    )
+def build_processing_overview_section(counts, results=None, run_label=""):
+    """Show actual processing scope using table markup supported by email clients."""
+    results = results if isinstance(results, list) else []
+    rows = []
+
+    if run_label == "Recovery Run":
+        targets = []
+        for result in results:
+            recovery = result.get("immediate_recovery") or {}
+            for target in (recovery.get("categories") or []):
+                value = str(target).strip()
+                if value and value not in targets:
+                    targets.append(value)
+        target_text = ", ".join(targets) if targets else "Saved unresolved reward target(s)"
+        account_count = len(results)
+        account_word = "account" if account_count == 1 else "accounts"
+        rows.append((
+            "Targeted Recovery",
+            account_count,
+            f"Replayed exact saved target(s): {target_text}. Unrelated reward categories were not checked.",
+            "blue",
+            "#EAF2FF",
+        ))
+        subtitle = f"{account_count} target {account_word} · recovery-only execution"
+    else:
+        modes = [
+            ("Full Claim Path", int(counts.get("full_claim_accounts", 0) or 0),
+             "Daily, Store and eligible Progression / Loyalty / Event checks",
+             "blue", "#EAF2FF"),
+            ("Backup Reconciliation", int(counts.get("backup_reconciliation_accounts", 0) or 0),
+             "Targeted Daily / Store checks; Progression only when reopened",
+             "purple", "#F2ECFF"),
+            ("Promotional-only", int(counts.get("promotional_only_accounts", 0) or 0),
+             "Store promotional scans; core rewards not checked",
+             "teal", "#E8F8F5"),
+        ]
+        total = sum(value for _, value, _, _, _ in modes)
+        active_paths = sum(1 for _, value, _, _, _ in modes if value)
+        account_word = "account" if total == 1 else "accounts"
+        path_word = "path" if active_paths == 1 else "paths"
+        subtitle = f"{total} {account_word} · {active_paths} active {path_word}"
+        rows = modes
+
+    row_html = []
+    for label, value, note, tone, background in rows:
+        row_html.append(
+            "<tr><td class='v2-mode-card' "
+            f"bgcolor='{background}' style='background-color:{background};border:1px solid #DCE5F0;border-radius:9px;padding:10px 12px;'>"
+            "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
+            "<tr>"
+            "<td valign='middle' style='padding:0 8px 0 0;'>"
+            f"<strong class='v2-mode-title'>{html.escape(label)}</strong>"
+            f"<small class='v2-mode-note'>{html.escape(note)}</small>"
+            "</td>"
+            f"<td width='58' align='right' valign='middle'><strong class='v2-mode-count'>{value}</strong></td>"
+            "</tr></table></td></tr>"
+        )
+
     return (
         "<section class='v2-section v2-processing'>"
-        "<div class='v2-section-head'><h2>Processing Overview</h2>"
-        f"<span>{header_summary}</span></div>"
-        f"<div class='v2-mode-grid'>{cards}</div>"
-        "</section>"
+        + _email_section_header("Processing Overview", subtitle)
+        + "<table role='presentation' class='v2-mode-table' width='100%' cellpadding='0' cellspacing='0' border='0'>"
+        + "".join(row_html)
+        + "</table></section>"
     )
+
 
 
 def build_run_reconciliation_email_section(results, run_label, configured_player_count):
@@ -4658,27 +4713,39 @@ def build_run_reconciliation_email_section(results, run_label, configured_player
     matched = status == "matched"
     label = "Matched" if matched else "Attention Required"
     badge_class = "v2-state-success" if matched else "v2-state-warning"
-    scope = (
-        "Full-roster primary run" if reconciliation.get("scope") == "full_roster_primary"
-        else "Partial / mixed run"
-    )
-    detail = (
-        f"{passed}/{checked} consistency checks passed · "
-        f"{int(reconciliation.get('accounts_processed', 0) or 0)} / "
-        f"{int(reconciliation.get('configured_player_count', configured_player_count) or 0)} accounts represented"
-    )
-    if matched and reconciliation.get("scope") != "full_roster_primary":
-        detail += " · This does not certify a full-roster reward cycle"
+
+    if run_label == "Recovery Run":
+        title = "Recovery Run Consistency"
+        scope = "Targeted recovery subset"
+        detail = (
+            f"{passed}/{checked} consistency checks passed · "
+            f"{int(reconciliation.get('accounts_processed', 0) or 0)} targeted account(s) represented. "
+            "Full-roster cycle completion is shown above."
+        )
+    else:
+        title = "Run Reconciliation"
+        scope = (
+            "Full-roster primary run" if reconciliation.get("scope") == "full_roster_primary"
+            else "Partial / mixed run"
+        )
+        detail = (
+            f"{passed}/{checked} consistency checks passed · "
+            f"{int(reconciliation.get('accounts_processed', 0) or 0)} / "
+            f"{int(reconciliation.get('configured_player_count', configured_player_count) or 0)} accounts represented"
+        )
+        if matched and reconciliation.get("scope") != "full_roster_primary":
+            detail += " · This does not certify a full-roster reward cycle"
+
     warnings = reconciliation.get("warnings") or []
     if warnings:
         detail += " · " + ", ".join(str(item).replace("_", " ") for item in warnings)
     return (
         "<section class='v2-section v2-reconciliation v2-validation-card'>"
-        "<div class='v2-section-head'><h2>Run Reconciliation</h2>"
-        f"<span class='v2-state {badge_class}'>{label}</span></div>"
-        f"<p class='v2-muted-note'><strong>{scope}</strong> · {html.escape(detail)}</p>"
-        "</section>"
+        + _email_section_header(title, scope, label, badge_class)
+        + f"<p class='v2-muted-note'>{html.escape(detail)}</p>"
+        + "</section>"
     )
+
 
 
 def build_email(results, run_label, run_index, job_start, meta, followup_summary=None, configured_player_count=None):
@@ -4851,16 +4918,12 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     event_html = build_event_rewards_section(results)
     grenade_html = build_grenade_balance_email_section(results)
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
-    validation_html = (
-        "<div class='v2-validation-grid'>"
-        + grenade_html + reconciliation_html
-        + "</div>"
-    )
+    validation_html = grenade_html + reconciliation_html
     # A run-level reconciliation mismatch is an execution attention state even
     # when no individual account was attributed as the cause.
     if "v2-state-warning" in reconciliation_html and health_label != "Failed":
         health_label, health_class = "Attention Required", "v2-warn"
-    immediate_recovery_html = build_immediate_recovery_email_section(results)
+    immediate_recovery_html = build_immediate_recovery_email_section(results, run_label)
     daily_cycle_html = build_daily_cycle_email_section(cycle_summary) if is_recovery_rollup else ""
     exception_details = standard_attention_html + "".join(exception_cards)
     if exception_details:
@@ -4880,7 +4943,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         # The zero-attention state is already clear from the KPI; omit a redundant section.
         attention_html = ""
 
-    def _category_card(label, checked_results, claim_key, cycle_key, empty_note="Not checked in this run"):
+    def _category_card(label, checked_results, claim_key, cycle_key, tone, empty_note="Not checked in this run"):
         if is_recovery_rollup:
             value = int((cycle_summary.get("claim_totals") or {}).get(cycle_key, 0) or 0)
             note = "confirmed in today's cycle"
@@ -4891,8 +4954,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             account_word = "account" if len(checked_results) == 1 else "accounts"
             note = f"{len(checked_results)} {account_word} checked"
         return (
-            f"<div class='v2-category'><span>{label}</span>"
-            f"<strong>{value}</strong><small>{note}</small></div>"
+            f"<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-{tone}'>"
+            f"<span>{label}</span><strong>{value}</strong><small>{html.escape(note)}</small></div></td>"
         )
 
     promotions_checked_results = [
@@ -4904,15 +4967,19 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         if isinstance(result.get("event_rewards"), list) and result.get("event_rewards")
     ]
     category_cards = [
-        _category_card("Daily Rewards", standard_checked_results, "daily", "daily"),
-        _category_card("Store Rewards", standard_checked_results, "store", "store"),
-        _category_card("Progression Rewards", progression_checked_results, "progression", "progression"),
+        _category_card("Daily Rewards", standard_checked_results, "daily", "daily", "daily"),
+        _category_card("Store Rewards", standard_checked_results, "store", "store", "store"),
+        _category_card("Progression Rewards", progression_checked_results, "progression", "progression", "progression"),
         _category_card(
-            "Loyalty Rewards", loyalty_checked_results, "loyalty", "loyalty",
+            "Loyalty Rewards", loyalty_checked_results, "loyalty", "loyalty", "loyalty",
             "No enrolled accounts" if full_claim_results else "Not checked in this run",
         ),
     ]
-    category_html = "".join(category_cards)
+    category_html = (
+        "<table role='presentation' class='v2-category-table' width='100%' cellpadding='0' cellspacing='0' border='0'><tr>"
+        + "".join(category_cards)
+        + "</tr></table>"
+    )
     generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
     safe_run_label = html.escape(str(run_label or "Reward Run"))
     confirmed_note = "Total confirmed in today's cycle" if is_recovery_rollup else "Portal-confirmed during this run"
@@ -4953,7 +5020,34 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             f"{immediate_resolved} resolved · {immediate_unresolved} pending"
             if immediate_attempted else "No in-run retries were needed"
         )
-    processing_html = build_processing_overview_section(counts)
+    kpi_items = [
+        (accounts_kpi_label, accounts_kpi_value, accounts_kpi_note, "accounts", "👥"),
+        ("Confirmed claims", confirmed_claims, confirmed_note, "claims", "🎁"),
+        (recovery_kpi_label, recovery_kpi_value, recovery_kpi_note, "recovery", "🔄"),
+        ("Need attention", attention_accounts, "Accounts with item-level exceptions", "attention", "⚠️"),
+    ]
+    kpi_cells = "".join(
+        "<td class='v2-kpi-cell' width='25%' valign='top'>"
+        f"<div class='v2-kpi v2-kpi-{tone}'>"
+        f"<span>{icon} {html.escape(str(label))}</span>"
+        f"<strong>{html.escape(str(value))}</strong>"
+        f"<small>{html.escape(str(note))}</small>"
+        "</div></td>"
+        for label, value, note, tone, icon in kpi_items
+    )
+    kpi_html = (
+        "<table role='presentation' class='v2-kpi-table' width='100%' cellpadding='0' cellspacing='0' border='0'><tr>"
+        + kpi_cells
+        + "</tr></table>"
+    )
+    processing_html = build_processing_overview_section(counts, results, run_label)
+    rewards_heading = "Reward Claims (Today's Cycle)" if is_recovery_rollup else "Reward Claims (This Run)"
+    rewards_subtitle = (
+        "Cumulative portal-confirmed totals from the primary and recovery runs"
+        if is_recovery_rollup else
+        "Portal-confirmed counts for reward categories checked in this run"
+    )
+
     run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
     repository = str(os.getenv("GITHUB_REPOSITORY") or "").strip()
     commit_sha = str(os.getenv("GITHUB_SHA") or "").strip()
@@ -4978,115 +5072,111 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
         "<style>"
         "*{box-sizing:border-box}"
-        "body{margin:0;padding:16px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}"
-        ".v2-shell{max-width:780px;margin:0 auto}"
-        ".v2-hero{padding:22px 24px;border-radius:16px;background:linear-gradient(135deg,#172b4d,#234d88);color:#fff}"
-        ".v2-brand{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;opacity:.82}"
-        ".v2-hero h1{font-size:23px;margin:8px 0 6px;line-height:1.2}"
+        "body{margin:0;padding:16px;background:#f2f5fa;color:#172033;font-family:Arial,Helvetica,sans-serif}"
+        ".v2-shell{width:100%;max-width:780px;margin:0 auto}"
+        ".v2-hero{padding:22px 24px;border-radius:14px;background-color:#173968;color:#fff}"
+        ".v2-brand{font-size:11px;letter-spacing:1.25px;text-transform:uppercase;color:#dbeafe}"
+        ".v2-hero h1{font-size:24px;margin:8px 0 6px;line-height:1.2;color:#fff}"
         ".v2-meta{font-size:12px;color:#dbeafe;line-height:1.5}"
-        ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background:#fff}"
-        ".v2-healthy{color:#166534;background:#dcfce7}"
-        ".v2-warn{color:#92400e;background:#fef3c7}"
-        ".v2-failed{color:#991b1b;background:#fee2e2}"
-        ".v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:14px 0}"
-        ".v2-kpi,.v2-category,.v2-section{background:#fff;border:1px solid #e5e7eb;border-radius:12px;min-width:0}"
-        ".v2-kpi{padding:14px 13px;box-shadow:0 1px 3px rgba(15,23,42,.04)}"
-        ".v2-kpi span,.v2-category span{display:block;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.55px;line-height:1.35}"
-        ".v2-kpi strong{display:block;font-size:24px;margin:7px 0 2px;color:#172033;line-height:1.15;overflow-wrap:anywhere}"
-        ".v2-kpi small,.v2-category small{font-size:10px;color:#64748b;line-height:1.4;display:block}"
-        ".v2-section{padding:15px;margin:0 0 12px;box-shadow:0 1px 2px rgba(15,23,42,.03)}"
-        ".v2-section-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;min-width:0}"
-        ".v2-section-head h2{font-size:14px;margin:0;line-height:1.35;flex:1 1 180px;min-width:0}"
-        ".v2-section-head>span{font-size:10px;color:#64748b;text-align:right;line-height:1.4;max-width:100%;overflow-wrap:anywhere;white-space:normal}"
-        ".v2-processing{padding-bottom:14px}"
-        ".v2-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}"
-        ".v2-mode-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:11px;min-width:0}"
-        ".v2-mode-title{font-size:11px;font-weight:700;color:#334155;line-height:1.35}"
-        ".v2-mode-card strong{display:block;font-size:21px;color:#172033;margin:5px 0 3px}"
-        ".v2-mode-card small{display:block;font-size:10px;color:#64748b;line-height:1.4}"
-        ".v2-reward-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}"
-        ".v2-category{padding:12px;min-width:0}"
-        ".v2-category strong{display:block;font-size:21px;margin:6px 0 2px;color:#172033}"
-        ".v2-item{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:10px 0;border-top:1px solid #eef2f7;font-size:12px;min-width:0}"
+        ".v2-health{display:inline-block;margin-top:12px;padding:6px 11px;border-radius:20px;font-size:11px;font-weight:700;background-color:#fff}"
+        ".v2-healthy{color:#166534;background-color:#dcfce7}"
+        ".v2-warn{color:#92400e;background-color:#fef3c7}"
+        ".v2-failed{color:#991b1b;background-color:#fee2e2}"
+        ".v2-kpi-table,.v2-category-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px 0;margin:14px 0}"
+        ".v2-kpi-cell,.v2-category-cell{width:25%;vertical-align:top;padding:0 2px}"
+        ".v2-kpi,.v2-category{border:1px solid #dbe4ef;border-radius:12px;padding:13px 11px;min-height:104px}"
+        ".v2-kpi-accounts{background-color:#eaf2ff;border-color:#bfd5ff}"
+        ".v2-kpi-claims{background-color:#f1eafe;border-color:#dac8ff}"
+        ".v2-kpi-recovery{background-color:#e8f8ef;border-color:#b7e6c8}"
+        ".v2-kpi-attention{background-color:#fff3e4;border-color:#f4d2a4}"
+        ".v2-kpi span,.v2-category span{display:block;color:#52647d;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;line-height:1.4}"
+        ".v2-kpi strong{display:block;font-size:26px;margin:7px 0 3px;color:#172b4d;line-height:1.1;overflow-wrap:anywhere}"
+        ".v2-kpi small,.v2-category small{font-size:11px;color:#52647d;line-height:1.4;display:block}"
+        ".v2-section{background-color:#fff;border:1px solid #e1e7ef;border-radius:12px;padding:15px;margin:0 0 12px}"
+        ".v2-section-head{display:block;margin:0 0 10px}"
+        ".v2-section-head h2{display:block;font-size:15px;margin:0 0 4px;line-height:1.35;color:#172b4d}"
+        ".v2-section-head>span{display:block;font-size:11px;color:#64748b;line-height:1.45;text-align:left;max-width:100%;white-space:normal;margin:3px 0 0}"
+        ".v2-section-subtitle{display:block;font-size:11px;color:#64748b;line-height:1.45;margin:4px 0 0}"
+        ".v2-mode-table{width:100%;border-collapse:separate;border-spacing:0 6px;table-layout:fixed}"
+        ".v2-mode-card{border-radius:9px;padding:10px 12px;border:1px solid #dce5f0}"
+        ".v2-mode-title{display:block;font-size:12px;font-weight:700;color:#253b5b;line-height:1.35}"
+        ".v2-mode-note{display:block;font-size:11px;color:#61738d;line-height:1.4;margin-top:3px}"
+        ".v2-mode-count{font-size:22px;color:#173968;line-height:1.1}"
+        ".v2-category{padding:13px 11px;min-height:100px}"
+        ".v2-category-daily{background-color:#eaf2ff;border-color:#bfd5ff}"
+        ".v2-category-store{background-color:#f1eafe;border-color:#dac8ff}"
+        ".v2-category-progression{background-color:#e8f8ef;border-color:#b7e6c8}"
+        ".v2-category-loyalty{background-color:#fff3e4;border-color:#f4d2a4}"
+        ".v2-category strong{display:block;font-size:24px;margin:7px 0 3px;color:#172b4d;line-height:1.1}"
+        ".v2-item{display:table;width:100%;table-layout:fixed;border-collapse:collapse;border-top:1px solid #edf1f6;font-size:12px}"
         ".v2-item:first-of-type{border-top:0}"
-        ".v2-item strong{display:block;overflow-wrap:anywhere}"
-        ".v2-item small{display:block;color:#64748b;font-size:10px;margin-top:3px;line-height:1.4}"
-        ".v2-result{max-width:58%;text-align:right;color:#475569;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
+        ".v2-item>div{display:table-cell;width:42%;vertical-align:top;padding:10px 10px 10px 0}"
+        ".v2-item>.v2-result{display:table-cell;width:58%;vertical-align:top;padding:10px 0 10px 8px;max-width:none;text-align:right;color:#475569;font-size:11px;line-height:1.45;overflow-wrap:anywhere}"
+        ".v2-item strong{display:block;overflow-wrap:anywhere;color:#253b5b}"
+        ".v2-item small{display:block;color:#64748b;font-size:11px;margin-top:3px;line-height:1.4}"
         ".v2-good{color:#166534}"
-        ".v2-attention{background:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
-        ".v2-exceptions{background:#fffbeb;border-color:#fcd34d}"
-        ".v2-exception{background:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
-        ".v2-exception div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}"
-        ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.4;overflow-wrap:anywhere}"
-        ".v2-status{font-size:10px;color:#92400e}"
-        ".v2-all-clear{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:11px;color:#166534;font-size:12px;line-height:1.45}"
-        ".v2-all-clear-section{background:#fff}"
-        ".v2-cycle p{margin:7px 0 0;color:#64748b;font-size:11px;line-height:1.45}"
-        ".v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:10px}"
-        ".v2-validation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}"
-        ".v2-validation-card{margin-bottom:12px}"
-        ".v2-validation-card .v2-section-head{align-items:flex-start}"
-        ".v2-state{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:700;line-height:1.35;white-space:normal}"
-        ".v2-state-success{background:#dcfce7;color:#166534}"
-        ".v2-state-warning{background:#fef3c7;color:#92400e}"
-        ".v2-state-neutral{background:#eef2f7;color:#475569}"
-        ".v2-muted-note{margin:0;color:#64748b;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
-        ".v2-grenade-summary{display:block;margin:3px 0 8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#475569;font-size:11px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-attention{background-color:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
+        ".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}"
+        ".v2-exception{background-color:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
+        ".v2-exception div{display:block;margin-bottom:4px}"
+        ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:12px;line-height:1.45;overflow-wrap:anywhere}"
+        ".v2-status{font-size:11px;color:#92400e}"
+        ".v2-all-clear{background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:11px;color:#166534;font-size:12px;line-height:1.45}"
+        ".v2-all-clear-section{background-color:#fff}"
+        ".v2-cycle p{margin:7px 0 0;color:#475569;font-size:12px;line-height:1.5}"
+        ".v2-cycle small{display:block;margin-top:7px;color:#92400e;font-size:11px}"
+        ".v2-state{display:inline-block;padding:4px 8px;border-radius:20px;font-size:11px;font-weight:700;line-height:1.35;white-space:normal}"
+        ".v2-state-success{background-color:#dcfce7;color:#166534}"
+        ".v2-state-warning{background-color:#fef3c7;color:#92400e}"
+        ".v2-state-neutral{background-color:#eef2f7;color:#475569}"
+        ".v2-muted-note{margin:0;color:#64748b;font-size:12px;line-height:1.5;overflow-wrap:anywhere}"
+        ".v2-grenade-summary{display:block;margin:6px 0 8px;padding:9px 10px;background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-size:12px;line-height:1.5;overflow-wrap:anywhere}"
         ".v2-grenade .v2-item{margin:5px 0}"
-        ".v2-grenade .v2-item small{font-size:10px;color:#64748b}"
-        ".v2-offer-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:9px 0;border-top:1px solid #eef2f7;font-size:11px;min-width:0}"
+        ".v2-grenade .v2-item small{font-size:11px;color:#64748b}"
+        ".v2-offer-row{display:table;width:100%;table-layout:fixed;border-collapse:collapse;border-top:1px solid #edf1f6;font-size:12px}"
         ".v2-offer-row:first-of-type{border-top:0}"
-        ".v2-offer-row strong{display:block;color:#172033;overflow-wrap:anywhere}"
-        ".v2-offer-row small{display:block;color:#64748b;font-size:10px;margin-top:3px}"
-        ".v2-offer-row>span{max-width:58%;text-align:right;color:#475569;line-height:1.45;overflow-wrap:anywhere}"
+        ".v2-offer-row>div,.v2-offer-row>span{display:table-cell;width:50%;vertical-align:top;padding:9px 0}"
+        ".v2-offer-row strong{display:block;color:#253b5b;overflow-wrap:anywhere}"
+        ".v2-offer-row small{display:block;color:#64748b;font-size:11px;margin-top:3px;line-height:1.4}"
+        ".v2-offer-row>span{text-align:right;color:#475569;line-height:1.45;overflow-wrap:anywhere}"
         ".v2-promo-details{margin-top:4px}"
         ".v2-muted-note + .v2-item{border-top:0}"
-        ".v2-footer{text-align:center;color:#64748b;font-size:10px;line-height:1.55;padding:14px 8px}"
+        ".attn-box{padding:10px;background-color:#fff7ed;border:1px solid #fed7aa;border-radius:9px}"
+        ".attn-title{font-weight:700;color:#9a3412;font-size:12px;margin-bottom:6px}"
+        ".attn-row{padding:7px 0;border-top:1px solid #fed7aa;font-size:12px;line-height:1.45;color:#7c2d12}"
+        ".v2-footer{text-align:center;color:#64748b;font-size:11px;line-height:1.55;padding:14px 8px}"
         ".v2-footer a{color:#1d4ed8;text-decoration:underline}"
-        "@media(max-width:640px){"
-        " body{padding:9px}"
+        "@media screen and (max-width:640px){"
+        " body{padding:8px}"
         " .v2-shell{max-width:100%}"
-        " .v2-hero{padding:18px}"
-        " .v2-hero h1{font-size:20px}"
-        " .v2-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}"
-        " .v2-kpi{padding:12px}"
-        " .v2-kpi strong{font-size:21px}"
-        " .v2-mode-grid{grid-template-columns:1fr}"
-        " .v2-reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"
-        " .v2-validation-grid{grid-template-columns:1fr;gap:0}"
+        " .v2-hero{padding:18px 16px}"
+        " .v2-hero h1{font-size:21px}"
+        " .v2-kpi-cell,.v2-category-cell{display:inline-block !important;width:48% !important;vertical-align:top;padding:0 2px 6px}"
+        " .v2-kpi{min-height:94px;padding:11px 9px}"
+        " .v2-kpi strong{font-size:22px}"
+        " .v2-category{min-height:91px;padding:11px 9px}"
+        " .v2-category strong{font-size:22px}"
         " .v2-section{padding:12px}"
-        " .v2-section-head{align-items:flex-start}"
-        " .v2-section-head>span{text-align:left;flex:1 1 100%}"
-        " .v2-item{display:block}"
-        " .v2-result{display:block;max-width:none;text-align:left;margin-top:6px}"
-        " .v2-offer-row{display:block}"
-        " .v2-offer-row>span{display:block;max-width:none;text-align:left;margin-top:6px}"
+        " .v2-section-head h2{font-size:15px}"
+        " .v2-item{display:block;width:100%}"
+        " .v2-item>div,.v2-item>.v2-result{display:block;width:100%;text-align:left;padding:6px 0;max-width:none}"
+        " .v2-offer-row{display:block;width:100%}"
+        " .v2-offer-row>div,.v2-offer-row>span{display:block;width:100%;text-align:left;padding:6px 0}"
+        " .v2-footer{font-size:11px}"
         "}"
-        "@media(max-width:360px){"
-        " .v2-kpis{grid-template-columns:1fr 1fr}"
-        " .v2-reward-grid{grid-template-columns:1fr 1fr}"
-        " .v2-hero{padding:15px}"
-        " .v2-kpi strong{font-size:19px}"
-        "}"
-        "</style></head><body><main class='v2-shell'>"
+        "</style></head><body><div class='v2-shell'>"
         "<header class='v2-hero'>"
-        "<div class='v2-brand'>CS Rewards Bot · Automated Rewards Report</div>"
+        "<div class='v2-brand'>🎮 CS Rewards Bot · Automated Rewards Report</div>"
         "<h1>Daily Rewards Report</h1>"
         f"<div class='v2-meta'>{safe_run_label} · Started {job_start.strftime('%d %b %Y, %I:%M %p IST')} · Completed {generated} · Duration {duration_text}</div>"
         f"<span class='v2-health {health_class}'>{health_label}</span>"
         "</header>"
-        "<section class='v2-kpis'>"
-        f"<div class='v2-kpi'><span>{accounts_kpi_label}</span><strong>{accounts_kpi_value}</strong><small>{accounts_kpi_note}</small></div>"
-        f"<div class='v2-kpi'><span>Confirmed claims</span><strong>{confirmed_claims}</strong><small>{confirmed_note}</small></div>"
-        f"<div class='v2-kpi'><span>{recovery_kpi_label}</span><strong>{recovery_kpi_value}</strong><small>{html.escape(recovery_kpi_note)}</small></div>"
-        f"<div class='v2-kpi'><span>Need attention</span><strong>{attention_accounts}</strong><small>Accounts with item-level exceptions</small></div>"
-        "</section>"
+        + kpi_html
         + processing_html
         + "<section class='v2-section v2-rewards'>"
-        "<div class='v2-section-head'><h2>Reward Claims (This Run)</h2>"
-        "<span>Only checked categories are counted</span></div>"
-        f"<div class='v2-reward-grid'>{category_html}</div>"
-        "</section>"
+        + _email_section_header(rewards_heading, rewards_subtitle)
+        + category_html
+        + "</section>"
         + (daily_cycle_html or "")
         + validation_html
         + (immediate_recovery_html or "")
@@ -5096,7 +5186,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + (event_html or "")
         + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · {html.escape(footer_meta)}"
         + (f"<div>{run_link_html}</div>" if run_link_html else "")
-        + "</footer></main></body></html>"
+        + "</footer></div></body></html>"
     )
 
 
