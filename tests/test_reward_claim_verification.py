@@ -815,5 +815,51 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
 
 
 
+
+    def test_daily_preexisting_claim_is_recorded_before_history_suppression(self):
+        driver = FakeDriver()
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = "FREAKv20"
+        driver._portal_claim_run_label = "Primary Run"
+        driver._preexisting_portal_claims = []
+        with patch.object(bot, "bypass_cloudflare"), \\
+             patch.object(bot, "close_popup"), \\
+             patch.object(bot.time, "sleep"), \\
+             patch.object(bot, "_daily_portal_confirms_claim", return_value=True), \\
+             patch.object(bot, "record_preexisting_portal_claim") as record, \\
+             patch.object(bot, "update_claim_history") as history_update:
+            result = bot.claim_daily_rewards(driver, "1234567890123456")
+        self.assertEqual(result, (0, True, False))
+        record.assert_called_once_with(
+            driver, "1234567890123456", "daily", "daily",
+            "Daily Reward", "daily_initial_portal_state",
+        )
+        history_update.assert_called_once_with(
+            "1234567890123456", "daily",
+            detected_cooldown=timedelta(seconds=61),
+        )
+
+    def test_store_claim_that_changes_to_claimed_after_our_click_is_not_a_preexisting_claim(self):
+        driver = FakeDriver()
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = "FREAKv20"
+        driver._portal_claim_run_label = "Primary Run"
+        driver._preexisting_portal_claims = []
+        with patch.object(bot, "bypass_cloudflare"), \\
+             patch.object(bot, "close_popup"), \\
+             patch.object(bot.time, "sleep"), \\
+             patch.object(bot, "_find_store_daily_button", return_value=(object(), "available")), \\
+             patch.object(bot, "_wait_for_store_daily_state", return_value="claimed"), \\
+             patch.object(bot, "physical_click", return_value=True), \\
+             patch.object(bot, "record_preexisting_portal_claim") as record, \\
+             patch.object(bot, "update_claim_history"):
+            result = bot.claim_store_rewards(
+                driver, "1234567890123456",
+                reward_indices=[1], max_attempts=1, scan_promotions=False,
+            )
+        self.assertEqual(result[0], 1)
+        self.assertEqual(result[4], [1])
+        record.assert_not_called()
+
 if __name__ == "__main__":
     unittest.main()
