@@ -919,5 +919,70 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("2 additional claims confirmed", report)
         self.assertNotIn("<span>In-run recovery</span>", report)
 
+    def test_email_uses_gmail_safe_table_layout_and_color_coded_cards(self):
+        player = self.sample_player()
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=1,
+        )
+        self.assertIn("class='v2-kpi-table'", report)
+        self.assertIn("class='v2-category-table'", report)
+        self.assertIn("v2-kpi-accounts", report)
+        self.assertIn("v2-kpi-claims", report)
+        self.assertIn("v2-kpi-recovery", report)
+        self.assertIn("v2-kpi-attention", report)
+        self.assertIn("v2-category-daily", report)
+        self.assertIn("v2-category-store", report)
+        self.assertIn("@media screen and (max-width:640px)", report)
+        self.assertNotIn("display:grid", report)
+        self.assertNotIn("display:flex", report)
+        self.assertNotIn("grid-template-columns", report)
+        self.assertNotIn("justify-content", report)
+
+    def test_recovery_email_labels_subset_scope_and_cycle_totals_correctly(self):
+        player = self.sample_player()
+        player["immediate_recovery"] = {
+            "attempted": True,
+            "status": "resolved",
+            "categories": ["Daily Reward"],
+            "resolved_categories": ["Daily Reward"],
+            "unresolved_categories": [],
+            "recovered_claims": 1,
+        }
+        meta = {
+            "daily_cycle_email_summary": {
+                "reset_date": "2026-11-12",
+                "configured_player_count": 35,
+                "accounts_complete": 35,
+                "accounts_pending": 0,
+                "total_claims": 140,
+                "recovery_accounts_count": 1,
+                "recovery_claims_added": 1,
+                "pending_player_last4": [],
+                "claim_totals": {
+                    "daily": 35, "store": 105, "progression": 0,
+                    "loyalty": 0, "promotions": 0, "events": 0,
+                },
+            }
+        }
+        with patch("master_claimer._current_reset_date", return_value="2026-11-12"):
+            report = build_email(
+                [player], "Recovery Run", 2,
+                get_ist_time() - timedelta(minutes=1), meta,
+                configured_player_count=35,
+            )
+        self.assertIn("Targeted Recovery", report)
+        self.assertIn("Exact saved target(s): Daily Reward", report)
+        self.assertIn("Reward Claims (Today's Cycle)", report)
+        self.assertIn("Cumulative portal-confirmed totals from the primary and recovery runs", report)
+        self.assertIn("Recovery Run Consistency", report)
+        self.assertIn("1 targeted account(s) represented", report)
+        self.assertNotIn("Full Claim Path", report)
+        self.assertNotIn("Reward Claims (This Run)", report)
+        self.assertIn("Post-run Recovery", report)
+        self.assertIn("35 / 35 accounts complete", report)
+        self.assertIn("140 total confirmed claims", report)
+
 if __name__ == "__main__":
     unittest.main()
