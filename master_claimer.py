@@ -624,6 +624,88 @@ def save_claim_history(h):
         log(f"⚠️ Error saving {HISTORY_FILE}: {e}")
 
 
+def record_player_display_name(meta, player_id, display_name, observed_at=None):
+    """Maintain current IGN and all previously authenticated names for a stable Player ID."""
+    if not isinstance(meta, dict):
+        return None
+    player_id = str(player_id or "").strip()
+    display_name = " ".join(str(display_name or "").split())
+    if not player_id or not display_name:
+        return None
+
+    observed = observed_at or get_ist_time()
+    if isinstance(observed, str):
+        try:
+            observed = datetime.fromisoformat(observed)
+        except (TypeError, ValueError):
+            observed = get_ist_time()
+    observed_text = observed.isoformat()
+
+    current_cache = meta.setdefault("player_display_names", {})
+    if not isinstance(current_cache, dict):
+        current_cache = {}
+        meta["player_display_names"] = current_cache
+    history_store = meta.setdefault("player_display_name_history", {})
+    if not isinstance(history_store, dict):
+        history_store = {}
+        meta["player_display_name_history"] = history_store
+
+    legacy_name = " ".join(str(current_cache.get(player_id) or "").split())
+    player_history = history_store.setdefault(player_id, {"current_name": None, "names": []})
+    if not isinstance(player_history, dict):
+        player_history = {"current_name": None, "names": []}
+        history_store[player_id] = player_history
+    names = player_history.setdefault("names", [])
+    if not isinstance(names, list):
+        names = []
+        player_history["names"] = names
+
+    # Migrate the old latest-name cache without inventing a timestamp for the old IGN.
+    if legacy_name and not any(
+        isinstance(item, dict) and item.get("name") == legacy_name for item in names
+    ):
+        names.append({
+            "name": legacy_name,
+            "first_seen_at_ist": None,
+            "last_seen_at_ist": None,
+            "observation_count": 0,
+            "source": "legacy_name_cache",
+            "timestamp_precision": "unknown",
+        })
+
+    entry = next(
+        (item for item in names if isinstance(item, dict) and item.get("name") == display_name),
+        None,
+    )
+    if entry is None:
+        entry = {
+            "name": display_name,
+            "first_seen_at_ist": observed_text,
+            "last_seen_at_ist": observed_text,
+            "observation_count": 1,
+            "source": "authenticated_profile_capture",
+            "timestamp_precision": "run_observation",
+        }
+        names.append(entry)
+    else:
+        if not entry.get("first_seen_at_ist") and entry.get("timestamp_precision") != "unknown":
+            entry["first_seen_at_ist"] = observed_text
+        entry["last_seen_at_ist"] = observed_text
+        entry["observation_count"] = int(entry.get("observation_count", 0) or 0) + 1
+        entry.setdefault("source", "authenticated_profile_capture")
+
+    previous_name = str(player_history.get("current_name") or legacy_name or "").strip()
+    player_history["current_name"] = display_name
+    player_history["last_observed_at_ist"] = observed_text
+    current_cache[player_id] = display_name
+    return {
+        "current_name": display_name,
+        "previous_name": previous_name if previous_name and previous_name != display_name else None,
+        "changed": bool(previous_name and previous_name != display_name),
+        "names": names,
+    }
+
+
 def load_portal_claim_audit():
     """Load the durable pre-existing portal-claim audit without overwriting corruption."""
     if not os.path.exists(PORTAL_CLAIM_AUDIT_FILE):
@@ -737,7 +819,9 @@ def record_preexisting_portal_claim(driver, pid, reward_category, reward_key, re
         existing["last_observed_at_ist"] = now_text
         existing["observation_count"] = int(existing.get("observation_count", 1) or 1) + 1
         if getattr(driver, "_portal_claim_display_name", None):
-            existing["display_name"] = str(driver._portal_claim_display_name)
+            latest_name = " ".join(str(driver._portal_claim_display_name).split())
+            existing["last_observed_display_name"] = latest_name
+            existing.setdefault("display_name_at_first_observation", existing.get("display_name"))
         run_ids = list(existing.get("run_ids") or [])
         if run_id and run_id not in run_ids:
             run_ids.append(run_id)
@@ -748,7 +832,9 @@ def record_preexisting_portal_claim(driver, pid, reward_category, reward_key, re
     event = {
         "incident_id": incident_id,
         "player_id": player_id,
-        "display_name": str(getattr(driver, "_portal_claim_display_name", "") or "").strip() or None,
+        "display_name": " ".join(str(getattr(driver, "_portal_claim_display_name", "") or "").split()) or None,
+        "display_name_at_first_observation": " ".join(str(getattr(driver, "_portal_claim_display_name", "") or "").split()) or None,
+        "last_observed_display_name": " ".join(str(getattr(driver, "_portal_claim_display_name", "") or "").split()) or None,
         "reward_category": category,
         "reward_key": reward_key,
         "reward_name": str(reward_name or reward_key).strip(),
@@ -3047,6 +3133,7 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
         # Capture display name right after login — used in email instead of raw player ID
         stats["display_name"] = capture_display_name(driver)
+        stats["display_name_captured_at_ist"] = get_ist_time().isoformat() if stats["display_name"] else None
         driver._portal_claim_audit_enabled = True
         driver._portal_claim_display_name = stats["display_name"]
         driver._portal_claim_run_label = run_label
@@ -3627,6 +3714,7 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
             recovered_name = capture_display_name(driver)
             if recovered_name:
                 result["display_name"] = recovered_name
+                result["display_name_captured_at_ist"] = get_ist_time().isoformat()
             driver._portal_claim_audit_enabled = False
             driver._portal_claim_display_name = result.get("display_name")
             driver._portal_claim_run_label = run_label
@@ -3857,6 +3945,7 @@ def process_player_promotions_only(pid, is_new, run_label):
             return stats
 
         stats["display_name"] = capture_display_name(driver)
+        stats["display_name_captured_at_ist"] = get_ist_time().isoformat() if stats["display_name"] else None
         driver._portal_claim_audit_enabled = True
         driver._portal_claim_display_name = stats["display_name"]
         driver._portal_claim_run_label = run_label
@@ -3991,6 +4080,7 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             return stats
 
         stats["display_name"] = capture_display_name(driver)
+        stats["display_name_captured_at_ist"] = get_ist_time().isoformat() if stats["display_name"] else None
         driver._portal_claim_audit_enabled = True
         driver._portal_claim_display_name = stats["display_name"]
         driver._portal_claim_run_label = run_label
@@ -4349,11 +4439,22 @@ def build_preexisting_portal_claim_section(results):
     rows = []
     for result, event in incidents:
         player_id = str(event.get("player_id") or result.get("pid") or "")
-        identity_source = {
-            "pid": player_id,
-            "display_name": event.get("display_name") or result.get("display_name"),
-        }
-        identity = html.escape(_issue_identity_label(identity_source))
+        first_name = str(
+            event.get("display_name_at_first_observation")
+            or event.get("display_name")
+            or result.get("display_name")
+            or "IGN unavailable"
+        ).strip()
+        current_name = str(
+            event.get("last_observed_display_name")
+            or result.get("display_name")
+            or first_name
+        ).strip()
+        identity = html.escape(_issue_identity_label({"pid": player_id, "display_name": current_name}))
+        previous_note = (
+            f" · Name at first observation: {html.escape(first_name)}"
+            if first_name and current_name and first_name != current_name else ""
+        )
         reward = html.escape(str(event.get("reward_name") or "Reward"))
         category = html.escape(str(event.get("reward_category") or "Reward").title())
         observed = str(event.get("first_observed_at_ist") or "")
@@ -4371,7 +4472,7 @@ def build_preexisting_portal_claim_section(results):
         rows.append(
             "<div class='v2-item v2-attention'>"
             f"<div><strong>{identity}</strong>"
-            f"<small>{category} · {reward} · First observed {html.escape(observed_text)}{run_note}</small></div>"
+            f"<small>{category} · {reward} · First observed {html.escape(observed_text)}{run_note}{previous_note}</small></div>"
             f"<span class='v2-result'>{html.escape(recurrence)}</span></div>"
         )
 
@@ -6396,15 +6497,16 @@ def main():
     followup_results = filter_followup_results(results, meta, _promotion_detail_worthy)
     followup_summary = update_promotion_followups(meta, followup_results, run_label, now=job_end)
     followup_summary["legacy_seeded_count"] = legacy_followup_seed["seeded_count"]
-    display_name_store = meta.setdefault("player_display_names", {})
-    if not isinstance(display_name_store, dict):
-        display_name_store = {}
-        meta["player_display_names"] = display_name_store
     for player_result in results:
         player_id = str(player_result.get("pid") or "").strip()
         player_name = str(player_result.get("display_name") or "").strip()
         if player_id and player_name:
-            display_name_store[player_id] = player_name
+            record_player_display_name(
+                meta,
+                player_id,
+                player_name,
+                observed_at=player_result.get("display_name_captured_at_ist") or job_end,
+            )
     dur_s   = int((job_end - job_start).total_seconds())
     td       = sum(r["daily"] for r in results)
     ts_daily = sum(r["store"] for r in results)
