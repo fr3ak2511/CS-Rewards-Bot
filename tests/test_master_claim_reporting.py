@@ -1159,9 +1159,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 "_portal_claim_run_label": "Backup Run #1",
                 "_preexisting_portal_claims": [],
             })()
-            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
-                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
-                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 6, 0, 0)), \\
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 12, 6, 0, 0)), \
                  patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 12, 5, 30, 0)):
                 _record_promotion_history(player_id, campaign, "portal_claimed")
                 event = record_preexisting_portal_claim(
@@ -1196,9 +1196,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 "_portal_claim_run_label": "Primary Run",
                 "_preexisting_portal_claims": [],
             })()
-            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \\
-                 patch("master_claimer.HISTORY_FILE", str(history_path)), \\
-                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 13, 5, 42, 0)), \\
+            with patch("master_claimer.PORTAL_CLAIM_AUDIT_FILE", str(audit_path)), \
+                 patch("master_claimer.HISTORY_FILE", str(history_path)), \
+                 patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 13, 5, 42, 0)), \
                  patch("master_claimer.get_last_daily_reset", return_value=datetime(2026, 11, 13, 5, 30, 0)):
                 cleared = _clear_promotion_unconfirmed_attempt(player_id, campaign)
                 event = record_preexisting_portal_claim(
