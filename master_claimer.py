@@ -4606,8 +4606,7 @@ def build_daily_cycle_email_section(summary):
     return (
         "<section class='v2-section v2-cycle'>"
         + _email_section_header("Today's Reward Cycle", f"{total_claims} total confirmed claims")
-
-        f"<strong>{html.escape(state)}</strong>"
+        + f"<strong>{html.escape(state)}</strong>"
         f"<p>{html.escape(recovery_note)}</p>{pending_note}"
         "</section>"
     )
