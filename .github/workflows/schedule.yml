@@ -587,7 +587,7 @@ jobs:
           : "${TARGET_BRANCH:?TARGET_BRANCH environment variable is required}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- claim_history.json bot_meta.json grenade_balance_baselines.json
+          git add -- claim_history.json bot_meta.json grenade_balance_baselines.json portal_claim_audit.json
 
           if git diff --cached --quiet; then
             echo "No runtime-state changes to commit."

@@ -23,7 +23,11 @@ Temporary point-event rewards currently use the reusable, configuration-driven e
 
 ## Existing/manual claims and history migration
 
-On the first run after deployment, each ID is inspected live. If Daily or any of the three standard Store cards shows a timer or a `Claimed` state, the bot records a **portal-observed claim/cooldown** with an observation timestamp and suppresses another attempt until the daily reset. It does not falsify that event as a claim made by the bot. Legacy `store.reward_4` state is preserved for compatibility, while the dynamic promotional scanner records each live offer in the separate per-promotion history and records a portal-confirmed already-claimed state as `portal_claimed`.
+The bot inspects the live portal before every eligible Daily and standard Store claim. If a reward is already Claimed/on cooldown before the bot's first click attempt, the portal state is recorded separately from a claim made by the bot. The dynamic promotional scanner similarly distinguishes a card that was already claimed on the initial page snapshot from a claim confirmed after this run's click.
+
+A separate `portal_claim_audit.json` stores review evidence for pre-existing portal claims. Daily and standard Store observations are deduplicated per player, reward and 05:30 IST reset date; dynamic promotional cards are deduplicated per player/campaign. Repeat observations are summarised across distinct reset dates. The audit retains the full Player ID, captured in-game display name (IGN), reward name/category, first-observed IST timestamp, run label/ID and evidence source. A same-reset bot-confirmed claim or unresolved bot attempt suppresses a new manual-review record because the later portal state is ambiguous.
+
+**The portal does not identify who made a claim.** The email therefore labels these as pre-existing portal claims / review evidence, not proven manual claims. This section does not change claim eligibility, retry policy, or remove players from `players.csv`. Any roster removal remains a manual owner decision. Legacy `store.reward_4` state is preserved for compatibility.
 
 The existing `claim_history.json` is migrated lazily per player; do not replace it with a fresh empty file. `bot_meta.json` is also preserved and updated by the workflow. Existing Store entries `reward_1`–`reward_3` remain reset-based and legacy `reward_4` history is preserved. Current promotional cards are discovered and reported independently; an old `reward_4` marker does not suppress a newly appearing offer.
 
@@ -31,7 +35,7 @@ The existing `claim_history.json` is migrated lazily per player; do not replace 
 
 Every normal run builds and sends the HTML email after processing the selected accounts. The email and JSON summary distinguish accounts processed, confirmed claims made, unavailable/on-cooldown rewards, partial or unresolved results, unconfirmed promotional claims, dynamic-scan failures, and actual login/script failures. Deltas are suppressed when the current and previous run have different full-claim scope. Email sending retries up to three times; if delivery still fails, the workflow is marked failed and retains `debug_email.html` plus `run_artifacts/run_summary.json` for review.
 
-The HTML report includes all processed account rows, per-account processing mode, confirmed claims, visible unavailable offers, partial or unresolved results, unconfirmed promotions, dynamic-scan failures, actual failures, efficiency for full-claim accounts, run timing, and portal-observed statuses. Promotional-only rows explicitly mark daily Store, progression, and loyalty rewards as not checked; aggregate daily/store denominators exclude those rows. The uploaded JSON summary masks player IDs to their last four characters.
+The HTML report includes all processed account rows, per-account processing mode, confirmed claims, visible unavailable offers, partial or unresolved results, unconfirmed promotions, dynamic-scan failures, actual failures, efficiency for full-claim accounts, run timing, and portal-observed statuses. Account-specific issue sections show the full Player ID together with the captured IGN so an account can be checked without opening `players.csv`. The separate pre-existing portal-claim section includes full IDs and IGNs and flags accounts observed across multiple reset dates. Promotional-only rows explicitly mark daily Store, progression, and loyalty rewards as not checked; aggregate daily/store denominators exclude those rows. The general run-summary player table remains privacy-minimised; the separately retained portal-claim audit holds the full identifiers needed for follow-up.
 
 Each normal run also creates `run_artifacts/report.html`, a self-contained browser report with a **Copy Report** action. It first attempts to copy the report as a PNG image (with formatted HTML and plain text included), then falls back to formatted HTML and plain text, and finally plain text if image or rich clipboard access is unavailable. Open this artifact in a browser; clipboard access may require browser permission. The emailed report remains script-free for email-client compatibility and is sent as HTML only, without a PNG attachment.
 
@@ -78,7 +82,8 @@ The scheduled primary wait logic is retained. Login diagnostics and login-only t
 | `.github/workflows/schedule.yml` | Randomized primary wait, four unique promotional-check slots, preflight/run gates, state commit-back and artifacts |
 | `players.csv` | Current configured player IDs; unchanged |
 | `requirements.txt` | Pinned Selenium / undetected-chromedriver versions for reproducible installation |
-| `claim_history.json` | Per-player claim and portal-observation state; preserve existing data |
+| `claim_history.json` | Per-player bot-claim and portal-state history; preserve existing data |
+| `portal_claim_audit.json` | Reset-day-deduplicated pre-existing portal-claim evidence with full Player ID and captured IGN; persisted by the primary workflow |
 | `bot_meta.json` | Streak, last run and email-delivery status; preserve existing data |
 | `.github/workflows/cleanup.yml` | Existing old-run cleanup workflow; unchanged |
 
