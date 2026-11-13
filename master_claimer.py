@@ -1798,6 +1798,16 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
         metadata["title_error"] = type(exc).__name__
     if click_trace:
         metadata["click_trace"] = click_trace
+    for attribute, key in (
+        ("_last_daily_target_trace", "daily_target"),
+        ("_last_daily_popup_guard", "popup_guard"),
+    ):
+        try:
+            value = getattr(driver, attribute, None)
+            if isinstance(value, dict):
+                metadata[key] = value
+        except Exception:
+            pass
 
     try:
         page_snapshot = driver.execute_script(r"""
@@ -1805,43 +1815,78 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
             const norm = value => (value || '').replace(/\s+/g, ' ').trim();
             const visible = el => {
                 if (!el) return false;
-                const style = getComputedStyle(el);
-                const rect = el.getBoundingClientRect();
+                const style = getComputedStyle(el), rect = el.getBoundingClientRect();
                 return !!(el.getClientRects().length && style.display !== 'none'
-                    && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0);
+                    && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0
+                    && rect.width > 0 && rect.height > 0);
             };
             const bodyText = norm(document.body && document.body.innerText);
             const lines = (document.body && document.body.innerText || '')
                 .split(/\n+/).map(line => norm(line)).filter(Boolean);
+            const dailyButtons = Array.from(document.querySelectorAll(
+                'button[data-variant="component-daily-reward"],[role="button"][data-variant="component-daily-reward"]'
+            ));
+            const dailyClaims = dailyButtons.filter(el =>
+                norm(el.innerText || el.textContent).toLowerCase() === 'claim'
+            );
+            const inViewport = rect => rect.bottom > 0 && rect.right > 0
+                && rect.top < window.innerHeight && rect.left < window.innerWidth;
+            const dialogs = Array.from(document.querySelectorAll(
+                '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+            )).filter(visible).slice(0, 5).map(el => ({
+                text:norm(el.innerText || el.textContent).slice(0, 220),
+                class_name:String(el.className || '').slice(0, 120),
+                role:el.getAttribute('role'),
+                aria_modal:el.getAttribute('aria-modal')
+            }));
             return {
-                total_button_count: controls.length,
-                claim_button_count: controls.filter(el =>
+                total_button_count:controls.length,
+                claim_button_count:controls.filter(el =>
                     norm(el.innerText || el.textContent).toLowerCase() === 'claim').length,
-                buttons: controls.slice(0, 50).map((el, index) => {
+                daily_component_button_count:dailyButtons.length,
+                daily_claim_candidate_count:dailyClaims.length,
+                daily_claim_candidates:dailyClaims.slice(0, 8).map(el => {
                     const rect = el.getBoundingClientRect();
-                    const label = norm(el.innerText || el.textContent);
+                    const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width/2));
+                    const y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height/2));
+                    const top = document.elementFromPoint(x, y);
                     return {
-                        index,
-                        tag: el.tagName.toLowerCase(),
-                        role: el.getAttribute('role'),
-                        text: label.slice(0, 240),
-                        visible: visible(el),
-                        enabled: !el.disabled && el.getAttribute('aria-disabled') !== 'true',
-                        disabled_property: !!el.disabled,
-                        aria_disabled: el.getAttribute('aria-disabled'),
-                        bounding_box: {
-                            x: Math.round(rect.x), y: Math.round(rect.y),
-                            width: Math.round(rect.width), height: Math.round(rect.height)
+                        text:norm(el.innerText || el.textContent),
+                        enabled:!el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                        in_viewport:inViewport(rect),
+                        unobstructed:!!(top && (top === el || el.contains(top))),
+                        bounding_box:{
+                            x:Math.round(rect.x), y:Math.round(rect.y),
+                            width:Math.round(rect.width), height:Math.round(rect.height)
                         },
-                        outer_html_excerpt: (el.outerHTML || '').slice(0, 1200)
+                        outer_html_excerpt:(el.outerHTML || '').slice(0, 1000)
                     };
                 }),
-                visible_page_text: bodyText.slice(0, 5000),
-                timer_text_lines: lines.filter(line =>
+                dialogs,
+                viewport:{
+                    width:window.innerWidth, height:window.innerHeight,
+                    scroll_x:window.scrollX, scroll_y:window.scrollY
+                },
+                buttons:controls.slice(0, 50).map((el,index) => {
+                    const rect = el.getBoundingClientRect(), label = norm(el.innerText || el.textContent);
+                    return {
+                        index, tag:el.tagName.toLowerCase(), role:el.getAttribute('role'),
+                        text:label.slice(0,240), visible:visible(el), in_viewport:inViewport(rect),
+                        enabled:!el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                        disabled_property:!!el.disabled, aria_disabled:el.getAttribute('aria-disabled'),
+                        bounding_box:{
+                            x:Math.round(rect.x), y:Math.round(rect.y),
+                            width:Math.round(rect.width), height:Math.round(rect.height)
+                        },
+                        outer_html_excerpt:(el.outerHTML || '').slice(0,1200)
+                    };
+                }),
+                visible_page_text:bodyText.slice(0,5000),
+                timer_text_lines:lines.filter(line =>
                     /daily|next in|next reward|cooldown|claimed|claim/i.test(line)
-                ).slice(0, 40)
+                ).slice(0,40)
             };
-        """)
+        """))
         if isinstance(page_snapshot, dict):
             metadata.update(page_snapshot)
         else:
