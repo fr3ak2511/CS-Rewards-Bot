@@ -6978,7 +6978,10 @@ def main():
             targets = daily_pending_targets[pid]
             slot_available = (
                 MANUAL_DAILY_RECOVERY
-                or _mark_daily_recovery_slot_attempt(meta, pid, run_label)
+                or (
+                    pid in daily_recovery_eligible_ids
+                    and _mark_daily_recovery_slot_attempt(meta, pid, run_label)
+                )
             )
             if pid in daily_recovery_eligible_ids and slot_available:
                 daily_target_only = {
