@@ -40,6 +40,15 @@ on:
         required: false
         type: boolean
         default: false
+      recover_pending_daily:
+        description: "Run one guarded Daily-only recovery for the exact Player ID below; no other account or reward category"
+        required: false
+        type: boolean
+        default: false
+      daily_recovery_player_id:
+        description: "Exact Player ID for recover_pending_daily; the account must already be pending for the current reset"
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -374,6 +383,11 @@ jobs:
           SCHEDULE_RUN_CREATED_AT: ${{ needs.preflight.outputs.scheduled_run_created_at }}
           DISPATCH_TYPE: ${{ github.event.action }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
+          MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
+          MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
+          DIAGNOSE_LOGIN: ${{ inputs.diagnose_login }}
+          LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
+          CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
           SELECTED_BRANCH: ${{ github.ref_name }}
         run: |
           python3 - <<'PY'
@@ -388,12 +402,18 @@ jobs:
               is_recent_full_claim_recovery,
               daily_only_pending_targets,
               eligible_daily_recovery_ids,
+              manual_daily_recovery_targets,
           )
 
           event = os.environ.get('RUN_EVENT', '')
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
           dispatch_type = os.environ.get('DISPATCH_TYPE', '')
           external_primary = os.environ.get('EXTERNAL_PRIMARY', '').strip().lower() == 'true'
+          manual_daily_recovery = os.environ.get('MANUAL_DAILY_RECOVERY', '').strip().lower() == 'true'
+          manual_daily_player_id = os.environ.get('MANUAL_DAILY_RECOVERY_PLAYER_ID', '').strip()
+          diagnose_login = os.environ.get('DIAGNOSE_LOGIN', '').strip().lower() == 'true'
+          login_test_only = os.environ.get('LOGIN_TEST_ONLY', '').strip().lower() == 'true'
+          claim_test_only = os.environ.get('CLAIM_TEST_ONLY', '').strip().lower() == 'true'
           selected_branch = os.environ.get('SELECTED_BRANCH', '')
           out_path = os.environ['GITHUB_OUTPUT']
           launcher_cron = '30 21 * * *'
@@ -442,6 +462,55 @@ jobs:
               raise SystemExit(0)
 
           if event == 'workflow_dispatch' and not external_primary:
+              if manual_daily_recovery:
+                  if diagnose_login or login_test_only or claim_test_only:
+                      emit(False, False, 'manual Daily recovery cannot be combined with login diagnostics, login tests, or one-player claim tests')
+                      raise SystemExit(0)
+                  if not manual_daily_player_id:
+                      emit(False, False, 'manual Daily recovery requires one exact Player ID')
+                      raise SystemExit(0)
+
+                  meta = load_json('bot_meta.json', {})
+                  try:
+                      with open('players.csv', 'r', newline='', encoding='utf-8-sig') as handle:
+                          player_ids = [
+                              (row.get('player_id') or '').strip()
+                              for row in csv.DictReader(handle)
+                              if (row.get('player_id') or '').strip()
+                          ]
+                  except Exception as exc:
+                      emit(False, False, f'manual Daily recovery could not read players.csv ({type(exc).__name__}); fail closed')
+                      raise SystemExit(0)
+                  if not player_ids or len(player_ids) != len(set(player_ids)):
+                      emit(False, False, 'manual Daily recovery rejected: configured roster is empty or contains duplicate Player IDs')
+                      raise SystemExit(0)
+
+                  now = datetime.now(ist_tz).replace(tzinfo=None)
+                  reset_date = now.date()
+                  if now.time() < dt_time(5, 30):
+                      reset_date -= timedelta(days=1)
+                  candidates = manual_daily_recovery_targets(
+                      meta,
+                      player_ids,
+                      reset_date=reset_date.isoformat(),
+                      player_id=manual_daily_player_id,
+                  )
+                  if manual_daily_player_id not in player_ids:
+                      emit(False, False, 'manual Daily recovery rejected: requested Player ID is not in players.csv')
+                  elif len(candidates) != 1 or manual_daily_player_id not in candidates:
+                      emit(False, False, 'manual Daily recovery rejected: no saved, current-reset, pending Daily-only target exists for this Player ID')
+                  else:
+                      emit(
+                          True,
+                          False,
+                          f'manual Daily-only recovery accepted for exactly Player ID {manual_daily_player_id}; one account, Daily reward only; no scheduled backup slot consumed',
+                          True,
+                      )
+                  raise SystemExit(0)
+
+              if manual_daily_player_id:
+                  emit(False, False, 'daily_recovery_player_id requires recover_pending_daily=true; fail closed')
+                  raise SystemExit(0)
               emit(True, False, 'manual workflow_dispatch request on prod; run the selected manual mode')
               raise SystemExit(0)
 
@@ -649,12 +718,29 @@ jobs:
           LOGIN_DIAGNOSTIC_ONLY: ${{ inputs.diagnose_login }}
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
+          MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
+          MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
           DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
         run: |
-          if { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$LOGIN_TEST_ONLY" == "true" ]]; } \
+          if [[ "$MANUAL_DAILY_RECOVERY" == "true" ]]; then
+            if [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] || [[ "$LOGIN_TEST_ONLY" == "true" ]] || \
+               [[ "$CLAIM_TEST_ONLY" == "true" ]] || [[ "$EXTERNAL_PRIMARY" == "true" ]] || \
+               [[ "$RECOVERY_ONLY_FAILED" == "true" ]] || [[ "$DAILY_ONLY_RECOVERY" != "true" ]]; then
+              echo "Manual Daily recovery cannot be combined with another execution mode."
+              exit 2
+            elif [[ -z "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]; then
+              echo "Manual Daily recovery requires one exact Player ID."
+              exit 2
+            else
+              python master_claimer.py
+            fi
+          elif [[ -n "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]; then
+            echo "daily_recovery_player_id requires recover_pending_daily=true."
+            exit 2
+          elif { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$LOGIN_TEST_ONLY" == "true" ]]; } \
             || { [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; } \
             || { [[ "$LOGIN_TEST_ONLY" == "true" ]] && [[ "$CLAIM_TEST_ONLY" == "true" ]]; }; then
             echo "Choose only one manual mode: diagnose_login, test_login_only, OR test_claims_one_player."
@@ -738,6 +824,8 @@ jobs:
         env:
           EXECUTE_REQUESTED: ${{ steps.run_mode.outputs.execute }}
           DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
+          MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
+          MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
           CLAIM_OUTCOME: ${{ steps.claim.outcome }}
           DECISION_REASON: ${{ steps.run_mode.outputs.reason }}
         run: |
@@ -749,7 +837,12 @@ jobs:
             elif [[ "$CLAIM_OUTCOME" == "success" ]]; then
               echo "- **Claim execution:** STEP EXECUTED (portal confirmation is reported separately by the claimer)"
               if [[ "$DAILY_ONLY_RECOVERY" == "true" ]]; then
-                echo "- **Scope:** bounded Daily-only recovery for pending account(s); complete accounts remain promotional-only"
+                if [[ "$MANUAL_DAILY_RECOVERY" == "true" ]]; then
+                  echo "- **Scope:** one-account Daily-only recovery for Player ID $MANUAL_DAILY_RECOVERY_PLAYER_ID"
+                  echo "- **Isolation:** no other account or reward category was eligible; scheduled backup counters were not consumed"
+                else
+                  echo "- **Scope:** bounded Daily-only recovery for pending account(s); complete accounts remain promotional-only"
+                fi
               fi
             elif [[ "$CLAIM_OUTCOME" == "skipped" ]]; then
               echo "- **Claim execution:** SKIPPED despite an execution request"
