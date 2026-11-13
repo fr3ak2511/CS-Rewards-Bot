@@ -41,7 +41,9 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
     def test_python_recovery_receiver_uses_shared_candidate_validator(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
-        self.assertIn("from recovery_policy import full_claim_retry_ids", source)
+        self.assertIn("from recovery_policy import (", source)
+        self.assertIn("full_claim_retry_ids,", source)
+        self.assertIn("daily_only_pending_targets,", source)
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
 
     def test_external_primary_dispatch_starts_after_0535_without_randomized_wait(self):
