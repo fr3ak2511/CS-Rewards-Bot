@@ -400,6 +400,22 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(actions[0], ("move", backdrop, 20, 20))
         self.assertEqual(driver.dialogs, [])
 
+
+
+    def test_ineffective_x_without_verified_backdrop_stays_fail_closed(self):
+        driver = LayerDriver(layers=1, closable=True)
+        driver.close_buttons[0].click_action = lambda: None
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("dialog_remained_after_native_close_click", reason)
+        self.assertIn("backdrop_fallback=no_verified_blank_backdrop", reason)
+        self.assertEqual(driver.close_count, 0)
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+
     def test_does_not_click_generic_blank_page_area_when_no_backdrop_is_proven(self):
         driver = LayerDriver(layers=1, closable=False)
         ok, reason = dismiss_all_safe_popups(
