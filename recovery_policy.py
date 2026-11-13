@@ -186,6 +186,39 @@ def daily_only_pending_targets(
     return candidates
 
 
+def manual_daily_recovery_targets(
+    meta: Any,
+    player_ids: Any,
+    *,
+    reset_date: str,
+    player_id: str,
+) -> dict[str, dict[str, Any]]:
+    """Select exactly one configured account with a saved current-reset Daily-only failure.
+
+    This manual path deliberately ignores scheduled-slot counters: it is an
+    explicit, one-account recovery request, not a scheduled backup attempt.
+    """
+    if not isinstance(player_id, str) or not player_id.strip():
+        return {}
+    requested_id = player_id.strip()
+    if not isinstance(player_ids, (list, tuple, set)):
+        return {}
+    configured_ids = {
+        item.strip() for item in player_ids
+        if isinstance(item, str) and item.strip()
+    }
+    if requested_id not in configured_ids:
+        return {}
+
+    pending = daily_only_pending_targets(
+        meta, player_ids, reset_date=reset_date
+    )
+    targets = pending.get(requested_id)
+    if not isinstance(targets, dict):
+        return {}
+    return {requested_id: dict(targets)}
+
+
 def eligible_daily_recovery_ids(
     meta: Any,
     player_ids: Any,
