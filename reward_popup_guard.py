@@ -25,6 +25,8 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
+from selenium.webdriver.common.action_chains import ActionChains
+
 DIALOG_SELECTOR = (
     '[role="dialog"], [aria-modal="true"], '
     '[class*="modal"], [class*="Modal"]'
@@ -167,6 +169,235 @@ return {
   visibleOverlays: overlays
 };"""
 
+
+
+# Some portal versions render the dialog's explicit X control in a fixed
+# portal wrapper beside (rather than inside) the dialog content. Only inspect
+# the wrapper chain containing this dialog, and only its top-right close area.
+_ASSOCIATED_WRAPPER_CLOSE_CANDIDATES_JS = r"""/* REWARD_POPUP_WRAPPER_CLOSE_CANDIDATES_V1 */
+const dialog = arguments[0];
+if (!dialog || !dialog.isConnected) return [];
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.isConnected && el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden'
+    && Number(s.opacity || '1') > 0 && s.pointerEvents !== 'none');
+};
+const isExplicitClose = button => {
+  const text = norm(button.innerText || button.textContent).toLowerCase();
+  const aria = norm(button.getAttribute('aria-label')).toLowerCase();
+  const title = norm(button.getAttribute('title')).toLowerCase();
+  const testid = norm(button.getAttribute('data-testid')).toLowerCase();
+  const variant = norm(button.getAttribute('data-variant')).toLowerCase();
+  const cls = String(button.className || '').toLowerCase();
+  const action = [text, aria, title, testid, variant].join(' ');
+  const explicit = testid === 'close' || variant === 'close'
+    || ['close', 'close dialog', 'dismiss'].includes(aria)
+    || ['close', 'dismiss'].includes(title)
+    || cls.includes('button-close') || cls.includes('modal-close')
+    || cls.includes('dialog-close')
+    || ['x', '×', 'close', 'dismiss'].includes(text);
+  return explicit && !/\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|submit|yes)\b/i.test(action);
+};
+const dr = dialog.getBoundingClientRect();
+const candidates = [];
+let wrapper = dialog.parentElement;
+for (let depth = 0; wrapper && wrapper !== document.body && depth < 5;
+     depth++, wrapper = wrapper.parentElement) {
+  const ws = getComputedStyle(wrapper), wr = wrapper.getBoundingClientRect();
+  const viewportWrapper = ws.position === 'fixed'
+    && wr.width >= window.innerWidth * 0.8
+    && wr.height >= window.innerHeight * 0.8
+    && wrapper.contains(dialog);
+  if (!viewportWrapper) continue;
+
+  for (const button of Array.from(wrapper.querySelectorAll('button,[role="button"]'))) {
+    if (dialog.contains(button) || !visible(button) || button.disabled
+        || button.getAttribute('aria-disabled') === 'true'
+        || norm(button.getAttribute('type') || 'button').toLowerCase() !== 'button'
+        || !isExplicitClose(button)) continue;
+    const br = button.getBoundingClientRect();
+    const cx = br.left + br.width / 2, cy = br.top + br.height / 2;
+    const nearTopRight = cx >= dr.right - Math.max(56, Math.min(128, dr.width * 0.2))
+      && cx <= dr.right + 16 && cy >= dr.top - 8 && cy <= dr.top + 104;
+    if (!nearTopRight) continue;
+    const hit = document.elementFromPoint(cx, cy);
+    if (!(hit && (hit === button || button.contains(hit)))) continue;
+    candidates.push({button, wrapper});
+  }
+  if (candidates.length) break;
+}
+return candidates;
+""";
+
+_WRAPPER_CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_WRAPPER_CLOSE_CONTROL_CHECK_V1 */
+const button = arguments[0], dialog = arguments[1], wrapper = arguments[2];
+if (!button || !dialog || !wrapper || !wrapper.contains(dialog)
+    || !wrapper.contains(button) || dialog.contains(button)) {
+  return {ok:false, reason:'wrapper_relationship_invalid'};
+}
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.isConnected && el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden'
+    && Number(s.opacity || '1') > 0 && s.pointerEvents !== 'none');
+};
+const dr = dialog.getBoundingClientRect(), br = button.getBoundingClientRect();
+const ws = getComputedStyle(wrapper), wr = wrapper.getBoundingClientRect();
+const text = norm(button.innerText || button.textContent);
+const aria = norm(button.getAttribute('aria-label'));
+const title = norm(button.getAttribute('title'));
+const testid = norm(button.getAttribute('data-testid'));
+const variant = norm(button.getAttribute('data-variant'));
+const cls = String(button.className || '').toLowerCase();
+const type = norm(button.getAttribute('type') || 'button');
+const disabled = !!button.disabled || button.getAttribute('aria-disabled') === 'true';
+const actionText = [text, aria, title, testid, variant].join(' ');
+const closeEvidence = testid === 'close' || variant === 'close'
+  || ['close', 'close dialog', 'dismiss'].includes(aria)
+  || ['close', 'dismiss'].includes(title)
+  || cls.includes('button-close') || cls.includes('modal-close')
+  || cls.includes('dialog-close')
+  || ['x', '×', 'close', 'dismiss'].includes(text);
+const top = visible(button) ? document.elementFromPoint(
+  br.left + br.width/2, br.top + br.height/2
+) : null;
+const topmost = !!(top && (top === button || button.contains(top)));
+const nearTopRight = (br.left + br.width/2) >= dr.right - Math.max(56, Math.min(128, dr.width * 0.2))
+  && (br.left + br.width/2) <= dr.right + 16
+  && (br.top + br.height/2) >= dr.top - 8
+  && (br.top + br.height/2) <= dr.top + 104;
+const viewportWrapper = ws.position === 'fixed'
+  && wr.width >= window.innerWidth * 0.8
+  && wr.height >= window.innerHeight * 0.8;
+return {
+  ok: visible(button) && visible(dialog) && viewportWrapper && !disabled
+    && type === 'button' && closeEvidence
+    && !/\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|submit|yes)\b/i.test(actionText)
+    && nearTopRight && topmost,
+  reason: !visible(button) ? 'wrapper_close_not_visible'
+    : !visible(dialog) ? 'dialog_not_visible'
+    : !viewportWrapper ? 'wrapper_not_fullscreen_fixed'
+    : disabled ? 'wrapper_close_disabled'
+    : type !== 'button' ? 'wrapper_close_not_button_type'
+    : !closeEvidence ? 'wrapper_control_not_explicit_close'
+    : /\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|submit|yes)\b/i.test(actionText)
+      ? 'wrapper_control_looks_dangerous'
+    : !nearTopRight ? 'wrapper_close_not_near_dialog_top_right'
+    : !topmost ? 'wrapper_close_not_topmost'
+    : 'validated',
+  zIndex: Number.parseInt(ws.zIndex || getComputedStyle(dialog).zIndex || '0', 10) || 0,
+  topmost, nearTopRight, viewportWrapper
+};""";
+
+# A backdrop is eligible only when its own DOM marker identifies it as a
+# dialog/modal backdrop, it belongs to the same portal tree, and hit-testing
+# proves the selected blank point lands on that backdrop (not the page).
+_SAFE_BACKDROP_CLICK_POINT_JS = r"""/* REWARD_POPUP_SAFE_BACKDROP_POINT_V1 */
+const dialog = arguments[0];
+if (!dialog || !dialog.isConnected) return {ok:false, reason:'dialog_missing'};
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.isConnected && el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden'
+    && Number(s.opacity || '1') > 0);
+};
+const selectors = [
+  '[data-slot="dialog-overlay"]', '[data-slot="modal-overlay"]',
+  '[data-slot="dialog-backdrop"]', '[data-slot="modal-backdrop"]',
+  '[data-testid="dialog-overlay"]', '[data-testid="modal-backdrop"]',
+  '[data-testid="popup-backdrop"]', '[role="dialog-overlay"]'
+].join(',');
+const isExplicitBackdrop = el => {
+  const slot = String(el.getAttribute('data-slot') || '').toLowerCase();
+  const testid = String(el.getAttribute('data-testid') || '').toLowerCase();
+  const role = String(el.getAttribute('role') || '').toLowerCase();
+  const cls = String(el.getAttribute('class') || '');
+  return [
+    'dialog-overlay','modal-overlay','dialog-backdrop','modal-backdrop'
+  ].includes(slot) || [
+    'dialog-overlay','modal-backdrop','popup-backdrop'
+  ].includes(testid) || role === 'dialog-overlay'
+    || /(^|[\s_-])(dialog|modal|popup)[_-](overlay|backdrop)([\s_-]|$)/i.test(cls);
+};
+const relatedPortal = candidate => {
+  if (candidate.contains(dialog)) return true;
+  let node = dialog;
+  for (let depth = 0; node && depth <= 4; depth++, node = node.parentElement) {
+    if (node === document.body || node === document.documentElement) break;
+    if (node.contains(candidate)) {
+      let candidateDepth = 0, parent = candidate;
+      while (parent && parent !== node && candidateDepth <= 4) {
+        candidateDepth++;
+        parent = parent.parentElement;
+      }
+      if (parent === node && candidateDepth <= 3) return true;
+    }
+  }
+  return false;
+};
+const dialogs = Array.from(document.querySelectorAll(
+  '[role="dialog"],[aria-modal="true"],dialog,[class*="modal"],[class*="Modal"]'
+)).filter(visible);
+const w = window.innerWidth, h = window.innerHeight, margin = 20;
+const points = [
+  [margin, margin], [w-margin, margin],
+  [margin, h-margin], [w-margin, h-margin],
+  [w/2, margin], [w/2, h-margin],
+  [margin, h/2], [w-margin, h/2]
+];
+const safePointsFor = candidate => {
+  const r = candidate.getBoundingClientRect();
+  for (const [x,y] of points) {
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+    if (dialogs.some(d => {
+      const q = d.getBoundingClientRect();
+      return x >= q.left-4 && x <= q.right+4 && y >= q.top-4 && y <= q.bottom+4;
+    })) continue;
+    const hit = document.elementFromPoint(x,y);
+    if (!(hit && (hit === candidate || candidate.contains(hit)))) continue;
+    let node = hit, interactive = false;
+    while (node && node !== candidate) {
+      if (node.matches && node.matches(
+        'button,a[href],input,select,textarea,[role="button"],[role="link"],[contenteditable="true"]'
+      )) { interactive = true; break; }
+      node = node.parentElement;
+    }
+    if (!interactive) return {x,y};
+  }
+  return null;
+};
+const candidates = [];
+for (const candidate of Array.from(document.querySelectorAll(selectors))) {
+  if (!visible(candidate) || !isExplicitBackdrop(candidate) || !relatedPortal(candidate)) continue;
+  const s = getComputedStyle(candidate), r = candidate.getBoundingClientRect();
+  if (s.position !== 'fixed' || s.pointerEvents !== 'auto'
+      || r.width < w*0.8 || r.height < h*0.8) continue;
+  const state = String(candidate.getAttribute('data-state') || '').toLowerCase();
+  if (state && !['open','visible','shown'].includes(state)) continue;
+  const point = safePointsFor(candidate);
+  if (point) candidates.push({candidate, point, marker:
+    candidate.getAttribute('data-slot') || candidate.getAttribute('data-testid')
+    || candidate.getAttribute('role') || 'explicit-backdrop'});
+}
+if (candidates.length !== 1) {
+  return {ok:false, reason:candidates.length ? 'ambiguous_safe_backdrops' : 'no_verified_blank_backdrop'};
+}
+const chosen = candidates[0], r = chosen.candidate.getBoundingClientRect();
+return {
+  ok:true, backdrop:chosen.candidate,
+  offsetX:Math.round(chosen.point.x - (r.left + r.width/2)),
+  offsetY:Math.round(chosen.point.y - (r.top + r.height/2)),
+  x:Math.round(chosen.point.x), y:Math.round(chosen.point.y),
+  marker:String(chosen.marker).slice(0,80)
+};""";
+
+
 _CLOSE_CONTROL_CHECK_JS = r"""/* REWARD_POPUP_CLOSE_CONTROL_CHECK_V2 */
 const button = arguments[0], dialog = arguments[1];
 if (!button || !dialog) return {ok:false, reason:'missing_element'};
@@ -239,6 +470,14 @@ return {
   text, aria, title, testid, variant, className:cls.slice(0,180),
   topmost, zIndex:z, dialogVisible, safeRewardContinue
 };"""
+
+
+
+def _native_click_backdrop(driver, backdrop, offset_x: int, offset_y: int) -> None:
+    """Dispatch a real pointer click at a prevalidated blank point on a modal backdrop."""
+    ActionChains(driver).move_to_element_with_offset(
+        backdrop, int(offset_x), int(offset_y)
+    ).click().perform()
 
 
 def _log(log: Callable[[str], None] | None, message: str) -> None:
@@ -458,7 +697,7 @@ def dismiss_all_safe_popups(
                 try:
                     buttons = dialog.find_elements("css selector", BUTTON_SELECTOR)
                 except Exception:
-                    continue
+                    buttons = []
                 for button in buttons:
                     if not _is_visible(button):
                         continue
@@ -476,14 +715,41 @@ def dismiss_all_safe_popups(
                         candidates.append((
                             int(validation.get("zIndex", 0) or 0),
                             0 if validation.get("safeRewardContinue") else 1,
-                            button_id,
-                            dialog,
-                            button,
-                            validation,
+                            button_id, dialog, button, validation, None,
+                        ))
+
+                # The portal's own X can live in a fixed wrapper as a sibling
+                # of the role=dialog node. Only explicit close controls in the
+                # dialog's own fullscreen wrapper are considered.
+                try:
+                    wrapper_pairs = driver.execute_script(
+                        _ASSOCIATED_WRAPPER_CLOSE_CANDIDATES_JS, dialog
+                    ) or []
+                except Exception:
+                    wrapper_pairs = []
+                for pair in wrapper_pairs:
+                    if not isinstance(pair, dict):
+                        continue
+                    button, wrapper = pair.get("button"), pair.get("wrapper")
+                    if button is None or wrapper is None or not _is_visible(button):
+                        continue
+                    button_id = getattr(button, "id", None) or id(button)
+                    if button_id in seen_button_ids:
+                        continue
+                    seen_button_ids.add(button_id)
+                    try:
+                        validation = driver.execute_script(
+                            _WRAPPER_CLOSE_CONTROL_CHECK_JS, button, dialog, wrapper
+                        )
+                    except Exception:
+                        continue
+                    if isinstance(validation, dict) and validation.get("ok"):
+                        candidates.append((
+                            int(validation.get("zIndex", 0) or 0),
+                            1, button_id, dialog, button, validation, wrapper,
                         ))
 
             if not candidates:
-                diagnostics = _popup_context_diagnostics(driver)
                 # The portal can leave a short-lived, non-interactive wrapper
                 # for the just-dismissed "Your rewards! xN Continue" layer.
                 # Wait for that exact residue to disappear; never click it again.
@@ -495,9 +761,65 @@ def dismiss_all_safe_popups(
                         return True, f"clear_after_reward_transition; dismissed={dismissed}"
                     return False, (
                         "reward_success_dialog_did_not_settle; "
-                        f"dismissed={dismissed}; {diagnostics}; no additional click attempted"
+                        f"dismissed={dismissed}; {_popup_context_diagnostics(driver)}; "
+                        "no additional click attempted"
                     )
 
+                # A blank-area click is allowed only on a uniquely identified,
+                # pointer-active backdrop in this dialog's own portal tree.
+                # Generic screen/page space is never clicked.
+                if dialog_count:
+                    try:
+                        backdrop_check = driver.execute_script(
+                            _SAFE_BACKDROP_CLICK_POINT_JS, dialogs[0]
+                        )
+                    except Exception as exc:
+                        backdrop_check = {
+                            "ok": False, "reason": f"backdrop_inspection_failed:{type(exc).__name__}"
+                        }
+                    if isinstance(backdrop_check, dict) and backdrop_check.get("ok"):
+                        try:
+                            _native_click_backdrop(
+                                driver,
+                                backdrop_check["backdrop"],
+                                backdrop_check["offsetX"],
+                                backdrop_check["offsetY"],
+                            )
+                        except Exception as exc:
+                            return False, (
+                                f"safe_backdrop_native_click_failed:{type(exc).__name__}; "
+                                f"dismissed={dismissed}"
+                            )
+                        deadline = time.monotonic() + timeout
+                        cleared = False
+                        while time.monotonic() < deadline:
+                            try:
+                                current = _inspect(driver)
+                                if int(current.get("dialogCount", 0) or 0) < dialog_count:
+                                    cleared = True
+                                    break
+                                if not _is_visible(dialogs[0]):
+                                    cleared = True
+                                    break
+                            except Exception:
+                                pass
+                            time.sleep(poll_interval)
+                        if cleared:
+                            dismissed += 1
+                            _log(
+                                log,
+                                "🧹 Reward popup guard: dismissed layer "
+                                f"{dismissed} using verified blank backdrop point "
+                                f"({backdrop_check.get('marker','backdrop')})",
+                            )
+                            continue
+                        return False, (
+                            "safe_backdrop_click_did_not_dismiss_dialog; "
+                            f"marker={backdrop_check.get('marker','backdrop')}; "
+                            f"dismissed={dismissed}; {_popup_context_diagnostics(driver)}"
+                        )
+
+                diagnostics = _popup_context_diagnostics(driver)
                 if overlay_count and not dialog_count:
                     return False, (
                         "unknown_fullscreen_overlay_blocks_page; "
@@ -505,10 +827,14 @@ def dismiss_all_safe_popups(
                     )
                 summary = state.get("dialogSummaries") or []
                 description = summary[0].get("text", "")[:100] if summary else ""
+                backdrop_reason = (
+                    backdrop_check.get("reason", "not_checked")
+                    if isinstance(backdrop_check, dict) else "not_checked"
+                )
                 return False, (
                     f"blocking_dialog_has_no_unambiguous_safe_close; dialogs={dialog_count}; "
                     f"overlays={overlay_count}; top_dialog={description!r}; "
-                    f"dismissed={dismissed}; {diagnostics}"
+                    f"backdrop={backdrop_reason}; dismissed={dismissed}; {diagnostics}"
                 )
 
             # Only one close control should be topmost at its click point. Prefer
@@ -522,7 +848,7 @@ def dismiss_all_safe_popups(
             if len(top_candidates) != 1:
                 return False, f"ambiguous_topmost_close_controls:{len(top_candidates)}; dismissed={dismissed}"
 
-            _, _, _, target_dialog, target_button, validation = top_candidates[0]
+            _, _, _, target_dialog, target_button, validation, _target_wrapper = top_candidates[0]
             dialog_description = ""
             try:
                 dialog_description = driver.execute_script(
