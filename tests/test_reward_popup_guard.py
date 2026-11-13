@@ -344,6 +344,62 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(driver.dialogs, [])
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
+
+
+    def test_verified_backdrop_is_tried_when_safe_x_click_does_not_close_popup(self):
+        from unittest.mock import patch
+        import reward_popup_guard as guard
+
+        driver = LayerDriver(layers=1, closable=True)
+        dialog = driver.dialogs[0]
+        close = driver.close_buttons[0]
+        # The X click dispatches but this portal implementation leaves the
+        # dialog open; only the separately verified backdrop dismisses it.
+        close.click_action = lambda: None
+        backdrop = Element("verified dialog overlay", {
+            "data-slot": "dialog-overlay",
+            "class": "dialog-backdrop",
+        })
+        base_execute = driver.execute_script
+
+        def execute_script(script, *args):
+            if script == guard._SAFE_BACKDROP_CLICK_POINT_JS:
+                return {
+                    "ok": True, "backdrop": backdrop, "dialog": dialog,
+                    "offsetX": 20, "offsetY": 20, "marker": "dialog-overlay",
+                }
+            return base_execute(script, *args)
+
+        driver.execute_script = execute_script
+        actions = []
+
+        class FakeActionChains:
+            def __init__(self, target_driver):
+                self.target_driver = target_driver
+
+            def move_to_element_with_offset(self, element, x, y):
+                actions.append(("move", element, x, y))
+                return self
+
+            def click(self):
+                actions.append(("click",))
+                return self
+
+            def perform(self):
+                actions.append(("perform",))
+                self.target_driver._close(dialog)
+
+        with patch.object(guard, "ActionChains", FakeActionChains):
+            ok, reason = dismiss_all_safe_popups(
+                driver, log=lambda _m: None, timeout=0.2
+            )
+
+        self.assertTrue(ok, reason)
+        self.assertTrue(close.clicked)
+        self.assertEqual(driver.close_count, 1)
+        self.assertEqual(actions[0], ("move", backdrop, 20, 20))
+        self.assertEqual(driver.dialogs, [])
+
     def test_does_not_click_generic_blank_page_area_when_no_backdrop_is_proven(self):
         driver = LayerDriver(layers=1, closable=False)
         ok, reason = dismiss_all_safe_popups(
