@@ -400,7 +400,7 @@ if (candidates.length !== 1) {
 }
 const chosen = candidates[0], r = chosen.candidate.getBoundingClientRect();
 return {
-  ok:true, backdrop:chosen.candidate,
+  ok:true, backdrop:chosen.candidate, dialog,
   offsetX:Math.round(chosen.point.x - r.left),
   offsetY:Math.round(chosen.point.y - r.top),
   x:Math.round(chosen.point.x), y:Math.round(chosen.point.y),
@@ -808,7 +808,8 @@ def dismiss_all_safe_popups(
                                 if int(current.get("dialogCount", 0) or 0) < dialog_count:
                                     cleared = True
                                     break
-                                if not _is_visible(dialogs[0]):
+                                target_dialog = backdrop_check.get('dialog')
+                                if target_dialog is not None and not _is_visible(target_dialog):
                                     cleared = True
                                     break
                             except Exception:
