@@ -306,7 +306,7 @@ class RewardPopupGuardTests(unittest.TestCase):
             if script == guard._SAFE_BACKDROP_CLICK_POINT_JS:
                 self.assertEqual(args, ())
                 return {
-                    "ok": True, "backdrop": backdrop,
+                    "ok": True, "backdrop": backdrop, "dialog": dialog,
                     "offsetX": 20, "offsetY": 20,
                     "x": 20, "y": 20, "marker": "dialog-overlay",
                 }
