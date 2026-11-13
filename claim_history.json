@@ -13925,9 +13925,9 @@
   },
   "BB382E889AA37C4F": {
     "daily": {
-      "last_claim": "2026-11-12T06:29:58.459373",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-13T22:57:42.923927",
+      "next_available": "2026-11-14T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-13T17:55:01.677226",
       "unconfirmed_attempts": 4
     },

@@ -53,36 +53,24 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-13T17:59:20.964484",
-    "run_label": "Promotional Check #1",
+    "timestamp": "2026-11-13T22:57:43.762433",
+    "run_label": "Manual Run",
     "daily_only_recovery": true,
-    "daily_recovery_slot": "Promotional Check #1",
+    "daily_recovery_mode": "manual",
+    "daily_recovery_slot": null,
+    "manual_daily_recovery_player_id": "BB382E889AA37C4F",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
-    "retry_player_ids": [
-      "BB382E889AA37C4F"
-    ],
-    "retry_player_count": 1,
-    "retry_targets_by_player": {
-      "BB382E889AA37C4F": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": true,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": false,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      }
-    },
-    "total_claimed": 0,
-    "efficiency": 0.0,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
+    "retry_targets_by_player": {},
+    "total_claimed": 1,
+    "efficiency": 100.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 1512,
+    "duration_seconds": 50,
     "per_type": {
-      "daily": 0,
+      "daily": 1,
       "store": 0,
       "store_daily": 0,
       "store_temp": 0,
@@ -91,33 +79,33 @@
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 42.2,
-    "accounts_processed": 35,
-    "claims_made": 0,
-    "unavailable_rewards": 7,
+    "slowest_player": "BB382E889AA37C4F",
+    "avg_time_per_player": 50.0,
+    "accounts_processed": 1,
+    "claims_made": 1,
+    "unavailable_rewards": 0,
     "standard_rewards_on_cooldown": 0,
-    "promotional_unavailable_observations": 7,
-    "distinct_promotional_offer_types": 1,
+    "promotional_unavailable_observations": 0,
+    "distinct_promotional_offer_types": 0,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
-    "partial_results": 1,
+    "partial_results": 0,
     "actual_failures": 0,
-    "unconfirmed_claims": 1,
+    "unconfirmed_claims": 0,
     "immediate_recovery_accounts_attempted": 1,
-    "immediate_recovery_accounts_resolved": 0,
-    "immediate_recovery_accounts_unresolved": 1,
+    "immediate_recovery_accounts_resolved": 1,
+    "immediate_recovery_accounts_unresolved": 0,
     "promotion_detection_failures": 0,
     "promotion_followups_open": 0,
     "promotion_followups_still_blocked": 0,
     "promotion_followups_pending_recheck": 0,
     "promotion_followups_legacy_seeded": 0,
-    "promotional_only_accounts": 34,
+    "promotional_only_accounts": 0,
     "backup_reconciliation_accounts": 0,
     "full_claim_accounts": 1,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 35
+    "player_count": 1
   },
   "last_full_run": {
     "timestamp": "2026-11-13T06:43:16.038770",
@@ -494,12 +482,12 @@
     },
     "BB382E889AA37C4F": {
       "reset_date": "2026-11-13",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-13T17:55:02.271460",
-      "last_run_label": "Promotional Check #1",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery",
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-13T22:57:43.261828",
+      "last_run_label": "Manual Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
       "daily_recovery_slots_attempted": [
         "Promotional Check #1"
       ],
@@ -1145,13 +1133,13 @@
         {
           "name": "SAVAggEEEE",
           "first_seen_at_ist": "2026-11-13T17:54:42.480986",
-          "last_seen_at_ist": "2026-11-13T17:54:42.480986",
-          "observation_count": 1,
+          "last_seen_at_ist": "2026-11-13T22:57:20.716241",
+          "observation_count": 2,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-13T17:54:42.480986"
+      "last_observed_at_ist": "2026-11-13T22:57:20.716241"
     },
     "DA4C269DB53172C5": {
       "current_name": "\u0120od\u0141\u00eekeP\u015aR",
