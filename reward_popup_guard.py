@@ -662,6 +662,60 @@ def _wait_for_reward_success_residue(
         return False
 
 
+
+def _try_safe_backdrop_dismissal(
+    driver, *, dialog_count: int, state: dict,
+    timeout: float, poll_interval: float,
+) -> tuple[bool, str, dict]:
+    """Try one native click on a verified blank point of the active modal backdrop."""
+    try:
+        before = _inspect(driver)
+    except Exception as exc:
+        return False, f"backdrop_state_refresh_failed:{type(exc).__name__}", {}
+    before_url = str(state.get("url") or "")
+    current_url = str(before.get("url") or "")
+    if before_url and current_url and before_url != current_url:
+        return False, "page_url_changed_before_backdrop_fallback", {}
+    current_count = int(before.get("dialogCount", 0) or 0)
+    if current_count < dialog_count:
+        return True, "dialog_closed_before_backdrop_fallback", {}
+    if current_count == 0:
+        return True, "no_dialog_remains", {}
+
+    try:
+        check = driver.execute_script(_SAFE_BACKDROP_CLICK_POINT_JS) or {}
+    except Exception as exc:
+        return False, f"backdrop_inspection_failed:{type(exc).__name__}", {}
+    if not isinstance(check, dict) or not check.get("ok"):
+        reason = check.get("reason", "no_verified_blank_backdrop") if isinstance(check, dict) else "invalid_backdrop_result"
+        return False, str(reason), check if isinstance(check, dict) else {}
+
+    try:
+        _native_click_backdrop(
+            driver, check["backdrop"], check["offsetX"], check["offsetY"]
+        )
+    except Exception as exc:
+        return False, f"safe_backdrop_native_click_failed:{type(exc).__name__}", check
+
+    target_dialog = check.get("dialog")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            after = _inspect(driver)
+            after_url = str(after.get("url") or "")
+            if before_url and after_url and before_url != after_url:
+                return False, "backdrop_click_changed_page_url", check
+            after_count = int(after.get("dialogCount", 0) or 0)
+            if after_count < current_count:
+                return True, "verified_backdrop_dismissed_top_dialog", check
+            if target_dialog is not None and not _is_visible(target_dialog):
+                return True, "verified_backdrop_dismissed_top_dialog", check
+        except Exception:
+            pass
+        time.sleep(poll_interval)
+    return False, "safe_backdrop_click_did_not_dismiss_dialog", check
+
+
 def dismiss_all_safe_popups(
     driver,
     *,
@@ -785,57 +839,25 @@ def dismiss_all_safe_popups(
                 # A blank-area click is allowed only on a uniquely identified,
                 # pointer-active backdrop in this dialog's own portal tree.
                 # Generic screen/page space is never clicked.
+                backdrop_cleared = False
+                backdrop_reason = "not_checked"
+                backdrop_check = {}
                 if dialog_count:
-                    try:
-                        backdrop_check = driver.execute_script(
-                            _SAFE_BACKDROP_CLICK_POINT_JS
+                    backdrop_cleared, backdrop_reason, backdrop_check = (
+                        _try_safe_backdrop_dismissal(
+                            driver, dialog_count=dialog_count, state=state,
+                            timeout=timeout, poll_interval=poll_interval,
                         )
-                    except Exception as exc:
-                        backdrop_check = {
-                            "ok": False, "reason": f"backdrop_inspection_failed:{type(exc).__name__}"
-                        }
-                    if isinstance(backdrop_check, dict) and backdrop_check.get("ok"):
-                        try:
-                            _native_click_backdrop(
-                                driver,
-                                backdrop_check["backdrop"],
-                                backdrop_check["offsetX"],
-                                backdrop_check["offsetY"],
-                            )
-                        except Exception as exc:
-                            return False, (
-                                f"safe_backdrop_native_click_failed:{type(exc).__name__}; "
-                                f"dismissed={dismissed}"
-                            )
-                        deadline = time.monotonic() + timeout
-                        cleared = False
-                        while time.monotonic() < deadline:
-                            try:
-                                current = _inspect(driver)
-                                if int(current.get("dialogCount", 0) or 0) < dialog_count:
-                                    cleared = True
-                                    break
-                                target_dialog = backdrop_check.get('dialog')
-                                if target_dialog is not None and not _is_visible(target_dialog):
-                                    cleared = True
-                                    break
-                            except Exception:
-                                pass
-                            time.sleep(poll_interval)
-                        if cleared:
-                            dismissed += 1
-                            _log(
-                                log,
-                                "🧹 Reward popup guard: dismissed layer "
-                                f"{dismissed} using verified blank backdrop point "
-                                f"({backdrop_check.get('marker','backdrop')})",
-                            )
-                            continue
-                        return False, (
-                            "safe_backdrop_click_did_not_dismiss_dialog; "
-                            f"marker={backdrop_check.get('marker','backdrop')}; "
-                            f"dismissed={dismissed}; {_popup_context_diagnostics(driver)}"
+                    )
+                    if backdrop_cleared:
+                        dismissed += 1
+                        _log(
+                            log,
+                            "🧹 Reward popup guard: dismissed layer "
+                            f"{dismissed} using verified blank backdrop point "
+                            f"({backdrop_check.get('marker','backdrop')})",
                         )
+                        continue
 
                 diagnostics = _popup_context_diagnostics(driver)
                 if overlay_count and not dialog_count:
@@ -906,7 +928,28 @@ def dismiss_all_safe_popups(
                 time.sleep(poll_interval)
 
             if not closed:
-                return False, f"dialog_remained_after_native_close_click; dismissed={dismissed}"
+                # The explicit X was safe to click but did not dismiss this
+                # layer. Try one separately verified backdrop point; never
+                # fall back to arbitrary page whitespace.
+                backdrop_cleared, backdrop_reason, backdrop_check = (
+                    _try_safe_backdrop_dismissal(
+                        driver, dialog_count=dialog_count, state=state,
+                        timeout=timeout, poll_interval=poll_interval,
+                    )
+                )
+                if backdrop_cleared:
+                    dismissed += 1
+                    _log(
+                        log,
+                        "🧹 Reward popup guard: X did not dismiss layer; "
+                        f"verified blank backdrop point closed layer {dismissed} "
+                        f"({backdrop_check.get('marker','backdrop')})",
+                    )
+                    continue
+                return False, (
+                    "dialog_remained_after_native_close_click; "
+                    f"backdrop_fallback={backdrop_reason}; dismissed={dismissed}"
+                )
 
             dismissed += 1
             control_kind = "reward Continue" if validation.get("safeRewardContinue") else "close"
