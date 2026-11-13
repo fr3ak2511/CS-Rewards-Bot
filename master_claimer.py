@@ -7000,6 +7000,10 @@ def main():
                 r, coverage_rechecked = recover_player_from_saved_targets(
                     pid, has_loyalty, new_id, run_label, daily_target_only
                 )
+                # The saved-target result constructor represents a general
+                # standard-reward audit. This branch touched Daily only, so it
+                # must never mark Gold/Cash/Luckyloon as audited for this reset.
+                r["standard_rewards_checked"] = False
                 r["daily_only_recovery"] = True
                 r["daily_recovery_attempted"] = True
                 if coverage_rechecked:
