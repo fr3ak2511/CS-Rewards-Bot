@@ -298,8 +298,18 @@ return {
 # dialog/modal backdrop, it belongs to the same portal tree, and hit-testing
 # proves the selected blank point lands on that backdrop (not the page).
 _SAFE_BACKDROP_CLICK_POINT_JS = r"""/* REWARD_POPUP_SAFE_BACKDROP_POINT_V1 */
-const dialog = arguments[0];
-if (!dialog || !dialog.isConnected) return {ok:false, reason:'dialog_missing'};
+const allDialogs = Array.from(document.querySelectorAll(
+  '[role="dialog"],[aria-modal="true"],dialog,[class*="modal"],[class*="Modal"]'
+)).filter(el => {
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.isConnected && el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || '1') > 0);
+});
+if (!allDialogs.length) return {ok:false, reason:'dialog_missing'};
+const dialog = allDialogs.reduce((best, item) => {
+  const z = el => Number.parseInt(getComputedStyle(el).zIndex || '0', 10) || 0;
+  return z(item) >= z(best) ? item : best;
+}, allDialogs[0]);
 const visible = el => {
   if (!el) return false;
   const r = el.getBoundingClientRect(), s = getComputedStyle(el);
@@ -391,8 +401,8 @@ if (candidates.length !== 1) {
 const chosen = candidates[0], r = chosen.candidate.getBoundingClientRect();
 return {
   ok:true, backdrop:chosen.candidate,
-  offsetX:Math.round(chosen.point.x - (r.left + r.width/2)),
-  offsetY:Math.round(chosen.point.y - (r.top + r.height/2)),
+  offsetX:Math.round(chosen.point.x - r.left),
+  offsetY:Math.round(chosen.point.y - r.top),
   x:Math.round(chosen.point.x), y:Math.round(chosen.point.y),
   marker:String(chosen.marker).slice(0,80)
 };""";
