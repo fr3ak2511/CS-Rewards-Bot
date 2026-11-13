@@ -295,10 +295,10 @@ class RewardPopupGuardTests(unittest.TestCase):
 
         def execute_script(script, *args):
             if script == guard._SAFE_BACKDROP_CLICK_POINT_JS:
-                self.assertIs(args[0], dialog)
+                self.assertEqual(args, ())
                 return {
                     "ok": True, "backdrop": backdrop,
-                    "offsetX": -400, "offsetY": -300,
+                    "offsetX": 20, "offsetY": 20,
                     "x": 20, "y": 20, "marker": "dialog-overlay",
                 }
             return base_execute(script, *args)
@@ -330,7 +330,7 @@ class RewardPopupGuardTests(unittest.TestCase):
             )
 
         self.assertTrue(ok, reason)
-        self.assertEqual(actions[0], ("move", backdrop, -400, -300))
+        self.assertEqual(actions[0], ("move", backdrop, 20, 20))
         self.assertEqual(actions[1], ("click",))
         self.assertEqual(driver.dialogs, [])
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
