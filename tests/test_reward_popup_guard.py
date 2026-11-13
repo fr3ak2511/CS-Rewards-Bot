@@ -248,28 +248,32 @@ class RewardPopupGuardTests(unittest.TestCase):
 
 
 
-    def test_dismisses_explicit_close_button_in_fixed_wrapper_outside_dialog(self):
-        driver = LayerDriver(layers=1, closable=False)
-        dialog = driver.dialogs[0]
-        wrapper = Element("fixed popup wrapper")
-        close = Element("", {
-            "type": "button",
-            "aria-label": "Close dialog",
-            "data-testid": "close",
-            "class": "button-close",
-        }, click_action=lambda: driver._close(dialog))
-        driver.wrapper_close = close
-        driver.wrapper = wrapper
+    def test_dismisses_stacked_dialogs_with_explicit_close_buttons_in_fixed_wrappers(self):
+        driver = LayerDriver(layers=2, closable=False)
+        dialogs = list(driver.dialogs)
+        wrappers = {dialog: Element("fixed popup wrapper") for dialog in dialogs}
+        close_buttons = {
+            dialog: Element("", {
+                "type": "button",
+                "aria-label": "Close dialog",
+                "data-testid": "close",
+                "class": "button-close",
+            }, click_action=lambda d=dialog: driver._close(d))
+            for dialog in dialogs
+        }
         base_execute = driver.execute_script
 
         def execute_script(script, *args):
             guard = __import__("reward_popup_guard")
             if script == guard._ASSOCIATED_WRAPPER_CLOSE_CANDIDATES_JS:
-                return [{"button": close, "wrapper": wrapper}]
+                dialog = args[0]
+                return [{
+                    "button": close_buttons[dialog],
+                    "wrapper": wrappers[dialog],
+                }]
             if script == guard._WRAPPER_CLOSE_CONTROL_CHECK_JS:
-                self.assertIs(args[0], close)
-                self.assertIs(args[1], dialog)
-                self.assertIs(args[2], wrapper)
+                self.assertIs(args[0], close_buttons[args[1]])
+                self.assertIs(args[2], wrappers[args[1]])
                 return {"ok": True, "zIndex": 2100, "reason": "validated"}
             return base_execute(script, *args)
 
@@ -277,7 +281,8 @@ class RewardPopupGuardTests(unittest.TestCase):
         ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
 
         self.assertTrue(ok, reason)
-        self.assertTrue(close.clicked)
+        self.assertEqual(driver.close_count, 2)
+        self.assertTrue(all(button.clicked for button in close_buttons.values()))
         self.assertEqual(driver.dialogs, [])
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
