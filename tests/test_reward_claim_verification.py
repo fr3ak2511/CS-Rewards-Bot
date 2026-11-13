@@ -405,7 +405,7 @@ class BoundedRewardRetryTests(unittest.TestCase):
     def test_store_recovery_only_inspects_requested_card_and_skips_promotions(self):
         driver = FakeDriver()
         with patch.object(bot, "bypass_cloudflare"), \
-             patch.object(bot, "close_popup"), \
+             patch.object(bot, "_dismiss_daily_reward_popups", return_value=(True, "test-clear")), \
              patch.object(bot.time, "sleep"), \
              patch.object(bot, "_find_store_daily_button", return_value=(None, "claimed")) as lookup, \
              patch.object(bot, "discover_and_claim_promotions") as promotions, \
