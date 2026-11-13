@@ -461,6 +461,10 @@ jobs:
               emit(False, False, f"production-only claimer; selected branch '{selected_branch or 'unknown'}' is not 'prod'")
               raise SystemExit(0)
 
+          if manual_daily_recovery and (event != 'workflow_dispatch' or external_primary):
+              emit(False, False, 'manual Daily recovery is valid only as its own workflow_dispatch mode on prod; fail closed')
+              raise SystemExit(0)
+
           if event == 'workflow_dispatch' and not external_primary:
               if manual_daily_recovery:
                   if diagnose_login or login_test_only or claim_test_only:
