@@ -1935,31 +1935,202 @@ def _daily_claim_is_already_visible_as_claimed(driver):
 
 
 def _find_daily_claim_button(driver):
-    """Return the visible, enabled Daily-page Claim button and its live state."""
+    """Find only an enabled Daily-reward component button, never Store Bonus controls."""
     try:
         result = driver.execute_script(r"""
-            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim();
             const visible = el => {
                 if (!el) return false;
                 const st = getComputedStyle(el), r = el.getBoundingClientRect();
-                return !!(el.getClientRects().length && st.display !== 'none'
-                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+                return !!(el.isConnected && el.getClientRects().length
+                    && st.display !== 'none' && st.visibility !== 'hidden'
+                    && Number(st.opacity || '1') > 0 && r.width > 0 && r.height > 0);
             };
-            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
-            const claimed = buttons.some(b => visible(b)
-                && ['claimed', 'already claimed'].includes(norm(b.innerText || b.textContent)));
-            const button = buttons.find(b => visible(b)
-                && norm(b.innerText || b.textContent) === 'claim'
-                && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
-            if (button) return {status: 'available', button};
-            return {status: claimed ? 'claimed' : 'not_found'};
+            const text = el => norm(el && (el.innerText || el.textContent));
+            const blockers = Array.from(document.querySelectorAll(
+                '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+            )).filter(visible);
+            if (blockers.length) {
+                return {status:'blocked', reason:'visible_dialog_present', blocker_count:blockers.length};
+            }
+            const dailyButtons = Array.from(document.querySelectorAll(
+                'button[data-variant="component-daily-reward"],[role="button"][data-variant="component-daily-reward"]'
+            )).filter(visible);
+            const available = dailyButtons.filter(b =>
+                text(b).toLowerCase() === 'claim'
+                && !b.disabled && b.getAttribute('aria-disabled') !== 'true'
+            );
+            const cardText = button => {
+                let node = button;
+                for (let depth = 0; depth < 8 && node; depth++, node = node.parentElement) {
+                    const value = text(node);
+                    if (value && value.length <= 500
+                        && (/extra reward/i.test(value) || /\bday\s+\d+\b/i.test(value))) {
+                        return value.slice(0, 420);
+                    }
+                }
+                return '';
+            };
+            const targetTrace = (button, extraPriority) => ({
+                selector:'button[data-variant="component-daily-reward"]',
+                index:dailyButtons.indexOf(button),
+                card_text:cardText(button),
+                button_text:text(button),
+                button_html:(button.outerHTML || '').slice(0, 1200),
+                available_count:available.length,
+                extra_reward_priority:!!extraPriority
+            });
+            if (available.length > 1) {
+                const extra = available.filter(b => /extra reward/i.test(cardText(b)));
+                if (extra.length === 1) {
+                    return {status:'available', button:extra[0], target:targetTrace(extra[0], true)};
+                }
+                return {status:'ambiguous', reason:'multiple_daily_claim_buttons', available_count:available.length};
+            }
+            if (available.length === 1) {
+                const button = available[0];
+                return {
+                    status:'available', button,
+                    target:targetTrace(button, /extra reward/i.test(cardText(button)))
+                };
+            }
+            const allDailyClaimed = dailyButtons.length > 0 && dailyButtons.every(b =>
+                ['claimed','already claimed'].includes(text(b).toLowerCase())
+            );
+            return {
+                status:allDailyClaimed ? 'claimed' : 'not_found',
+                daily_button_count:dailyButtons.length,
+                claimed_button_count:dailyButtons.filter(b =>
+                    ['claimed','already claimed'].includes(text(b).toLowerCase())
+                ).length
+            };
         """)
         if not isinstance(result, dict):
             return None, "error"
+        trace = result.get("target") if isinstance(result.get("target"), dict) else result
+        try:
+            driver._last_daily_target_trace = dict(trace)
+        except Exception:
+            pass
         return result.get("button"), str(result.get("status") or "error")
     except Exception as exc:
         log(f"⚠️ Daily claim button lookup failed: {type(exc).__name__}")
         return None, "error"
+
+
+def _dismiss_daily_reward_popups(driver):
+    """Clear safely dismissible portal dialogs; fail closed if any blocker is ambiguous."""
+    if not callable(getattr(driver, "execute_script", None)):
+        # Test doubles are not live portal pages.
+        return True, "non-browser test double"
+    ok, reason = dismiss_all_safe_popups(
+        driver, log=log, max_popups=8, timeout=3.0, poll_interval=0.15
+    )
+    try:
+        driver._last_daily_popup_guard = {"ok":bool(ok), "reason":str(reason)[:1800]}
+    except Exception:
+        pass
+    if not ok:
+        log(f"⚠️ Daily page is blocked by a popup that could not be safely dismissed: {reason}")
+    return bool(ok), str(reason)
+
+
+_DAILY_TARGET_READY_SCRIPT = r"""
+/* CS_HUB_DAILY_TARGET_READY_V1 */
+const el = arguments[0];
+if (!el || !el.isConnected) return {ready:false, reason:'target_detached'};
+const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+const visible = !!(el.getClientRects().length && r.width > 0 && r.height > 0
+  && s.display !== 'none' && s.visibility !== 'hidden'
+  && Number(s.opacity || '1') > 0);
+const fullyInViewport = r.top >= 0 && r.left >= 0
+  && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+const x = Math.max(0, Math.min(window.innerWidth - 1, r.left + r.width/2));
+const y = Math.max(0, Math.min(window.innerHeight - 1, r.top + r.height/2));
+const top = visible ? document.elementFromPoint(x, y) : null;
+const unobstructed = !!(top && (top === el || el.contains(top)));
+const dialogs = Array.from(document.querySelectorAll(
+  '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+)).filter(node => {
+  const rr = node.getBoundingClientRect(), st = getComputedStyle(node);
+  return !!(node.getClientRects().length && rr.width > 0 && rr.height > 0
+    && st.display !== 'none' && st.visibility !== 'hidden'
+    && Number(st.opacity || '1') > 0);
+});
+return {
+  ready:visible && fullyInViewport && unobstructed && dialogs.length === 0
+    && !el.disabled && el.getAttribute('aria-disabled') !== 'true',
+  reason:!visible ? 'target_not_visible'
+    : dialogs.length ? 'blocking_dialog_present'
+    : !fullyInViewport ? 'target_outside_viewport'
+    : !unobstructed ? 'target_obscured_at_click_point'
+    : (el.disabled || el.getAttribute('aria-disabled') === 'true')
+      ? 'target_disabled' : 'ready',
+  rect:{x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
+  viewport:{width:window.innerWidth,height:window.innerHeight,scroll_x:window.scrollX,scroll_y:window.scrollY},
+  hit_test:top ? {tag:top.tagName.toLowerCase(),text:(top.innerText||top.textContent||'').replace(/\s+/g,' ').trim().slice(0,100)} : null,
+  blocker_count:dialogs.length
+};
+"""
+
+
+def _prepare_daily_claim_target(driver, button, *, timeout=3.5):
+    """Instant-scroll the exact Daily CTA and wait for an unobstructed viewport hit test."""
+    if not callable(getattr(driver, "execute_script", None)):
+        return True, {"ready":True,"reason":"non-browser test double"}
+    trace = {"scroll_behavior":"auto","method":"scroll_into_view"}
+    try:
+        driver.execute_script(
+            "arguments[0].scrollIntoView({behavior:'auto',block:'center',inline:'nearest'});",
+            button,
+        )
+        deadline = time.monotonic() + max(0.2, min(6.0, float(timeout)))
+        last = None
+        while time.monotonic() < deadline:
+            last = driver.execute_script(_DAILY_TARGET_READY_SCRIPT, button)
+            if isinstance(last, dict):
+                trace.update(last)
+                try:
+                    driver._last_daily_target_trace = {
+                        **dict(getattr(driver, "_last_daily_target_trace", {}) or {}),
+                        "viewport_check":trace
+                    }
+                except Exception:
+                    pass
+                if last.get("ready"):
+                    return True, trace
+                if last.get("reason") in ("blocking_dialog_present","target_detached","target_disabled"):
+                    return False, trace
+            time.sleep(0.12)
+        if isinstance(last, dict):
+            trace.update(last)
+        trace.setdefault("reason","viewport_wait_timeout")
+        return False, trace
+    except Exception as exc:
+        trace["error"] = type(exc).__name__
+        trace["reason"] = "viewport_preparation_failed"
+        return False, trace
+
+
+def _click_daily_claim_target(driver, button):
+    """Native click only. Daily claims never use ActionChains or JavaScript click fallbacks."""
+    trace = {"method":"not_dispatched","attempted":[]}
+    try:
+        trace["attempted"].append("webdriver_element_click")
+        button.click()
+        trace["method"] = "webdriver_element_click"
+        try:
+            driver._last_physical_click_trace = dict(trace)
+        except Exception:
+            pass
+        return True
+    except Exception as exc:
+        trace["webdriver_error"] = type(exc).__name__
+        try:
+            driver._last_physical_click_trace = dict(trace)
+        except Exception:
+            pass
+        return False
 
 
 def _daily_portal_confirms_claim(driver):
