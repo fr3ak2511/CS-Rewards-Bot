@@ -1260,52 +1260,132 @@ def accept_cookies(driver):
         pass
 
 
-def capture_display_name(driver):
-    """
-    Extracts in-game display name from hub top-right corner after login.
-    Falls back to None — caller uses masked ID fallback.
-    """
+_DISPLAY_NAME_CAPTURE_SCRIPT = r"""
+/* CS_HUB_DISPLAY_NAME_CAPTURE_V2 */
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
+const blocked = /^(?:critical strike(?: cs)?|online fps|official page|home|store|daily rewards|progression program|loyalty program|redeem code|content creator program|news|updates|events|achievements|about|faq|customer support|operated by aghanim|claim your daily rewards|iron|rp\s*\d+|menu)$/i;
+const validName = value => {
+  const text = norm(value);
+  return !!(text.length >= 2 && text.length < 40 && !blocked.test(text)
+    && !/^[0-9\s]+$/.test(text) && !/[\n\r/:]/.test(text) && /[\p{L}]/u.test(text));
+};
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), st = getComputedStyle(el);
+  return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+    && st.display !== 'none' && st.visibility !== 'hidden' && Number(st.opacity || '1') > 0);
+};
+const directSelectors = [
+  '[data-testid="username"]', '[data-testid="display-name"]',
+  '[data-testid*="player-name"]', '[class*="username"]',
+  '[class*="display-name"]', '[class*="player-name"]',
+  '[class*="user-name"]', '[class*="nickname"]'
+];
+for (const selector of directSelectors) {
+  for (const el of document.querySelectorAll(selector)) {
+    if (!visible(el)) continue;
+    const value = norm(el.innerText || el.textContent);
+    if (validName(value)) return {name:value, source:'profile_name_selector', selector};
+  }
+}
+const avatars = Array.from(document.querySelectorAll(
+  'img[src*="avatar" i], img[src*="profile" i], img[alt*="avatar" i], img[alt*="profile" i]'
+)).filter(visible);
+const candidateSelector = 'h1,h2,h3,p,span,strong,bdi,div';
+for (const avatar of avatars) {
+  const ar = avatar.getBoundingClientRect();
+  let root = avatar;
+  for (let depth = 0; depth < 7 && root; depth++, root = root.parentElement) {
+    const rr = root.getBoundingClientRect();
+    if (rr.width > window.innerWidth * 0.85 || rr.height > window.innerHeight * 0.75) continue;
+    const candidates = Array.from(root.querySelectorAll(candidateSelector)).filter(el => {
+      if (!visible(el)) return false;
+      const value = norm(el.innerText || el.textContent);
+      if (!validName(value)) return false;
+      const r = el.getBoundingClientRect();
+      const dx = Math.abs((r.left + r.width/2) - (ar.left + ar.width/2));
+      return dx <= Math.max(240, window.innerWidth * 0.18)
+        && r.top >= ar.top - 24 && r.top <= ar.bottom + 190;
+    }).map(el => {
+      const r = el.getBoundingClientRect(), value = norm(el.innerText || el.textContent);
+      const dx = Math.abs((r.left + r.width/2) - (ar.left + ar.width/2));
+      const dy = Math.abs(r.top - (ar.bottom + 36));
+      return {name:value, score:dx + dy * 0.8, depth};
+    }).sort((a,b) => a.score - b.score || a.name.length - b.name.length);
+    if (candidates.length) {
+      return {name:candidates[0].name, source:'text_near_profile_avatar', depth};
+    }
+  }
+}
+// Last-resort scan is restricted to the profile area in the top-right corner.
+const fallback = Array.from(document.querySelectorAll(candidateSelector)).filter(el => {
+  if (!visible(el)) return false;
+  const value = norm(el.innerText || el.textContent);
+  if (!validName(value)) return false;
+  const r = el.getBoundingClientRect();
+  return r.left >= window.innerWidth * 0.66 && r.top >= 0
+    && r.top <= window.innerHeight * 0.48
+    && r.width <= Math.max(320, window.innerWidth * 0.28);
+}).map(el => {
+  const r = el.getBoundingClientRect();
+  return {name:norm(el.innerText || el.textContent),
+    score:Math.abs((r.left + r.width/2) - window.innerWidth * 0.84)
+      + Math.abs(r.top - window.innerHeight * 0.16)};
+}).sort((a,b) => a.score - b.score || a.name.length - b.name.length);
+return fallback.length ? {name:fallback[0].name, source:'top_right_profile_fallback'} : null;
+"""
+
+
+def _normalize_display_name(value):
+    """Reject blank or obvious portal labels while preserving legitimate IGN punctuation."""
+    name = " ".join(str(value or "").split())
+    if not (2 <= len(name) < 40) or name.isdigit():
+        return None
+    if any(char in name for char in ("/", ":", "\n", "\r")):
+        return None
+    blocked = {
+        "critical strike", "critical strike cs", "online fps", "official page",
+        "home", "store", "daily rewards", "progression program", "loyalty program",
+        "redeem code", "content creator program", "news", "updates", "events",
+        "achievements", "about", "faq", "customer support", "operated by aghanim",
+        "claim your daily rewards", "iron", "menu",
+    }
+    folded = name.casefold()
+    if folded in blocked or re.fullmatch(r"rp\s*\d+", folded):
+        return None
+    return name if any(char.isalpha() for char in name) else None
+
+
+def capture_display_name(driver, *, attempts=5, poll_interval=0.35):
+    """Poll the authenticated profile header briefly; return None if no credible IGN is visible."""
     try:
-        result = driver.execute_script("""
-            var selectors = [
-                '[class*="username"]', '[class*="display-name"]',
-                '[class*="player-name"]', '[class*="user-name"]',
-                '[class*="nickname"]', '[data-testid="username"]',
-                '[data-testid="display-name"]'
-            ];
-            for (var i = 0; i < selectors.length; i++) {
-                var el = document.querySelector(selectors[i]);
-                if (el) {
-                    var t = (el.innerText || el.textContent || '').trim();
-                    if (t && t.length > 0 && t.length < 40) return t;
-                }
-            }
-            // Heuristic: text near avatar image
-            var avatars = document.querySelectorAll(
-                'img[src*="avatar"],img[src*="profile"],img[alt*="avatar"],img[alt*="profile"]'
-            );
-            for (var j = 0; j < avatars.length; j++) {
-                var parent = avatars[j].parentElement;
-                for (var d = 0; d < 4 && parent; d++) {
-                    var texts = Array.from(parent.querySelectorAll('*')).filter(function(e) {
-                        var t = (e.innerText || '').trim();
-                        return t.length > 1 && t.length < 40 && e.children.length === 0
-                            && !/^[0-9]+$/.test(t) && !t.includes('/') && !t.includes(':');
-                    });
-                    if (texts.length > 0) {
-                        var name = (texts[0].innerText || texts[0].textContent || '').trim();
-                        if (name) return name;
-                    }
-                    parent = parent.parentElement;
-                }
-            }
-            return null;
-        """)
-        if result and len(result.strip()) > 0:
-            log(f"👤 Display name: {result.strip()}")
-            return result.strip()
-    except Exception as e:
-        log(f"⚠️ Display name capture failed (non-critical): {e}")
+        attempts = max(1, min(8, int(attempts)))
+    except (TypeError, ValueError, OverflowError):
+        attempts = 5
+    try:
+        poll_interval = max(0.05, min(1.0, float(poll_interval)))
+    except (TypeError, ValueError, OverflowError):
+        poll_interval = 0.35
+
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            result = driver.execute_script(_DISPLAY_NAME_CAPTURE_SCRIPT)
+            candidate = result.get("name") if isinstance(result, dict) else result
+            source = str(result.get("source") or "profile") if isinstance(result, dict) else "profile"
+            display_name = _normalize_display_name(candidate)
+            if display_name:
+                log(f"👤 Display name captured: {display_name} (source={source})")
+                return display_name
+        except Exception as exc:
+            last_error = type(exc).__name__
+        if attempt + 1 < attempts:
+            time.sleep(poll_interval)
+
+    if last_error:
+        log(f"⚠️ Display name capture unavailable after bounded polling ({last_error}); using cached name or masked ID")
+    else:
+        log("⚠️ Display name not yet present in the profile header after bounded polling; using cached name or masked ID")
     return None
 
 
