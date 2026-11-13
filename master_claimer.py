@@ -2172,7 +2172,7 @@ def _capture_daily_failure_stage(driver, evidence, stage, attempt, reason=None, 
 
 
 def claim_daily_rewards(driver, pid, *, max_attempts=2):
-    """Claim Daily only when live portal state says available; return (count, skipped, unconfirmed)."""
+    """Claim the exact Daily reward CTA only after popup and viewport safety checks."""
     log("🎁 Checking Daily Rewards against live portal state...")
     diagnostic_evidence = []
     try:
@@ -2183,7 +2183,16 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(2)
-        close_popup(driver)
+
+        popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+        if not popup_ok:
+            _capture_daily_failure_stage(
+                driver, diagnostic_evidence, "initial_popup_blocked", 0, popup_reason
+            )
+            log("🚩 Daily claim deferred: popup could not be safely dismissed")
+            update_claim_history(pid, "daily", unconfirmed=True)
+            _persist_daily_claim_diagnostics(pid, diagnostic_evidence, "daily_initial_popup_blocked")
+            return 0, False, True
 
         # Do not trust local history as proof. The live Daily page is authoritative.
         if _daily_portal_confirms_claim(driver):
@@ -2197,8 +2206,8 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
 
         button, state = _find_daily_claim_button(driver)
         if state != "available" or button is None:
-            diagnostic_evidence.append(
-                _capture_daily_claim_diagnostic(driver, "initial_state_unconfirmed", attempt=0)
+            _capture_daily_failure_stage(
+                driver, diagnostic_evidence, "initial_state_unconfirmed", 0, state
             )
             update_claim_history(pid, "daily", unconfirmed=True)
             log(f"⚠️ Daily state could not be established (portal_state={state}); leaving it retryable")
@@ -2207,27 +2216,75 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
             return 0, False, True
 
         for attempt in range(max_attempts):
-            # Re-resolve the actual page control immediately before each attempt.
+            # Check/dismiss any overlay before resolving the actual Daily component CTA.
+            popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+            if not popup_ok:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "popup_blocked_before_click", attempt + 1,
+                    popup_reason
+                )
+                break
+
             button, state = _find_daily_claim_button(driver)
             if state == "claimed" or _daily_portal_confirms_claim(driver):
                 update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
                 driver.save_screenshot(f"daily_{pid}.png")
                 return 0, True, False
             if state != "available" or button is None:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_found_before_click", attempt + 1, state
+                )
+                break
+
+            target_ready, target_trace = _prepare_daily_claim_target(driver, button)
+            if not target_ready:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_ready", attempt + 1,
+                    target_trace.get("reason")
+                )
+                log(f"🚩 Daily click deferred: target not safely interactable ({target_trace.get('reason')})")
+                break
+
+            # Scrolling may reveal a delayed popup. Clear it, then re-resolve/re-check
+            # the exact Daily component CTA; never use a stale or covered element.
+            popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+            if not popup_ok:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "popup_blocked_after_scroll", attempt + 1,
+                    popup_reason
+                )
+                break
+
+            button, state = _find_daily_claim_button(driver)
+            if state != "available" or button is None:
+                if state == "claimed" or _daily_portal_confirms_claim(driver):
+                    update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                    driver.save_screenshot(f"daily_{pid}.png")
+                    return 0, True, False
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_changed_after_scroll", attempt + 1, state
+                )
+                break
+
+            target_ready, target_trace = _prepare_daily_claim_target(driver, button)
+            if not target_ready:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_ready_after_popup_check", attempt + 1,
+                    target_trace.get("reason")
+                )
                 break
 
             pre_click_evidence = _capture_daily_claim_diagnostic(
                 driver, "pre_click", attempt=attempt + 1
             )
             diagnostic_evidence.append(pre_click_evidence)
-            clicked = bool(physical_click(driver, button))
+            clicked = bool(_click_daily_claim_target(driver, button))
             click_trace = dict(getattr(driver, "_last_physical_click_trace", {}) or {})
             pre_click_evidence["metadata"]["click_trace"] = click_trace
-            click_method = click_trace.get("method", "not_recorded")
             if clicked:
-                log(f"🖱️ Daily claim click dispatched (attempt {attempt + 1}, route={click_method}); awaiting portal confirmation")
+                log(f"🖱️ Daily native click dispatched (attempt {attempt + 1}); awaiting portal confirmation")
             else:
-                log(f"⚠️ Daily click helper did not confirm dispatch (attempt {attempt + 1}, route={click_method}); checking portal state")
+                log(f"⚠️ Daily native click was not dispatched (attempt {attempt + 1}); no fallback click attempted")
 
             if _wait_for_daily_claim_confirmation(driver):
                 if clicked:
@@ -2236,7 +2293,7 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
                     driver.save_screenshot(f"daily_{pid}.png")
                     return 1, False, False
                 update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
-                log("✅ Daily portal state changed to claimed; dispatch result was ambiguous")
+                log("✅ Daily portal state changed to claimed; native dispatch result was ambiguous")
                 driver.save_screenshot(f"daily_{pid}.png")
                 return 0, True, False
 
@@ -2247,50 +2304,60 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
                 )
             )
 
-            # A second attempt is permitted only when a fresh read still shows Claim.
+            # A second attempt is permitted only after a fresh page read, a cleared
+            # popup stack, exact target resolution, and another viewport verification.
             if attempt + 1 < max_attempts:
-                # Refresh once so the retry decision is based on server-rendered state,
-                # not only a possibly stale SPA view.
-                refreshed = False
                 try:
                     driver.refresh()
                     bypass_cloudflare(driver)
                     time.sleep(1.5)
-                    close_popup(driver)
-                    refreshed = True
                 except Exception as refresh_exc:
                     log(f"⚠️ Daily refresh before retry failed: {type(refresh_exc).__name__}")
-                    diagnostic_evidence.append(
-                        _capture_daily_claim_diagnostic(
-                            driver, "refresh_error", attempt=attempt + 1,
-                            click_trace={"refresh_error": type(refresh_exc).__name__},
-                        )
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "refresh_error", attempt + 1,
+                        type(refresh_exc).__name__,
+                        click_trace={"refresh_error": type(refresh_exc).__name__},
                     )
-                if refreshed:
-                    diagnostic_evidence.append(
-                        _capture_daily_claim_diagnostic(
-                            driver, "post_refresh", attempt=attempt + 1
-                        )
+                    break
+
+                popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+                if not popup_ok:
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "popup_blocked_after_refresh", attempt + 1,
+                        popup_reason
                     )
-                    fresh_button, fresh_state = _find_daily_claim_button(driver)
-                    if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
-                        update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
-                        driver.save_screenshot(f"daily_{pid}.png")
-                        return 0, True, False
-                    if fresh_state == "available" and fresh_button is not None:
-                        log("⚠️ Daily still appears claimable after a fresh page read; one retry will follow")
+                    break
+
+                _capture_daily_failure_stage(driver, diagnostic_evidence, "post_refresh", attempt + 1)
+                fresh_button, fresh_state = _find_daily_claim_button(driver)
+                if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
+                    update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                    driver.save_screenshot(f"daily_{pid}.png")
+                    return 0, True, False
+                if fresh_state == "available" and fresh_button is not None:
+                    fresh_ready, fresh_trace = _prepare_daily_claim_target(driver, fresh_button)
+                    if fresh_ready:
+                        log("⚠️ Daily remains claimable after refresh and popup clearance; one retry will follow")
                         continue
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "retry_target_not_ready", attempt + 1,
+                        fresh_trace.get("reason")
+                    )
             break
 
         update_claim_history(pid, "daily", unconfirmed=True)
-        log("⚠️ Daily click was not confirmed by the portal; retry required")
+        log("⚠️ Daily claim was not confirmed by the portal; exact target remains retryable")
         diagnostic_path = _persist_daily_claim_diagnostics(
             pid, diagnostic_evidence, "daily_click_not_confirmed_after_allowed_attempts"
         )
         if diagnostic_path:
             log(f"🧪 Daily failure evidence saved: {diagnostic_path}")
-        driver.save_screenshot(f"daily_{pid}.png")
+        try:
+            driver.save_screenshot(f"daily_{pid}.png")
+        except Exception:
+            pass
         return 0, False, True
+
     except Exception as exc:
         log(f"❌ Daily error: {type(exc).__name__}: {str(exc)[:160]}")
         try:
