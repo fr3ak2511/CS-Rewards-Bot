@@ -781,7 +781,7 @@ def dismiss_all_safe_popups(
                 if dialog_count:
                     try:
                         backdrop_check = driver.execute_script(
-                            _SAFE_BACKDROP_CLICK_POINT_JS, dialogs[0]
+                            _SAFE_BACKDROP_CLICK_POINT_JS
                         )
                     except Exception as exc:
                         backdrop_check = {
