@@ -867,10 +867,6 @@ def dismiss_all_safe_popups(
                     )
                 summary = state.get("dialogSummaries") or []
                 description = summary[0].get("text", "")[:100] if summary else ""
-                backdrop_reason = (
-                    backdrop_check.get("reason", "not_checked")
-                    if isinstance(backdrop_check, dict) else "not_checked"
-                )
                 return False, (
                     f"blocking_dialog_has_no_unambiguous_safe_close; dialogs={dialog_count}; "
                     f"overlays={overlay_count}; top_dialog={description!r}; "
