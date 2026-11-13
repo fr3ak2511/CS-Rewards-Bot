@@ -38,6 +38,7 @@ from recovery_policy import (
     full_claim_retry_ids,
     daily_only_pending_targets,
     eligible_daily_recovery_ids,
+    manual_daily_recovery_targets,
 )
 from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
@@ -67,6 +68,8 @@ RUN_ARTIFACTS_DIR = "run_artifacts"
 DAILY_CLAIM_DIAGNOSTICS_DIR = "daily_claim_diagnostics"
 RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
 DAILY_ONLY_RECOVERY = os.getenv("DAILY_ONLY_RECOVERY", "").strip().lower() == "true"
+MANUAL_DAILY_RECOVERY = os.getenv("MANUAL_DAILY_RECOVERY", "").strip().lower() == "true"
+MANUAL_DAILY_RECOVERY_PLAYER_ID = os.getenv("MANUAL_DAILY_RECOVERY_PLAYER_ID", "").strip()
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
@@ -6849,6 +6852,33 @@ def main():
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
 
+    manual_daily_targets = {}
+    if MANUAL_DAILY_RECOVERY:
+        if not DAILY_ONLY_RECOVERY or RECOVERY_ONLY_FAILED:
+            log("❌ Manual Daily recovery requires the dedicated Daily-only mode and cannot be combined with general recovery.")
+            return 2
+        if not MANUAL_DAILY_RECOVERY_PLAYER_ID:
+            log("❌ Manual Daily recovery requires one exact Player ID.")
+            return 2
+        manual_daily_targets = manual_daily_recovery_targets(
+            meta,
+            player_ids,
+            reset_date=_current_reset_date(),
+            player_id=MANUAL_DAILY_RECOVERY_PLAYER_ID,
+        )
+        if len(manual_daily_targets) != 1 or MANUAL_DAILY_RECOVERY_PLAYER_ID not in manual_daily_targets:
+            log("❌ Manual Daily recovery rejected: the requested Player ID is not a current-reset, pending, Daily-only recovery candidate.")
+            return 2
+        selected_pid = MANUAL_DAILY_RECOVERY_PLAYER_ID
+        players = [(pid, loyalty) for pid, loyalty in players if pid == selected_pid]
+        if len(players) != 1 or players[0][0] != selected_pid:
+            log("❌ Manual Daily recovery failed exact one-account roster selection; no browser started.")
+            return 2
+        log(f"🎯 Manual Daily recovery validated for exactly one account: {selected_pid}.")
+    elif MANUAL_DAILY_RECOVERY_PLAYER_ID:
+        log("❌ A manual Daily Player ID was supplied without enabling manual Daily recovery; refusing execution.")
+        return 2
+
     recovery_targets_by_player = {}
     if RECOVERY_ONLY_FAILED:
         prior = meta.get("last_run") or {}
@@ -6903,17 +6933,32 @@ def main():
     } and not RECOVERY_ONLY_FAILED
     daily_pending_targets = {}
     daily_recovery_eligible_ids = set()
-    if DAILY_ONLY_RECOVERY and is_promotional_backup:
-        daily_pending_targets = daily_only_pending_targets(
-            meta, player_ids, reset_date=_current_reset_date()
-        )
-        daily_recovery_eligible_ids = set(eligible_daily_recovery_ids(
-            meta, player_ids, reset_date=_current_reset_date(), slot_label=run_label
-        ))
-        log(
-            f"🎯 Daily-only backup recovery: {len(daily_pending_targets)} pending Daily account(s); "
-            f"{len(daily_recovery_eligible_ids)} eligible for this slot ({run_label})."
-        )
+    if DAILY_ONLY_RECOVERY and (is_promotional_backup or MANUAL_DAILY_RECOVERY):
+        if MANUAL_DAILY_RECOVERY:
+            # Re-read persisted state after the workflow concurrency lock was acquired.
+            # Only this exact Player ID can enter the browser loop.
+            daily_pending_targets = manual_daily_recovery_targets(
+                meta,
+                player_ids,
+                reset_date=_current_reset_date(),
+                player_id=MANUAL_DAILY_RECOVERY_PLAYER_ID,
+            )
+            if len(daily_pending_targets) != 1 or MANUAL_DAILY_RECOVERY_PLAYER_ID not in daily_pending_targets:
+                log("⛔ Manual Daily recovery target changed or is no longer pending; no browser started.")
+                return 2
+            daily_recovery_eligible_ids = set(daily_pending_targets)
+            log(f"🎯 Manual Daily-only recovery: exactly one validated target ({MANUAL_DAILY_RECOVERY_PLAYER_ID}); scheduled-slot counters will not be changed.")
+        else:
+            daily_pending_targets = daily_only_pending_targets(
+                meta, player_ids, reset_date=_current_reset_date()
+            )
+            daily_recovery_eligible_ids = set(eligible_daily_recovery_ids(
+                meta, player_ids, reset_date=_current_reset_date(), slot_label=run_label
+            ))
+            log(
+                f"🎯 Daily-only backup recovery: {len(daily_pending_targets)} pending Daily account(s); "
+                f"{len(daily_recovery_eligible_ids)} eligible for this slot ({run_label})."
+            )
 
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
@@ -6931,7 +6976,14 @@ def main():
             # Do not send this account through process_player(): the scheduled
             # safety-net is restricted to the exact saved Daily target only.
             targets = daily_pending_targets[pid]
-            if pid in daily_recovery_eligible_ids and _mark_daily_recovery_slot_attempt(meta, pid, run_label):
+            slot_available = (
+                MANUAL_DAILY_RECOVERY
+                or (
+                    pid in daily_recovery_eligible_ids
+                    and _mark_daily_recovery_slot_attempt(meta, pid, run_label)
+                )
+            )
+            if pid in daily_recovery_eligible_ids and slot_available:
                 daily_target_only = {
                     "login_retry": False,
                     "processing_error": False,
@@ -6943,19 +6995,29 @@ def main():
                     "event_thresholds_by_program": {},
                     "event_rewards": [],
                 }
-                log(f"🎯 {pid}: executing bounded Daily-only recovery for {run_label}; other reward categories are excluded.")
+                recovery_origin = "manual request" if MANUAL_DAILY_RECOVERY else run_label
+                log(f"🎯 {pid}: executing bounded Daily-only recovery for {recovery_origin}; other reward categories are excluded.")
                 r, coverage_rechecked = recover_player_from_saved_targets(
                     pid, has_loyalty, new_id, run_label, daily_target_only
                 )
+                # The saved-target result constructor represents a general
+                # standard-reward audit. This branch touched Daily only, so it
+                # must never mark Gold/Cash/Luckyloon as audited for this reset.
+                r["standard_rewards_checked"] = False
                 r["daily_only_recovery"] = True
                 r["daily_recovery_attempted"] = True
                 if coverage_rechecked:
                     _record_full_claim_coverage(meta, pid, r, run_label)
             else:
+                defer_reason = (
+                    "Manual Daily recovery target was no longer eligible at execution; no reward click attempted."
+                    if MANUAL_DAILY_RECOVERY
+                    else "Daily-only recovery was not attempted: this backup slot was already used or the four-slot per-reset limit was reached."
+                )
                 r = _deferred_daily_recovery_result(
                     pid,
                     targets,
-                    "Daily-only recovery was not attempted: this backup slot was already used or the four-slot per-reset limit was reached.",
+                    defer_reason,
                 )
                 r["daily_recovery_attempted"] = False
                 log(f"⏭️ {pid}: Daily-only recovery deferred; slot already used or per-reset retry limit reached.")
@@ -7062,7 +7124,12 @@ def main():
         "timestamp":           job_end.isoformat(),
         "run_label":           run_label,
         "daily_only_recovery": DAILY_ONLY_RECOVERY,
-        "daily_recovery_slot": run_label if DAILY_ONLY_RECOVERY else None,
+        "daily_recovery_mode": (
+            "manual" if MANUAL_DAILY_RECOVERY
+            else ("scheduled_backup" if DAILY_ONLY_RECOVERY else None)
+        ),
+        "daily_recovery_slot": run_label if DAILY_ONLY_RECOVERY and not MANUAL_DAILY_RECOVERY else None,
+        "manual_daily_recovery_player_id": MANUAL_DAILY_RECOVERY_PLAYER_ID if MANUAL_DAILY_RECOVERY else None,
         "failed_player_ids":   hard_failed_ids,
         "failed_player_count": len(hard_failed_ids),
         "retry_candidate_scope": "full_claim_only",

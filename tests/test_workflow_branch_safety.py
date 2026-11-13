@@ -56,6 +56,33 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("eligible_daily_recovery_ids", policy)
 
 
+    def test_manual_daily_recovery_is_exact_one_account_and_uses_shared_claim_owner(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn("recover_pending_daily:", workflow)
+        self.assertIn("daily_recovery_player_id:", workflow)
+        self.assertIn("manual_daily_recovery_targets(", workflow)
+        self.assertIn("one account, Daily reward only", workflow)
+        self.assertIn("MANUAL_DAILY_RECOVERY_PLAYER_ID:", workflow)
+        self.assertIn("scheduled backup slot consumed", workflow)
+        run_claimer = workflow.split("  run-claimer:", 1)[1]
+        self.assertIn("group: rewards-claimer", run_claimer)
+        self.assertIn('MANUAL_DAILY_RECOVERY" == "true"', run_claimer)
+        self.assertIn('elif [[ -z "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]; then', run_claimer)
+
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn("MANUAL_DAILY_RECOVERY = os.getenv", source)
+        self.assertIn("manual_daily_recovery_targets(", source)
+        self.assertIn("players = [(pid, loyalty) for pid, loyalty in players if pid == selected_pid]", source)
+        self.assertIn("MANUAL_DAILY_RECOVERY\n                or (", source)
+        self.assertIn('r["standard_rewards_checked"] = False', source)
+        self.assertIn('"daily_recovery_mode":', source)
+        self.assertIn('"manual_daily_recovery_player_id":', source)
+
+    def test_manual_daily_recovery_is_not_dispatched_into_general_post_run_recovery(self):
+        policy = (ROOT / ".github" / "scripts" / "recovery_policy.js").read_text(encoding="utf-8")
+        self.assertIn("lastRun.daily_only_recovery === true", policy)
+        self.assertIn("scheduled Daily-only recovery already ran", policy)
+
     def test_external_primary_dispatch_starts_after_0535_without_randomized_wait(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("external_primary:", workflow)

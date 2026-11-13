@@ -7,6 +7,7 @@ from recovery_policy import (
     is_recent_full_claim_recovery,
     daily_only_pending_targets,
     eligible_daily_recovery_ids,
+    manual_daily_recovery_targets,
 )
 
 
@@ -283,6 +284,46 @@ class DailyOnlyBackupRecoveryTests(unittest.TestCase):
             ),
             [],
         )
+
+    def test_manual_recovery_selects_only_the_exact_pending_daily_player(self):
+        selected = manual_daily_recovery_targets(
+            self.meta, self.roster, reset_date=self.RESET_DATE,
+            player_id=self.PLAYER,
+        )
+        self.assertEqual(list(selected), [self.PLAYER])
+        self.assertTrue(selected[self.PLAYER]["daily_unconfirmed"])
+
+    def test_manual_recovery_rejects_blank_unknown_and_non_pending_ids(self):
+        for player_id in ("", "UNKNOWN-PLAYER", "COMPLETE-PLAYER", "STALE-PLAYER"):
+            with self.subTest(player_id=player_id):
+                self.assertEqual(
+                    manual_daily_recovery_targets(
+                        self.meta, self.roster, reset_date=self.RESET_DATE,
+                        player_id=player_id,
+                    ),
+                    {},
+                )
+
+    def test_manual_recovery_rejects_mixed_reward_targets(self):
+        self.meta["last_run"]["retry_targets_by_player"][self.PLAYER][
+            "store_unconfirmed_indices"
+        ] = [2]
+        self.assertEqual(
+            manual_daily_recovery_targets(
+                self.meta, self.roster, reset_date=self.RESET_DATE,
+                player_id=self.PLAYER,
+            ),
+            {},
+        )
+
+    def test_manual_recovery_does_not_consume_a_scheduled_slot(self):
+        selected = manual_daily_recovery_targets(
+            self.meta, self.roster, reset_date=self.RESET_DATE,
+            player_id=self.PLAYER,
+        )
+        self.assertEqual(selected, {self.PLAYER: self.meta["last_run"]["retry_targets_by_player"][self.PLAYER]})
+        self.assertNotIn("daily_recovery_slots_attempted", self.meta["full_claim_coverage"][self.PLAYER])
+
 
     def test_unknown_slot_fails_closed(self):
         self.assertEqual(
