@@ -92,3 +92,11 @@ test('stale recovery candidates are rejected', () => {
   assert.equal(result.dispatch, false);
   assert.match(result.reason, /stale, does not match this workflow/);
 });
+
+test('scheduled Daily-only recovery does not trigger a second immediate recovery loop', () => {
+  const result = decide(validLastRun({ daily_only_recovery: true }));
+  assert.equal(result.dispatch, false);
+  assert.match(result.reason, /next retry is reserved for a later backup slot/);
+  assert.deepEqual(result.retryIds, []);
+});
+

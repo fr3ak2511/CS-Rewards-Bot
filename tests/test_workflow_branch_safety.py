@@ -41,8 +41,20 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
     def test_python_recovery_receiver_uses_shared_candidate_validator(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
-        self.assertIn("from recovery_policy import full_claim_retry_ids", source)
+        self.assertIn("from recovery_policy import (", source)
+        self.assertIn("full_claim_retry_ids,", source)
+        self.assertIn("daily_only_pending_targets,", source)
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
+
+
+    def test_daily_only_backup_recovery_preserves_roster_streak_and_coverage(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn("not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY", source)
+        self.assertIn("_mark_daily_recovery_slot_attempt(meta, pid, run_label)", source)
+        policy = (ROOT / "recovery_policy.py").read_text(encoding="utf-8")
+        self.assertIn("daily_only_pending_targets", policy)
+        self.assertIn("eligible_daily_recovery_ids", policy)
+
 
     def test_external_primary_dispatch_starts_after_0535_without_randomized_wait(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
