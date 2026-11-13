@@ -1886,7 +1886,7 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
                     /daily|next in|next reward|cooldown|claimed|claim/i.test(line)
                 ).slice(0,40)
             };
-        """))
+        """)
         if isinstance(page_snapshot, dict):
             metadata.update(page_snapshot)
         else:
