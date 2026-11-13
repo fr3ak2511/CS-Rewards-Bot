@@ -254,12 +254,14 @@ class DailyClaimVerificationTests(unittest.TestCase):
     def test_daily_click_counts_only_after_portal_confirmation(self):
         driver = FakeDriver()
         with patch.object(bot, "bypass_cloudflare"), \
-             patch.object(bot, "close_popup"), \
+             patch.object(bot, "_dismiss_daily_reward_popups", return_value=(True, "test-clear")), \
              patch.object(bot.time, "sleep"), \
              patch.object(bot, "_daily_portal_confirms_claim", side_effect=[False, False]), \
              patch.object(bot, "_find_daily_claim_button", return_value=(object(), "available")), \
-             patch.object(bot, "physical_click", return_value=True), \
+             patch.object(bot, "_prepare_daily_claim_target", return_value=(True, {"ready": True})), \
+             patch.object(bot, "_click_daily_claim_target", return_value=True), \
              patch.object(bot, "_wait_for_daily_claim_confirmation", return_value=True), \
+             patch.object(bot, "_capture_daily_claim_diagnostic", return_value={"metadata": {}, "screenshot": None}), \
              patch.object(bot, "update_claim_history") as history_update:
             result = bot.claim_daily_rewards(driver, "TESTPLAYER0001")
 
@@ -269,14 +271,16 @@ class DailyClaimVerificationTests(unittest.TestCase):
     def test_daily_click_without_portal_transition_remains_unconfirmed(self):
         driver = FakeDriver()
         with patch.object(bot, "bypass_cloudflare"), \
-             patch.object(bot, "close_popup"), \
+             patch.object(bot, "_dismiss_daily_reward_popups", return_value=(True, "test-clear")), \
              patch.object(bot.time, "sleep"), \
              patch.object(bot, "_daily_portal_confirms_claim", return_value=False), \
              patch.object(bot, "_find_daily_claim_button", side_effect=[
                  (object(), "available"), (object(), "available"),
                  (object(), "available"), (object(), "available"),
+                 (object(), "available"), (object(), "available"),
              ]), \
-             patch.object(bot, "physical_click", return_value=True) as click, \
+             patch.object(bot, "_prepare_daily_claim_target", return_value=(True, {"ready": True})), \
+             patch.object(bot, "_click_daily_claim_target", return_value=True) as click, \
              patch.object(bot, "_wait_for_daily_claim_confirmation", side_effect=[False, False]), \
              patch.object(bot, "_capture_daily_claim_diagnostic", return_value={"metadata": {}, "screenshot": None}), \
              patch.object(bot, "_persist_daily_claim_diagnostics") as persist, \
@@ -385,11 +389,12 @@ class BoundedRewardRetryTests(unittest.TestCase):
     def test_daily_max_attempts_one_never_dispatches_a_second_click(self):
         driver = FakeDriver()
         with patch.object(bot, "bypass_cloudflare"), \
-             patch.object(bot, "close_popup"), \
+             patch.object(bot, "_dismiss_daily_reward_popups", return_value=(True, "test-clear")), \
              patch.object(bot.time, "sleep"), \
              patch.object(bot, "_daily_portal_confirms_claim", return_value=False), \
              patch.object(bot, "_find_daily_claim_button", return_value=(object(), "available")), \
-             patch.object(bot, "physical_click", return_value=True) as click, \
+             patch.object(bot, "_prepare_daily_claim_target", return_value=(True, {"ready": True})), \
+             patch.object(bot, "_click_daily_claim_target", return_value=True) as click, \
              patch.object(bot, "_wait_for_daily_claim_confirmation", return_value=False), \
              patch.object(bot, "_capture_daily_claim_diagnostic", return_value={"metadata": {}, "screenshot": None}), \
              patch.object(bot, "_persist_daily_claim_diagnostics"), \

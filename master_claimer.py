@@ -1260,52 +1260,132 @@ def accept_cookies(driver):
         pass
 
 
-def capture_display_name(driver):
-    """
-    Extracts in-game display name from hub top-right corner after login.
-    Falls back to None — caller uses masked ID fallback.
-    """
+_DISPLAY_NAME_CAPTURE_SCRIPT = r"""
+/* CS_HUB_DISPLAY_NAME_CAPTURE_V2 */
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
+const blocked = /^(?:critical strike(?: cs)?|online fps|official page|home|store|daily rewards|progression program|loyalty program|redeem code|content creator program|news|updates|events|achievements|about|faq|customer support|operated by aghanim|claim your daily rewards|iron|rp\s*\d+|menu)$/i;
+const validName = value => {
+  const text = norm(value);
+  return !!(text.length >= 2 && text.length < 40 && !blocked.test(text)
+    && !/^[0-9\s]+$/.test(text) && !/[\n\r/:]/.test(text) && /[\p{L}]/u.test(text));
+};
+const visible = el => {
+  if (!el) return false;
+  const r = el.getBoundingClientRect(), st = getComputedStyle(el);
+  return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+    && st.display !== 'none' && st.visibility !== 'hidden' && Number(st.opacity || '1') > 0);
+};
+const directSelectors = [
+  '[data-testid="username"]', '[data-testid="display-name"]',
+  '[data-testid*="player-name"]', '[class*="username"]',
+  '[class*="display-name"]', '[class*="player-name"]',
+  '[class*="user-name"]', '[class*="nickname"]'
+];
+for (const selector of directSelectors) {
+  for (const el of document.querySelectorAll(selector)) {
+    if (!visible(el)) continue;
+    const value = norm(el.innerText || el.textContent);
+    if (validName(value)) return {name:value, source:'profile_name_selector', selector};
+  }
+}
+const avatars = Array.from(document.querySelectorAll(
+  'img[src*="avatar" i], img[src*="profile" i], img[alt*="avatar" i], img[alt*="profile" i]'
+)).filter(visible);
+const candidateSelector = 'h1,h2,h3,p,span,strong,bdi,div';
+for (const avatar of avatars) {
+  const ar = avatar.getBoundingClientRect();
+  let root = avatar;
+  for (let depth = 0; depth < 7 && root; depth++, root = root.parentElement) {
+    const rr = root.getBoundingClientRect();
+    if (rr.width > window.innerWidth * 0.85 || rr.height > window.innerHeight * 0.75) continue;
+    const candidates = Array.from(root.querySelectorAll(candidateSelector)).filter(el => {
+      if (!visible(el)) return false;
+      const value = norm(el.innerText || el.textContent);
+      if (!validName(value)) return false;
+      const r = el.getBoundingClientRect();
+      const dx = Math.abs((r.left + r.width/2) - (ar.left + ar.width/2));
+      return dx <= Math.max(240, window.innerWidth * 0.18)
+        && r.top >= ar.top - 24 && r.top <= ar.bottom + 190;
+    }).map(el => {
+      const r = el.getBoundingClientRect(), value = norm(el.innerText || el.textContent);
+      const dx = Math.abs((r.left + r.width/2) - (ar.left + ar.width/2));
+      const dy = Math.abs(r.top - (ar.bottom + 36));
+      return {name:value, score:dx + dy * 0.8, depth};
+    }).sort((a,b) => a.score - b.score || a.name.length - b.name.length);
+    if (candidates.length) {
+      return {name:candidates[0].name, source:'text_near_profile_avatar', depth};
+    }
+  }
+}
+// Last-resort scan is restricted to the profile area in the top-right corner.
+const fallback = Array.from(document.querySelectorAll(candidateSelector)).filter(el => {
+  if (!visible(el)) return false;
+  const value = norm(el.innerText || el.textContent);
+  if (!validName(value)) return false;
+  const r = el.getBoundingClientRect();
+  return r.left >= window.innerWidth * 0.66 && r.top >= 0
+    && r.top <= window.innerHeight * 0.48
+    && r.width <= Math.max(320, window.innerWidth * 0.28);
+}).map(el => {
+  const r = el.getBoundingClientRect();
+  return {name:norm(el.innerText || el.textContent),
+    score:Math.abs((r.left + r.width/2) - window.innerWidth * 0.84)
+      + Math.abs(r.top - window.innerHeight * 0.16)};
+}).sort((a,b) => a.score - b.score || a.name.length - b.name.length);
+return fallback.length ? {name:fallback[0].name, source:'top_right_profile_fallback'} : null;
+"""
+
+
+def _normalize_display_name(value):
+    """Reject blank or obvious portal labels while preserving legitimate IGN punctuation."""
+    name = " ".join(str(value or "").split())
+    if not (2 <= len(name) < 40) or name.isdigit():
+        return None
+    if any(char in name for char in ("/", ":", "\n", "\r")):
+        return None
+    blocked = {
+        "critical strike", "critical strike cs", "online fps", "official page",
+        "home", "store", "daily rewards", "progression program", "loyalty program",
+        "redeem code", "content creator program", "news", "updates", "events",
+        "achievements", "about", "faq", "customer support", "operated by aghanim",
+        "claim your daily rewards", "iron", "menu",
+    }
+    folded = name.casefold()
+    if folded in blocked or re.fullmatch(r"rp\s*\d+", folded):
+        return None
+    return name if any(char.isalpha() for char in name) else None
+
+
+def capture_display_name(driver, *, attempts=5, poll_interval=0.35):
+    """Poll the authenticated profile header briefly; return None if no credible IGN is visible."""
     try:
-        result = driver.execute_script("""
-            var selectors = [
-                '[class*="username"]', '[class*="display-name"]',
-                '[class*="player-name"]', '[class*="user-name"]',
-                '[class*="nickname"]', '[data-testid="username"]',
-                '[data-testid="display-name"]'
-            ];
-            for (var i = 0; i < selectors.length; i++) {
-                var el = document.querySelector(selectors[i]);
-                if (el) {
-                    var t = (el.innerText || el.textContent || '').trim();
-                    if (t && t.length > 0 && t.length < 40) return t;
-                }
-            }
-            // Heuristic: text near avatar image
-            var avatars = document.querySelectorAll(
-                'img[src*="avatar"],img[src*="profile"],img[alt*="avatar"],img[alt*="profile"]'
-            );
-            for (var j = 0; j < avatars.length; j++) {
-                var parent = avatars[j].parentElement;
-                for (var d = 0; d < 4 && parent; d++) {
-                    var texts = Array.from(parent.querySelectorAll('*')).filter(function(e) {
-                        var t = (e.innerText || '').trim();
-                        return t.length > 1 && t.length < 40 && e.children.length === 0
-                            && !/^[0-9]+$/.test(t) && !t.includes('/') && !t.includes(':');
-                    });
-                    if (texts.length > 0) {
-                        var name = (texts[0].innerText || texts[0].textContent || '').trim();
-                        if (name) return name;
-                    }
-                    parent = parent.parentElement;
-                }
-            }
-            return null;
-        """)
-        if result and len(result.strip()) > 0:
-            log(f"👤 Display name: {result.strip()}")
-            return result.strip()
-    except Exception as e:
-        log(f"⚠️ Display name capture failed (non-critical): {e}")
+        attempts = max(1, min(8, int(attempts)))
+    except (TypeError, ValueError, OverflowError):
+        attempts = 5
+    try:
+        poll_interval = max(0.05, min(1.0, float(poll_interval)))
+    except (TypeError, ValueError, OverflowError):
+        poll_interval = 0.35
+
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            result = driver.execute_script(_DISPLAY_NAME_CAPTURE_SCRIPT)
+            candidate = result.get("name") if isinstance(result, dict) else result
+            source = str(result.get("source") or "profile") if isinstance(result, dict) else "profile"
+            display_name = _normalize_display_name(candidate)
+            if display_name:
+                log(f"👤 Display name captured: {display_name} (source={source})")
+                return display_name
+        except Exception as exc:
+            last_error = type(exc).__name__
+        if attempt + 1 < attempts:
+            time.sleep(poll_interval)
+
+    if last_error:
+        log(f"⚠️ Display name capture unavailable after bounded polling ({last_error}); using cached name or masked ID")
+    else:
+        log("⚠️ Display name not yet present in the profile header after bounded polling; using cached name or masked ID")
     return None
 
 
@@ -1718,6 +1798,16 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
         metadata["title_error"] = type(exc).__name__
     if click_trace:
         metadata["click_trace"] = click_trace
+    for attribute, key in (
+        ("_last_daily_target_trace", "daily_target"),
+        ("_last_daily_popup_guard", "popup_guard"),
+    ):
+        try:
+            value = getattr(driver, attribute, None)
+            if isinstance(value, dict):
+                metadata[key] = value
+        except Exception:
+            pass
 
     try:
         page_snapshot = driver.execute_script(r"""
@@ -1725,41 +1815,76 @@ def _capture_daily_claim_diagnostic(driver, stage, attempt=None, click_trace=Non
             const norm = value => (value || '').replace(/\s+/g, ' ').trim();
             const visible = el => {
                 if (!el) return false;
-                const style = getComputedStyle(el);
-                const rect = el.getBoundingClientRect();
+                const style = getComputedStyle(el), rect = el.getBoundingClientRect();
                 return !!(el.getClientRects().length && style.display !== 'none'
-                    && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0);
+                    && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0
+                    && rect.width > 0 && rect.height > 0);
             };
             const bodyText = norm(document.body && document.body.innerText);
             const lines = (document.body && document.body.innerText || '')
                 .split(/\n+/).map(line => norm(line)).filter(Boolean);
+            const dailyButtons = Array.from(document.querySelectorAll(
+                'button[data-variant="component-daily-reward"],[role="button"][data-variant="component-daily-reward"]'
+            ));
+            const dailyClaims = dailyButtons.filter(el =>
+                norm(el.innerText || el.textContent).toLowerCase() === 'claim'
+            );
+            const inViewport = rect => rect.bottom > 0 && rect.right > 0
+                && rect.top < window.innerHeight && rect.left < window.innerWidth;
+            const dialogs = Array.from(document.querySelectorAll(
+                '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+            )).filter(visible).slice(0, 5).map(el => ({
+                text:norm(el.innerText || el.textContent).slice(0, 220),
+                class_name:String(el.className || '').slice(0, 120),
+                role:el.getAttribute('role'),
+                aria_modal:el.getAttribute('aria-modal')
+            }));
             return {
-                total_button_count: controls.length,
-                claim_button_count: controls.filter(el =>
+                total_button_count:controls.length,
+                claim_button_count:controls.filter(el =>
                     norm(el.innerText || el.textContent).toLowerCase() === 'claim').length,
-                buttons: controls.slice(0, 50).map((el, index) => {
+                daily_component_button_count:dailyButtons.length,
+                daily_claim_candidate_count:dailyClaims.length,
+                daily_claim_candidates:dailyClaims.slice(0, 8).map(el => {
                     const rect = el.getBoundingClientRect();
-                    const label = norm(el.innerText || el.textContent);
+                    const x = Math.max(0, Math.min(window.innerWidth - 1, rect.left + rect.width/2));
+                    const y = Math.max(0, Math.min(window.innerHeight - 1, rect.top + rect.height/2));
+                    const top = document.elementFromPoint(x, y);
                     return {
-                        index,
-                        tag: el.tagName.toLowerCase(),
-                        role: el.getAttribute('role'),
-                        text: label.slice(0, 240),
-                        visible: visible(el),
-                        enabled: !el.disabled && el.getAttribute('aria-disabled') !== 'true',
-                        disabled_property: !!el.disabled,
-                        aria_disabled: el.getAttribute('aria-disabled'),
-                        bounding_box: {
-                            x: Math.round(rect.x), y: Math.round(rect.y),
-                            width: Math.round(rect.width), height: Math.round(rect.height)
+                        text:norm(el.innerText || el.textContent),
+                        enabled:!el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                        in_viewport:inViewport(rect),
+                        unobstructed:!!(top && (top === el || el.contains(top))),
+                        bounding_box:{
+                            x:Math.round(rect.x), y:Math.round(rect.y),
+                            width:Math.round(rect.width), height:Math.round(rect.height)
                         },
-                        outer_html_excerpt: (el.outerHTML || '').slice(0, 1200)
+                        outer_html_excerpt:(el.outerHTML || '').slice(0, 1000)
                     };
                 }),
-                visible_page_text: bodyText.slice(0, 5000),
-                timer_text_lines: lines.filter(line =>
+                dialogs,
+                viewport:{
+                    width:window.innerWidth, height:window.innerHeight,
+                    scroll_x:window.scrollX, scroll_y:window.scrollY
+                },
+                buttons:controls.slice(0, 50).map((el,index) => {
+                    const rect = el.getBoundingClientRect(), label = norm(el.innerText || el.textContent);
+                    return {
+                        index, tag:el.tagName.toLowerCase(), role:el.getAttribute('role'),
+                        text:label.slice(0,240), visible:visible(el), in_viewport:inViewport(rect),
+                        enabled:!el.disabled && el.getAttribute('aria-disabled') !== 'true',
+                        disabled_property:!!el.disabled, aria_disabled:el.getAttribute('aria-disabled'),
+                        bounding_box:{
+                            x:Math.round(rect.x), y:Math.round(rect.y),
+                            width:Math.round(rect.width), height:Math.round(rect.height)
+                        },
+                        outer_html_excerpt:(el.outerHTML || '').slice(0,1200)
+                    };
+                }),
+                visible_page_text:bodyText.slice(0,5000),
+                timer_text_lines:lines.filter(line =>
                     /daily|next in|next reward|cooldown|claimed|claim/i.test(line)
-                ).slice(0, 40)
+                ).slice(0,40)
             };
         """)
         if isinstance(page_snapshot, dict):
@@ -1855,40 +1980,213 @@ def _daily_claim_is_already_visible_as_claimed(driver):
 
 
 def _find_daily_claim_button(driver):
-    """Return the visible, enabled Daily-page Claim button and its live state."""
+    """Find only an enabled Daily-reward component button, never Store Bonus controls."""
     try:
         result = driver.execute_script(r"""
-            const norm = s => (s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const norm = s => (s || '').replace(/\s+/g, ' ').trim();
             const visible = el => {
                 if (!el) return false;
                 const st = getComputedStyle(el), r = el.getBoundingClientRect();
-                return !!(el.getClientRects().length && st.display !== 'none'
-                    && st.visibility !== 'hidden' && r.width > 0 && r.height > 0);
+                return !!(el.isConnected && el.getClientRects().length
+                    && st.display !== 'none' && st.visibility !== 'hidden'
+                    && Number(st.opacity || '1') > 0 && r.width > 0 && r.height > 0);
             };
-            const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
-            const claimed = buttons.some(b => visible(b)
-                && ['claimed', 'already claimed'].includes(norm(b.innerText || b.textContent)));
-            const button = buttons.find(b => visible(b)
-                && norm(b.innerText || b.textContent) === 'claim'
-                && !b.disabled && b.getAttribute('aria-disabled') !== 'true');
-            if (button) return {status: 'available', button};
-            return {status: claimed ? 'claimed' : 'not_found'};
+            const text = el => norm(el && (el.innerText || el.textContent));
+            const blockers = Array.from(document.querySelectorAll(
+                '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+            )).filter(visible);
+            if (blockers.length) {
+                return {status:'blocked', reason:'visible_dialog_present', blocker_count:blockers.length};
+            }
+            const dailyButtons = Array.from(document.querySelectorAll(
+                'button[data-variant="component-daily-reward"],[role="button"][data-variant="component-daily-reward"]'
+            )).filter(visible);
+            const available = dailyButtons.filter(b =>
+                text(b).toLowerCase() === 'claim'
+                && !b.disabled && b.getAttribute('aria-disabled') !== 'true'
+            );
+            const cardText = button => {
+                let node = button;
+                for (let depth = 0; depth < 8 && node; depth++, node = node.parentElement) {
+                    const value = text(node);
+                    if (value && value.length <= 500
+                        && (/extra reward/i.test(value) || /\bday\s+\d+\b/i.test(value))) {
+                        return value.slice(0, 420);
+                    }
+                }
+                return '';
+            };
+            const targetTrace = (button, extraPriority) => ({
+                selector:'button[data-variant="component-daily-reward"]',
+                index:dailyButtons.indexOf(button),
+                card_text:cardText(button),
+                button_text:text(button),
+                button_html:(button.outerHTML || '').slice(0, 1200),
+                available_count:available.length,
+                extra_reward_priority:!!extraPriority
+            });
+            if (available.length > 1) {
+                const extra = available.filter(b => /extra reward/i.test(cardText(b)));
+                if (extra.length === 1) {
+                    return {status:'available', button:extra[0], target:targetTrace(extra[0], true)};
+                }
+                return {status:'ambiguous', reason:'multiple_daily_claim_buttons', available_count:available.length};
+            }
+            if (available.length === 1) {
+                const button = available[0];
+                return {
+                    status:'available', button,
+                    target:targetTrace(button, /extra reward/i.test(cardText(button)))
+                };
+            }
+            const allDailyClaimed = dailyButtons.length > 0 && dailyButtons.every(b =>
+                ['claimed','already claimed'].includes(text(b).toLowerCase())
+            );
+            return {
+                status:allDailyClaimed ? 'claimed' : 'not_found',
+                daily_button_count:dailyButtons.length,
+                claimed_button_count:dailyButtons.filter(b =>
+                    ['claimed','already claimed'].includes(text(b).toLowerCase())
+                ).length
+            };
         """)
         if not isinstance(result, dict):
             return None, "error"
+        trace = result.get("target") if isinstance(result.get("target"), dict) else result
+        try:
+            driver._last_daily_target_trace = dict(trace)
+        except Exception:
+            pass
         return result.get("button"), str(result.get("status") or "error")
     except Exception as exc:
         log(f"⚠️ Daily claim button lookup failed: {type(exc).__name__}")
         return None, "error"
 
 
+def _dismiss_daily_reward_popups(driver):
+    """Clear safely dismissible portal dialogs; fail closed if any blocker is ambiguous."""
+    if not callable(getattr(driver, "execute_script", None)):
+        # Test doubles are not live portal pages.
+        return True, "non-browser test double"
+    ok, reason = dismiss_all_safe_popups(
+        driver, log=log, max_popups=8, timeout=3.0, poll_interval=0.15
+    )
+    try:
+        driver._last_daily_popup_guard = {"ok":bool(ok), "reason":str(reason)[:1800]}
+    except Exception:
+        pass
+    if not ok:
+        log(f"⚠️ Daily page is blocked by a popup that could not be safely dismissed: {reason}")
+    return bool(ok), str(reason)
+
+
+_DAILY_TARGET_READY_SCRIPT = r"""
+/* CS_HUB_DAILY_TARGET_READY_V1 */
+const el = arguments[0];
+if (!el || !el.isConnected) return {ready:false, reason:'target_detached'};
+const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+const visible = !!(el.getClientRects().length && r.width > 0 && r.height > 0
+  && s.display !== 'none' && s.visibility !== 'hidden'
+  && Number(s.opacity || '1') > 0);
+const fullyInViewport = r.top >= 0 && r.left >= 0
+  && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
+const x = Math.max(0, Math.min(window.innerWidth - 1, r.left + r.width/2));
+const y = Math.max(0, Math.min(window.innerHeight - 1, r.top + r.height/2));
+const top = visible ? document.elementFromPoint(x, y) : null;
+const unobstructed = !!(top && (top === el || el.contains(top)));
+const dialogs = Array.from(document.querySelectorAll(
+  '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+)).filter(node => {
+  const rr = node.getBoundingClientRect(), st = getComputedStyle(node);
+  return !!(node.getClientRects().length && rr.width > 0 && rr.height > 0
+    && st.display !== 'none' && st.visibility !== 'hidden'
+    && Number(st.opacity || '1') > 0);
+});
+return {
+  ready:visible && fullyInViewport && unobstructed && dialogs.length === 0
+    && !el.disabled && el.getAttribute('aria-disabled') !== 'true',
+  reason:!visible ? 'target_not_visible'
+    : dialogs.length ? 'blocking_dialog_present'
+    : !fullyInViewport ? 'target_outside_viewport'
+    : !unobstructed ? 'target_obscured_at_click_point'
+    : (el.disabled || el.getAttribute('aria-disabled') === 'true')
+      ? 'target_disabled' : 'ready',
+  rect:{x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
+  viewport:{width:window.innerWidth,height:window.innerHeight,scroll_x:window.scrollX,scroll_y:window.scrollY},
+  hit_test:top ? {tag:top.tagName.toLowerCase(),text:(top.innerText||top.textContent||'').replace(/\s+/g,' ').trim().slice(0,100)} : null,
+  blocker_count:dialogs.length
+};
+"""
+
+
+def _prepare_daily_claim_target(driver, button, *, timeout=3.5):
+    """Instant-scroll the exact Daily CTA and wait for an unobstructed viewport hit test."""
+    if not callable(getattr(driver, "execute_script", None)):
+        return True, {"ready":True,"reason":"non-browser test double"}
+    trace = {"scroll_behavior":"auto","method":"scroll_into_view"}
+    try:
+        driver.execute_script(
+            "arguments[0].scrollIntoView({behavior:'auto',block:'center',inline:'nearest'});",
+            button,
+        )
+        deadline = time.monotonic() + max(0.2, min(6.0, float(timeout)))
+        last = None
+        while time.monotonic() < deadline:
+            last = driver.execute_script(_DAILY_TARGET_READY_SCRIPT, button)
+            if isinstance(last, dict):
+                trace.update(last)
+                try:
+                    driver._last_daily_target_trace = {
+                        **dict(getattr(driver, "_last_daily_target_trace", {}) or {}),
+                        "viewport_check":trace
+                    }
+                except Exception:
+                    pass
+                if last.get("ready"):
+                    return True, trace
+                if last.get("reason") in ("blocking_dialog_present","target_detached","target_disabled"):
+                    return False, trace
+            time.sleep(0.12)
+        if isinstance(last, dict):
+            trace.update(last)
+        trace.setdefault("reason","viewport_wait_timeout")
+        return False, trace
+    except Exception as exc:
+        trace["error"] = type(exc).__name__
+        trace["reason"] = "viewport_preparation_failed"
+        return False, trace
+
+
+def _click_daily_claim_target(driver, button):
+    """Native click only. Daily claims never use ActionChains or JavaScript click fallbacks."""
+    trace = {"method":"not_dispatched","attempted":[]}
+    try:
+        trace["attempted"].append("webdriver_element_click")
+        button.click()
+        trace["method"] = "webdriver_element_click"
+        try:
+            driver._last_physical_click_trace = dict(trace)
+        except Exception:
+            pass
+        return True
+    except Exception as exc:
+        trace["webdriver_error"] = type(exc).__name__
+        try:
+            driver._last_physical_click_trace = dict(trace)
+        except Exception:
+            pass
+        return False
+
+
 def _daily_portal_confirms_claim(driver):
-    """Confirm Daily completion from its own live CTA, using a timer only as fallback."""
+    """Confirm Daily completion from its own live CTA; unrelated blockers never count as claimed."""
     button, state = _find_daily_claim_button(driver)
     if state == "available" and button is not None:
         return False
     if state == "claimed":
         return True
+    if state in ("blocked", "ambiguous"):
+        return False
     try:
         timer = detect_daily_timer_js(driver)
         if timer and timer.total_seconds() > 60:
@@ -1908,8 +2206,18 @@ def _wait_for_daily_claim_confirmation(driver, timeout=6.0, poll_interval=0.5):
         time.sleep(max(0.05, float(poll_interval)))
 
 
+def _capture_daily_failure_stage(driver, evidence, stage, attempt, reason=None, click_trace=None):
+    captured = _capture_daily_claim_diagnostic(
+        driver, stage, attempt=attempt, click_trace=click_trace
+    )
+    if reason:
+        captured.setdefault("metadata", {})["guard_reason"] = str(reason)[:1800]
+    evidence.append(captured)
+    return captured
+
+
 def claim_daily_rewards(driver, pid, *, max_attempts=2):
-    """Claim Daily only when live portal state says available; return (count, skipped, unconfirmed)."""
+    """Claim the exact Daily reward CTA only after popup and viewport safety checks."""
     log("🎁 Checking Daily Rewards against live portal state...")
     diagnostic_evidence = []
     try:
@@ -1920,7 +2228,16 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
         driver.get("https://hub.vertigogames.co/daily-rewards")
         bypass_cloudflare(driver)
         time.sleep(2)
-        close_popup(driver)
+
+        popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+        if not popup_ok:
+            _capture_daily_failure_stage(
+                driver, diagnostic_evidence, "initial_popup_blocked", 0, popup_reason
+            )
+            log("🚩 Daily claim deferred: popup could not be safely dismissed")
+            update_claim_history(pid, "daily", unconfirmed=True)
+            _persist_daily_claim_diagnostics(pid, diagnostic_evidence, "daily_initial_popup_blocked")
+            return 0, False, True
 
         # Do not trust local history as proof. The live Daily page is authoritative.
         if _daily_portal_confirms_claim(driver):
@@ -1934,8 +2251,8 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
 
         button, state = _find_daily_claim_button(driver)
         if state != "available" or button is None:
-            diagnostic_evidence.append(
-                _capture_daily_claim_diagnostic(driver, "initial_state_unconfirmed", attempt=0)
+            _capture_daily_failure_stage(
+                driver, diagnostic_evidence, "initial_state_unconfirmed", 0, state
             )
             update_claim_history(pid, "daily", unconfirmed=True)
             log(f"⚠️ Daily state could not be established (portal_state={state}); leaving it retryable")
@@ -1944,27 +2261,75 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
             return 0, False, True
 
         for attempt in range(max_attempts):
-            # Re-resolve the actual page control immediately before each attempt.
+            # Check/dismiss any overlay before resolving the actual Daily component CTA.
+            popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+            if not popup_ok:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "popup_blocked_before_click", attempt + 1,
+                    popup_reason
+                )
+                break
+
             button, state = _find_daily_claim_button(driver)
             if state == "claimed" or _daily_portal_confirms_claim(driver):
                 update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
                 driver.save_screenshot(f"daily_{pid}.png")
                 return 0, True, False
             if state != "available" or button is None:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_found_before_click", attempt + 1, state
+                )
+                break
+
+            target_ready, target_trace = _prepare_daily_claim_target(driver, button)
+            if not target_ready:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_ready", attempt + 1,
+                    target_trace.get("reason")
+                )
+                log(f"🚩 Daily click deferred: target not safely interactable ({target_trace.get('reason')})")
+                break
+
+            # Scrolling may reveal a delayed popup. Clear it, then re-resolve/re-check
+            # the exact Daily component CTA; never use a stale or covered element.
+            popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+            if not popup_ok:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "popup_blocked_after_scroll", attempt + 1,
+                    popup_reason
+                )
+                break
+
+            button, state = _find_daily_claim_button(driver)
+            if state != "available" or button is None:
+                if state == "claimed" or _daily_portal_confirms_claim(driver):
+                    update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                    driver.save_screenshot(f"daily_{pid}.png")
+                    return 0, True, False
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_changed_after_scroll", attempt + 1, state
+                )
+                break
+
+            target_ready, target_trace = _prepare_daily_claim_target(driver, button)
+            if not target_ready:
+                _capture_daily_failure_stage(
+                    driver, diagnostic_evidence, "target_not_ready_after_popup_check", attempt + 1,
+                    target_trace.get("reason")
+                )
                 break
 
             pre_click_evidence = _capture_daily_claim_diagnostic(
                 driver, "pre_click", attempt=attempt + 1
             )
             diagnostic_evidence.append(pre_click_evidence)
-            clicked = bool(physical_click(driver, button))
+            clicked = bool(_click_daily_claim_target(driver, button))
             click_trace = dict(getattr(driver, "_last_physical_click_trace", {}) or {})
             pre_click_evidence["metadata"]["click_trace"] = click_trace
-            click_method = click_trace.get("method", "not_recorded")
             if clicked:
-                log(f"🖱️ Daily claim click dispatched (attempt {attempt + 1}, route={click_method}); awaiting portal confirmation")
+                log(f"🖱️ Daily native click dispatched (attempt {attempt + 1}); awaiting portal confirmation")
             else:
-                log(f"⚠️ Daily click helper did not confirm dispatch (attempt {attempt + 1}, route={click_method}); checking portal state")
+                log(f"⚠️ Daily native click was not dispatched (attempt {attempt + 1}); no fallback click attempted")
 
             if _wait_for_daily_claim_confirmation(driver):
                 if clicked:
@@ -1973,7 +2338,7 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
                     driver.save_screenshot(f"daily_{pid}.png")
                     return 1, False, False
                 update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
-                log("✅ Daily portal state changed to claimed; dispatch result was ambiguous")
+                log("✅ Daily portal state changed to claimed; native dispatch result was ambiguous")
                 driver.save_screenshot(f"daily_{pid}.png")
                 return 0, True, False
 
@@ -1984,50 +2349,60 @@ def claim_daily_rewards(driver, pid, *, max_attempts=2):
                 )
             )
 
-            # A second attempt is permitted only when a fresh read still shows Claim.
+            # A second attempt is permitted only after a fresh page read, a cleared
+            # popup stack, exact target resolution, and another viewport verification.
             if attempt + 1 < max_attempts:
-                # Refresh once so the retry decision is based on server-rendered state,
-                # not only a possibly stale SPA view.
-                refreshed = False
                 try:
                     driver.refresh()
                     bypass_cloudflare(driver)
                     time.sleep(1.5)
-                    close_popup(driver)
-                    refreshed = True
                 except Exception as refresh_exc:
                     log(f"⚠️ Daily refresh before retry failed: {type(refresh_exc).__name__}")
-                    diagnostic_evidence.append(
-                        _capture_daily_claim_diagnostic(
-                            driver, "refresh_error", attempt=attempt + 1,
-                            click_trace={"refresh_error": type(refresh_exc).__name__},
-                        )
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "refresh_error", attempt + 1,
+                        type(refresh_exc).__name__,
+                        click_trace={"refresh_error": type(refresh_exc).__name__},
                     )
-                if refreshed:
-                    diagnostic_evidence.append(
-                        _capture_daily_claim_diagnostic(
-                            driver, "post_refresh", attempt=attempt + 1
-                        )
+                    break
+
+                popup_ok, popup_reason = _dismiss_daily_reward_popups(driver)
+                if not popup_ok:
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "popup_blocked_after_refresh", attempt + 1,
+                        popup_reason
                     )
-                    fresh_button, fresh_state = _find_daily_claim_button(driver)
-                    if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
-                        update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
-                        driver.save_screenshot(f"daily_{pid}.png")
-                        return 0, True, False
-                    if fresh_state == "available" and fresh_button is not None:
-                        log("⚠️ Daily still appears claimable after a fresh page read; one retry will follow")
+                    break
+
+                _capture_daily_failure_stage(driver, diagnostic_evidence, "post_refresh", attempt + 1)
+                fresh_button, fresh_state = _find_daily_claim_button(driver)
+                if fresh_state == "claimed" or _daily_portal_confirms_claim(driver):
+                    update_claim_history(pid, "daily", detected_cooldown=timedelta(seconds=61))
+                    driver.save_screenshot(f"daily_{pid}.png")
+                    return 0, True, False
+                if fresh_state == "available" and fresh_button is not None:
+                    fresh_ready, fresh_trace = _prepare_daily_claim_target(driver, fresh_button)
+                    if fresh_ready:
+                        log("⚠️ Daily remains claimable after refresh and popup clearance; one retry will follow")
                         continue
+                    _capture_daily_failure_stage(
+                        driver, diagnostic_evidence, "retry_target_not_ready", attempt + 1,
+                        fresh_trace.get("reason")
+                    )
             break
 
         update_claim_history(pid, "daily", unconfirmed=True)
-        log("⚠️ Daily click was not confirmed by the portal; retry required")
+        log("⚠️ Daily claim was not confirmed by the portal; exact target remains retryable")
         diagnostic_path = _persist_daily_claim_diagnostics(
             pid, diagnostic_evidence, "daily_click_not_confirmed_after_allowed_attempts"
         )
         if diagnostic_path:
             log(f"🧪 Daily failure evidence saved: {diagnostic_path}")
-        driver.save_screenshot(f"daily_{pid}.png")
+        try:
+            driver.save_screenshot(f"daily_{pid}.png")
+        except Exception:
+            pass
         return 0, False, True
+
     except Exception as exc:
         log(f"❌ Daily error: {type(exc).__name__}: {str(exc)[:160]}")
         try:
