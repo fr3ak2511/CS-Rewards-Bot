@@ -2134,12 +2134,14 @@ def _click_daily_claim_target(driver, button):
 
 
 def _daily_portal_confirms_claim(driver):
-    """Confirm Daily completion from its own live CTA, using a timer only as fallback."""
+    """Confirm Daily completion from its own live CTA; unrelated blockers never count as claimed."""
     button, state = _find_daily_claim_button(driver)
     if state == "available" and button is not None:
         return False
     if state == "claimed":
         return True
+    if state in ("blocked", "ambiguous"):
+        return False
     try:
         timer = detect_daily_timer_js(driver)
         if timer and timer.total_seconds() > 60:
@@ -2157,6 +2159,16 @@ def _wait_for_daily_claim_confirmation(driver, timeout=6.0, poll_interval=0.5):
         if time.monotonic() >= deadline:
             return False
         time.sleep(max(0.05, float(poll_interval)))
+
+
+def _capture_daily_failure_stage(driver, evidence, stage, attempt, reason=None, click_trace=None):
+    captured = _capture_daily_claim_diagnostic(
+        driver, stage, attempt=attempt, click_trace=click_trace
+    )
+    if reason:
+        captured.setdefault("metadata", {})["guard_reason"] = str(reason)[:1800]
+    evidence.append(captured)
+    return captured
 
 
 def claim_daily_rewards(driver, pid, *, max_attempts=2):
