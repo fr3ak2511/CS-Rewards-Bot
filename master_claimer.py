@@ -7035,14 +7035,14 @@ def main():
     log(f"  Accounts:{len(results)} ({run_counts['full_claim_accounts']} full / {run_counts.get('backup_reconciliation_accounts', 0)} backup-reconciliation / {run_counts['promotional_only_accounts']} promo-only) | Standard cooldowns:{run_counts['standard_rewards_on_cooldown']} | Distinct promo types:{run_counts['distinct_promotional_offer_types']} | Promo claims:{run_counts['promotional_claims_made']} | Partial:{run_counts['partial_results']} | Failures:{run_counts['actual_failures']} | Unconfirmed claims:{run_counts['unconfirmed_claims']} | Promo scan failures:{run_counts['promotion_detection_failures']}")
     log(f"{'='*60}")
 
-    # Streak: only requires daily + store, NOT loyalty (LP-locked players would break it)
-    if not RECOVERY_ONLY_FAILED:
+    # Subset recovery attempts must not recalculate the roster-wide daily streak.
+    if not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY:
         all_ok = compute_all_ok_today(players)
         if all_ok:
             log("✅ All daily+store claimed today — streak eligible")
         update_streak_day_level(meta, all_ok)
     else:
-        log("ℹ️ Recovery run: daily streak left unchanged (subset of the roster).")
+        log("ℹ️ Recovery subset: daily streak left unchanged.")
 
     prev_run = meta.get("last_run")
     hard_failed_ids = [r.get("pid") for r in results

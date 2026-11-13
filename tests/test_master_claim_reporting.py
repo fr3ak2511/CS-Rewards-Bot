@@ -19,6 +19,7 @@ from master_claimer import (
     _player_claim_total,
     _promotion_detail_worthy,
     _record_full_claim_coverage,
+    _mark_daily_recovery_slot_attempt,
     _summary_counts,
     build_email,
     build_event_rewards_section,
@@ -113,6 +114,70 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         }
         self.assertFalse(_record_full_claim_coverage(meta, "PROMO0002", result, "Promotional Check #1"))
         self.assertEqual(meta["full_claim_coverage"]["PROMO0002"], original)
+
+
+    def test_daily_recovery_slot_marker_is_durable_and_at_most_once(self):
+        reset_date = _current_reset_date()
+        meta = {
+            "full_claim_coverage": {
+                "PENDINGDAILY001": {
+                    "reset_date": reset_date,
+                    "status": "pending",
+                    "retry_required": True,
+                }
+            }
+        }
+        with patch("master_claimer.save_bot_meta") as save:
+            self.assertTrue(_mark_daily_recovery_slot_attempt(
+                meta, "PENDINGDAILY001", "Promotional Check #2"
+            ))
+            self.assertFalse(_mark_daily_recovery_slot_attempt(
+                meta, "PENDINGDAILY001", "Promotional Check #2"
+            ))
+            self.assertTrue(_mark_daily_recovery_slot_attempt(
+                meta, "PENDINGDAILY001", "Promotional Check #3"
+            ))
+        entry = meta["full_claim_coverage"]["PENDINGDAILY001"]
+        self.assertEqual(
+            entry["daily_recovery_slots_attempted"],
+            ["Promotional Check #2", "Promotional Check #3"],
+        )
+        self.assertEqual(entry["daily_recovery_attempts"], 2)
+        self.assertEqual(save.call_count, 2)
+
+    def test_daily_recovery_slot_markers_survive_coverage_refresh(self):
+        reset_date = _current_reset_date()
+        meta = {
+            "full_claim_coverage": {
+                "PENDINGDAILY002": {
+                    "reset_date": reset_date,
+                    "status": "pending",
+                    "retry_required": True,
+                    "daily_recovery_slots_attempted": ["Promotional Check #2"],
+                    "daily_recovery_attempts": 1,
+                    "daily_recovery_last_slot": "Promotional Check #2",
+                    "daily_recovery_last_attempt_at": "2026-11-13T13:35:10",
+                }
+            }
+        }
+        result = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "event_rewards_retry_required": False,
+            "event_rewards": [],
+        }
+        self.assertTrue(_record_full_claim_coverage(
+            meta, "PENDINGDAILY002", result, "Promotional Check #2"
+        ))
+        entry = meta["full_claim_coverage"]["PENDINGDAILY002"]
+        self.assertEqual(entry["status"], "pending")
+        self.assertEqual(entry["daily_recovery_slots_attempted"], ["Promotional Check #2"])
+        self.assertEqual(entry["daily_recovery_attempts"], 1)
+        self.assertEqual(entry["daily_recovery_last_slot"], "Promotional Check #2")
+
 
     def test_full_claim_promotion_failure_keeps_clean_standard_coverage(self):
         meta = {}
