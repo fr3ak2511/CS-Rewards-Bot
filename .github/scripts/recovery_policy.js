@@ -80,6 +80,14 @@ function istResetEpoch(nowEpochMs) {
 }
 
 function evaluateImmediateRecovery({ lastRun, sourceRun, nowEpochMs = Date.now() }) {
+  if (lastRun && lastRun.daily_only_recovery === true) {
+    return {
+      dispatch: false,
+      reason: 'scheduled Daily-only recovery already ran; the next retry is reserved for a later backup slot',
+      retryIds: []
+    };
+  }
+
   const candidateCheck = fullClaimRetryIds(lastRun);
   if (!candidateCheck.retryIds.length) {
     return { dispatch: false, reason: candidateCheck.reason, retryIds: [] };

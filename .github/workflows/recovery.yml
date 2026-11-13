@@ -95,3 +95,20 @@ jobs:
               }
             });
             core.info('Recovery dispatched; the receiver revalidates freshness and retry candidates before starting the browser.')
+
+      - name: Report immediate recovery decision
+        if: always()
+        env:
+          DISPATCH_DECISION: ${{ steps.decision.outputs.dispatch }}
+        run: |
+          {
+            echo "## Immediate recovery decision"
+            if [[ "$DISPATCH_DECISION" == "true" ]]; then
+              echo "- **Dispatch:** requested"
+              echo "- The receiving claimer revalidates saved account targets before opening a browser."
+            else
+              echo "- **Dispatch:** not performed"
+              echo "- This is a successful policy no-op, not evidence that the reward was claimed."
+              echo "- See the decision step log for the exact reason."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

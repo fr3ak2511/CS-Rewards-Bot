@@ -364,6 +364,8 @@ jobs:
               full_claim_retry_ids,
               has_complete_full_roster_coverage,
               is_recent_full_claim_recovery,
+              daily_only_pending_targets,
+              eligible_daily_recovery_ids,
           )
 
           event = os.environ.get('RUN_EVENT', '')
@@ -382,10 +384,11 @@ jobs:
           }
           ist_tz = timezone(timedelta(hours=5, minutes=30))
 
-          def emit(execute, recovery, reason):
+          def emit(execute, recovery, reason, daily_only=False):
               with open(out_path, 'a', encoding='utf-8') as handle:
                   handle.write(f"execute={'true' if execute else 'false'}\n")
                   handle.write(f"recovery={'true' if recovery else 'false'}\n")
+                  handle.write(f"daily_only={'true' if daily_only else 'false'}\n")
                   handle.write(f'reason={reason}\n')
               print(f"{'RUN' if execute else 'SKIP'}: {reason}")
 
@@ -527,11 +530,29 @@ jobs:
                       f'delayed promotional-check slot #{slot} arrived before 05:30 IST; skipping stale event'
                   )
               else:
-                  emit(
-                      True,
-                      False,
-                      f'scheduled promotional check slot #{slot}; uncovered/new IDs use the full claim path'
+                  slot_label = f"Promotional Check #{slot}"
+                  pending_daily = daily_only_pending_targets(
+                      meta, player_ids, reset_date=reset_date.isoformat()
                   )
+                  eligible_daily = eligible_daily_recovery_ids(
+                      meta, player_ids,
+                      reset_date=reset_date.isoformat(),
+                      slot_label=slot_label,
+                  )
+                  if pending_daily:
+                      emit(
+                          True,
+                          False,
+                          f"backup slot #{slot}: {len(eligible_daily)} pending Daily-only account(s) will receive a saved-target recovery; "
+                          f"{len(pending_daily) - len(eligible_daily)} are held by slot/cap guards; complete accounts remain promotional-only",
+                          True,
+                      )
+                  else:
+                      emit(
+                          True,
+                          False,
+                          f"scheduled promotional check slot #{slot}; uncovered/new IDs use the full claim path"
+                      )
           PY
 
       - name: Set up Python
@@ -548,6 +569,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Master Claimer
+        id: claim
         if: steps.run_mode.outputs.execute == 'true'
         env:
           SMTP_SERVER: smtp.gmail.com
@@ -560,6 +582,7 @@ jobs:
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
+          DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
         run: |
@@ -641,3 +664,30 @@ jobs:
           path: claim_test_artifacts/
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Report claim execution outcome
+        if: always()
+        env:
+          EXECUTE_REQUESTED: ${{ steps.run_mode.outputs.execute }}
+          DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
+          CLAIM_OUTCOME: ${{ steps.claim.outcome }}
+          DECISION_REASON: ${{ steps.run_mode.outputs.reason }}
+        run: |
+          {
+            echo "## Claim execution"
+            if [[ "$EXECUTE_REQUESTED" != "true" ]]; then
+              echo "- **Claim execution:** SKIPPED"
+              echo "- **Reason:** $DECISION_REASON"
+            elif [[ "$CLAIM_OUTCOME" == "success" ]]; then
+              echo "- **Claim execution:** STEP EXECUTED (portal confirmation is reported separately by the claimer)"
+              if [[ "$DAILY_ONLY_RECOVERY" == "true" ]]; then
+                echo "- **Scope:** bounded Daily-only recovery for pending account(s); complete accounts remain promotional-only"
+              fi
+            elif [[ "$CLAIM_OUTCOME" == "skipped" ]]; then
+              echo "- **Claim execution:** SKIPPED despite an execution request"
+              echo "- **Reason:** Master Claimer step did not run; inspect the run-mode gate"
+            else
+              echo "- **Claim execution:** FAILED OR NOT COMPLETED"
+              echo "- **Step outcome:** $CLAIM_OUTCOME"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

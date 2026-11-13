@@ -106,6 +106,119 @@ def full_claim_retry_ids(last_run: Any) -> list[str]:
     return retry_ids
 
 
+
+
+DAILY_RECOVERY_SLOT_LABELS = {
+    "Promotional Check #1",
+    "Promotional Check #2",
+    "Promotional Check #3",
+    "Promotional Check #4",
+}
+
+
+def _is_daily_only_target(targets: Any) -> bool:
+    """Accept only a saved Daily failure; never broaden this path to other rewards."""
+    if not isinstance(targets, dict) or targets.get("daily_unconfirmed") is not True:
+        return False
+    if targets.get("login_retry") or targets.get("processing_error"):
+        return False
+    if targets.get("store_unconfirmed_indices"):
+        return False
+    if targets.get("progression_unconfirmed"):
+        return False
+    if targets.get("event_retry_required"):
+        return False
+    if targets.get("event_rewards"):
+        return False
+    event_targets = targets.get("event_thresholds_by_program")
+    if event_targets and (not isinstance(event_targets, dict) or len(event_targets) > 0):
+        return False
+    return True
+
+
+def daily_only_pending_targets(
+    meta: Any,
+    player_ids: Any,
+    *,
+    reset_date: str,
+) -> dict[str, dict[str, Any]]:
+    """Return roster IDs with pending current-reset coverage and an exact Daily-only target."""
+    if not isinstance(meta, dict) or not isinstance(reset_date, str) or not reset_date:
+        return {}
+    if not isinstance(player_ids, (list, tuple, set)):
+        return {}
+
+    coverage = meta.get("full_claim_coverage")
+    if not isinstance(coverage, dict):
+        return {}
+
+    # Prefer the most recent saved target set, but retain last_full_run as the
+    # durable source if an intervening Recovery Run or promo-only pass omitted it.
+    target_sources = []
+    for source_name in ("last_run", "last_full_run"):
+        source = meta.get(source_name)
+        targets_by_player = source.get("retry_targets_by_player") if isinstance(source, dict) else None
+        if isinstance(targets_by_player, dict):
+            target_sources.append(targets_by_player)
+
+    candidates: dict[str, dict[str, Any]] = {}
+    for raw_id in player_ids:
+        if not isinstance(raw_id, str) or not raw_id.strip():
+            continue
+        player_id = raw_id.strip()
+        entry = coverage.get(player_id)
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("reset_date") != reset_date:
+            continue
+        if entry.get("status") != "pending" or entry.get("retry_required") is not True:
+            continue
+
+        saved_targets = None
+        for source in target_sources:
+            candidate = source.get(player_id)
+            if _is_daily_only_target(candidate):
+                saved_targets = dict(candidate)
+                break
+        if saved_targets is not None:
+            candidates[player_id] = saved_targets
+
+    return candidates
+
+
+def eligible_daily_recovery_ids(
+    meta: Any,
+    player_ids: Any,
+    *,
+    reset_date: str,
+    slot_label: str,
+    max_attempts: int = 4,
+) -> list[str]:
+    """Return pending Daily-only IDs not yet attempted in this backup slot or cap."""
+    if slot_label not in DAILY_RECOVERY_SLOT_LABELS:
+        return []
+    try:
+        max_attempts = max(1, min(4, int(max_attempts)))
+    except (TypeError, ValueError, OverflowError):
+        max_attempts = 4
+
+    pending = daily_only_pending_targets(meta, player_ids, reset_date=reset_date)
+    coverage = meta.get("full_claim_coverage", {}) if isinstance(meta, dict) else {}
+    eligible = []
+    for player_id in pending:
+        entry = coverage.get(player_id, {})
+        attempted = entry.get("daily_recovery_slots_attempted", [])
+        if not isinstance(attempted, list):
+            attempted = []
+        attempted_slots = list(dict.fromkeys(
+            item.strip() for item in attempted if isinstance(item, str) and item.strip()
+        ))
+        if slot_label in attempted_slots or len(attempted_slots) >= max_attempts:
+            continue
+        eligible.append(player_id)
+    return eligible
+
+
 def is_recent_full_claim_recovery(
     last_run: Any,
     *,

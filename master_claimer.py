@@ -34,7 +34,11 @@ from promotion_followups import (
     filter_followup_results, seed_legacy_popup_followups,
     update_promotion_followups, build_promotional_followup_section,
 )
-from recovery_policy import full_claim_retry_ids
+from recovery_policy import (
+    full_claim_retry_ids,
+    daily_only_pending_targets,
+    eligible_daily_recovery_ids,
+)
 from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
 from email_cycle_summary import update_daily_cycle_summary
@@ -62,6 +66,7 @@ CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
 RUN_ARTIFACTS_DIR = "run_artifacts"
 DAILY_CLAIM_DIAGNOSTICS_DIR = "daily_claim_diagnostics"
 RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
+DAILY_ONLY_RECOVERY = os.getenv("DAILY_ONLY_RECOVERY", "").strip().lower() == "true"
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
 
 DAILY_RESET_HOUR_IST   = 5
@@ -371,6 +376,11 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
     reason = result.get("fail_reason") if retry_required else None
     if not reason and retry_required:
         reason = "One or more full-claim rewards remained unconfirmed"
+    previous = meta.get("full_claim_coverage", {}).get(pid, {})
+    preserve_daily_slots = (
+        previous.get("reset_date") == _current_reset_date()
+        and isinstance(previous.get("daily_recovery_slots_attempted"), list)
+    )
     entry = {
         "reset_date": _current_reset_date(),
         "status": "pending" if retry_required else "complete",
@@ -380,6 +390,17 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
         "retry_required": bool(retry_required),
         "unresolved_reason": reason,
     }
+    if preserve_daily_slots:
+        attempted_slots = list(dict.fromkeys(
+            item for item in previous.get("daily_recovery_slots_attempted", [])
+            if isinstance(item, str) and item.strip()
+        ))
+        entry["daily_recovery_slots_attempted"] = attempted_slots
+        entry["daily_recovery_attempts"] = len(attempted_slots)
+        if previous.get("daily_recovery_last_attempt_at"):
+            entry["daily_recovery_last_attempt_at"] = previous["daily_recovery_last_attempt_at"]
+        if previous.get("daily_recovery_last_slot"):
+            entry["daily_recovery_last_slot"] = previous["daily_recovery_last_slot"]
     standard_checked = bool(result.get("standard_rewards_checked"))
     standard_unconfirmed = bool(
         result.get("daily_unconfirmed")
@@ -389,6 +410,58 @@ def _record_full_claim_coverage(meta, pid, result, run_label):
         entry["standard_rewards_audited_reset"] = _current_reset_date()
     meta.setdefault("full_claim_coverage", {})[pid] = entry
     return True
+
+
+def _mark_daily_recovery_slot_attempt(meta, pid, slot_label):
+    """Persist an at-most-once marker for this account and scheduled backup slot."""
+    if slot_label not in {
+        "Promotional Check #1", "Promotional Check #2",
+        "Promotional Check #3", "Promotional Check #4",
+    }:
+        return False
+    coverage = meta.setdefault("full_claim_coverage", {})
+    entry = coverage.get(pid)
+    if not isinstance(entry, dict) or entry.get("reset_date") != _current_reset_date():
+        return False
+    attempted = entry.get("daily_recovery_slots_attempted")
+    if not isinstance(attempted, list):
+        attempted = []
+    attempted = list(dict.fromkeys(
+        item for item in attempted if isinstance(item, str) and item.strip()
+    ))
+    if slot_label in attempted or len(attempted) >= 4:
+        return False
+    attempted.append(slot_label)
+    entry["daily_recovery_slots_attempted"] = attempted
+    entry["daily_recovery_attempts"] = len(attempted)
+    entry["daily_recovery_last_slot"] = slot_label
+    entry["daily_recovery_last_attempt_at"] = get_ist_time().isoformat()
+    coverage[pid] = entry
+    meta["full_claim_coverage"] = coverage
+    # The workflow's always-run state-commit step persists this marker even if
+    # the browser attempt subsequently fails or the portal does not confirm it.
+    save_bot_meta(meta)
+    return True
+
+
+def _deferred_daily_recovery_result(pid, targets, reason):
+    """Represent a bounded retry that was intentionally not clicked this slot."""
+    result = _recovery_result_from_saved_targets(pid, targets)
+    result["status"] = "Partial"
+    result["recovery_deferred"] = True
+    result["fail_reason"] = reason
+    result["daily_only_recovery"] = True
+    result["immediate_recovery"] = {
+        "attempted": False,
+        "status": "deferred",
+        "categories": ["Daily Reward"],
+        "resolved_categories": [],
+        "unresolved_categories": ["Daily Reward"],
+        "reason": reason,
+        "click_limit_per_target": 1,
+    }
+    return result
+
 
 
 
@@ -6828,6 +6901,20 @@ def main():
     is_promotional_backup = run_label in {
         "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"
     } and not RECOVERY_ONLY_FAILED
+    daily_pending_targets = {}
+    daily_recovery_eligible_ids = set()
+    if DAILY_ONLY_RECOVERY and is_promotional_backup:
+        daily_pending_targets = daily_only_pending_targets(
+            meta, player_ids, reset_date=_current_reset_date()
+        )
+        daily_recovery_eligible_ids = set(eligible_daily_recovery_ids(
+            meta, player_ids, reset_date=_current_reset_date(), slot_label=run_label
+        ))
+        log(
+            f"🎯 Daily-only backup recovery: {len(daily_pending_targets)} pending Daily account(s); "
+            f"{len(daily_recovery_eligible_ids)} eligible for this slot ({run_label})."
+        )
+
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
         if RECOVERY_ONLY_FAILED:
@@ -6840,6 +6927,38 @@ def main():
             )
             if coverage_rechecked:
                 _record_full_claim_coverage(meta, pid, r, run_label)
+        elif DAILY_ONLY_RECOVERY and pid in daily_pending_targets:
+            # Do not send this account through process_player(): the scheduled
+            # safety-net is restricted to the exact saved Daily target only.
+            targets = daily_pending_targets[pid]
+            if pid in daily_recovery_eligible_ids and _mark_daily_recovery_slot_attempt(meta, pid, run_label):
+                daily_target_only = {
+                    "login_retry": False,
+                    "processing_error": False,
+                    "daily_unconfirmed": True,
+                    "store_unconfirmed_indices": [],
+                    "progression_unconfirmed": False,
+                    "progression_card_signature": None,
+                    "event_retry_required": False,
+                    "event_thresholds_by_program": {},
+                    "event_rewards": [],
+                }
+                log(f"🎯 {pid}: executing bounded Daily-only recovery for {run_label}; other reward categories are excluded.")
+                r, coverage_rechecked = recover_player_from_saved_targets(
+                    pid, has_loyalty, new_id, run_label, daily_target_only
+                )
+                r["daily_only_recovery"] = True
+                r["daily_recovery_attempted"] = True
+                if coverage_rechecked:
+                    _record_full_claim_coverage(meta, pid, r, run_label)
+            else:
+                r = _deferred_daily_recovery_result(
+                    pid,
+                    targets,
+                    "Daily-only recovery was not attempted: this backup slot was already used or the four-slot per-reset limit was reached.",
+                )
+                r["daily_recovery_attempted"] = False
+                log(f"⏭️ {pid}: Daily-only recovery deferred; slot already used or per-reset retry limit reached.")
         elif is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
             if needs_standard_backup_audit(pid, meta):
                 r = process_player_backup_reconciliation(pid, new_id, run_label)
@@ -6942,6 +7061,8 @@ def main():
     meta["last_run"] = {
         "timestamp":           job_end.isoformat(),
         "run_label":           run_label,
+        "daily_only_recovery": DAILY_ONLY_RECOVERY,
+        "daily_recovery_slot": run_label if DAILY_ONLY_RECOVERY else None,
         "failed_player_ids":   hard_failed_ids,
         "failed_player_count": len(hard_failed_ids),
         "retry_candidate_scope": "full_claim_only",
@@ -7029,6 +7150,8 @@ def main():
         "Promotional Check #4": "Store Promo Check #4",
     }
     subject_date = job_start.strftime("%d %b")
+    if DAILY_ONLY_RECOVERY:
+        run_subject_labels[run_label] = f"Daily Recovery + {run_subject_labels.get(run_label, run_label)}"
     if run_label == "Recovery Run" and cycle_summary is not None:
         if cycle_summary.get("cycle_complete"):
             subject = (
