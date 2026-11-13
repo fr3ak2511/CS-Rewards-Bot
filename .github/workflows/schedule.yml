@@ -60,6 +60,7 @@ jobs:
     outputs:
       should_run: ${{ steps.gate.outputs.should_run }}
       reason: ${{ steps.gate.outputs.reason }}
+      scheduled_run_created_at: ${{ steps.gate.outputs.scheduled_run_created_at }}
     steps:
       - name: Check out the production scheduler policy
         uses: actions/checkout@v4
@@ -79,6 +80,7 @@ jobs:
               countConfiguredPlayers,
               hasCompleteFullRosterCoverage,
               isBlockingClaimJob,
+              evaluateScheduledBackupFreshness,
             } = require(path.join(
               process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
             ));
@@ -110,6 +112,25 @@ jobs:
               if (![launcherCron, retryCron, ...backupCrons].includes(cron)) {
                 out(false, `unrecognised schedule '${cron}'; fail closed`);
                 return;
+              }
+
+              // Preserve GitHub's original event creation time; current time alone
+              // cannot distinguish a delayed scheduled event from a fresh slot.
+              const currentScheduleRun = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: context.runId
+              });
+              const scheduledRunCreatedAt = currentScheduleRun.data.created_at || '';
+              core.setOutput('scheduled_run_created_at', scheduledRunCreatedAt);
+              if (backupCrons.includes(cron)) {
+                const freshness = evaluateScheduledBackupFreshness({
+                  cron, createdAt: scheduledRunCreatedAt, now: new Date()
+                });
+                if (!freshness.fresh) {
+                  out(false, freshness.reason + '; no browser session or reward click will start');
+                  return;
+                }
+                core.info('Fresh backup slot accepted: created delay ' + freshness.createdDelayMinutes +
+                  ' min; execution delay ' + freshness.processingDelayMinutes + ' min.');
               }
 
               // The daily dispatcher must pass state/duplicate checks before starting
@@ -350,6 +371,7 @@ jobs:
         env:
           RUN_EVENT: ${{ github.event_name }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
+          SCHEDULE_RUN_CREATED_AT: ${{ needs.preflight.outputs.scheduled_run_created_at }}
           DISPATCH_TYPE: ${{ github.event.action }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
           SELECTED_BRANCH: ${{ github.ref_name }}
@@ -456,6 +478,52 @@ jobs:
           if event != 'schedule' and not (event == 'workflow_dispatch' and external_primary):
               emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
+
+          # Revalidate freshness after any concurrency wait, immediately before
+          # browser work. GitHub run creation time is authoritative for the slot.
+          if event == 'schedule' and cron in backup_crons:
+              slot_utc = {
+                  '5 4 * * *': (4, 5),
+                  '5 8 * * *': (8, 5),
+                  '5 12 * * *': (12, 5),
+                  '5 16 * * *': (16, 5),
+              }[cron]
+              created_raw = os.environ.get('SCHEDULE_RUN_CREATED_AT', '').strip()
+              try:
+                  created_at = datetime.fromisoformat(created_raw.replace('Z', '+00:00'))
+                  if created_at.tzinfo is None:
+                      created_at = created_at.replace(tzinfo=timezone.utc)
+                  created_at = created_at.astimezone(timezone.utc)
+                  scheduled_at = created_at.replace(
+                      hour=slot_utc[0], minute=slot_utc[1], second=0, microsecond=0,
+                  )
+                  now_utc = datetime.now(timezone.utc)
+                  created_delay = (created_at - scheduled_at).total_seconds()
+                  execution_delay = (now_utc - scheduled_at).total_seconds()
+                  max_delay = 45 * 60
+                  early_tolerance = 5 * 60
+                  if (
+                      created_delay < -early_tolerance
+                      or created_delay > max_delay
+                      or execution_delay < -early_tolerance
+                      or execution_delay > max_delay
+                  ):
+                      emit(
+                          False, False,
+                          f'stale backup slot {backup_crons[cron]} rejected; '
+                          f'created delay {created_delay / 60:.1f} min; '
+                          f'execution delay {execution_delay / 60:.1f} min; '
+                          'no browser session or reward click will start',
+                      )
+                      raise SystemExit(0)
+              except SystemExit:
+                  raise
+              except Exception as exc:
+                  emit(
+                      False, False,
+                      f'backup slot freshness could not be validated ({type(exc).__name__}); fail closed',
+                  )
+                  raise SystemExit(0)
 
           # Validate the configured roster before any browser work.
           try:

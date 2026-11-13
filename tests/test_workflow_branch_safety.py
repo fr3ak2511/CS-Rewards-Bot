@@ -88,6 +88,15 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn('GRENADE_BALANCE_FILE = "grenade_balance_baselines.json"', source)
         self.assertIn("save_grenade_balance_state", source)
 
+
+    def test_backup_schedule_rejects_stale_event_before_browser_execution(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn("getWorkflowRun", workflow)
+        self.assertIn("evaluateScheduledBackupFreshness", workflow)
+        self.assertIn("SCHEDULE_RUN_CREATED_AT", workflow)
+        self.assertIn("max_delay = 45 * 60", workflow)
+        self.assertIn("no browser session or reward click will start", workflow)
+
     def test_schedule_keeps_the_full_roster_fallback(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
