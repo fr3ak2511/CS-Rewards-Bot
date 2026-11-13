@@ -67,7 +67,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         run_claimer = workflow.split("  run-claimer:", 1)[1]
         self.assertIn("group: rewards-claimer", run_claimer)
         self.assertIn('MANUAL_DAILY_RECOVERY" == "true"', run_claimer)
-        self.assertIn('[[ "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]', run_claimer)
+        self.assertIn('elif [[ -z "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]; then', run_claimer)
 
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn("MANUAL_DAILY_RECOVERY = os.getenv", source)
