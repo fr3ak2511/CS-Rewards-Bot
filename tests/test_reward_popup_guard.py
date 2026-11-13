@@ -274,7 +274,11 @@ class RewardPopupGuardTests(unittest.TestCase):
             if script == guard._WRAPPER_CLOSE_CONTROL_CHECK_JS:
                 self.assertIs(args[0], close_buttons[args[1]])
                 self.assertIs(args[2], wrappers[args[1]])
-                return {"ok": True, "zIndex": 2100, "reason": "validated"}
+                return {
+                    "ok": True, "zIndex": 2100,
+                    "stackOrder": driver.dialogs.index(args[1]),
+                    "reason": "validated",
+                }
             return base_execute(script, *args)
 
         driver.execute_script = execute_script
