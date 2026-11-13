@@ -151,6 +151,10 @@ class LayerDriver:
                 "reason": "validated" if ok else "not_safe",
                 "safeRewardContinue": is_reward_continue,
             }
+        if script == __import__("reward_popup_guard")._ASSOCIATED_WRAPPER_CLOSE_CANDIDATES_JS:
+            return []
+        if script == __import__("reward_popup_guard")._SAFE_BACKDROP_CLICK_POINT_JS:
+            return {"ok": False, "reason": "no_verified_blank_backdrop"}
         if "return (arguments[0].innerText" in script:
             return args[0].text
         raise AssertionError("Unexpected JavaScript execution in popup test")
@@ -239,6 +243,105 @@ class RewardPopupGuardTests(unittest.TestCase):
         ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
         self.assertFalse(ok)
         self.assertIn("no_unambiguous_safe_close", reason)
+        self.assertEqual(driver.close_count, 0)
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+
+
+
+    def test_dismisses_explicit_close_button_in_fixed_wrapper_outside_dialog(self):
+        driver = LayerDriver(layers=1, closable=False)
+        dialog = driver.dialogs[0]
+        wrapper = Element("fixed popup wrapper")
+        close = Element("", {
+            "type": "button",
+            "aria-label": "Close dialog",
+            "data-testid": "close",
+            "class": "button-close",
+        }, click_action=lambda: driver._close(dialog))
+        driver.wrapper_close = close
+        driver.wrapper = wrapper
+        base_execute = driver.execute_script
+
+        def execute_script(script, *args):
+            guard = __import__("reward_popup_guard")
+            if script == guard._ASSOCIATED_WRAPPER_CLOSE_CANDIDATES_JS:
+                return [{"button": close, "wrapper": wrapper}]
+            if script == guard._WRAPPER_CLOSE_CONTROL_CHECK_JS:
+                self.assertIs(args[0], close)
+                self.assertIs(args[1], dialog)
+                self.assertIs(args[2], wrapper)
+                return {"ok": True, "zIndex": 2100, "reason": "validated"}
+            return base_execute(script, *args)
+
+        driver.execute_script = execute_script
+        ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
+
+        self.assertTrue(ok, reason)
+        self.assertTrue(close.clicked)
+        self.assertEqual(driver.dialogs, [])
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+
+    def test_uses_only_a_verified_backdrop_blank_point_when_no_safe_x_exists(self):
+        from unittest.mock import patch
+        import reward_popup_guard as guard
+
+        driver = LayerDriver(layers=1, closable=False)
+        dialog = driver.dialogs[0]
+        backdrop = Element("verified dialog overlay", {
+            "data-slot": "dialog-overlay",
+            "class": "dialog-backdrop",
+        })
+        base_execute = driver.execute_script
+
+        def execute_script(script, *args):
+            if script == guard._SAFE_BACKDROP_CLICK_POINT_JS:
+                self.assertIs(args[0], dialog)
+                return {
+                    "ok": True, "backdrop": backdrop,
+                    "offsetX": -400, "offsetY": -300,
+                    "x": 20, "y": 20, "marker": "dialog-overlay",
+                }
+            return base_execute(script, *args)
+
+        driver.execute_script = execute_script
+        actions = []
+
+        class FakeActionChains:
+            def __init__(self, target_driver):
+                self.target_driver = target_driver
+                self.point = None
+
+            def move_to_element_with_offset(self, element, x, y):
+                actions.append(("move", element, x, y))
+                self.point = (element, x, y)
+                return self
+
+            def click(self):
+                actions.append(("click",))
+                return self
+
+            def perform(self):
+                actions.append(("perform",))
+                self.target_driver._close(dialog)
+
+        with patch.object(guard, "ActionChains", FakeActionChains):
+            ok, reason = dismiss_all_safe_popups(
+                driver, log=lambda _m: None, timeout=0.2
+            )
+
+        self.assertTrue(ok, reason)
+        self.assertEqual(actions[0], ("move", backdrop, -400, -300))
+        self.assertEqual(actions[1], ("click",))
+        self.assertEqual(driver.dialogs, [])
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+
+    def test_does_not_click_generic_blank_page_area_when_no_backdrop_is_proven(self):
+        driver = LayerDriver(layers=1, closable=False)
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2
+        )
+        self.assertFalse(ok)
+        self.assertIn("no_verified_blank_backdrop", reason)
         self.assertEqual(driver.close_count, 0)
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
