@@ -277,6 +277,7 @@ class DailyClaimVerificationTests(unittest.TestCase):
              patch.object(bot, "_find_daily_claim_button", side_effect=[
                  (object(), "available"), (object(), "available"),
                  (object(), "available"), (object(), "available"),
+                 (object(), "available"), (object(), "available"),
              ]), \
              patch.object(bot, "_prepare_daily_claim_target", return_value=(True, {"ready": True})), \
              patch.object(bot, "_click_daily_claim_target", return_value=True) as click, \
