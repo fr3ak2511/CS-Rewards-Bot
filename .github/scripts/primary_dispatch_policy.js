@@ -74,6 +74,71 @@ function parseIstTimestamp(value) {
  * preflight. This lets the native 03:00 dispatcher exit before its long wait
  * when the external primary has already committed today's complete run.
  */
+
+
+/**
+ * Reject scheduled backup events that GitHub delivered/started too late.
+ * Cron expressions are stored in UTC; the execution limit is measured from
+ * the scheduled instant and also rechecked when the claim job actually starts.
+ */
+function evaluateScheduledBackupFreshness({
+  cron, createdAt, now = new Date(),
+  maxDelayMinutes = 45, earlyToleranceMinutes = 5,
+} = {}) {
+  const slots = {
+    '5 4 * * *': [4, 5],
+    '5 8 * * *': [8, 5],
+    '5 12 * * *': [12, 5],
+    '5 16 * * *': [16, 5],
+  };
+  const slot = slots[String(cron || '').trim()];
+  const createdMs = Date.parse(createdAt || '');
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  if (!slot || !Number.isFinite(createdMs) || !Number.isFinite(nowMs)) {
+    return { fresh: false, reason: 'backup slot timestamp or cron is unavailable' };
+  }
+  const created = new Date(createdMs);
+  const scheduledMs = Date.UTC(
+    created.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate(),
+    slot[0], slot[1], 0, 0
+  );
+  const createdDelayMinutes = (createdMs - scheduledMs) / 60000;
+  const processingDelayMinutes = (nowMs - scheduledMs) / 60000;
+  if (createdDelayMinutes < -earlyToleranceMinutes) {
+    return {
+      fresh: false,
+      reason: 'scheduled backup event timestamp is ' +
+        Math.round(Math.abs(createdDelayMinutes)) + ' minute(s) before its slot',
+    };
+  }
+  if (createdDelayMinutes > maxDelayMinutes) {
+    return {
+      fresh: false,
+      reason: 'stale scheduled backup event was created ' +
+        Math.round(createdDelayMinutes) + ' minute(s) after its slot',
+    };
+  }
+  if (processingDelayMinutes > maxDelayMinutes) {
+    return {
+      fresh: false,
+      reason: 'scheduled backup claim job reached execution ' +
+        Math.round(processingDelayMinutes) + ' minute(s) after its slot',
+    };
+  }
+  if (processingDelayMinutes < -earlyToleranceMinutes) {
+    return {
+      fresh: false,
+      reason: 'scheduled backup claim job started ' +
+        Math.round(Math.abs(processingDelayMinutes)) + ' minute(s) before its slot',
+    };
+  }
+  return {
+    fresh: true,
+    createdDelayMinutes: Math.round(createdDelayMinutes),
+    processingDelayMinutes: Math.round(processingDelayMinutes),
+  };
+}
+
 function hasCompleteFullRosterCoverage({ fullRun, playerCount, now = new Date() } = {}) {
   if (!fullRun || typeof fullRun !== 'object' || Array.isArray(fullRun)) return false;
   if (!ALLOWED_FULL_ROSTER_RUN_LABELS.has(fullRun.run_label)) return false;
@@ -118,4 +183,5 @@ module.exports = {
   countConfiguredPlayers,
   hasCompleteFullRosterCoverage,
   isBlockingClaimJob,
+  evaluateScheduledBackupFreshness,
 };
