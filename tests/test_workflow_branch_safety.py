@@ -73,7 +73,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("MANUAL_DAILY_RECOVERY = os.getenv", source)
         self.assertIn("manual_daily_recovery_targets(", source)
         self.assertIn("players = [(pid, loyalty) for pid, loyalty in players if pid == selected_pid]", source)
-        self.assertIn("MANUAL_DAILY_RECOVERY or (", source)
+        self.assertIn("MANUAL_DAILY_RECOVERY\n                or (", source)
         self.assertIn('"daily_recovery_mode":', source)
         self.assertIn('"manual_daily_recovery_player_id":', source)
 
