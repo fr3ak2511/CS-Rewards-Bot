@@ -291,6 +291,8 @@ return {
     : !topmost ? 'wrapper_close_not_topmost'
     : 'validated',
   zIndex: Number.parseInt(ws.zIndex || getComputedStyle(dialog).zIndex || '0', 10) || 0,
+  stackOrder:Array.from(document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'))
+    .filter(visible).indexOf(dialog),
   topmost, nearTopRight, viewportWrapper
 };""";
 
@@ -478,7 +480,10 @@ return {
     : safeRewardContinue ? 'validated_reward_continue'
     : 'validated',
   text, aria, title, testid, variant, className:cls.slice(0,180),
-  topmost, zIndex:z, dialogVisible, safeRewardContinue
+  topmost, zIndex:z,
+  stackOrder:Array.from(document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'))
+    .filter(visible).indexOf(dialog),
+  dialogVisible, safeRewardContinue
 };"""
 
 
@@ -724,6 +729,7 @@ def dismiss_all_safe_popups(
                     if isinstance(validation, dict) and validation.get("ok"):
                         candidates.append((
                             int(validation.get("zIndex", 0) or 0),
+                            int(validation.get("stackOrder", 0) or 0),
                             0 if validation.get("safeRewardContinue") else 1,
                             button_id, dialog, button, validation, None,
                         ))
@@ -756,6 +762,7 @@ def dismiss_all_safe_popups(
                     if isinstance(validation, dict) and validation.get("ok"):
                         candidates.append((
                             int(validation.get("zIndex", 0) or 0),
+                            int(validation.get("stackOrder", 0) or 0),
                             1, button_id, dialog, button, validation, wrapper,
                         ))
 
@@ -851,15 +858,23 @@ def dismiss_all_safe_popups(
             # Only one close control should be topmost at its click point. Prefer
             # the highest dialog z-index; ambiguous peers are not guessed at.
             highest_z = max(item[0] for item in candidates)
-            highest_priority = max(item[1] for item in candidates if item[0] == highest_z)
+            highest_stack_order = max(
+                item[1] for item in candidates if item[0] == highest_z
+            )
+            highest_priority = max(
+                item[2] for item in candidates
+                if item[0] == highest_z and item[1] == highest_stack_order
+            )
             top_candidates = [
                 item for item in candidates
-                if item[0] == highest_z and item[1] == highest_priority
+                if item[0] == highest_z
+                and item[1] == highest_stack_order
+                and item[2] == highest_priority
             ]
             if len(top_candidates) != 1:
                 return False, f"ambiguous_topmost_close_controls:{len(top_candidates)}; dismissed={dismissed}"
 
-            _, _, _, target_dialog, target_button, validation, _target_wrapper = top_candidates[0]
+            _, _, _, _, target_dialog, target_button, validation, _target_wrapper = top_candidates[0]
             dialog_description = ""
             try:
                 dialog_description = driver.execute_script(
