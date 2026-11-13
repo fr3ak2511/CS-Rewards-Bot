@@ -53,8 +53,10 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-13T06:45:07.399289",
-    "run_label": "Recovery Run",
+    "timestamp": "2026-11-13T17:59:20.964484",
+    "run_label": "Promotional Check #1",
+    "daily_only_recovery": true,
+    "daily_recovery_slot": "Promotional Check #1",
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
@@ -78,7 +80,7 @@
     "total_claimed": 0,
     "efficiency": 0.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 47,
+    "duration_seconds": 1512,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -89,14 +91,14 @@
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "BB382E889AA37C4F",
-    "avg_time_per_player": 47.0,
-    "accounts_processed": 1,
+    "slowest_player": "E1E9729A4885E6D9",
+    "avg_time_per_player": 42.2,
+    "accounts_processed": 35,
     "claims_made": 0,
-    "unavailable_rewards": 0,
+    "unavailable_rewards": 7,
     "standard_rewards_on_cooldown": 0,
-    "promotional_unavailable_observations": 0,
-    "distinct_promotional_offer_types": 0,
+    "promotional_unavailable_observations": 7,
+    "distinct_promotional_offer_types": 1,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
     "partial_results": 1,
@@ -110,12 +112,12 @@
     "promotion_followups_still_blocked": 0,
     "promotion_followups_pending_recheck": 0,
     "promotion_followups_legacy_seeded": 0,
-    "promotional_only_accounts": 0,
+    "promotional_only_accounts": 34,
     "backup_reconciliation_accounts": 0,
     "full_claim_accounts": 1,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 1
+    "player_count": 35
   },
   "last_full_run": {
     "timestamp": "2026-11-13T06:43:16.038770",
@@ -493,11 +495,17 @@
     "BB382E889AA37C4F": {
       "reset_date": "2026-11-13",
       "status": "pending",
-      "last_full_attempt_at": "2026-11-13T06:45:06.898694",
-      "last_run_label": "Recovery Run",
+      "last_full_attempt_at": "2026-11-13T17:55:02.271460",
+      "last_run_label": "Promotional Check #1",
       "last_status": "Partial",
       "retry_required": true,
-      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery"
+      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery",
+      "daily_recovery_slots_attempted": [
+        "Promotional Check #1"
+      ],
+      "daily_recovery_attempts": 1,
+      "daily_recovery_last_attempt_at": "2026-11-13T17:54:21.090633",
+      "daily_recovery_last_slot": "Promotional Check #1"
     },
     "2D29FA0DEE0A941B": {
       "reset_date": "2026-10-22",
@@ -700,5 +708,534 @@
       "7C4F"
     ],
     "last_recovery_timestamp": "2026-11-13T06:45:07.399289"
+  },
+  "player_display_names": {
+    "E1E9729A4885E6D9": "Freaksson",
+    "4DC0E2AA7130D7E6": "FREAKv20",
+    "46C57810F646B91F": "Umang1984",
+    "8EE5A8F3D8CAD1F3": "SAGI2511",
+    "5899855DAA167B36": "FREAK2511",
+    "5D14D66D5B6C7B8F": "hgkme",
+    "5429611A24A8F01A": "hgkme1",
+    "856EB1365FA9D02E": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+    "F251D3D226496061": "Gvk9916",
+    "3D9A901755C3B2D8": "T\u00f5p\u011c\u00fc\u00f1",
+    "86CD85689FAE9549": "Nick 11 11",
+    "A32124B011061E03": "VEN\u00d8M\u00d8\u00f9S",
+    "63989CEF5D15F053": "R\u00e5s\u00dclGh\u00fcL",
+    "B0036841F0183A12": "\u011e\u00f6Ku",
+    "A6DA56D3C46DF31B": "HareeshK",
+    "7E53CF9C948CED45": "retH\u00e8llG\u00d8D",
+    "E796C81690AB75C0": "DRSxSUJAN",
+    "F820398935D2C403": "R\u00e8t\u0111 K\u00e8\u00f1",
+    "C3960960443AF932": "LittleKane",
+    "2B50290C73E02027": "top silly",
+    "188A50EA1ABE0765": "LULL\u00ef",
+    "4D1AA8C2C628E73F": "SujanBckup",
+    "B4BAE5FC4CACA8F7": "B4BAE5FC4CACA8F7",
+    "8FC80EF0CC5B9D39": "RITZEE17",
+    "1956988E56026BA7": "Hunter7575",
+    "631FEB500E5C1EB7": "Mickypt",
+    "6163D9F946C4BD48": "Mickypt 1",
+    "B3ED965EAECB6F7C": "AnwrHatela",
+    "BB382E889AA37C4F": "SAVAggEEEE",
+    "DA4C269DB53172C5": "\u0120od\u0141\u00eekeP\u015aR",
+    "51001A5D6014F2DD": "Gupta00001",
+    "4443B75C454AEFF8": "4443B75C454AEFF8",
+    "809109186A2962E4": "annu411",
+    "90A110C58E410DDF": "ReddyRulz",
+    "3F493D8C327FAF81": "VaR88"
+  },
+  "player_display_name_history": {
+    "E1E9729A4885E6D9": {
+      "current_name": "Freaksson",
+      "names": [
+        {
+          "name": "Freaksson",
+          "first_seen_at_ist": "2026-11-13T17:34:55.308379",
+          "last_seen_at_ist": "2026-11-13T17:34:55.308379",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:34:55.308379"
+    },
+    "4DC0E2AA7130D7E6": {
+      "current_name": "FREAKv20",
+      "names": [
+        {
+          "name": "FREAKv20",
+          "first_seen_at_ist": "2026-11-13T17:35:37.717194",
+          "last_seen_at_ist": "2026-11-13T17:35:37.717194",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:35:37.717194"
+    },
+    "46C57810F646B91F": {
+      "current_name": "Umang1984",
+      "names": [
+        {
+          "name": "Umang1984",
+          "first_seen_at_ist": "2026-11-13T17:36:20.127939",
+          "last_seen_at_ist": "2026-11-13T17:36:20.127939",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:36:20.127939"
+    },
+    "8EE5A8F3D8CAD1F3": {
+      "current_name": "SAGI2511",
+      "names": [
+        {
+          "name": "SAGI2511",
+          "first_seen_at_ist": "2026-11-13T17:37:02.785413",
+          "last_seen_at_ist": "2026-11-13T17:37:02.785413",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:37:02.785413"
+    },
+    "5899855DAA167B36": {
+      "current_name": "FREAK2511",
+      "names": [
+        {
+          "name": "FREAK2511",
+          "first_seen_at_ist": "2026-11-13T17:37:45.697944",
+          "last_seen_at_ist": "2026-11-13T17:37:45.697944",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:37:45.697944"
+    },
+    "5D14D66D5B6C7B8F": {
+      "current_name": "hgkme",
+      "names": [
+        {
+          "name": "hgkme",
+          "first_seen_at_ist": "2026-11-13T17:38:27.987664",
+          "last_seen_at_ist": "2026-11-13T17:38:27.987664",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:38:27.987664"
+    },
+    "5429611A24A8F01A": {
+      "current_name": "hgkme1",
+      "names": [
+        {
+          "name": "hgkme1",
+          "first_seen_at_ist": "2026-11-13T17:39:10.112534",
+          "last_seen_at_ist": "2026-11-13T17:39:10.112534",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:39:10.112534"
+    },
+    "856EB1365FA9D02E": {
+      "current_name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+      "names": [
+        {
+          "name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+          "first_seen_at_ist": "2026-11-13T17:39:53.493458",
+          "last_seen_at_ist": "2026-11-13T17:39:53.493458",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:39:53.493458"
+    },
+    "F251D3D226496061": {
+      "current_name": "Gvk9916",
+      "names": [
+        {
+          "name": "Gvk9916",
+          "first_seen_at_ist": "2026-11-13T17:40:36.320433",
+          "last_seen_at_ist": "2026-11-13T17:40:36.320433",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:40:36.320433"
+    },
+    "3D9A901755C3B2D8": {
+      "current_name": "T\u00f5p\u011c\u00fc\u00f1",
+      "names": [
+        {
+          "name": "T\u00f5p\u011c\u00fc\u00f1",
+          "first_seen_at_ist": "2026-11-13T17:41:18.857939",
+          "last_seen_at_ist": "2026-11-13T17:41:18.857939",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:41:18.857939"
+    },
+    "86CD85689FAE9549": {
+      "current_name": "Nick 11 11",
+      "names": [
+        {
+          "name": "Nick 11 11",
+          "first_seen_at_ist": "2026-11-13T17:42:01.204845",
+          "last_seen_at_ist": "2026-11-13T17:42:01.204845",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:42:01.204845"
+    },
+    "A32124B011061E03": {
+      "current_name": "VEN\u00d8M\u00d8\u00f9S",
+      "names": [
+        {
+          "name": "VEN\u00d8M\u00d8\u00f9S",
+          "first_seen_at_ist": "2026-11-13T17:42:43.026468",
+          "last_seen_at_ist": "2026-11-13T17:42:43.026468",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:42:43.026468"
+    },
+    "63989CEF5D15F053": {
+      "current_name": "R\u00e5s\u00dclGh\u00fcL",
+      "names": [
+        {
+          "name": "R\u00e5s\u00dclGh\u00fcL",
+          "first_seen_at_ist": "2026-11-13T17:43:24.612315",
+          "last_seen_at_ist": "2026-11-13T17:43:24.612315",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:43:24.612315"
+    },
+    "B0036841F0183A12": {
+      "current_name": "\u011e\u00f6Ku",
+      "names": [
+        {
+          "name": "\u011e\u00f6Ku",
+          "first_seen_at_ist": "2026-11-13T17:44:07.123635",
+          "last_seen_at_ist": "2026-11-13T17:44:07.123635",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:44:07.123635"
+    },
+    "A6DA56D3C46DF31B": {
+      "current_name": "HareeshK",
+      "names": [
+        {
+          "name": "HareeshK",
+          "first_seen_at_ist": "2026-11-13T17:44:50.688748",
+          "last_seen_at_ist": "2026-11-13T17:44:50.688748",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:44:50.688748"
+    },
+    "7E53CF9C948CED45": {
+      "current_name": "retH\u00e8llG\u00d8D",
+      "names": [
+        {
+          "name": "retH\u00e8llG\u00d8D",
+          "first_seen_at_ist": "2026-11-13T17:45:32.901979",
+          "last_seen_at_ist": "2026-11-13T17:45:32.901979",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:45:32.901979"
+    },
+    "E796C81690AB75C0": {
+      "current_name": "DRSxSUJAN",
+      "names": [
+        {
+          "name": "DRSxSUJAN",
+          "first_seen_at_ist": "2026-11-13T17:46:14.323601",
+          "last_seen_at_ist": "2026-11-13T17:46:14.323601",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:46:14.323601"
+    },
+    "F820398935D2C403": {
+      "current_name": "R\u00e8t\u0111 K\u00e8\u00f1",
+      "names": [
+        {
+          "name": "R\u00e8t\u0111 K\u00e8\u00f1",
+          "first_seen_at_ist": "2026-11-13T17:46:57.023708",
+          "last_seen_at_ist": "2026-11-13T17:46:57.023708",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:46:57.023708"
+    },
+    "C3960960443AF932": {
+      "current_name": "LittleKane",
+      "names": [
+        {
+          "name": "LittleKane",
+          "first_seen_at_ist": "2026-11-13T17:47:37.950601",
+          "last_seen_at_ist": "2026-11-13T17:47:37.950601",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:47:37.950601"
+    },
+    "2B50290C73E02027": {
+      "current_name": "top silly",
+      "names": [
+        {
+          "name": "top silly",
+          "first_seen_at_ist": "2026-11-13T17:48:19.544032",
+          "last_seen_at_ist": "2026-11-13T17:48:19.544032",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:48:19.544032"
+    },
+    "188A50EA1ABE0765": {
+      "current_name": "LULL\u00ef",
+      "names": [
+        {
+          "name": "LULL\u00ef",
+          "first_seen_at_ist": "2026-11-13T17:49:02.179514",
+          "last_seen_at_ist": "2026-11-13T17:49:02.179514",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:49:02.179514"
+    },
+    "4D1AA8C2C628E73F": {
+      "current_name": "SujanBckup",
+      "names": [
+        {
+          "name": "SujanBckup",
+          "first_seen_at_ist": "2026-11-13T17:49:44.197025",
+          "last_seen_at_ist": "2026-11-13T17:49:44.197025",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:49:44.197025"
+    },
+    "B4BAE5FC4CACA8F7": {
+      "current_name": "B4BAE5FC4CACA8F7",
+      "names": [
+        {
+          "name": "B4BAE5FC4CACA8F7",
+          "first_seen_at_ist": "2026-11-13T17:50:26.368388",
+          "last_seen_at_ist": "2026-11-13T17:50:26.368388",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:50:26.368388"
+    },
+    "8FC80EF0CC5B9D39": {
+      "current_name": "RITZEE17",
+      "names": [
+        {
+          "name": "RITZEE17",
+          "first_seen_at_ist": "2026-11-13T17:51:08.791378",
+          "last_seen_at_ist": "2026-11-13T17:51:08.791378",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:51:08.791378"
+    },
+    "1956988E56026BA7": {
+      "current_name": "Hunter7575",
+      "names": [
+        {
+          "name": "Hunter7575",
+          "first_seen_at_ist": "2026-11-13T17:51:51.663053",
+          "last_seen_at_ist": "2026-11-13T17:51:51.663053",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:51:51.663053"
+    },
+    "631FEB500E5C1EB7": {
+      "current_name": "Mickypt",
+      "names": [
+        {
+          "name": "Mickypt",
+          "first_seen_at_ist": "2026-11-13T17:52:34.267983",
+          "last_seen_at_ist": "2026-11-13T17:52:34.267983",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:52:34.267983"
+    },
+    "6163D9F946C4BD48": {
+      "current_name": "Mickypt 1",
+      "names": [
+        {
+          "name": "Mickypt 1",
+          "first_seen_at_ist": "2026-11-13T17:53:16.583746",
+          "last_seen_at_ist": "2026-11-13T17:53:16.583746",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:53:16.583746"
+    },
+    "B3ED965EAECB6F7C": {
+      "current_name": "AnwrHatela",
+      "names": [
+        {
+          "name": "AnwrHatela",
+          "first_seen_at_ist": "2026-11-13T17:54:00.115358",
+          "last_seen_at_ist": "2026-11-13T17:54:00.115358",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:54:00.115358"
+    },
+    "BB382E889AA37C4F": {
+      "current_name": "SAVAggEEEE",
+      "names": [
+        {
+          "name": "SAVAggEEEE",
+          "first_seen_at_ist": "2026-11-13T17:54:42.480986",
+          "last_seen_at_ist": "2026-11-13T17:54:42.480986",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:54:42.480986"
+    },
+    "DA4C269DB53172C5": {
+      "current_name": "\u0120od\u0141\u00eekeP\u015aR",
+      "names": [
+        {
+          "name": "\u0120od\u0141\u00eekeP\u015aR",
+          "first_seen_at_ist": "2026-11-13T17:55:24.146300",
+          "last_seen_at_ist": "2026-11-13T17:55:24.146300",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:55:24.146300"
+    },
+    "51001A5D6014F2DD": {
+      "current_name": "Gupta00001",
+      "names": [
+        {
+          "name": "Gupta00001",
+          "first_seen_at_ist": "2026-11-13T17:56:08.145826",
+          "last_seen_at_ist": "2026-11-13T17:56:08.145826",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:56:08.145826"
+    },
+    "4443B75C454AEFF8": {
+      "current_name": "4443B75C454AEFF8",
+      "names": [
+        {
+          "name": "4443B75C454AEFF8",
+          "first_seen_at_ist": "2026-11-13T17:56:52.175108",
+          "last_seen_at_ist": "2026-11-13T17:56:52.175108",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:56:52.175108"
+    },
+    "809109186A2962E4": {
+      "current_name": "annu411",
+      "names": [
+        {
+          "name": "annu411",
+          "first_seen_at_ist": "2026-11-13T17:57:34.731507",
+          "last_seen_at_ist": "2026-11-13T17:57:34.731507",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:57:34.731507"
+    },
+    "90A110C58E410DDF": {
+      "current_name": "ReddyRulz",
+      "names": [
+        {
+          "name": "ReddyRulz",
+          "first_seen_at_ist": "2026-11-13T17:58:17.191976",
+          "last_seen_at_ist": "2026-11-13T17:58:17.191976",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:58:17.191976"
+    },
+    "3F493D8C327FAF81": {
+      "current_name": "VaR88",
+      "names": [
+        {
+          "name": "VaR88",
+          "first_seen_at_ist": "2026-11-13T17:58:59.657665",
+          "last_seen_at_ist": "2026-11-13T17:58:59.657665",
+          "observation_count": 1,
+          "source": "authenticated_profile_capture",
+          "timestamp_precision": "run_observation"
+        }
+      ],
+      "last_observed_at_ist": "2026-11-13T17:58:59.657665"
+    }
   }
 }
