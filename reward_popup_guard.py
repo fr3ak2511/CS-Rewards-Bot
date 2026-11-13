@@ -706,10 +706,10 @@ def _try_safe_backdrop_dismissal(
             if before_url and after_url and before_url != after_url:
                 return False, "backdrop_click_changed_page_url", check
             after_count = int(after.get("dialogCount", 0) or 0)
-            if after_count < current_count:
-                return True, "verified_backdrop_dismissed_top_dialog", check
             if target_dialog is not None and not _is_visible(target_dialog):
                 return True, "verified_backdrop_dismissed_top_dialog", check
+            if after_count == 0 and target_dialog is None:
+                return False, "backdrop_result_missing_target_dialog_reference", check
         except Exception:
             pass
         time.sleep(poll_interval)
