@@ -3561,6 +3561,9 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_unconfirmed_indices": [],
         "store_claimed_indices": [],
         "progression_unconfirmed": False,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
         "grenade_balance": None,
         "standard_rewards_checked": False,
         "progression_checked": True,
@@ -3630,6 +3633,10 @@ def process_player(pid, has_loyalty, is_new, run_label):
         stats["progression"] = p
         stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
         stats["progression_unconfirmed_card_signature"] = getattr(driver, "_progression_unconfirmed_card_signature", None)
+        stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+        stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+        stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+        stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
         stats["grenade_balance"] = _record_grenade_balance_for_player(
             driver, pid, is_new_account=is_new, stats=stats
         )
@@ -3855,6 +3862,9 @@ def _recovery_result_from_saved_targets(pid, targets):
         "progression": 0,
         "progression_unconfirmed": progression_pending,
         "progression_unconfirmed_card_signature": progression_signature,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
         "progression_checked": True,
         "loyalty": 0,
         "loyalty_skipped": True,
@@ -4098,6 +4108,7 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
         "categories": categories + deferred_categories,
         "resolved_categories": [],
         "unresolved_categories": list(deferred_categories),
+        "deferred_checks": [],
         "attempted_at": None,
         "finished_at": None,
         "recovery_seconds": 0,
@@ -4248,6 +4259,10 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
                     result["progression_unconfirmed_card_signature"] = getattr(
                         driver, "_progression_unconfirmed_card_signature", None
                     )
+                    result["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+                    result["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+                    result["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+                    result["progression_checked"] = bool(getattr(driver, "_progression_checked", not result["progression_deferred"]))
                     if progression_unconfirmed:
                         unresolved.append("Progression reward")
                     else:
@@ -4268,9 +4283,16 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
                     result["progression_unconfirmed_card_signature"] = getattr(
                         driver, "_progression_unconfirmed_card_signature", None
                     )
-                    recovery["resolved_categories"].append("Progression eligibility after Store recovery")
+                    result["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+                    result["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+                    result["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+                    result["progression_checked"] = bool(getattr(driver, "_progression_checked", not result["progression_deferred"]))
                     if result["progression_unconfirmed"]:
                         unresolved.append("Progression reward")
+                    elif result["progression_deferred"]:
+                        recovery["deferred_checks"].append("Progression eligibility after Store recovery")
+                    else:
+                        recovery["resolved_categories"].append("Progression eligibility after Store recovery")
                 except Exception as exc:
                     result["progression_unconfirmed"] = True
                     unresolved.append("Progression reward")
@@ -4484,6 +4506,10 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         "processing_mode": "backup_reconciliation",
         "standard_rewards_checked": False,
         "progression_checked": False,
+        "progression_unconfirmed": False,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
         "daily": 0,
         "store": 0,
         "store_temp": 0,
@@ -4573,6 +4599,10 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             p = claim_progression_program_rewards(driver, pid)
             stats["progression"] = p
             stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+            stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+            stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+            stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+            stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
             stats["grenade_balance"] = _record_grenade_balance_for_player(
                 driver, pid, is_new_account=is_new, stats=stats
             )
@@ -5008,7 +5038,13 @@ def build_standard_attention_section(results):
             label = STORE_DAILY_LABELS.get(int(reward_index), f"Store reward {reward_index}")
             rows.append((player, label, "Still available or portal state could not be established"))
         if result.get("progression_unconfirmed"):
-            rows.append((player, "Progression reward", "Claim button did not transition to Delivered"))
+            if result.get("progression_deferred"):
+                reason = "A previously attempted Progression claim remains unconfirmed; this recheck was deferred and no new click was attempted"
+            elif result.get("progression_claim_attempted"):
+                reason = "Claim click was dispatched, but the portal did not confirm the same card as Delivered"
+            else:
+                reason = "Progression target remains unconfirmed; safe click dispatch could not be verified"
+            rows.append((player, "Progression reward", reason))
 
     if not rows:
         return ""
@@ -5021,6 +5057,46 @@ def build_standard_attention_section(results):
         f"<div class='attn-title'>⚠️ Attention Required — {len(rows)} unconfirmed standard reward(s)</div>"
         f"{row_html}"
         "</div>"
+    )
+
+
+def build_deferred_checks_section(results):
+    """Render safe checks that could not be completed without implying a failed claim."""
+    rows = []
+    for result in results:
+        if not result.get("progression_deferred"):
+            continue
+        player = html.escape(_issue_identity_label(result))
+        reason = str(
+            result.get("progression_deferred_reason")
+            or "Progression inspection was blocked by a safety check"
+        )
+        if result.get("progression_unconfirmed"):
+            detail = (
+                "A previously attempted claim remains unconfirmed; this recheck was "
+                "deferred, and no additional claim click was attempted. "
+                + reason
+            )
+        else:
+            detail = (
+                "Progression inspection was deferred; no claim click was attempted. "
+                + reason
+            )
+        rows.append(
+            "<div class='v2-item'>"
+            f"<div><strong>{player}</strong><small>Progression Program</small></div>"
+            f"<span class='v2-result'>{html.escape(detail)}</span></div>"
+        )
+    if not rows:
+        return ""
+    count = len(rows)
+    account_word = "account" if count == 1 else "accounts"
+    return (
+        "<section class='v2-section v2-deferred'>"
+        "<div class='v2-section-head'><h2>Deferred Checks</h2>"
+        f"<span>{count} {account_word} · no new claim click attempted</span></div>"
+        + "".join(rows)
+        + "</section>"
     )
 
 
@@ -5706,9 +5782,11 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     ]
     progression_checked_results = [
         result for result in results
-        if (bool(result.get("progression_checked"))
+        if (
+            (bool(result.get("progression_checked")) and not result.get("progression_deferred"))
             or (result.get("processing_mode", "full_claim") == "full_claim"
-                and not _is_hard_failure(result)))
+                and not _is_hard_failure(result) and not result.get("progression_deferred"))
+        )
     ]
     full_claim_results = [
         result for result in results
@@ -5837,6 +5915,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         health_label, health_class = "Completed", "v2-healthy"
 
     standard_attention_html = build_standard_attention_section(results)
+    deferred_checks_html = build_deferred_checks_section(results)
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
@@ -6044,6 +6123,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         ".v2-good{color:#166534}"
         ".v2-attention{background-color:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
         ".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}"
+        ".v2-deferred{background-color:#f8fafc;border-color:#cbd5e1}"
         ".v2-exception{background-color:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
         ".v2-exception div{display:block;margin-bottom:4px}"
         ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:12px;line-height:1.45;overflow-wrap:anywhere}"
@@ -6106,6 +6186,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + "</section>"
         + (daily_cycle_html or "")
         + validation_html
+        + (deferred_checks_html or "")
         + (immediate_recovery_html or "")
         + attention_html
         + (preexisting_portal_claim_html or "")
@@ -6750,6 +6831,10 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "standard_store_unconfirmed_indices": list(r.get("store_unconfirmed_indices", []) or []),
                 "standard_store_claimed_indices": list(r.get("store_claimed_indices", []) or []),
                 "progression_unconfirmed": bool(r.get("progression_unconfirmed", False)),
+                "progression_deferred": bool(r.get("progression_deferred", False)),
+                "progression_deferred_reason": r.get("progression_deferred_reason"),
+                "progression_claim_attempted": bool(r.get("progression_claim_attempted", False)),
+                "progression_checked": bool(r.get("progression_checked", False)),
                 "immediate_recovery": r.get("immediate_recovery"),
                 "grenade_balance": r.get("grenade_balance"),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),

@@ -103,6 +103,9 @@ class ProgressionSafetyTests(unittest.TestCase):
         self.assertEqual(claimed, 0)
         self.assertEqual(len(clicks), 1)
         self.assertTrue(driver._progression_unconfirmed)
+        self.assertFalse(driver._progression_deferred)
+        self.assertTrue(driver._progression_claim_attempted)
+        self.assertEqual(driver._progression_unconfirmed_card_signature, "Grenade reward 3")
         self.assertEqual(history[-1][1], {"claimed_count": 0, "unconfirmed": True})
 
     def test_unknown_popup_blocks_claim_before_click(self):
@@ -112,8 +115,36 @@ class ProgressionSafetyTests(unittest.TestCase):
         claimed, driver, clicks, history = self._run(before, dismiss_results=[False])
         self.assertEqual(claimed, 0)
         self.assertEqual(clicks, [])
+        self.assertFalse(driver._progression_unconfirmed)
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_claim_attempted)
+        self.assertFalse(driver._progression_checked)
+        # A blocked inspection is not written into claim history as a failed claim.
+        self.assertEqual(history, [])
+
+    def test_popup_blocked_recheck_preserves_a_previously_dispatched_target(self):
+        claimed, driver, clicks, history = self._run(
+            {"valid_page": True, "claimable_count": 1, "delivered_count": 0,
+             "button": object(), "button_text": "claim", "card_signature": "Prior target"},
+            dismiss_results=[False],
+            target_card_signature="Prior target",
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
         self.assertTrue(driver._progression_unconfirmed)
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_claim_attempted)
+        self.assertEqual(driver._progression_unconfirmed_card_signature, "Prior target")
         self.assertEqual(history[-1][1], {"claimed_count": 0, "unconfirmed": True})
+
+    def test_snapshot_failure_is_deferred_without_false_claim_failure(self):
+        claimed, driver, clicks, history = self._run(None)
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertFalse(driver._progression_unconfirmed)
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_claim_attempted)
+        self.assertEqual(history, [])
 
     def test_popup_that_appears_after_click_is_rechecked_before_confirmation(self):
         button = object()

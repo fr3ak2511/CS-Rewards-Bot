@@ -110,50 +110,73 @@ def claim_progression_rewards(
     max_claims_per_visit: int = 6,
     target_card_signature: str | None = None,
 ) -> int:
-    """Claim visible Progression rewards, optionally restricting recovery to one exact card."""
+    """Claim visible Progression rewards, optionally restricting recovery to one exact card.
+
+    A blocked inspection is not a failed claim. Only a dispatched click without
+    same-card portal confirmation remains an unconfirmed claim. If this is a
+    recheck of an earlier unconfirmed card, a blocked inspection preserves that
+    earlier unresolved target without dispatching another click.
+    """
     claimed = 0
     unconfirmed = False
-    unconfirmed_card_signature = None
+    deferred = False
+    deferred_reason = None
+    claim_attempted = False
+    prior_target_signature = str(target_card_signature or "").strip() or None
+    unconfirmed_card_signature = prior_target_signature
     max_claims_per_visit = max(1, min(12, int(max_claims_per_visit)))
     verify_polls = max(1, min(40, int(verify_polls)))
 
-    def _dismiss() -> bool:
+    def _defer(reason: str) -> None:
+        nonlocal deferred, deferred_reason, unconfirmed, unconfirmed_card_signature
+        deferred = True
+        deferred_reason = str(reason or "Progression inspection could not be completed")
+        # A saved target signature proves that an earlier click was already
+        # dispatched. Keep that earlier failure unresolved, but never create a
+        # new unconfirmed-claim state for an inspection that made no click.
+        if prior_target_signature:
+            unconfirmed = True
+            unconfirmed_card_signature = prior_target_signature
+        log(f"⏭️ Progression inspection deferred: {deferred_reason}")
+
+    def _dismiss() -> tuple[bool, str]:
         try:
             ok, reason = dismiss_popups(driver)
         except Exception as exc:
+            reason = f"popup inspection failed ({type(exc).__name__})"
             log(f"🚩 Progression popup inspection failed: {type(exc).__name__}")
-            return False
+            return False, reason
+        reason = str(reason or "popup/overlay safety guard did not clear")
         if not ok:
             log(f"🚩 Progression blocked by popup/overlay guard: {reason}")
-            return False
-        return True
+            return False, reason
+        return True, reason
 
     try:
         log("🎯 Checking Progression Program...")
         driver.get("https://hub.vertigogames.co/progression-program")
         bypass_cloudflare(driver)
         sleep(1.5)
-        if not _dismiss():
-            unconfirmed = True
+        popup_clear, popup_reason = _dismiss()
+        if not popup_clear:
+            _defer(f"popup/overlay safety guard blocked inspection ({popup_reason})")
         else:
             sweep = 0
             while claimed < max_claims_per_visit and sweep < 7:
                 before = _safe_snapshot(snapshot_fn, driver, log)
                 if before is None:
-                    unconfirmed = True
-                    log("🚩 Progression page could not be inspected reliably")
+                    _defer("Progression page snapshot was unavailable")
                     break
                 if not before.get("valid_page", True):
-                    unconfirmed = True
-                    log(
-                        "🚩 Progression URL/page validation failed; refusing all reward clicks "
+                    _defer(
+                        "Progression page validation failed "
                         f"(url={str(before.get('url') or '')[:160]!r}, "
                         f"title={str(before.get('title') or '')[:100]!r})"
                     )
                     break
 
-                if target_card_signature:
-                    target_signature = str(target_card_signature).strip()
+                if prior_target_signature:
+                    target_signature = prior_target_signature
                     claimable_cards = [
                         card for card in (before.get("claimable_cards") or [])
                         if isinstance(card, dict)
@@ -182,6 +205,7 @@ def claim_progression_rewards(
                         if len(delivered_matches) == 1:
                             log("✅ Progression recovery: the exact previously unconfirmed card is now portal-confirmed Delivered")
                             unconfirmed = False
+                            unconfirmed_card_signature = None
                             break
                         unconfirmed = True
                         unconfirmed_card_signature = target_signature
@@ -194,8 +218,9 @@ def claim_progression_rewards(
                     sweep += 1
                     if moved:
                         sleep(0.35)
-                        if not _dismiss():
-                            unconfirmed = True
+                        popup_clear, popup_reason = _dismiss()
+                        if not popup_clear:
+                            _defer(f"popup/overlay safety guard blocked carousel recheck ({popup_reason})")
                             break
                         continue
                     log("ℹ️ Progression: no currently visible claimable reward after carousel scan")
@@ -206,8 +231,7 @@ def claim_progression_rewards(
                     candidates = before.get("claimable_cards") or []
                     button = candidates[0].get("button") if candidates and isinstance(candidates[0], dict) else None
                 if button is None:
-                    unconfirmed = True
-                    log("🚩 Progression reported an available reward but no card-bound button reference")
+                    _defer("Progression showed a possible reward but supplied no safe card-bound button reference")
                     break
 
                 # Scroll is positioning only. Re-run the multi-popup guard after
@@ -219,12 +243,12 @@ def claim_progression_rewards(
                             button,
                         )
                     except Exception as exc:
-                        unconfirmed = True
-                        log(f"🚩 Progression target could not be positioned: {type(exc).__name__}")
+                        _defer(f"Progression target could not be positioned ({type(exc).__name__})")
                         break
                 sleep(0.15)
-                if not _dismiss():
-                    unconfirmed = True
+                popup_clear, popup_reason = _dismiss()
+                if not popup_clear:
+                    _defer(f"popup/overlay safety guard blocked the claim before click ({popup_reason})")
                     break
 
                 try:
@@ -233,13 +257,17 @@ def claim_progression_rewards(
                     clicked = False
                     log(f"⚠️ Progression native click failed: {type(exc).__name__}")
                 if not clicked:
+                    # Keep this conservative: a failed/ambiguous native dispatch
+                    # remains retryable, but is distinguished from a confirmed
+                    # click through claim_attempted=False in the run evidence.
                     unconfirmed = True
-                    unconfirmed_card_signature = str(before.get("card_signature") or target_card_signature or "").strip() or None
-                    log("🚩 Progression click was not safely dispatched; leaving reward retryable")
+                    unconfirmed_card_signature = str(before.get("card_signature") or prior_target_signature or "").strip() or None
+                    log("🚩 Progression click was not safely dispatched; preserving the exact target for retry")
                     break
 
+                claim_attempted = True
                 button_text = str(before.get("button_text") or "claim").strip().lower()
-                signature = str(before.get("card_signature") or "").strip()
+                signature = str(before.get("card_signature") or prior_target_signature or "").strip()
                 log(
                     f"🖱️ Progression {button_text!r} click dispatched"
                     + (f" for card {signature[:90]!r}" if signature else "")
@@ -252,8 +280,9 @@ def claim_progression_rewards(
                 for _ in range(verify_polls):
                     # Dismiss any offer that appears after dispatch; if an
                     # unknown overlay remains, it cannot count as a success.
-                    if not _dismiss():
-                        last_popup_reason = "blocking popup/overlay during post-click verification"
+                    popup_clear, popup_reason = _dismiss()
+                    if not popup_clear:
+                        last_popup_reason = f"blocking popup/overlay during post-click verification ({popup_reason})"
                         sleep(poll_seconds)
                         continue
                     after = _safe_snapshot(snapshot_fn, driver, log)
@@ -266,7 +295,7 @@ def claim_progression_rewards(
 
                 if not confirmed:
                     unconfirmed = True
-                    unconfirmed_card_signature = signature or str(target_card_signature or "").strip() or None
+                    unconfirmed_card_signature = signature or prior_target_signature or None
                     after_count = (last_after or {}).get("claimable_count", "unknown")
                     delivered_count = (last_after or {}).get("delivered_count", "unknown")
                     log(
@@ -279,6 +308,8 @@ def claim_progression_rewards(
                     break
 
                 claimed += 1
+                unconfirmed = False
+                unconfirmed_card_signature = None
                 log(f"✅ Progression reward confirmed by the portal ({claimed} this visit)")
                 sleep(0.25)
                 # Take a fresh snapshot on the next pass; a newly available
@@ -286,20 +317,33 @@ def claim_progression_rewards(
                 sweep = 0
 
     except Exception as exc:
-        unconfirmed = True
-        log(f"❌ Progression error: {type(exc).__name__}: {str(exc)[:160]}")
+        if claim_attempted:
+            unconfirmed = True
+            unconfirmed_card_signature = (
+                unconfirmed_card_signature or prior_target_signature
+            )
+            log(f"❌ Progression post-click verification failed: {type(exc).__name__}: {str(exc)[:160]}")
+        else:
+            _defer(f"Progression inspection failed before a claim click ({type(exc).__name__}: {str(exc)[:120]})")
     finally:
-        try:
-            update_history(player_id, "progression", claimed_count=claimed, unconfirmed=unconfirmed)
-        except Exception as exc:
-            log(f"⚠️ Could not save Progression history: {type(exc).__name__}")
+        # Do not rewrite claim history as an unconfirmed claim merely because
+        # inspection was blocked before any click. A saved old target remains
+        # unconfirmed and is deliberately preserved during its deferred recheck.
+        if not deferred or prior_target_signature:
+            try:
+                update_history(player_id, "progression", claimed_count=claimed, unconfirmed=unconfirmed)
+            except Exception as exc:
+                log(f"⚠️ Could not save Progression history: {type(exc).__name__}")
         try:
             driver._progression_unconfirmed = bool(unconfirmed)
             driver._progression_unconfirmed_card_signature = unconfirmed_card_signature if unconfirmed else None
+            driver._progression_deferred = bool(deferred)
+            driver._progression_deferred_reason = deferred_reason if deferred else None
+            driver._progression_claim_attempted = bool(claim_attempted)
+            driver._progression_checked = not bool(deferred)
         except Exception:
             pass
 
     return claimed
-
 
 __all__ = ["claim_progression_rewards"]
