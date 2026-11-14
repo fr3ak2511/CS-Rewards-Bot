@@ -3082,8 +3082,23 @@
       "last_claim": "2026-11-06T06:22:26.612681",
       "last_count": 1,
       "last_visit": "2026-11-14T05:50:27.351054",
-      "status": "unconfirmed",
-      "last_unconfirmed_at": "2026-11-14T05:50:27.351054"
+      "status": "inspection_deferred",
+      "last_inspection_deferred_at": "2026-11-14T12:26:31+05:30",
+      "inspection_deferred_reason": "Primary run's popup/overlay safety guard blocked Progression inspection before any claim click was dispatched. Captured grenade balance was 42 (minimum 42; next milestone 56). User-provided portal screenshot later showed 42/56 with the 56 milestone locked; no Progression claim was attempted.",
+      "last_inspection_deferred_source": {
+        "primary_run_id": "43531737900",
+        "recovery_run_id": "43539409440",
+        "captured_grenade_balance": 42,
+        "next_milestone": 56,
+        "manual_portal_observation": {
+          "observed_at_ist_approx": "2026-11-14T11:45:00+05:30",
+          "progress": "42/56",
+          "delivered_milestone": 18,
+          "next_milestone": 56,
+          "next_milestone_state": "locked",
+          "evidence": "User-provided Progression Program screenshot"
+        }
+      }
     },
     "loyalty": {
       "last_claim": null,
