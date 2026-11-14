@@ -62,25 +62,11 @@
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
-    "retry_player_ids": [
-      "5429611A24A8F01A"
-    ],
-    "retry_player_count": 1,
-    "retry_targets_by_player": {
-      "5429611A24A8F01A": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": false,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": true,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      }
-    },
+    "retry_player_ids": [],
+    "retry_player_count": 0,
+    "retry_targets_by_player": {},
     "total_claimed": 1,
-    "efficiency": 50.0,
+    "efficiency": 50,
     "efficiency_scope": "full_claim_accounts_only",
     "duration_seconds": 109,
     "per_type": {
@@ -94,7 +80,7 @@
       "event_rewards": 0
     },
     "slowest_player": "51001A5D6014F2DD",
-    "avg_time_per_player": 54.0,
+    "avg_time_per_player": 54,
     "accounts_processed": 2,
     "claims_made": 1,
     "unavailable_rewards": 0,
@@ -119,7 +105,30 @@
     "full_claim_accounts": 2,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 2
+    "player_count": 2,
+    "deferred_inspections_by_player": {
+      "5429611A24A8F01A": {
+        "progression_inspection_deferred": true,
+        "click_dispatched": false,
+        "classification": "inspection_deferred_no_claim_attempted",
+        "reason": "Primary run's popup/overlay safety guard blocked Progression inspection before any claim click was dispatched. Captured grenade balance was 42 (minimum 42; next milestone 56). User-provided portal screenshot later showed 42/56 with the 56 milestone locked; no Progression claim was attempted.",
+        "primary_run_id": "43531737900",
+        "primary_job_id": "132250932100",
+        "post_run_recovery_id": "43539409440",
+        "post_run_recovery_job_id": "132276233321",
+        "captured_grenade_balance": 42,
+        "next_progression_milestone": 56,
+        "manual_portal_observation": {
+          "observed_at_ist_approx": "2026-11-14T11:45:00+05:30",
+          "progress": "42/56",
+          "delivered_milestone": 18,
+          "next_milestone": 56,
+          "next_milestone_state": "locked",
+          "evidence": "User-provided Progression Program screenshot"
+        },
+        "reconciled_at_ist": "2026-11-14T12:26:31+05:30"
+      }
+    }
   },
   "last_full_run": {
     "timestamp": "2026-11-14T06:44:15.595793",
@@ -132,22 +141,10 @@
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
     "retry_player_ids": [
-      "5429611A24A8F01A",
       "51001A5D6014F2DD"
     ],
-    "retry_player_count": 2,
+    "retry_player_count": 1,
     "retry_targets_by_player": {
-      "5429611A24A8F01A": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": false,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": true,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      },
       "51001A5D6014F2DD": {
         "login_retry": false,
         "processing_error": false,
@@ -200,7 +197,30 @@
     "full_claim_accounts": 35,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 35
+    "player_count": 35,
+    "deferred_inspections_by_player": {
+      "5429611A24A8F01A": {
+        "progression_inspection_deferred": true,
+        "click_dispatched": false,
+        "classification": "inspection_deferred_no_claim_attempted",
+        "reason": "Primary run's popup/overlay safety guard blocked Progression inspection before any claim click was dispatched. Captured grenade balance was 42 (minimum 42; next milestone 56). User-provided portal screenshot later showed 42/56 with the 56 milestone locked; no Progression claim was attempted.",
+        "primary_run_id": "43531737900",
+        "primary_job_id": "132250932100",
+        "post_run_recovery_id": "43539409440",
+        "post_run_recovery_job_id": "132276233321",
+        "captured_grenade_balance": 42,
+        "next_progression_milestone": 56,
+        "manual_portal_observation": {
+          "observed_at_ist_approx": "2026-11-14T11:45:00+05:30",
+          "progress": "42/56",
+          "delivered_milestone": 18,
+          "next_milestone": 56,
+          "next_milestone_state": "locked",
+          "evidence": "User-provided Progression Program screenshot"
+        },
+        "reconciled_at_ist": "2026-11-14T12:26:31+05:30"
+      }
+    }
   },
   "full_claim_coverage": {
     "E1E9729A4885E6D9": {
@@ -283,13 +303,18 @@
     },
     "5429611A24A8F01A": {
       "reset_date": "2026-11-14",
-      "status": "pending",
+      "status": "complete",
       "last_full_attempt_at": "2026-11-14T06:45:22.817613",
       "last_run_label": "Recovery Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "Targeted post-run recovery from the saved failure identities",
-      "standard_rewards_audited_reset": "2026-11-14"
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-14",
+      "deferred_inspections": [
+        "Progression Program"
+      ],
+      "deferred_inspection_reason": "Primary run's popup/overlay safety guard blocked Progression inspection before any claim click was dispatched. Captured grenade balance was 42 (minimum 42; next milestone 56). User-provided portal screenshot later showed 42/56 with the 56 milestone locked; no Progression claim was attempted.",
+      "reconciled_at_ist": "2026-11-14T12:26:31+05:30"
     },
     "856EB1365FA9D02E": {
       "reset_date": "2026-11-14",
@@ -700,20 +725,20 @@
     "5899855DAA167B36": "FREAK2511",
     "5D14D66D5B6C7B8F": "hgkme",
     "5429611A24A8F01A": "hgkme1",
-    "856EB1365FA9D02E": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+    "856EB1365FA9D02E": "ĦàmàśĞüřļ",
     "F251D3D226496061": "Gvk9916",
-    "3D9A901755C3B2D8": "T\u00f5p\u011c\u00fc\u00f1",
+    "3D9A901755C3B2D8": "TõpĜüñ",
     "86CD85689FAE9549": "Nick 11 11",
-    "A32124B011061E03": "VEN\u00d8M\u00d8\u00f9S",
-    "63989CEF5D15F053": "R\u00e5s\u00dclGh\u00fcL",
-    "B0036841F0183A12": "\u011e\u00f6Ku",
+    "A32124B011061E03": "VENØMØùS",
+    "63989CEF5D15F053": "RåsÜlGhüL",
+    "B0036841F0183A12": "ĞöKu",
     "A6DA56D3C46DF31B": "HareeshK",
-    "7E53CF9C948CED45": "retH\u00e8llG\u00d8D",
+    "7E53CF9C948CED45": "retHèllGØD",
     "E796C81690AB75C0": "DRSxSUJAN",
-    "F820398935D2C403": "R\u00e8t\u0111 K\u00e8\u00f1",
+    "F820398935D2C403": "Rètđ Kèñ",
     "C3960960443AF932": "LittleKane",
     "2B50290C73E02027": "top silly",
-    "188A50EA1ABE0765": "LULL\u00ef",
+    "188A50EA1ABE0765": "LULLï",
     "4D1AA8C2C628E73F": "SujanBckup",
     "B4BAE5FC4CACA8F7": "B4BAE5FC4CACA8F7",
     "8FC80EF0CC5B9D39": "RITZEE17",
@@ -722,7 +747,7 @@
     "6163D9F946C4BD48": "Mickypt 1",
     "B3ED965EAECB6F7C": "AnwrHatela",
     "BB382E889AA37C4F": "SAVAggEEEE",
-    "DA4C269DB53172C5": "\u0120od\u0141\u00eekeP\u015aR",
+    "DA4C269DB53172C5": "ĠodŁîkePŚR",
     "51001A5D6014F2DD": "Gupta00001",
     "4443B75C454AEFF8": "4443B75C454AEFF8",
     "809109186A2962E4": "annu411",
@@ -829,10 +854,10 @@
       "last_observed_at_ist": "2026-11-14T05:49:19.760789"
     },
     "856EB1365FA9D02E": {
-      "current_name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+      "current_name": "ĦàmàśĞüřļ",
       "names": [
         {
-          "name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+          "name": "ĦàmàśĞüřļ",
           "first_seen_at_ist": "2026-11-13T17:39:53.493458",
           "last_seen_at_ist": "2026-11-14T05:51:05.577606",
           "observation_count": 2,
@@ -857,10 +882,10 @@
       "last_observed_at_ist": "2026-11-14T05:52:54.471779"
     },
     "3D9A901755C3B2D8": {
-      "current_name": "T\u00f5p\u011c\u00fc\u00f1",
+      "current_name": "TõpĜüñ",
       "names": [
         {
-          "name": "T\u00f5p\u011c\u00fc\u00f1",
+          "name": "TõpĜüñ",
           "first_seen_at_ist": "2026-11-13T17:41:18.857939",
           "last_seen_at_ist": "2026-11-14T05:54:42.819857",
           "observation_count": 2,
@@ -885,10 +910,10 @@
       "last_observed_at_ist": "2026-11-14T05:56:30.950756"
     },
     "A32124B011061E03": {
-      "current_name": "VEN\u00d8M\u00d8\u00f9S",
+      "current_name": "VENØMØùS",
       "names": [
         {
-          "name": "VEN\u00d8M\u00d8\u00f9S",
+          "name": "VENØMØùS",
           "first_seen_at_ist": "2026-11-13T17:42:43.026468",
           "last_seen_at_ist": "2026-11-14T05:58:19.562074",
           "observation_count": 2,
@@ -899,10 +924,10 @@
       "last_observed_at_ist": "2026-11-14T05:58:19.562074"
     },
     "63989CEF5D15F053": {
-      "current_name": "R\u00e5s\u00dclGh\u00fcL",
+      "current_name": "RåsÜlGhüL",
       "names": [
         {
-          "name": "R\u00e5s\u00dclGh\u00fcL",
+          "name": "RåsÜlGhüL",
           "first_seen_at_ist": "2026-11-13T17:43:24.612315",
           "last_seen_at_ist": "2026-11-14T06:00:06.510339",
           "observation_count": 2,
@@ -913,10 +938,10 @@
       "last_observed_at_ist": "2026-11-14T06:00:06.510339"
     },
     "B0036841F0183A12": {
-      "current_name": "\u011e\u00f6Ku",
+      "current_name": "ĞöKu",
       "names": [
         {
-          "name": "\u011e\u00f6Ku",
+          "name": "ĞöKu",
           "first_seen_at_ist": "2026-11-13T17:44:07.123635",
           "last_seen_at_ist": "2026-11-14T06:01:54.402808",
           "observation_count": 2,
@@ -941,10 +966,10 @@
       "last_observed_at_ist": "2026-11-14T06:03:42.531523"
     },
     "7E53CF9C948CED45": {
-      "current_name": "retH\u00e8llG\u00d8D",
+      "current_name": "retHèllGØD",
       "names": [
         {
-          "name": "retH\u00e8llG\u00d8D",
+          "name": "retHèllGØD",
           "first_seen_at_ist": "2026-11-13T17:45:32.901979",
           "last_seen_at_ist": "2026-11-14T06:05:29.972224",
           "observation_count": 2,
@@ -969,10 +994,10 @@
       "last_observed_at_ist": "2026-11-14T06:07:17.421227"
     },
     "F820398935D2C403": {
-      "current_name": "R\u00e8t\u0111 K\u00e8\u00f1",
+      "current_name": "Rètđ Kèñ",
       "names": [
         {
-          "name": "R\u00e8t\u0111 K\u00e8\u00f1",
+          "name": "Rètđ Kèñ",
           "first_seen_at_ist": "2026-11-13T17:46:57.023708",
           "last_seen_at_ist": "2026-11-14T06:09:04.658809",
           "observation_count": 2,
@@ -1011,10 +1036,10 @@
       "last_observed_at_ist": "2026-11-14T06:12:39.601787"
     },
     "188A50EA1ABE0765": {
-      "current_name": "LULL\u00ef",
+      "current_name": "LULLï",
       "names": [
         {
-          "name": "LULL\u00ef",
+          "name": "LULLï",
           "first_seen_at_ist": "2026-11-13T17:49:02.179514",
           "last_seen_at_ist": "2026-11-14T06:14:26.712881",
           "observation_count": 2,
@@ -1137,10 +1162,10 @@
       "last_observed_at_ist": "2026-11-14T06:30:10.538954"
     },
     "DA4C269DB53172C5": {
-      "current_name": "\u0120od\u0141\u00eekeP\u015aR",
+      "current_name": "ĠodŁîkePŚR",
       "names": [
         {
-          "name": "\u0120od\u0141\u00eekeP\u015aR",
+          "name": "ĠodŁîkePŚR",
           "first_seen_at_ist": "2026-11-13T17:55:24.146300",
           "last_seen_at_ist": "2026-11-14T06:32:27.099496",
           "observation_count": 2,
@@ -1251,5 +1276,37 @@
       "F2DD"
     ],
     "last_recovery_timestamp": "2026-11-14T06:47:12.632353"
-  }
+  },
+  "runtime_reconciliations": [
+    {
+      "player_id": "5429611A24A8F01A",
+      "display_name": "hgkme1",
+      "reset_date": "2026-11-14",
+      "category": "Progression Program",
+      "previous_status": "unconfirmed",
+      "corrected_status": "inspection_deferred",
+      "retry_removed": true,
+      "claim_attempted": false,
+      "last_confirmed_claim_preserved": "2026-11-06T06:22:26.612681",
+      "progression_inspection_deferred": true,
+      "click_dispatched": false,
+      "classification": "inspection_deferred_no_claim_attempted",
+      "reason": "Primary run's popup/overlay safety guard blocked Progression inspection before any claim click was dispatched. Captured grenade balance was 42 (minimum 42; next milestone 56). User-provided portal screenshot later showed 42/56 with the 56 milestone locked; no Progression claim was attempted.",
+      "primary_run_id": "43531737900",
+      "primary_job_id": "132250932100",
+      "post_run_recovery_id": "43539409440",
+      "post_run_recovery_job_id": "132276233321",
+      "captured_grenade_balance": 42,
+      "next_progression_milestone": 56,
+      "manual_portal_observation": {
+        "observed_at_ist_approx": "2026-11-14T11:45:00+05:30",
+        "progress": "42/56",
+        "delivered_milestone": 18,
+        "next_milestone": 56,
+        "next_milestone_state": "locked",
+        "evidence": "User-provided Progression Program screenshot"
+      },
+      "reconciled_at_ist": "2026-11-14T12:26:31+05:30"
+    }
+  ]
 }
