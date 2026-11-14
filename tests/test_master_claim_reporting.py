@@ -510,6 +510,48 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 account checked</small>", report)
 
 
+    def test_deferred_progression_is_not_counted_as_checked_or_attention_required(self):
+        checked = [
+            {
+                "pid": f"CHECKED{i:04d}",
+                "display_name": f"Checked Player {i}",
+                "processing_mode": "full_claim",
+                "status": "Success",
+                "standard_rewards_checked": True,
+                "progression_checked": True,
+                "progression_unconfirmed": False,
+                "progression_deferred": False,
+                "daily": 1, "store": 3, "progression": 0, "loyalty": 0,
+                "has_loyalty": False, "promotions_observed": [], "event_rewards": [],
+            }
+            for i in range(34)
+        ]
+        deferred = {
+            "pid": "5429611A24A8F01A",
+            "display_name": "hgkme1",
+            "processing_mode": "full_claim",
+            "status": "Success",
+            "standard_rewards_checked": True,
+            "progression_checked": False,
+            "progression_unconfirmed": False,
+            "progression_deferred": True,
+            "progression_deferred_reason": "popup/overlay safety guard blocked inspection",
+            "progression_claim_attempted": False,
+            "daily": 1, "store": 3, "progression": 0, "loyalty": 0,
+            "has_loyalty": False, "promotions_observed": [], "event_rewards": [],
+        }
+        report = build_email(
+            checked + [deferred], "Primary Run", 1,
+            get_ist_time() - timedelta(minutes=2), {}, configured_player_count=35,
+        )
+        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked</small>", report)
+        self.assertIn("Deferred Checks", report)
+        self.assertIn("hgkme1", report)
+        self.assertIn("no claim click was attempted", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
+        self.assertIn("Completed", report)
+        self.assertNotIn("<span>Progression Rewards</span><strong>0</strong><small>35 accounts checked</small>", report)
+
     def test_generic_popup_blocker_remains_reportable(self):
         generic = {
             "key": "store-popup-blocked",
