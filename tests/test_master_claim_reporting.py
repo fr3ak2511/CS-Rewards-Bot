@@ -932,9 +932,30 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         section = build_promotional_section(players)
         self.assertIn("Promotional Offers", section)
         self.assertIn("Seen on 2 accounts", section)
+        self.assertIn("2 account scans · 1 offer type", section)
         self.assertIn("2 unavailable", section)
         self.assertNotIn("PROMO0001", section)
         self.assertNotIn("PROMO0002", section)
+
+    def test_promotional_offer_type_summary_pluralizes_multiple_types(self):
+        players = [
+            {
+                "pid": "PROMO0001", "promotion_scan_completed": True,
+                "promotions_observed": [{
+                    "title": "Free Pack A", "status": "unavailable",
+                    "button_text": "free", "card_text": "Free Pack A Free",
+                }],
+            },
+            {
+                "pid": "PROMO0002", "promotion_scan_completed": True,
+                "promotions_observed": [{
+                    "title": "Free Pack B", "status": "unavailable",
+                    "button_text": "free", "card_text": "Free Pack B Free",
+                }],
+            },
+        ]
+        section = build_promotional_section(players)
+        self.assertIn("2 account scans · 2 offer types", section)
 
     def test_promo_summary_does_not_surface_paid_unavailable_offer(self):
         section = build_promotional_section([{
