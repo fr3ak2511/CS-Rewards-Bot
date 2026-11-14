@@ -7,6 +7,7 @@ const {
   hasCompleteFullRosterCoverage,
   isBlockingClaimJob,
   evaluateScheduledBackupFreshness,
+  evaluateExternalPromotionalBackupFreshness,
 } = require('../.github/scripts/primary_dispatch_policy');
 
 test('external primary may pass a scheduled run that is only waiting for its randomized target', () => {
@@ -161,5 +162,61 @@ test('unknown cron and malformed trigger timestamps fail closed', () => {
     cron: '5 4 * * *',
     createdAt: 'not-a-timestamp',
     now: new Date('2026-11-13T04:06:00Z'),
+  }).fresh, false);
+});
+
+
+test('external promotional slot 1 accepts a fresh 12:05 IST dispatch', () => {
+  const result = evaluateExternalPromotionalBackupFreshness({
+    slot: '1',
+    createdAt: '2026-11-13T06:38:00Z',
+    now: new Date('2026-11-13T06:50:00Z'),
+  });
+  assert.equal(result.fresh, true);
+  assert.equal(result.createdDelayMinutes, 3);
+  assert.equal(result.processingDelayMinutes, 15);
+});
+
+test('external promotional slot 2 accepts a fresh 18:05 IST dispatch', () => {
+  const result = evaluateExternalPromotionalBackupFreshness({
+    slot: '2',
+    createdAt: '2026-11-13T12:40:00Z',
+    now: new Date('2026-11-13T12:50:00Z'),
+  });
+  assert.equal(result.fresh, true);
+  assert.equal(result.createdDelayMinutes, 5);
+  assert.equal(result.processingDelayMinutes, 15);
+});
+
+test('external promotional dispatch created more than 45 minutes late is rejected', () => {
+  const result = evaluateExternalPromotionalBackupFreshness({
+    slot: '1',
+    createdAt: '2026-11-13T07:21:00Z',
+    now: new Date('2026-11-13T07:22:00Z'),
+  });
+  assert.equal(result.fresh, false);
+  assert.match(result.reason, /created too late/i);
+});
+
+test('external promotional claim job delayed after a fresh dispatch is rejected', () => {
+  const result = evaluateExternalPromotionalBackupFreshness({
+    slot: '2',
+    createdAt: '2026-11-13T12:40:00Z',
+    now: new Date('2026-11-13T13:30:00Z'),
+  });
+  assert.equal(result.fresh, false);
+  assert.match(result.reason, /execution too late/i);
+});
+
+test('invalid external promotional slot and malformed timestamps fail closed', () => {
+  assert.equal(evaluateExternalPromotionalBackupFreshness({
+    slot: '3',
+    createdAt: '2026-11-13T06:35:00Z',
+    now: new Date('2026-11-13T06:36:00Z'),
+  }).fresh, false);
+  assert.equal(evaluateExternalPromotionalBackupFreshness({
+    slot: '1',
+    createdAt: 'not-a-timestamp',
+    now: new Date('2026-11-13T06:36:00Z'),
   }).fresh, false);
 });

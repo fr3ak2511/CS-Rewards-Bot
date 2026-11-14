@@ -40,6 +40,15 @@ on:
         required: false
         type: boolean
         default: false
+      external_promotional_backup:
+        description: "Run the account-aware promotional backup path from the independent scheduler"
+        required: false
+        type: boolean
+        default: false
+      external_promotional_slot:
+        description: "External backup slot: 1 = 12:05 IST; 2 = 18:05 IST"
+        required: false
+        type: string
       recover_pending_daily:
         description: "Run one guarded Daily-only recovery for the exact Player ID below; no other account or reward category"
         required: false
@@ -90,11 +99,15 @@ jobs:
               hasCompleteFullRosterCoverage,
               isBlockingClaimJob,
               evaluateScheduledBackupFreshness,
+              evaluateExternalPromotionalBackupFreshness,
             } = require(path.join(
               process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'primary_dispatch_policy.js'
             ));
             const isExternalPrimary = context.eventName === 'workflow_dispatch' &&
               String(context.payload.inputs?.external_primary || '').toLowerCase() === 'true';
+            const isExternalPromoBackup = context.eventName === 'workflow_dispatch' &&
+              String(context.payload.inputs?.external_promotional_backup || '').toLowerCase() === 'true';
+            const externalPromoSlot = String(context.payload.inputs?.external_promotional_slot || '').trim();
             const launcherCron = '30 21 * * *';
             const retryCron = '0-30/5 0 * * *';
             const backupCrons = ['5 4 * * *', '5 8 * * *', '5 12 * * *', '5 16 * * *'];
@@ -111,7 +124,30 @@ jobs:
               return;
             }
 
-            if (context.eventName !== 'schedule' && !isExternalPrimary) {
+            if (context.eventName === 'workflow_dispatch') {
+              const inputEnabled = name =>
+                String(context.payload.inputs?.[name] || '').toLowerCase() === 'true';
+              const otherExecutionModes = [
+                'diagnose_login', 'test_login_only', 'test_claims_one_player',
+                'external_primary', 'recover_pending_daily',
+              ].some(inputEnabled);
+              const dailyRecoveryPlayerId = String(context.payload.inputs?.daily_recovery_player_id || '').trim();
+
+              if (externalPromoSlot && !isExternalPromoBackup) {
+                out(false, 'external_promotional_slot requires external_promotional_backup=true; fail closed');
+                return;
+              }
+              if (isExternalPromoBackup && (
+                !['1', '2'].includes(externalPromoSlot) ||
+                otherExecutionModes ||
+                dailyRecoveryPlayerId
+              )) {
+                out(false, 'external promotional backup requires exactly slot 1 or 2 and cannot be combined with another dispatch mode');
+                return;
+              }
+            }
+
+            if (context.eventName !== 'schedule' && !isExternalPrimary && !isExternalPromoBackup) {
               out(true, `${context.eventName} request on prod`);
               return;
             }
@@ -163,8 +199,28 @@ jobs:
                   return;
                 }
               }
-            } else {
+            } else if (isExternalPrimary) {
               core.info('external morning primary request; check for a real competing claim job');
+            } else {
+              // Use GitHub's original workflow-run creation time, then recheck it
+              // again after concurrency is acquired immediately before browser work.
+              const currentWorkflowRun = await github.rest.actions.getWorkflowRun({
+                owner, repo, run_id: context.runId
+              });
+              const externalRunCreatedAt = currentWorkflowRun.data.created_at || '';
+              core.setOutput('scheduled_run_created_at', externalRunCreatedAt);
+              const freshness = evaluateExternalPromotionalBackupFreshness({
+                slot: externalPromoSlot,
+                createdAt: externalRunCreatedAt,
+                now: new Date(),
+              });
+              if (!freshness.fresh) {
+                out(false, freshness.reason + '; no browser session or reward click will start');
+                return;
+              }
+              core.info('Fresh external promotional slot accepted: created delay ' +
+                freshness.createdDelayMinutes + ' min; execution delay ' +
+                freshness.processingDelayMinutes + ' min.');
             }
 
             // If the external primary has already committed a complete full-roster cycle,
@@ -383,6 +439,9 @@ jobs:
           SCHEDULE_RUN_CREATED_AT: ${{ needs.preflight.outputs.scheduled_run_created_at }}
           DISPATCH_TYPE: ${{ github.event.action }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
+          EXTERNAL_PROMOTIONAL_BACKUP: ${{ inputs.external_promotional_backup }}
+          EXTERNAL_PROMOTIONAL_SLOT: ${{ inputs.external_promotional_slot }}
+          EXTERNAL_PROMOTIONAL_RUN_CREATED_AT: ${{ needs.preflight.outputs.scheduled_run_created_at }}
           MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
           MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
           DIAGNOSE_LOGIN: ${{ inputs.diagnose_login }}
@@ -409,6 +468,9 @@ jobs:
           cron = os.environ.get('SCHEDULE_CRON', '').strip()
           dispatch_type = os.environ.get('DISPATCH_TYPE', '')
           external_primary = os.environ.get('EXTERNAL_PRIMARY', '').strip().lower() == 'true'
+          external_promotional_backup = os.environ.get('EXTERNAL_PROMOTIONAL_BACKUP', '').strip().lower() == 'true'
+          external_promotional_slot = os.environ.get('EXTERNAL_PROMOTIONAL_SLOT', '').strip()
+          external_promotional_run_created_at = os.environ.get('EXTERNAL_PROMOTIONAL_RUN_CREATED_AT', '').strip()
           manual_daily_recovery = os.environ.get('MANUAL_DAILY_RECOVERY', '').strip().lower() == 'true'
           manual_daily_player_id = os.environ.get('MANUAL_DAILY_RECOVERY_PLAYER_ID', '').strip()
           diagnose_login = os.environ.get('DIAGNOSE_LOGIN', '').strip().lower() == 'true'
@@ -461,11 +523,25 @@ jobs:
               emit(False, False, f"production-only claimer; selected branch '{selected_branch or 'unknown'}' is not 'prod'")
               raise SystemExit(0)
 
-          if manual_daily_recovery and (event != 'workflow_dispatch' or external_primary):
+          if event == 'workflow_dispatch' and external_promotional_slot and not external_promotional_backup:
+              emit(False, False, 'external_promotional_slot requires external_promotional_backup=true; fail closed')
+              raise SystemExit(0)
+
+          if event == 'workflow_dispatch' and external_promotional_backup:
+              other_modes = (
+                  external_primary or manual_daily_recovery
+                  or diagnose_login or login_test_only or claim_test_only
+                  or bool(manual_daily_player_id)
+              )
+              if other_modes or external_promotional_slot not in {'1', '2'}:
+                  emit(False, False, 'external promotional backup requires exactly slot 1 or 2 and cannot be combined with another dispatch mode; fail closed')
+                  raise SystemExit(0)
+
+          if manual_daily_recovery and (event != 'workflow_dispatch' or external_primary or external_promotional_backup):
               emit(False, False, 'manual Daily recovery is valid only as its own workflow_dispatch mode on prod; fail closed')
               raise SystemExit(0)
 
-          if event == 'workflow_dispatch' and not external_primary:
+          if event == 'workflow_dispatch' and not external_primary and not external_promotional_backup:
               if manual_daily_recovery:
                   if diagnose_login or login_test_only or claim_test_only:
                       emit(False, False, 'manual Daily recovery cannot be combined with login diagnostics, login tests, or one-player claim tests')
@@ -548,7 +624,8 @@ jobs:
           if event == 'schedule' and cron not in ({launcher_cron, retry_cron} | set(backup_crons)):
               emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
-          if event != 'schedule' and not (event == 'workflow_dispatch' and external_primary):
+          if event != 'schedule' and not (
+                  event == 'workflow_dispatch' and (external_primary or external_promotional_backup)):
               emit(False, False, f'unsupported or unrecognised scheduled event ({event!r}, {cron!r}); fail closed')
               raise SystemExit(0)
 
@@ -595,6 +672,44 @@ jobs:
                   emit(
                       False, False,
                       f'backup slot freshness could not be validated ({type(exc).__name__}); fail closed',
+                  )
+                  raise SystemExit(0)
+
+          if event == 'workflow_dispatch' and external_promotional_backup:
+              slot_utc = {'1': (6, 35), '2': (12, 35)}[external_promotional_slot]
+              try:
+                  created_at = datetime.fromisoformat(external_promotional_run_created_at.replace('Z', '+00:00'))
+                  if created_at.tzinfo is None:
+                      created_at = created_at.replace(tzinfo=timezone.utc)
+                  created_at = created_at.astimezone(timezone.utc)
+                  scheduled_at = created_at.replace(
+                      hour=slot_utc[0], minute=slot_utc[1], second=0, microsecond=0,
+                  )
+                  now_utc = datetime.now(timezone.utc)
+                  created_delay = (created_at - scheduled_at).total_seconds()
+                  execution_delay = (now_utc - scheduled_at).total_seconds()
+                  max_delay = 45 * 60
+                  early_tolerance = 5 * 60
+                  if (
+                      created_delay < -early_tolerance
+                      or created_delay > max_delay
+                      or execution_delay < -early_tolerance
+                      or execution_delay > max_delay
+                  ):
+                      emit(
+                          False, False,
+                          f'external promotional slot #{external_promotional_slot} rejected; '
+                          f'created delay {created_delay / 60:.1f} min; '
+                          f'execution delay {execution_delay / 60:.1f} min; '
+                          'no browser session or reward click will start',
+                      )
+                      raise SystemExit(0)
+              except SystemExit:
+                  raise
+              except Exception as exc:
+                  emit(
+                      False, False,
+                      f'external promotional freshness could not be validated ({type(exc).__name__}); fail closed',
                   )
                   raise SystemExit(0)
 
@@ -661,8 +776,8 @@ jobs:
               else:
                   emit(False, False, 'post-reset full-roster cycle already ran; no eligible first recovery remains')
 
-          elif cron in backup_crons:
-              slot = backup_crons[cron]
+          elif cron in backup_crons or external_promotional_backup:
+              slot = int(external_promotional_slot) if external_promotional_backup else backup_crons[cron]
 
               if now.time() < dt_time(5, 30):
                   emit(
@@ -728,10 +843,13 @@ jobs:
           DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
+          EXTERNAL_PROMOTIONAL_BACKUP: ${{ inputs.external_promotional_backup }}
+          EXTERNAL_PROMOTIONAL_SLOT: ${{ inputs.external_promotional_slot }}
         run: |
           if [[ "$MANUAL_DAILY_RECOVERY" == "true" ]]; then
             if [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] || [[ "$LOGIN_TEST_ONLY" == "true" ]] || \
                [[ "$CLAIM_TEST_ONLY" == "true" ]] || [[ "$EXTERNAL_PRIMARY" == "true" ]] || \
+               [[ "$EXTERNAL_PROMOTIONAL_BACKUP" == "true" ]] || \
                [[ "$RECOVERY_ONLY_FAILED" == "true" ]] || [[ "$DAILY_ONLY_RECOVERY" != "true" ]]; then
               echo "Manual Daily recovery cannot be combined with another execution mode."
               exit 2

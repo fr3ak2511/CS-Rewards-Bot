@@ -1,3 +1,5 @@
+import ast
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -128,6 +130,41 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
         self.assertIn("elif not covered_since_reset:", workflow)
+
+
+    def test_embedded_run_mode_gate_is_valid_python(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        run_mode = workflow.split("id: run_mode", 1)[1].split("      - name: Set up Python", 1)[0]
+        script = run_mode.split("python3 - <<'PY'", 1)[1].split("          PY", 1)[0]
+        ast.parse(textwrap.dedent(script.lstrip("\n")))
+
+    def test_external_promotional_backup_is_slot_scoped_freshness_gated_and_uses_shared_claimer(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        self.assertIn("external_promotional_backup:", workflow)
+        self.assertIn("external_promotional_slot:", workflow)
+        self.assertIn("evaluateExternalPromotionalBackupFreshness", workflow)
+        self.assertIn("EXTERNAL_PROMOTIONAL_RUN_CREATED_AT:", workflow)
+        self.assertIn("external promotional backup requires exactly slot 1 or 2", workflow)
+        self.assertIn("elif cron in backup_crons or external_promotional_backup:", workflow)
+        self.assertIn("EXTERNAL_PROMOTIONAL_BACKUP:", workflow)
+        self.assertIn("EXTERNAL_PROMOTIONAL_SLOT:", workflow)
+        self.assertIn("max_delay = 45 * 60", workflow)
+
+        run_claimer = workflow.split("  run-claimer:", 1)[1]
+        self.assertIn("group: rewards-claimer", run_claimer)
+        self.assertIn("EXTERNAL_PROMOTIONAL_BACKUP:", run_claimer)
+
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn('os.getenv("EXTERNAL_PROMOTIONAL_BACKUP", "").strip().lower() == "true"', source)
+        self.assertIn('return f"Promotional Check #{slot}", int(slot)', source)
+        self.assertIn("Unknown External Promotional Backup", source)
+
+    def test_external_promotional_backup_does_not_remove_native_fallback_or_existing_backup_crons(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        for cron in ("30 21 * * *", "0-30/5 0 * * *", "5 4 * * *", "5 8 * * *", "5 12 * * *", "5 16 * * *"):
+            self.assertIn(f"'{cron}'", workflow)
+        self.assertIn("evaluateScheduledBackupFreshness", workflow)
+        self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
 
 
 if __name__ == "__main__":
