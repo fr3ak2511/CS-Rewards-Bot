@@ -135,8 +135,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
     def test_embedded_run_mode_gate_is_valid_python(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         run_mode = workflow.split("id: run_mode", 1)[1].split("      - name: Set up Python", 1)[0]
-        script = run_mode.split("python3 - <<'PY'\\n", 1)[1].split("\\n          PY", 1)[0]
-        ast.parse(textwrap.dedent(script))
+        script = run_mode.split("python3 - <<'PY'", 1)[1].split("          PY", 1)[0]
+        ast.parse(textwrap.dedent(script.lstrip("\n")))
 
     def test_external_promotional_backup_is_slot_scoped_freshness_gated_and_uses_shared_claimer(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
