@@ -139,6 +139,54 @@ function evaluateScheduledBackupFreshness({
   };
 }
 
+/**
+ * Reject external promotional-backup dispatches that are created or executed
+ * too far from their intended IST slot. Slots are mapped to UTC to keep the
+ * provider's local timezone out of the claim decision.
+ */
+function evaluateExternalPromotionalBackupFreshness({
+  slot, createdAt, now = new Date(),
+  maxDelayMinutes = 45, earlyToleranceMinutes = 5,
+} = {}) {
+  const slots = {
+    '1': [6, 35],  // 12:05 IST
+    '2': [12, 35], // 18:05 IST
+  };
+  const selected = slots[String(slot ?? '').trim()];
+  const createdMs = Date.parse(createdAt || '');
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+  if (!selected || !Number.isFinite(createdMs) || !Number.isFinite(nowMs)) {
+    return { fresh: false, reason: 'external promotional slot or trigger timestamp is unavailable' };
+  }
+
+  const created = new Date(createdMs);
+  const scheduledMs = Date.UTC(
+    created.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate(),
+    selected[0], selected[1], 0, 0
+  );
+  const createdDelayMinutes = (createdMs - scheduledMs) / 60000;
+  const processingDelayMinutes = (nowMs - scheduledMs) / 60000;
+
+  if (createdDelayMinutes < -earlyToleranceMinutes) {
+    return { fresh: false, reason: 'external promotional dispatch was created before its slot' };
+  }
+  if (createdDelayMinutes > maxDelayMinutes) {
+    return { fresh: false, reason: 'stale external promotional dispatch was created too late' };
+  }
+  if (processingDelayMinutes < -earlyToleranceMinutes) {
+    return { fresh: false, reason: 'external promotional claim job reached execution before its slot' };
+  }
+  if (processingDelayMinutes > maxDelayMinutes) {
+    return { fresh: false, reason: 'external promotional claim job reached execution too late' };
+  }
+
+  return {
+    fresh: true,
+    createdDelayMinutes: Math.round(createdDelayMinutes),
+    processingDelayMinutes: Math.round(processingDelayMinutes),
+  };
+}
+
 function hasCompleteFullRosterCoverage({ fullRun, playerCount, now = new Date() } = {}) {
   if (!fullRun || typeof fullRun !== 'object' || Array.isArray(fullRun)) return false;
   if (!ALLOWED_FULL_ROSTER_RUN_LABELS.has(fullRun.run_label)) return false;
@@ -184,4 +232,5 @@ module.exports = {
   hasCompleteFullRosterCoverage,
   isBlockingClaimJob,
   evaluateScheduledBackupFreshness,
+  evaluateExternalPromotionalBackupFreshness,
 };
