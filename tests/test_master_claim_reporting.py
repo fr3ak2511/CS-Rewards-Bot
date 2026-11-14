@@ -8,10 +8,12 @@ from unittest.mock import patch
 from master_claimer import (
     _current_reset_date,
     _full_claim_recovery_candidate,
+    _result_needs_recovery,
     _issue_identity_label,
     _portal_claim_reset_day_count,
     build_preexisting_portal_claim_section,
     build_standard_attention_section,
+    build_deferred_checks_section,
     record_preexisting_portal_claim,
     record_player_display_name,
     _clear_promotion_unconfirmed_attempt,
@@ -1201,6 +1203,40 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("1234567890123456", row)
         self.assertNotIn("…3456", row)
 
+
+    def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
+        result = {
+            "pid": "5429611A24A8F01A",
+            "display_name": "hgkme1",
+            "processing_mode": "full_claim",
+            "status": "Success",
+            "retry_required": False,
+            "progression_unconfirmed": False,
+            "progression_deferred": True,
+            "progression_deferred_reason": "popup/overlay safety guard blocked inspection",
+            "progression_claim_attempted": False,
+        }
+        self.assertFalse(_result_needs_recovery(result))
+        self.assertFalse(_full_claim_recovery_candidate(result))
+        self.assertEqual(build_standard_attention_section([result]), "")
+        deferred = build_deferred_checks_section([result])
+        self.assertIn("Deferred Checks", deferred)
+        self.assertIn("hgkme1", deferred)
+        self.assertIn("no claim click was attempted", deferred)
+        self.assertNotIn("Attention Required", deferred)
+
+    def test_deferred_recheck_keeps_a_real_prior_progression_failure_visible(self):
+        result = {
+            "pid": "5429611A24A8F01A",
+            "display_name": "hgkme1",
+            "progression_unconfirmed": True,
+            "progression_deferred": True,
+            "progression_claim_attempted": False,
+        }
+        attention = build_standard_attention_section([result])
+        deferred = build_deferred_checks_section([result])
+        self.assertIn("previously attempted Progression claim remains unconfirmed", attention)
+        self.assertIn("no additional claim click was attempted", deferred)
 
     def test_unconfirmed_promotion_click_is_not_reclassified_as_preexisting_claimed(self):
         player_id = "1234567890123456"
