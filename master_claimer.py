@@ -4506,6 +4506,10 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
         "processing_mode": "backup_reconciliation",
         "standard_rewards_checked": False,
         "progression_checked": False,
+        "progression_unconfirmed": False,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
         "daily": 0,
         "store": 0,
         "store_temp": 0,
@@ -4595,6 +4599,10 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             p = claim_progression_program_rewards(driver, pid)
             stats["progression"] = p
             stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+            stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+            stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+            stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+            stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
             stats["grenade_balance"] = _record_grenade_balance_for_player(
                 driver, pid, is_new_account=is_new, stats=stats
             )
