@@ -184,6 +184,11 @@ def determine_run_context():
         return "Recovery Run", -2
     if os.getenv("EXTERNAL_PRIMARY", "").strip().lower() == "true":
         return "Primary Run", 0
+    if os.getenv("EXTERNAL_PROMOTIONAL_BACKUP", "").strip().lower() == "true":
+        slot = os.getenv("EXTERNAL_PROMOTIONAL_SLOT", "").strip()
+        if slot in {"1", "2"}:
+            return f"Promotional Check #{slot}", int(slot)
+        return "Unknown External Promotional Backup", -4
     event = os.getenv("GITHUB_EVENT_NAME") or "local"
     if event == "workflow_dispatch":
         return "Manual Run", -1
@@ -6906,6 +6911,9 @@ def main():
     run_label, run_index = determine_run_context()
     if os.getenv("GITHUB_EVENT_NAME") == "schedule" and run_label == "Unknown Scheduled Run":
         log(f"⛔ UNKNOWN_SCHEDULE_BLOCKED: unrecognized SCHEDULE_CRON={os.getenv('SCHEDULE_CRON', '')!r}; refusing claim execution.")
+        return 2
+    if run_label == "Unknown External Promotional Backup":
+        log(f"⛔ UNKNOWN_EXTERNAL_PROMOTIONAL_BACKUP_BLOCKED: invalid slot {os.getenv('EXTERNAL_PROMOTIONAL_SLOT', '')!r}; refusing claim execution.")
         return 2
     ist_now = get_ist_time()
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
