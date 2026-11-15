@@ -81,6 +81,10 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Load authoritative runtime state
+        if: github.ref_name == 'prod'
+        run: bash .github/scripts/runtime_state_branch.sh load
+
       - name: Decide whether this trigger should proceed
         id: gate
         uses: actions/github-script@v9
@@ -218,7 +222,7 @@ jobs:
                   return;
                 }
               } catch (error) {
-                core.warning(`Could not read production coverage state during preflight (${error.message}); keep native primary backup enabled.`);
+                core.warning(`Could not read runtime-state coverage during preflight (${error.message}); keep native primary backup enabled.`);
               }
             }
 
@@ -357,7 +361,7 @@ jobs:
             // the latest committed state rather than relying on the initial checkout.
             try {
               const [metaResponse, rosterResponse] = await Promise.all([
-                github.rest.repos.getContent({ owner, repo, path: 'bot_meta.json', ref: 'prod' }),
+                github.rest.repos.getContent({ owner, repo, path: 'bot_meta.json', ref: 'runtime-state' }),
                 github.rest.repos.getContent({ owner, repo, path: 'players.csv', ref: 'prod' }),
               ]);
               if (metaResponse.data.type === 'file' && rosterResponse.data.type === 'file') {
@@ -405,6 +409,9 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
+
+      - name: Load authoritative runtime state
+        run: bash .github/scripts/runtime_state_branch.sh load
 
       - name: Re-check reset coverage and determine run mode
         id: run_mode
@@ -803,37 +810,7 @@ jobs:
 
       - name: Commit runtime state safely
         if: always() && steps.run_mode.outputs.execute == 'true'
-        env:
-          TARGET_BRANCH: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          : "${TARGET_BRANCH:?TARGET_BRANCH environment variable is required}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- claim_history.json bot_meta.json grenade_balance_baselines.json portal_claim_audit.json
-
-          if git diff --cached --quiet; then
-            echo "No runtime-state changes to commit."
-            exit 0
-          fi
-
-          git commit -m "bot: update claim history and meta [skip ci]"
-          for attempt in 1 2 3; do
-            echo "State push attempt ${attempt}/3"
-            git fetch origin "${TARGET_BRANCH}"
-            if ! git rebase "origin/${TARGET_BRANCH}"; then
-              echo "Rebase conflict while saving runtime state; aborting rebase and reporting a visible failure."
-              git rebase --abort || true
-              exit 1
-            fi
-            if git push origin "HEAD:${TARGET_BRANCH}"; then
-              echo "Runtime state committed to ${TARGET_BRANCH}."
-              exit 0
-            fi
-            echo "Push failed; refreshing remote branch before the next retry."
-          done
-          echo "Could not save runtime state after three attempts."
-          exit 1
+        run: bash .github/scripts/runtime_state_branch.sh save
 
       - name: Upload full-run report and summary
         if: always() && steps.run_mode.outputs.execute == 'true'
