@@ -1,4 +1,5 @@
 import ast
+import subprocess
 import textwrap
 import unittest
 from pathlib import Path
@@ -108,15 +109,39 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn('os.getenv("EXTERNAL_PRIMARY", "").strip().lower() == "true"', source)
         self.assertIn('return "Primary Run", 0', source)
 
-    def test_schedule_persists_separate_grenade_balance_baselines(self):
+    def test_schedule_persists_state_on_dedicated_runtime_branch(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
-        self.assertIn(
-            "git add -- claim_history.json bot_meta.json grenade_balance_baselines.json",
-            workflow,
-        )
+        self.assertGreaterEqual(workflow.count("bash .github/scripts/runtime_state_branch.sh load"), 2)
+        self.assertIn("bash .github/scripts/runtime_state_branch.sh save", workflow)
+        self.assertIn("path: 'bot_meta.json', ref: 'runtime-state'", workflow)
+        self.assertNotIn('TARGET_BRANCH: ${{ github.ref_name }}', workflow)
+        self.assertNotIn('git push origin "HEAD:${TARGET_BRANCH}"', workflow)
+
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn('GRENADE_BALANCE_FILE = "grenade_balance_baselines.json"', source)
         self.assertIn("save_grenade_balance_state", source)
+
+    def test_immediate_recovery_reads_metadata_from_runtime_state_branch(self):
+        workflow = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
+        self.assertIn("path: 'bot_meta.json', ref: 'runtime-state'", workflow)
+        self.assertNotIn("path: 'bot_meta.json', ref: source.head_branch", workflow)
+
+    def test_runtime_state_helper_has_valid_shell_syntax_and_explicit_file_allowlist(self):
+        helper = ROOT / ".github" / "scripts" / "runtime_state_branch.sh"
+        result = subprocess.run(["bash", "-n", str(helper)], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        source = helper.read_text(encoding="utf-8")
+        for filename in (
+            "claim_history.json",
+            "bot_meta.json",
+            "grenade_balance_baselines.json",
+            "portal_claim_audit.json",
+        ):
+            self.assertIn(filename, source)
+        self.assertIn("refs/heads/${STATE_BRANCH}", source)
+        self.assertIn("HEAD:refs/heads/${STATE_BRANCH}", source)
+        self.assertNotIn("git push --force", source)
+        self.assertIn("git worktree add --track", source)
 
 
     def test_legacy_github_promotional_crons_are_removed_and_external_slots_remain_guarded(self):
