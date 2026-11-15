@@ -5,6 +5,7 @@ set -euo pipefail
 
 STATE_BRANCH="${RUNTIME_STATE_BRANCH:-runtime-state}"
 STATE_FILES=("claim_history.json" "bot_meta.json" "grenade_balance_baselines.json" "portal_claim_audit.json")
+RUNTIME_STATE_WORKTREE=""
 
 fail() {
   echo "ERROR: $*" >&2
@@ -82,8 +83,12 @@ save_state() {
 
   git worktree add -b "${local_branch}" "${worktree}" "${remote_ref}"
   cleanup_worktree() {
-    git worktree remove --force "${worktree}" >/dev/null 2>&1 || true
+    if [[ -n "${RUNTIME_STATE_WORKTREE}" ]]; then
+      git worktree remove --force "${RUNTIME_STATE_WORKTREE}" >/dev/null 2>&1 || true
+      RUNTIME_STATE_WORKTREE=""
+    fi
   }
+  RUNTIME_STATE_WORKTREE="${worktree}"
   trap cleanup_worktree EXIT
 
   for file in "${STATE_FILES[@]}"; do
