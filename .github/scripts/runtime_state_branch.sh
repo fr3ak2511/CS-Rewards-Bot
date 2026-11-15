@@ -80,7 +80,7 @@ save_state() {
 
   validate_state_files "${source_root}"
 
-  git worktree add --track -b "${local_branch}" "${worktree}" "${remote_ref}"
+  git worktree add -b "${local_branch}" "${worktree}" "${remote_ref}"
   cleanup_worktree() {
     git worktree remove --force "${worktree}" >/dev/null 2>&1 || true
   }
