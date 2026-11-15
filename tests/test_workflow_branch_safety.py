@@ -238,5 +238,14 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
                 r"\b(?:const|let)\s+\{\s*getOctokit\b",
             )
 
+    def test_full_regression_suite_runs_for_every_pull_request_to_prod_and_dev(self):
+        workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
+        pull_request = workflow.split("\n  pull_request:\n", 1)[1].split(
+            "\n  workflow_dispatch:", 1
+        )[0]
+        self.assertIn("      - prod", pull_request)
+        self.assertIn("      - dev", pull_request)
+        self.assertNotIn("    paths:", pull_request)
+
 if __name__ == "__main__":
     unittest.main()
