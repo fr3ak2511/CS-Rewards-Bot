@@ -28,7 +28,7 @@ The feature is observational only. It does not change reward eligibility, make/s
 - Run label and GitHub Actions run ID when available.
 - Observation count and reset-day recurrence, derived from distinct recorded reset dates.
 
-The record is separate from `claim_history.json`, which remains the authoritative bot claim/cooldown state. The primary workflow commits the audit file with the other runtime state. Corrupt/unreadable audit state is not overwritten; new audit writes are skipped and a warning is logged.
+The record is separate from `claim_history.json`, which remains the authoritative bot claim/cooldown state. The primary workflow commits the audit file to the dedicated `runtime-state` branch with the other authoritative runtime state. Corrupt/unreadable audit state is not overwritten; new audit writes are skipped and a warning is logged.
 
 ## Email presentation
 
