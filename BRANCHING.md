@@ -31,7 +31,7 @@ Use Squash and merge for short-lived feature/fix pull requests into `dev`. Use C
 - Never run the full-roster claimer or live reward-claim workflow from `dev` or a short-lived feature branch.
 - Regression tests are safe on development branches and pull requests.
 - `players.csv`, `bot_meta.json` and `claim_history.json` are runtime-critical. Do not copy stale versions between branches.
-- Production automation commits runtime state back to `prod`. Any future branch protection must explicitly account for those GitHub Actions commits.
+- Production automation reads and writes the four durable runtime JSON files on the dedicated `runtime-state` branch. `prod` contains production source and roster/configuration; do not copy stale runtime-state files between branches.
 
 ## Retired event workflow
 
