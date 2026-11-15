@@ -146,7 +146,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("not valid JSON", source)
         self.assertNotIn("git push --force", source)
         self.assertNotIn('git -C "${worktree}" rebase', source)
-        self.assertIn("git worktree add --track", source)
+        self.assertIn('git worktree add -b "${local_branch}"', source)
+        self.assertNotIn("git worktree add --track", source)
 
     def test_primary_wait_refreshes_coverage_from_runtime_state_branch(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
