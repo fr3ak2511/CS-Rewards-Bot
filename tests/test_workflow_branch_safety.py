@@ -231,12 +231,11 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
             self.assertNotIn('require("@actions/github")', source)
             self.assertNotRegex(
                 source,
-                r"\\b(?:const|let)\\s+getOctokit\\s*=",
+                r"\b(?:const|let)\s+getOctokit\s*=",
             )
             self.assertNotRegex(
                 source,
-                r"\\b(?:const|let)\\s+\\{\\s*getOctokit\\b",
-            ),
+                r"\b(?:const|let)\s+\{\s*getOctokit\b",
             )
 
 if __name__ == "__main__":
