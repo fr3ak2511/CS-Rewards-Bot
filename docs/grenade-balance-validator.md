@@ -55,7 +55,7 @@ A parser failure is never interpreted as zero Grenades.
 ## Runtime state and safety
 
 - Separate persistent state: \`grenade_balance_baselines.json\`.
-- The scheduler runtime commit stages this file alongside the existing bot state so the baseline survives future runs.
+- The scheduler persists this file on the dedicated `runtime-state` branch alongside the other authoritative runtime JSON files so the baseline survives future runs.
 - \`claim_history.json\`, \`bot_meta.json\`, and \`players.csv\` are not modified by the balance validator.
 - No Grenade amount is inferred from \`progression.last_count\`; that remains a per-visit reward-claim count.
 - The Progression snapshot reads the banner text only. It does not click controls.
