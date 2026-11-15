@@ -52,10 +52,10 @@ jobs:
             }
 
             const fileResponse = await github.rest.repos.getContent({
-              owner, repo, path: 'bot_meta.json', ref: source.head_branch
+              owner, repo, path: 'bot_meta.json', ref: 'runtime-state'
             });
             if (Array.isArray(fileResponse.data) || !fileResponse.data.content) {
-              out(false, 'bot_meta.json was not readable after the run');
+              out(false, 'bot_meta.json was not readable from runtime-state after the run');
               return;
             }
             const meta = JSON.parse(Buffer.from(fileResponse.data.content, 'base64').toString('utf8'));
