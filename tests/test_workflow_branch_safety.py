@@ -29,10 +29,11 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
 
     def test_regression_path_filters_cover_promotion_tracker_and_recovery_workflow(self):
         workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
-        self.assertEqual(workflow.count("'promotion_followups.py'"), 2)
-        self.assertEqual(workflow.count("'.github/workflows/recovery.yml'"), 2)
-        self.assertEqual(workflow.count("'recovery_policy.py'"), 2)
-        self.assertEqual(workflow.count("'.github/scripts/recovery_policy.js'"), 2)
+        # Pull-request events run unconditionally; path filters remain push-only.
+        self.assertEqual(workflow.count("'promotion_followups.py'"), 1)
+        self.assertEqual(workflow.count("'.github/workflows/recovery.yml'"), 1)
+        self.assertEqual(workflow.count("'recovery_policy.py'"), 1)
+        self.assertEqual(workflow.count("'.github/scripts/recovery_policy.js'"), 1)
 
     def test_schedule_recovery_uses_shared_scoped_count_validator(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
@@ -237,6 +238,15 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
                 source,
                 r"\b(?:const|let)\s+\{\s*getOctokit\b",
             )
+
+    def test_full_regression_suite_runs_for_every_pull_request_to_prod_and_dev(self):
+        workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
+        pull_request = workflow.split("\n  pull_request:\n", 1)[1].split(
+            "\n  workflow_dispatch:", 1
+        )[0]
+        self.assertIn("      - prod", pull_request)
+        self.assertIn("      - dev", pull_request)
+        self.assertNotIn("    paths:", pull_request)
 
 if __name__ == "__main__":
     unittest.main()
