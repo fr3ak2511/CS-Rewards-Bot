@@ -85,7 +85,7 @@ class RuntimeStateBranchTests(unittest.TestCase):
         env["RUNNER_TEMP"] = str(self.root / "runner-temp")
         env["GITHUB_RUN_ID"] = "12345"
         env["EXPECTED_RUNTIME_STATE_SHA"] = base_sha
-        result = run_helper(self.workspace, "save", env=env)
+        result = run_helper(self.workspace, "save", env=env, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         for name in STATE_FILES:
