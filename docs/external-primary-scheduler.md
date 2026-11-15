@@ -58,6 +58,45 @@ JSON body:
 
 A successful GitHub dispatch returns HTTP 200 with run details when requested (or HTTP 204 if the response body is not requested). A failed request must generate a failure notification.
 
+## External promotional backup jobs
+
+Two additional cron-job.org jobs dispatch the same `schedule.yml` workflow for promotional and account-aware backup processing:
+
+| Job title | Daily time (Asia/Kolkata) | Dispatch slot |
+|---|---:|---:|
+| `CS Rewards Bot - Promo Backup 12:05` | 12:05 | `1` |
+| `CS Rewards Bot - Promo Backup 18:05` | 18:05 | `2` |
+
+Use the same workflow-dispatch URL and fine-grained token described above. Each job uses method `POST`, timezone `Asia/Kolkata`, saves execution responses, and enables failure notifications.
+
+The JSON body for the 12:05 job is:
+
+```json
+{
+  "ref": "prod",
+  "inputs": {
+    "external_promotional_backup": "true",
+    "external_promotional_slot": "1"
+  }
+}
+```
+
+The JSON body for the 18:05 job is:
+
+```json
+{
+  "ref": "prod",
+  "inputs": {
+    "external_promotional_backup": "true",
+    "external_promotional_slot": "2"
+  }
+}
+```
+
+The workflow requires the correct slot value and validates GitHub's original workflow-run creation time at preflight and again immediately before browser work. It accepts at most five minutes early and 45 minutes late; otherwise it fails closed before a browser session or reward click. Do not use cron-job.org's arbitrary **Test Run** outside the intended window as a functional test: the freshness guard is expected to reject it.
+
+After both external slots passed live validation, the four old GitHub promotional cron entries were retired. The 03:00 IST native primary dispatcher and 05:30–06:00 reset-window fallback remain enabled, as does event-driven immediate recovery.
+
 ## Duplicate-run and state safeguards
 
 The external dispatch is explicitly marked with `external_primary=true`.
@@ -84,4 +123,4 @@ After confirming the dispatch and skip in GitHub Actions, leave the daily 05:35 
 
 ## Operational caveat
 
-cron-job.org states that it aims to minimize delays but does not guarantee punctual execution. Treat it as an independent second scheduling path, not a hard real-time service. Keep the native GitHub schedule and fallback enabled and monitor both execution histories.
+cron-job.org states that it aims to minimize delays but does not guarantee punctual execution. Treat cron-job.org as best-effort rather than a hard real-time service. Keep the native 03:00 IST primary dispatcher and 05:30–06:00 reset-window fallback enabled and monitor the external job histories.

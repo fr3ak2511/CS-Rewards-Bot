@@ -118,11 +118,20 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("save_grenade_balance_state", source)
 
 
-    def test_backup_schedule_rejects_stale_event_before_browser_execution(self):
+    def test_legacy_github_promotional_crons_are_removed_and_external_slots_remain_guarded(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
-        self.assertIn("getWorkflowRun", workflow)
-        self.assertIn("evaluateScheduledBackupFreshness", workflow)
-        self.assertIn("SCHEDULE_RUN_CREATED_AT", workflow)
+        for cron in ("5 4 * * *", "5 8 * * *", "5 12 * * *", "5 16 * * *"):
+            self.assertNotIn(f"    - cron: '{cron}'", workflow)
+
+        self.assertEqual(workflow.count("    - cron:"), 2)
+        self.assertIn("    - cron: '30 21 * * *'", workflow)
+        self.assertIn("    - cron: '0-30/5 0 * * *'", workflow)
+        self.assertNotIn("backup_crons", workflow)
+        self.assertNotIn("evaluateScheduledBackupFreshness", workflow)
+        self.assertNotIn("SCHEDULE_RUN_CREATED_AT:", workflow)
+
+        self.assertIn("evaluateExternalPromotionalBackupFreshness", workflow)
+        self.assertIn("EXTERNAL_PROMOTIONAL_RUN_CREATED_AT:", workflow)
         self.assertIn("max_delay = 45 * 60", workflow)
         self.assertIn("no browser session or reward click will start", workflow)
 
@@ -145,7 +154,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("evaluateExternalPromotionalBackupFreshness", workflow)
         self.assertIn("EXTERNAL_PROMOTIONAL_RUN_CREATED_AT:", workflow)
         self.assertIn("external promotional backup requires exactly slot 1 or 2", workflow)
-        self.assertIn("elif cron in backup_crons or external_promotional_backup:", workflow)
+        self.assertIn("elif external_promotional_backup:", workflow)
+        self.assertNotIn("backup_crons", workflow)
         self.assertIn("EXTERNAL_PROMOTIONAL_BACKUP:", workflow)
         self.assertIn("EXTERNAL_PROMOTIONAL_SLOT:", workflow)
         self.assertIn("max_delay = 45 * 60", workflow)
@@ -159,11 +169,17 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn('return f"Promotional Check #{slot}", int(slot)', source)
         self.assertIn("Unknown External Promotional Backup", source)
 
-    def test_external_promotional_backup_does_not_remove_native_fallback_or_existing_backup_crons(self):
+    def test_external_promotional_backup_replaces_legacy_crons_and_keeps_native_fallbacks(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
-        for cron in ("30 21 * * *", "0-30/5 0 * * *", "5 4 * * *", "5 8 * * *", "5 12 * * *", "5 16 * * *"):
-            self.assertIn(f"'{cron}'", workflow)
-        self.assertIn("evaluateScheduledBackupFreshness", workflow)
+        self.assertEqual(workflow.count("    - cron:"), 2)
+        self.assertIn("'30 21 * * *'", workflow)
+        self.assertIn("'0-30/5 0 * * *'", workflow)
+        for cron in ("5 4 * * *", "5 8 * * *", "5 12 * * *", "5 16 * * *"):
+            self.assertNotIn(f"    - cron: '{cron}'", workflow)
+        self.assertIn("external_promotional_backup:", workflow)
+        self.assertIn("external_promotional_slot:", workflow)
+        self.assertIn("evaluateExternalPromotionalBackupFreshness", workflow)
+        self.assertIn("group: rewards-claimer", workflow)
         self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
 
 

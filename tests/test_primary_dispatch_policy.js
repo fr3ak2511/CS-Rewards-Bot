@@ -6,7 +6,6 @@ const {
   countConfiguredPlayers,
   hasCompleteFullRosterCoverage,
   isBlockingClaimJob,
-  evaluateScheduledBackupFreshness,
   evaluateExternalPromotionalBackupFreshness,
 } = require('../.github/scripts/primary_dispatch_policy');
 
@@ -118,51 +117,6 @@ test('unknown or malformed run metadata fails open to the native backup', () => 
     playerCount: 35,
     now: new Date('2026-11-08T07:00:00+05:30'),
   }), false);
-});
-
-
-test('fresh scheduled backup events pass within their allowed window', () => {
-  const result = evaluateScheduledBackupFreshness({
-    cron: '5 4 * * *',
-    createdAt: '2026-11-13T04:08:00Z',
-    now: new Date('2026-11-13T04:20:00Z'),
-  });
-  assert.equal(result.fresh, true);
-  assert.equal(result.createdDelayMinutes, 3);
-  assert.equal(result.processingDelayMinutes, 15);
-});
-
-test('scheduled backup event created hours late is rejected', () => {
-  const result = evaluateScheduledBackupFreshness({
-    cron: '5 4 * * *',
-    createdAt: '2026-11-13T12:03:42Z',
-    now: new Date('2026-11-13T12:03:50Z'),
-  });
-  assert.equal(result.fresh, false);
-  assert.match(result.reason, /stale scheduled backup event/i);
-});
-
-test('a backup claim job that waited too long after a fresh trigger is rejected', () => {
-  const result = evaluateScheduledBackupFreshness({
-    cron: '5 8 * * *',
-    createdAt: '2026-11-13T08:06:00Z',
-    now: new Date('2026-11-13T09:00:00Z'),
-  });
-  assert.equal(result.fresh, false);
-  assert.match(result.reason, /reached execution/i);
-});
-
-test('unknown cron and malformed trigger timestamps fail closed', () => {
-  assert.equal(evaluateScheduledBackupFreshness({
-    cron: '5 20 * * *',
-    createdAt: '2026-11-13T20:05:00Z',
-    now: new Date('2026-11-13T20:06:00Z'),
-  }).fresh, false);
-  assert.equal(evaluateScheduledBackupFreshness({
-    cron: '5 4 * * *',
-    createdAt: 'not-a-timestamp',
-    now: new Date('2026-11-13T04:06:00Z'),
-  }).fresh, false);
 });
 
 

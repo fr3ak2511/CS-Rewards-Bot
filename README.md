@@ -45,15 +45,15 @@ The streak remains in `bot_meta.json` as an internal continuity metric: it incre
 
 ## Schedule and recovery
 
-The main schedule has one full-claim primary cycle and four promotional-check backups:
+The main schedule has one full-claim primary cycle and two externally dispatched promotional checks:
 
 | Window | Main trigger (IST) | Per-account behaviour |
 |---|---:|---|
-| Primary | 05:35–06:00 (date-seeded randomized target) | Full claim path for every configured ID |
-| Promotional Check #1 | 09:35 | Existing IDs with complete same-day full-claim coverage: promotional-only; new/uncovered/pending IDs: full claim path |
-| Promotional Check #2 | 13:35 | Same per-ID coverage rule |
-| Promotional Check #3 | 17:35 | Same per-ID coverage rule |
-| Promotional Check #4 | 21:35 | Same per-ID coverage rule |
+| Primary | 05:35 external dispatch (native fallback target 05:35–06:00) | Full claim path for every configured ID |
+| Promotional Check #1 | 12:05 external dispatch | Existing IDs with complete same-day full-claim coverage: promotional-only; new/uncovered/pending IDs: full claim or bounded saved-target Daily recovery |
+| Promotional Check #2 | 18:05 external dispatch | Same per-ID coverage rule |
+
+The two promotional triggers call the same production workflow through guarded `workflow_dispatch` inputs. Each is rejected before browser startup if its run is more than five minutes early or 45 minutes late. The four legacy GitHub promotional cron triggers have been retired after both external slots passed live validation. Historical recovery labels and persisted slot markers remain readable for audit compatibility.
 
 The 03:00 IST dispatcher retains its randomized 05:35–06:00 target, but it no longer sleeps blindly. During the wait it checks for another queued/running claimer and exits if one takes ownership; after the target it refreshes committed production state and skips if a complete full-roster cycle already finished. The native dispatcher and five-minute 05:30–06:00 fallback remain available when the external primary has not completed a cycle. If a state/API inspection fails, the native path fails open and the in-job Python state gate remains authoritative. A central Python guard also refuses all claim-capable entry points before 05:30 IST; read-only login diagnostics and login-only tests are exempt. Scheduled events are best-effort and may still be delayed or dropped by GitHub Actions.
 
