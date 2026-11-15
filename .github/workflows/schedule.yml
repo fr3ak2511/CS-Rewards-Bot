@@ -411,6 +411,7 @@ jobs:
           fetch-depth: 0
 
       - name: Load authoritative runtime state
+        id: runtime_state
         run: bash .github/scripts/runtime_state_branch.sh load
 
       - name: Re-check reset coverage and determine run mode
@@ -810,6 +811,8 @@ jobs:
 
       - name: Commit runtime state safely
         if: always() && steps.run_mode.outputs.execute == 'true'
+        env:
+          EXPECTED_RUNTIME_STATE_SHA: ${{ steps.runtime_state.outputs.base_sha }}
         run: bash .github/scripts/runtime_state_branch.sh save
 
       - name: Upload full-run report and summary
