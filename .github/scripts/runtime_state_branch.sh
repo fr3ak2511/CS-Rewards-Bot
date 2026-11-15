@@ -80,7 +80,7 @@ save_state() {
 
   validate_state_files "${source_root}"
 
-  git worktree add --track -b "${local_branch}" "${worktree}" "${expected_sha}"
+  git worktree add --track -b "${local_branch}" "${worktree}" "${remote_ref}"
   cleanup_worktree() {
     git worktree remove --force "${worktree}" >/dev/null 2>&1 || true
   }
@@ -102,14 +102,14 @@ save_state() {
 
   git -C "${worktree}" commit -m "bot: update runtime state [skip ci]"
 
-  # Refuse to rebase a stale full-JSON snapshot over an unexpected concurrent
+  # Refuse to merge a stale full-JSON snapshot over an unexpected concurrent
   # writer. A normal fast-forward push is the only accepted state update.
   fetch_state_branch
   current_sha="$(git rev-parse "${remote_ref}")"
   [[ "${current_sha}" == "${expected_sha}" ]] || fail "runtime-state advanced while the claimer was running (loaded ${expected_sha}, current ${current_sha}); refusing to overwrite newer state"
 
   if ! git -C "${worktree}" push origin "HEAD:refs/heads/${STATE_BRANCH}"; then
-    fail "Push to ${STATE_BRANCH} was rejected; state was not force-pushed or rebased. Inspect the branch before retrying."
+    fail "Push to ${STATE_BRANCH} was rejected; state was not force-pushed or merged over newer data. Inspect the branch before retrying."
   fi
 
   echo "Runtime state committed to ${STATE_BRANCH}."
