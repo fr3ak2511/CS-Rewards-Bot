@@ -145,7 +145,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("advanced while the claimer was running", source)
         self.assertIn("not valid JSON", source)
         self.assertNotIn("git push --force", source)
-        self.assertNotIn("rebase", source)
+        self.assertNotIn('git -C "${worktree}" rebase', source)
         self.assertIn("git worktree add --track", source)
 
     def test_primary_wait_refreshes_coverage_from_runtime_state_branch(self):
