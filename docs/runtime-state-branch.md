@@ -51,9 +51,14 @@ starting copy, not the final cutover snapshot.
 6. The existing `rewards-claimer` concurrency group remains the single-writer
    guard. No parallel claim owner is introduced.
 
-The save helper retries a non-fast-forward race by fetching and rebasing. It
-never force-pushes. A conflict or failed push remains a visible failed step.
-The temporary worktree is removed on exit.
+The load helper records the exact `runtime-state` commit SHA that supplied the files.
+The save helper requires that SHA, fetches the branch again and refuses to write
+if the branch advanced after the claim job loaded its snapshot. It validates
+all four JSON files before committing, creates a temporary worktree from the
+recorded SHA, and performs one normal fast-forward push. It does not force-push
+or rebase a stale full-JSON snapshot. A concurrent update or rejected push is a
+visible failure that must be investigated before retrying. The temporary
+worktree is removed on exit.
 
 ## One-time cutover — mandatory pre-merge gate
 
