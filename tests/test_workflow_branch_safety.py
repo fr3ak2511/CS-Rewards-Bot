@@ -140,8 +140,25 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
             self.assertIn(filename, source)
         self.assertIn("refs/heads/${STATE_BRANCH}", source)
         self.assertIn("HEAD:refs/heads/${STATE_BRANCH}", source)
+        self.assertIn("EXPECTED_RUNTIME_STATE_SHA", source)
+        self.assertIn("refusing a stale overwrite", source)
+        self.assertIn("advanced while the claimer was running", source)
+        self.assertIn("not valid JSON", source)
         self.assertNotIn("git push --force", source)
+        self.assertNotIn("rebase", source)
         self.assertIn("git worktree add --track", source)
+
+    def test_primary_wait_refreshes_coverage_from_runtime_state_branch(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        primary_delay = workflow.split("  primary_delay:", 1)[1].split("  run-claimer:", 1)[0]
+        self.assertIn("path: 'bot_meta.json', ref: 'runtime-state'", primary_delay)
+        self.assertIn("path: 'players.csv', ref: 'prod'", primary_delay)
+
+    def test_runtime_state_save_uses_the_snapshot_loaded_by_the_claimer_job(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        run_claimer = workflow.split("  run-claimer:", 1)[1]
+        self.assertIn("id: runtime_state", run_claimer)
+        self.assertIn("EXPECTED_RUNTIME_STATE_SHA: ${{ steps.runtime_state.outputs.base_sha }}", run_claimer)
 
 
     def test_legacy_github_promotional_crons_are_removed_and_external_slots_remain_guarded(self):
