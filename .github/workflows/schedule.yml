@@ -77,13 +77,13 @@ jobs:
       scheduled_run_created_at: ${{ steps.gate.outputs.scheduled_run_created_at }}
     steps:
       - name: Check out the production scheduler policy
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
 
       - name: Decide whether this trigger should proceed
         id: gate
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -274,13 +274,13 @@ jobs:
       proceed: ${{ steps.wait.outputs.proceed }}
     steps:
       - name: Check out the production scheduler policy
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: prod
 
       - name: Wait for target unless another claim run takes ownership
         id: wait
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const crypto = require('crypto');
@@ -401,7 +401,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
@@ -737,7 +737,7 @@ jobs:
 
       - name: Set up Python
         if: steps.run_mode.outputs.execute == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.10'
           cache: pip
@@ -837,7 +837,7 @@ jobs:
 
       - name: Upload full-run report and summary
         if: always() && steps.run_mode.outputs.execute == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cs-hub-run-report-${{ github.run_id }}
           path: |
@@ -849,7 +849,7 @@ jobs:
 
       - name: Upload login diagnostics
         if: always() && steps.run_mode.outputs.execute == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cs-hub-login-diagnostics-${{ github.run_id }}
           path: login_diagnostics/
@@ -858,7 +858,7 @@ jobs:
 
       - name: Upload one-player claim test evidence
         if: always() && steps.run_mode.outputs.execute == 'true' && inputs.test_claims_one_player
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cs-hub-claim-test-${{ github.run_id }}
           path: claim_test_artifacts/

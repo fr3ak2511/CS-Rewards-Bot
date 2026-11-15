@@ -183,5 +183,56 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("fallback primary: no complete full-roster cycle has started after 05:30 IST", workflow)
 
 
+
+    def test_active_workflows_use_node24_compatible_action_majors(self):
+        expected = {
+            ".github/workflows/schedule.yml": (
+                "actions/checkout@v7",
+                "actions/github-script@v9",
+                "actions/setup-python@v7",
+                "actions/upload-artifact@v6",
+            ),
+            ".github/workflows/recovery.yml": (
+                "actions/checkout@v7",
+                "actions/github-script@v9",
+            ),
+            ".github/workflows/event-tests.yml": (
+                "actions/checkout@v7",
+                "actions/setup-python@v7",
+                "actions/setup-node@v7",
+            ),
+        }
+        for relative_path, required_pins in expected.items():
+            workflow = (ROOT / relative_path).read_text(encoding="utf-8")
+            for pin in required_pins:
+                with self.subTest(path=relative_path, pin=pin):
+                    self.assertIn(pin, workflow)
+
+        # Keep old action-runtime majors out of active production workflows.
+        for relative_path in expected:
+            workflow = (ROOT / relative_path).read_text(encoding="utf-8")
+            for retired_pin in (
+                "actions/checkout@v4",
+                "actions/github-script@v7",
+                "actions/setup-python@v5",
+                "actions/setup-node@v4",
+                "actions/upload-artifact@v4",
+            ):
+                with self.subTest(path=relative_path, retired_pin=retired_pin):
+                    self.assertNotIn(retired_pin, workflow)
+
+    def test_github_script_v9_inline_scripts_avoid_esm_breaking_patterns(self):
+        for relative_path in (
+            ".github/workflows/schedule.yml",
+            ".github/workflows/recovery.yml",
+        ):
+            source = (ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertNotIn("require('@actions/github')", source)
+            self.assertNotIn('require("@actions/github")', source)
+            self.assertNotRegex(
+                source,
+                r"\\b(?:const|let)\\s+(?:getOctokit|\\{[^}]*\\bgetOctokit\\b[^}]*\\})\\s*=",
+            )
+
 if __name__ == "__main__":
     unittest.main()
