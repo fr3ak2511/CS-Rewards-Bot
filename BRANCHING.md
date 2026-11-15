@@ -2,7 +2,7 @@
 
 ## Permanent branches
 
-- `prod` — production source of truth and repository default branch. Scheduled reward claiming, immediate recovery and runtime-state commits are allowed only here.
+- `prod` — production source of truth and repository default branch. Scheduled reward claiming and immediate recovery execute from this branch; production code and `players.csv` remain here. The workflow reads and writes durable runtime JSON on `runtime-state`.
 - `dev` — the single development and validation branch. Feature work, integration, automated regression tests and safe diagnostics happen here.
 
 The legacy `test` branch is no longer part of the ongoing development or release flow. Retire it only after the two-branch transition has been completed and verified.
@@ -30,8 +30,8 @@ Use Squash and merge for short-lived feature/fix pull requests into `dev`. Use C
 - `.github/workflows/schedule.yml` and `.github/workflows/recovery.yml` must remain production-only. Their branch, event, timestamp and recovery-candidate gates must fail closed.
 - Never run the full-roster claimer or live reward-claim workflow from `dev` or a short-lived feature branch.
 - Regression tests are safe on development branches and pull requests.
-- `players.csv`, `bot_meta.json` and `claim_history.json` are runtime-critical. Do not copy stale versions between branches.
-- Production automation commits runtime state back to `prod`. Any future branch protection must explicitly account for those GitHub Actions commits.
+- `players.csv` remains production configuration on `prod`. The four mutable runtime JSON files (`claim_history.json`, `bot_meta.json`, `grenade_balance_baselines.json` and `portal_claim_audit.json`) are authoritative on `runtime-state`; never copy stale or development-branch versions between refs.
+- Production automation checks out code and roster from `prod`, reads the authoritative JSON state from `runtime-state`, and writes only those four files back to `runtime-state`. It must never commit routine runtime-state updates to `prod`.
 
 ## Retired event workflow
 

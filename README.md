@@ -29,7 +29,7 @@ A separate `portal_claim_audit.json` stores review evidence for pre-existing por
 
 **The portal does not identify who made a claim.** The email therefore labels these as pre-existing portal claims / review evidence, not proven manual claims. This section does not change claim eligibility, retry policy, or remove players from `players.csv`. Any roster removal remains a manual owner decision. Legacy `store.reward_4` state is preserved for compatibility.
 
-The existing `claim_history.json` is migrated lazily per player; do not replace it with a fresh empty file. `bot_meta.json` is also preserved and updated by the workflow. Existing Store entries `reward_1`–`reward_3` remain reset-based and legacy `reward_4` history is preserved. Current promotional cards are discovered and reported independently; an old `reward_4` marker does not suppress a newly appearing offer.
+The existing `claim_history.json` is migrated lazily per player; do not replace it with a fresh empty file. `bot_meta.json` is also preserved and updated by the workflow. After the runtime-state branch cutover, the workflow loads and persists `claim_history.json`, `bot_meta.json`, `grenade_balance_baselines.json`, and `portal_claim_audit.json` on the dedicated `runtime-state` branch; production code, `players.csv`, and configuration remain on `prod`. Existing Store entries `reward_1`–`reward_3` remain reset-based and legacy `reward_4` history is preserved. Current promotional cards are discovered and reported independently; an old `reward_4` marker does not suppress a newly appearing offer.
 
 ## Email and report artifacts
 
