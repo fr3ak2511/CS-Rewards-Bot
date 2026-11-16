@@ -1,3 +1,6 @@
+import re
+import shutil
+import subprocess
 import unittest
 
 from report_export import build_copyable_report
@@ -152,6 +155,27 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(pending)
         self.assertIn("ATTENTION REQUIRED", report)
         self.assertIn("pending baseline", report)
+
+    def test_generated_inline_copy_script_passes_node_syntax_check(self):
+        node = shutil.which("node")
+        self.assertIsNotNone(node, "Node.js must be available for generated report syntax checks.")
+
+        report = build_copyable_report(self.summary)
+        scripts = re.findall(r"<script>(.*?)</script>", report, flags=re.DOTALL)
+        self.assertEqual(len(scripts), 1, "Expected exactly one inline report script.")
+
+        result = subprocess.run(
+            [node, "--check", "-"],
+            input=scripts[0],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(
+            result.returncode,
+            0,
+            msg=f"Generated report JavaScript is invalid:\n{result.stderr}",
+        )
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
