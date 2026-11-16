@@ -53,8 +53,8 @@
     "3F493D8C327FAF81"
   ],
   "last_run": {
-    "timestamp": "2026-11-16T06:46:27.053790",
-    "run_label": "Primary Run",
+    "timestamp": "2026-11-16T06:49:47.645033",
+    "run_label": "Recovery Run",
     "daily_only_recovery": false,
     "daily_recovery_mode": null,
     "daily_recovery_slot": null,
@@ -62,77 +62,39 @@
     "failed_player_ids": [],
     "failed_player_count": 0,
     "retry_candidate_scope": "full_claim_only",
-    "retry_player_ids": [
-      "5899855DAA167B36",
-      "BB382E889AA37C4F",
-      "4443B75C454AEFF8"
-    ],
-    "retry_player_count": 3,
-    "retry_targets_by_player": {
-      "5899855DAA167B36": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": true,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": false,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      },
-      "BB382E889AA37C4F": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": true,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": false,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      },
-      "4443B75C454AEFF8": {
-        "login_retry": false,
-        "processing_error": false,
-        "daily_unconfirmed": true,
-        "store_unconfirmed_indices": [],
-        "progression_unconfirmed": false,
-        "progression_card_signature": null,
-        "event_retry_required": false,
-        "event_thresholds_by_program": {},
-        "event_rewards": []
-      }
-    },
-    "total_claimed": 137,
-    "efficiency": 97.9,
+    "retry_player_ids": [],
+    "retry_player_count": 0,
+    "retry_targets_by_player": {},
+    "total_claimed": 3,
+    "efficiency": 100.0,
     "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 4251,
+    "duration_seconds": 127,
     "per_type": {
-      "daily": 32,
-      "store": 105,
-      "store_daily": 105,
+      "daily": 3,
+      "store": 0,
+      "store_daily": 0,
       "store_temp": 0,
       "promotions": 0,
       "progression": 0,
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 120.4,
-    "accounts_processed": 35,
-    "claims_made": 137,
-    "unavailable_rewards": 42,
-    "standard_rewards_on_cooldown": 35,
-    "promotional_unavailable_observations": 7,
-    "distinct_promotional_offer_types": 1,
+    "slowest_player": "BB382E889AA37C4F",
+    "avg_time_per_player": 41.7,
+    "accounts_processed": 3,
+    "claims_made": 3,
+    "unavailable_rewards": 0,
+    "standard_rewards_on_cooldown": 0,
+    "promotional_unavailable_observations": 0,
+    "distinct_promotional_offer_types": 0,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
-    "partial_results": 3,
+    "partial_results": 0,
     "actual_failures": 0,
-    "unconfirmed_claims": 3,
-    "immediate_recovery_accounts_attempted": 9,
-    "immediate_recovery_accounts_resolved": 6,
-    "immediate_recovery_accounts_unresolved": 3,
+    "unconfirmed_claims": 0,
+    "immediate_recovery_accounts_attempted": 3,
+    "immediate_recovery_accounts_resolved": 3,
+    "immediate_recovery_accounts_unresolved": 0,
     "promotion_detection_failures": 0,
     "promotion_followups_open": 0,
     "promotion_followups_still_blocked": 0,
@@ -140,10 +102,10 @@
     "promotion_followups_legacy_seeded": 0,
     "promotional_only_accounts": 0,
     "backup_reconciliation_accounts": 0,
-    "full_claim_accounts": 35,
+    "full_claim_accounts": 3,
     "configured_player_count": 35,
     "email_sent": true,
-    "player_count": 35
+    "player_count": 3
   },
   "last_full_run": {
     "timestamp": "2026-11-16T06:46:27.053790",
@@ -299,12 +261,13 @@
     },
     "5899855DAA167B36": {
       "reset_date": "2026-11-16",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-16T05:46:47.242658",
-      "last_run_label": "Primary Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery"
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-16T06:48:22.779194",
+      "last_run_label": "Recovery Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-16"
     },
     "5D14D66D5B6C7B8F": {
       "reset_date": "2026-11-16",
@@ -547,12 +510,13 @@
     },
     "BB382E889AA37C4F": {
       "reset_date": "2026-11-16",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-16T06:34:45.582491",
-      "last_run_label": "Primary Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery"
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-16T06:49:06.407122",
+      "last_run_label": "Recovery Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-16"
     },
     "2D29FA0DEE0A941B": {
       "reset_date": "2026-10-22",
@@ -603,12 +567,13 @@
     },
     "4443B75C454AEFF8": {
       "reset_date": "2026-11-16",
-      "status": "pending",
-      "last_full_attempt_at": "2026-11-16T06:40:55.510371",
-      "last_run_label": "Primary Run",
-      "last_status": "Partial",
-      "retry_required": true,
-      "unresolved_reason": "One or more standard rewards remain unconfirmed after immediate recovery"
+      "status": "complete",
+      "last_full_attempt_at": "2026-11-16T06:49:47.144460",
+      "last_run_label": "Recovery Run",
+      "last_status": "Success",
+      "retry_required": false,
+      "unresolved_reason": null,
+      "standard_rewards_audited_reset": "2026-11-16"
     },
     "809109186A2962E4": {
       "reset_date": "2026-11-16",
@@ -825,13 +790,13 @@
         {
           "name": "FREAK2511",
           "first_seen_at_ist": "2026-11-13T17:37:45.697944",
-          "last_seen_at_ist": "2026-11-16T05:46:28.051826",
-          "observation_count": 7,
+          "last_seen_at_ist": "2026-11-16T06:48:01.792474",
+          "observation_count": 8,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-16T05:46:28.051826"
+      "last_observed_at_ist": "2026-11-16T06:48:01.792474"
     },
     "5D14D66D5B6C7B8F": {
       "current_name": "hgkme",
@@ -1161,13 +1126,13 @@
         {
           "name": "SAVAggEEEE",
           "first_seen_at_ist": "2026-11-13T17:54:42.480986",
-          "last_seen_at_ist": "2026-11-16T06:34:26.036430",
-          "observation_count": 8,
+          "last_seen_at_ist": "2026-11-16T06:48:43.933250",
+          "observation_count": 9,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-16T06:34:26.036430"
+      "last_observed_at_ist": "2026-11-16T06:48:43.933250"
     },
     "DA4C269DB53172C5": {
       "current_name": "\u0120od\u0141\u00eekeP\u015aR",
@@ -1203,13 +1168,13 @@
         {
           "name": "4443B75C454AEFF8",
           "first_seen_at_ist": "2026-11-13T17:56:52.175108",
-          "last_seen_at_ist": "2026-11-16T06:40:36.122247",
-          "observation_count": 7,
+          "last_seen_at_ist": "2026-11-16T06:49:27.004078",
+          "observation_count": 8,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-16T06:40:36.122247"
+      "last_observed_at_ist": "2026-11-16T06:49:27.004078"
     },
     "809109186A2962E4": {
       "current_name": "annu411",
@@ -1301,14 +1266,21 @@
       "events": 0
     },
     "recovery_claim_totals": {
-      "daily": 0,
+      "daily": 3,
       "store": 0,
       "promotions": 0,
       "progression": 0,
       "loyalty": 0,
       "events": 0
     },
-    "recovery_run_keys": [],
-    "recovered_player_last4": []
+    "recovery_run_keys": [
+      "43785359307:1"
+    ],
+    "recovered_player_last4": [
+      "7B36",
+      "7C4F",
+      "EFF8"
+    ],
+    "last_recovery_timestamp": "2026-11-16T06:49:47.645033"
   }
 }

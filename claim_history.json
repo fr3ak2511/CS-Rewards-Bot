@@ -2122,9 +2122,9 @@
   },
   "5899855DAA167B36": {
     "daily": {
-      "last_claim": "2026-11-15T05:45:05.528591",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-16T06:48:22.432181",
+      "next_available": "2026-11-17T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-16T05:46:46.995791",
       "unconfirmed_attempts": 3
     },
@@ -13963,9 +13963,9 @@
   },
   "BB382E889AA37C4F": {
     "daily": {
-      "last_claim": "2026-11-15T06:30:44.916618",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-16T06:49:06.056924",
+      "next_available": "2026-11-17T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-16T06:34:45.351591",
       "unconfirmed_attempts": 6
     },
@@ -15578,9 +15578,9 @@
   },
   "4443B75C454AEFF8": {
     "daily": {
-      "last_claim": "2026-11-15T06:36:09.652645",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-16T06:49:46.750118",
+      "next_available": "2026-11-17T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-16T06:40:55.284757",
       "unconfirmed_attempts": 3
     },
