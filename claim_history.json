@@ -3113,7 +3113,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:10:54.818672"
+        "last_seen_at": "2026-11-17T18:10:29.175426"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -9301,7 +9301,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:19:32.342645"
+        "last_seen_at": "2026-11-17T18:19:10.133949"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -9786,7 +9786,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:20:12.081741"
+        "last_seen_at": "2026-11-17T18:19:50.348917"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -10269,7 +10269,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:20:51.737648"
+        "last_seen_at": "2026-11-17T18:20:30.711573"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -10754,7 +10754,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:21:31.488564"
+        "last_seen_at": "2026-11-17T18:21:10.605727"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -12951,7 +12951,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:24:12.012621"
+        "last_seen_at": "2026-11-17T18:23:50.969887"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -15126,9 +15126,9 @@
   },
   "51001A5D6014F2DD": {
     "daily": {
-      "last_claim": "2026-11-16T06:37:17.794313",
-      "next_available": null,
-      "status": "unconfirmed",
+      "last_claim": "2026-11-17T18:26:33.460901",
+      "next_available": "2026-11-18T05:30:00",
+      "status": "claimed",
       "last_attempt_at": "2026-11-17T12:26:51.862605",
       "unconfirmed_attempts": 8
     },
@@ -15656,7 +15656,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-17T12:27:31.432484"
+        "last_seen_at": "2026-11-17T18:27:13.058334"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
