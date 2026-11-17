@@ -39,6 +39,7 @@ class LayerDriver:
         self, layers=1, closable=True, ambiguous=False, overlay_only=False,
         dialog_text=None, action_text="Buy now", extra_action=False,
         residual_success_inspections=0,
+        transition_residue_inspections=0,
     ):
         self.overlay_only = overlay_only
         self.dialogs = []
@@ -49,6 +50,8 @@ class LayerDriver:
         self.ambiguous = ambiguous
         self.residual_success_inspections = residual_success_inspections
         self.residual_dialog = None
+        self.transition_residue_inspections = transition_residue_inspections
+        self.transition_residue = None
         for i in range(layers):
             description = dialog_text if dialog_text is not None else f"Promotional offer layer {i+1}"
             dialog = Element(
@@ -103,6 +106,16 @@ class LayerDriver:
             residue.children = []
             self.residual_dialog = residue
             self.dialogs.append(residue)
+        if self.transition_residue_inspections != 0:
+            # Simulate a short-lived modal snapshot left behind by a portal
+            # transition after the explicitly validated X has been clicked.
+            residue = Element(
+                "Exclusive Discount Activated! transition residue",
+                {"role": "dialog", "aria-modal": "true", "class": "modal transition-residue"},
+            )
+            residue.children = []
+            self.transition_residue = residue
+            self.dialogs.append(residue)
 
     def find_elements(self, by, selector):
         if by == "css selector" and '[role="dialog"]' in selector:
@@ -111,6 +124,12 @@ class LayerDriver:
 
     def execute_script(self, script, *args):
         if "REWARD_POPUP_LAYER_INSPECT_V1" in script:
+            if self.transition_residue is not None and self.transition_residue_inspections > 0:
+                self.transition_residue_inspections -= 1
+                if self.transition_residue_inspections == 0:
+                    if self.transition_residue in self.dialogs:
+                        self.dialogs.remove(self.transition_residue)
+                    self.transition_residue.displayed = False
             if self.residual_dialog is not None and self.residual_success_inspections > 0:
                 self.residual_success_inspections -= 1
                 if self.residual_success_inspections == 0:
@@ -170,6 +189,42 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(driver.dialogs, [])
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
         self.assertTrue(any("dismissed and verified" in line.lower() for line in log))
+
+    def test_waits_for_transient_modal_snapshot_after_safe_close(self):
+        driver = LayerDriver(
+            layers=1,
+            closable=True,
+            transition_residue_inspections=4,
+        )
+        log = []
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=log.append, timeout=0.5, poll_interval=0.05
+        )
+
+        self.assertTrue(ok, reason)
+        self.assertEqual(driver.close_count, 1)
+        self.assertTrue(driver.close_buttons[0].clicked)
+        self.assertEqual(driver.dialogs, [])
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+        self.assertTrue(any("stale blocker cleared" in line.lower() for line in log))
+
+    def test_persistent_modal_after_safe_close_still_fails_closed(self):
+        driver = LayerDriver(
+            layers=1,
+            closable=True,
+            transition_residue_inspections=-1,
+        )
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2, poll_interval=0.05
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("no_unambiguous_safe_close", reason)
+        self.assertEqual(driver.close_count, 1)
+        self.assertTrue(driver.close_buttons[0].clicked)
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
     def test_dismisses_exact_continue_in_reward_success_dialog(self):
         driver = LayerDriver(

@@ -662,6 +662,39 @@ def _wait_for_reward_success_residue(
         return False
 
 
+def _wait_for_popup_transition_clear(
+    driver, *, timeout: float, poll_interval: float
+) -> tuple[bool, dict | None, str]:
+    """Wait briefly for a just-dismissed popup transition to finish.
+
+    This is a read-only settling check used only after at least one explicitly
+    validated popup close. It never clicks, dismisses, or ignores a control.
+    A page is considered clear only when a fresh layer inspection reports no
+    dialogs and no fullscreen overlays. Persistent or unknown blockers remain
+    fail-closed.
+    """
+    timeout = max(0.2, min(2.0, float(timeout)))
+    poll_interval = max(0.05, min(0.5, float(poll_interval)))
+    deadline = time.monotonic() + timeout
+    last_state = None
+
+    while True:
+        try:
+            last_state = _inspect(driver)
+        except Exception as exc:
+            return False, last_state, f"popup_state_recheck_failed:{type(exc).__name__}"
+
+        dialog_count = int(last_state.get("dialogCount", 0) or 0)
+        overlay_count = int(last_state.get("fullscreenOverlayCount", 0) or 0)
+        if dialog_count == 0 and overlay_count == 0:
+            return True, last_state, "clear"
+
+        if time.monotonic() >= deadline:
+            return False, last_state, "blocker_persisted"
+
+        time.sleep(poll_interval)
+
+
 
 def _try_safe_backdrop_dismissal(
     driver, *, dialog_count: int, state: dict,
@@ -835,6 +868,39 @@ def dismiss_all_safe_popups(
                         f"dismissed={dismissed}; {_popup_context_diagnostics(driver)}; "
                         "no additional click attempted"
                     )
+
+                # A just-closed portal dialog can briefly leave a stale
+                # modal snapshot while its transition finishes. Reinspect for
+                # a short, click-free window before reporting a blocker. This
+                # is allowed only after a previously validated close; unknown
+                # blockers on the initial page still fail closed immediately.
+                if dismissed > 0:
+                    transition_clear, transition_state, transition_reason = (
+                        _wait_for_popup_transition_clear(
+                            driver,
+                            timeout=min(1.5, timeout),
+                            poll_interval=poll_interval,
+                        )
+                    )
+                    if transition_clear:
+                        _log(
+                            log,
+                            "✅ Reward popup guard: stale blocker cleared "
+                            "during post-dismissal transition",
+                        )
+                        return True, (
+                            f"clear_after_popup_transition; dismissed={dismissed}"
+                        )
+                    if transition_state is None:
+                        return False, (
+                            f"{transition_reason}; dismissed={dismissed}; "
+                            "no additional click attempted"
+                        )
+                    # Use the latest state for all subsequent safety decisions
+                    # and diagnostics; never report from the older snapshot.
+                    state = transition_state
+                    dialog_count = int(state.get("dialogCount", 0) or 0)
+                    overlay_count = int(state.get("fullscreenOverlayCount", 0) or 0)
 
                 # A blank-area click is allowed only on a uniquely identified,
                 # pointer-active backdrop in this dialog's own portal tree.
