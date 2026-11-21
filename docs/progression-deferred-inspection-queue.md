@@ -16,14 +16,14 @@ Each entry is keyed by exact Player ID and records:
 - first and latest defer timestamps, source run label and run ID;
 - a concise, popup-context-free reason;
 - optional exact `target_card_signature` plus `requires_exact_target`;
-- per-reset attempted backup slots and a cumulative attempt count.
+- per-reset attempted run labels and a cumulative attempt count.
 
 Resolved entries are moved to `progression_deferred_inspection_history`; the archive is capped at 50 entries. This is separate from claim history, full-claim coverage, retry candidates and failed-player IDs.
 
 ## Lifecycle
 
 1. Every normal full-claim result is checked for `progression_deferred`. A deferred inspection is queued automatically, including its source run ID.
-2. On a promotional backup slot, the claimer checks for a queue entry only after confirming the account has complete full-claim coverage for the current reset.
+2. On a `Primary Run`, `Manual Run`, or a promotional backup slot, the claimer checks for a queue entry and reserves that run label once for the current reset. For a promotional backup, other covered accounts remain promotional-only; only queued accounts receive the scoped Progression inspection.
 3. The queued Progression inspection is executed inside the account's existing authenticated browser session. Normal promotional discovery and event checks still run; no second browser login is added.
 4. A pure deferred inspection with no earlier click target may use the existing card-bound Progression claim routine. A previously dispatched but unconfirmed click must carry its exact saved card signature. The routine will inspect only that exact target.
 5. If the popup guard still blocks the inspection, the queue remains. If the exact card is missing or ambiguous, the routine refuses to click another card. A confirmed same-card Delivered state resolves the target. A fully completed inspection with no claimable reward also resolves a pure deferred item.
@@ -31,11 +31,12 @@ Resolved entries are moved to `progression_deferred_inspection_history`; the arc
 
 ## Retry limits and isolation
 
-- Each account can consume a given backup slot once per reset date.
-- The queue permits at most four distinct backup-slot attempts per reset date. Attempt markers are written to `bot_meta.json` before browser processing, so a repeated slot cannot cause another Progression click.
+- Each account can consume a given eligible run label once per reset date (`Primary Run`, `Manual Run`, or one of the four `Promotional Check` slots).
+- The queue permits at most four distinct attempts per reset date across those run labels. Attempt markers are written to `bot_meta.json` before browser processing, so a repeated slot cannot cause another Progression click.
 - If a previously dispatched claim is still unconfirmed, it remains an exact-target queue item. A queued Progression target is not immediately retried a second time in the same slot. Immediate recovery for unrelated Daily/Store/Event targets remains available.
 - The queue does not change `full_claim_coverage`, `claim_history`, daily streak, full-claim retry IDs, or the normal recovery observer.
-- A dedicated Daily-only recovery remains strictly Daily-only and does not service the Progression queue. The next eligible promotional backup slot can service the queue.
+- A dedicated Daily-only recovery remains strictly Daily-only and does not service the Progression queue; it preserves the queued item as deferred instead of resolving it. The next eligible Primary/Manual/Promotional run can service the queue.
+- The general post-run failed-ID observer does not replay a queue-owned Progression target. It may still recover unrelated saved Daily/Store/Event targets.
 - The existing popup/overlay guard and same-card Delivered confirmation remain mandatory. There is no JavaScript click fallback or broad click when target identity is uncertain.
 
 ## Reporting
