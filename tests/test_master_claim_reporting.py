@@ -53,7 +53,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 driver, "PLAYER0001", stats,
                 {"status": "deferred", "requires_exact_target": False, "target_card_signature": None},
             )
-        claim.assert_called_once_with(driver, "PLAYER0001")
+        claim.assert_called_once_with(driver, "PLAYER0001", max_claims_per_visit=1)
         self.assertTrue(stats["progression_reinspection_attempted"])
         self.assertTrue(stats["progression_checked"])
         self.assertFalse(stats["progression_deferred"])
@@ -80,7 +80,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                  "target_card_signature": "Grenade reward 3"},
             )
         claim.assert_called_once_with(
-            driver, "PLAYER0001", target_card_signature="Grenade reward 3"
+            driver, "PLAYER0001", target_card_signature="Grenade reward 3",
+            max_claims_per_visit=1,
         )
         self.assertEqual(stats["progression"], 1)
         self.assertTrue(stats["progression_checked"])
