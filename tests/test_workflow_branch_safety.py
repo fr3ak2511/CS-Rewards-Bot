@@ -80,6 +80,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         )[0]
         self.assertIn("max_claims_per_visit=1", queued_handler)
         self.assertIn("target_card_text_fragments=target_fragments", queued_handler)
+        self.assertIn("require_unique_claimable_card=True", queued_handler)
+        self.assertIn("defer_if_more_claimable=True", queued_handler)
         self.assertIn("_non_progression_recovery_candidate", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
         self.assertIn("elif is_promotional_backup:", source)
