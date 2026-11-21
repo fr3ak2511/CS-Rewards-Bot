@@ -7478,10 +7478,62 @@ def main():
                 r["progression_claim_attempted"] = False
                 r["progression_reinspection_attempted"] = False
         else:
-            r = process_player(pid, has_loyalty, new_id, run_label)
+            queued_progression = get_pending_progression_inspection(meta, pid)
+            progression_attempt = (
+                _mark_queued_progression_inspection_attempt(meta, pid, run_label)
+                if queued_progression else None
+            )
+            progression_slot_blocked = bool(queued_progression and not progression_attempt)
+            r = process_player(
+                pid, has_loyalty, new_id, run_label,
+                progression_reinspection=progression_attempt,
+                progression_inspection_blocked=progression_slot_blocked,
+            )
             if _full_claim_recovery_candidate(r):
-                r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
-            _record_full_claim_coverage(meta, pid, r, run_label)
+                if r.get("progression_reinspection_attempted"):
+                    if _non_progression_recovery_candidate(r):
+                        progression_state = {
+                            key: r.get(key)
+                            for key in (
+                                "progression", "progression_checked", "progression_unconfirmed",
+                                "progression_unconfirmed_card_signature", "progression_deferred",
+                                "progression_deferred_reason", "progression_claim_attempted",
+                                "progression_reinspection_attempted",
+                            )
+                        }
+                        recovery_input = dict(r)
+                        recovery_input["progression_unconfirmed"] = False
+                        recovery_input["progression_unconfirmed_card_signature"] = None
+                        r = immediate_recover_player_claims(
+                            pid, has_loyalty, new_id, run_label, recovery_input,
+                            progression_reinspection=None,
+                            progression_inspection_blocked=True,
+                        )
+                        r.update(progression_state)
+                else:
+                    r = immediate_recover_player_claims(
+                        pid, has_loyalty, new_id, run_label, r,
+                        progression_reinspection=progression_attempt,
+                        progression_inspection_blocked=progression_slot_blocked,
+                    )
+            coverage_result = dict(r)
+            if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
+                coverage_result["progression_unconfirmed"] = False
+            _record_full_claim_coverage(meta, pid, coverage_result, run_label)
+
+        # Daily-only recovery and post-run recovery are deliberately not queue
+        # servicing modes. Keep any outstanding inspection visible and pending.
+        pending_progression = get_pending_progression_inspection(meta, pid)
+        if (
+            pending_progression
+            and not r.get("progression_reinspection_attempted")
+            and not r.get("progression_deferred")
+        ):
+            r = _preserve_queued_progression_state(
+                meta, pid, r,
+                "Queued Progression inspection was not performed by this run mode; "
+                "it remains pending for an eligible full/backup run.",
+            )
         _record_queued_progression_inspection_result(meta, pid, r, run_label)
         mark_id_seen(pid, meta)
         results.append(r)
