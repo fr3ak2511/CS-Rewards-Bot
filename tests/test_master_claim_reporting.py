@@ -1459,6 +1459,24 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("no claim click was attempted", deferred)
         self.assertNotIn("Attention Required", deferred)
 
+
+    def test_email_deferred_checks_explain_partial_progression_confirmation(self):
+        result = {
+            "pid": "F251D3D226496061",
+            "display_name": "Gvk9916",
+            "progression": 1,
+            "progression_deferred": True,
+            "progression_claim_attempted": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": (
+                "One Progression reward was portal-confirmed, but additional claimable cards remain"
+            ),
+        }
+        section = build_deferred_checks_section([result])
+        self.assertIn("1 Progression reward(s) were portal-confirmed", section)
+        self.assertIn("remaining-card inspection is incomplete and stays queued", section)
+        self.assertNotIn("no claim click was attempted", section.lower())
+
     def test_deferred_recheck_keeps_a_real_prior_progression_failure_visible(self):
         result = {
             "pid": "5429611A24A8F01A",
