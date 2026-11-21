@@ -32,7 +32,7 @@ Resolved entries are moved to `progression_deferred_inspection_history`; the arc
 ## Retry limits and isolation
 
 - Each account can consume a given eligible run label once per reset date (`Primary Run`, `Manual Run`, or one of the four `Promotional Check` slots).
-- The queue permits at most four distinct attempts per reset date across those run labels. Attempt markers are written to `bot_meta.json` before browser processing, so a repeated slot cannot cause another Progression click.
+- The queue permits at most four distinct attempts per reset date across those run labels. The slot is written to the run's local `bot_meta.json` snapshot before browser processing. The workflow's `always()` runtime-state save then commits that snapshot to `runtime-state`, guarded by the loaded branch SHA; the existing `rewards-claimer` concurrency group prevents overlapping claim sessions. A later run sees the committed slot marker and cannot repeat the same slot.
 - If a previously dispatched claim is still unconfirmed, it remains an exact-target queue item. A queued Progression target is not immediately retried a second time in the same slot. Immediate recovery for unrelated Daily/Store/Event targets remains available.
 - The queue does not change `full_claim_coverage`, `claim_history`, daily streak, full-claim retry IDs, or the normal recovery observer.
 - A dedicated Daily-only recovery remains strictly Daily-only and does not service the Progression queue; it preserves the queued item as deferred instead of resolving it. The next eligible Primary/Manual/Promotional run can service the queue.
