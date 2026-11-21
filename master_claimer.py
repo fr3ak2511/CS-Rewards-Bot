@@ -4624,7 +4624,7 @@ def process_player_promotions_only(pid, is_new, run_label, *, progression_reinsp
     return stats
 
 
-def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_reinspection=None):
+def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_reinspection=None, progression_inspection_blocked=False):
     """Perform the once-per-reset standard-reward audit plus promotions/events.
 
     Daily and all three standard Store cards are read from the live portal so stale
@@ -4732,18 +4732,22 @@ def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_
         # A separately queued inspection is also serviced here, inside this same
         # authenticated browser session, without reopening the other claim categories.
         recovered_store_indices = list(getattr(driver, "_store_daily_recovered_indices", []) or [])
-        if recovered_store_indices or progression_reinspection:
-            if recovered_store_indices:
-                log("🎯 Reopening Progression after a portal-confirmed Store Bonus.")
+        if progression_reinspection:
             _run_queued_progression_inspection(
                 driver, pid, stats, progression_reinspection
             )
-            if stats["progression_checked"]:
-                stats["grenade_balance"] = _record_grenade_balance_for_player(
-                    driver, pid, is_new_account=is_new, stats=stats
-                )
+        elif recovered_store_indices and not progression_inspection_blocked:
+            log("🎯 Reopening Progression after a portal-confirmed Store Bonus.")
+            _run_queued_progression_inspection(driver, pid, stats)
+        elif progression_inspection_blocked:
+            log("⏭️ Queued Progression inspection held for this backup slot; suppressing the generic Store-bonus recheck.")
         else:
             log("ℹ️ Progression not reopened: no Store Bonus recovery and no deferred inspection is queued")
+
+        if stats["progression_checked"]:
+            stats["grenade_balance"] = _record_grenade_balance_for_player(
+                driver, pid, is_new_account=is_new, stats=stats
+            )
 
         stats["event_rewards"] = run_event_reward_checks(driver, pid)
         stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
@@ -7285,6 +7289,7 @@ def main():
                 r = process_player_backup_reconciliation(
                     pid, new_id, run_label,
                     progression_reinspection=progression_attempt,
+                    progression_inspection_blocked=progression_slot_blocked,
                 )
                 if _full_claim_recovery_candidate(r):
                     # A queued Progression attempt is capped at one attempt per slot.
