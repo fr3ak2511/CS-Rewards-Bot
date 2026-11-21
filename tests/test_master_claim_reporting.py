@@ -38,8 +38,13 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
     def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
         driver = type("ProgressionDriver", (), {})()
 
-        def inspect(target_driver, player_id, *, max_claims_per_visit):
+        def inspect(
+            target_driver, player_id, *, max_claims_per_visit,
+            require_unique_claimable_card, defer_if_more_claimable
+        ):
             self.assertEqual(max_claims_per_visit, 1)
+            self.assertTrue(require_unique_claimable_card)
+            self.assertTrue(defer_if_more_claimable)
             target_driver._progression_unconfirmed = False
             target_driver._progression_unconfirmed_card_signature = None
             target_driver._progression_deferred = False
@@ -54,7 +59,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 driver, "PLAYER0001", stats,
                 {"status": "deferred", "requires_exact_target": False, "target_card_signature": None},
             )
-        claim.assert_called_once_with(driver, "PLAYER0001", max_claims_per_visit=1)
+        claim.assert_called_once_with(
+            driver, "PLAYER0001", max_claims_per_visit=1,
+            require_unique_claimable_card=True, defer_if_more_claimable=True,
+        )
         self.assertTrue(stats["progression_reinspection_attempted"])
         self.assertTrue(stats["progression_checked"])
         self.assertFalse(stats["progression_deferred"])
