@@ -3288,17 +3288,19 @@ def claim_progression_program_rewards(driver, pid, *, target_card_signature=None
     return result
 
 
-def _run_queued_progression_inspection(driver, pid, stats, queue_entry):
+def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
     """Reinspect Progression only; exact-target entries never fall back to generic clicks."""
-    if not isinstance(queue_entry, dict):
-        return stats
-    stats["progression_reinspection_attempted"] = True
+    queued = isinstance(queue_entry, dict) and bool(queue_entry)
+    queue_entry = queue_entry if isinstance(queue_entry, dict) else {}
+    if queued:
+        stats["progression_reinspection_attempted"] = True
     stats["progression_checked"] = False
 
     target_signature = str(queue_entry.get("target_card_signature") or "").strip()
     requires_exact = bool(queue_entry.get("requires_exact_target"))
     if requires_exact and not target_signature:
         stats["progression_deferred"] = True
+        stats["progression_unconfirmed"] = True
         stats["progression_deferred_reason"] = (
             "A previously attempted Progression card has no safe saved identity; "
             "refusing a generic claim scan or any claim click."
@@ -4730,12 +4732,7 @@ def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_
             if recovered_store_indices:
                 log("🎯 Reopening Progression after a portal-confirmed Store Bonus.")
             _run_queued_progression_inspection(
-                driver,
-                pid,
-                stats,
-                progression_reinspection or {},
-            ) if progression_reinspection else _run_queued_progression_inspection(
-                driver, pid, stats, {}
+                driver, pid, stats, progression_reinspection
             )
             if stats["progression_checked"]:
                 stats["grenade_balance"] = _record_grenade_balance_for_player(
