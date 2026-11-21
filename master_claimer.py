@@ -3649,7 +3649,11 @@ def claim_loyalty_program(driver, pid):
 # SECTION 9 — PLAYER PROCESSING
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def process_player(pid, has_loyalty, is_new, run_label):
+def process_player(
+    pid, has_loyalty, is_new, run_label, *,
+    progression_reinspection=None,
+    progression_inspection_blocked=False,
+):
     start = get_ist_time()
     stats = {
         "pid":             pid,
@@ -3759,17 +3763,32 @@ def process_player(pid, has_loyalty, is_new, run_label):
 
         # Progression
         driver._progression_unconfirmed = False
-        p = claim_progression_program_rewards(driver, pid)
-        stats["progression"] = p
-        stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
-        stats["progression_unconfirmed_card_signature"] = getattr(driver, "_progression_unconfirmed_card_signature", None)
-        stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
-        stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
-        stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
-        stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
-        stats["grenade_balance"] = _record_grenade_balance_for_player(
-            driver, pid, is_new_account=is_new, stats=stats
-        )
+        if progression_reinspection:
+            _run_queued_progression_inspection(
+                driver, pid, stats, progression_reinspection
+            )
+        elif progression_inspection_blocked:
+            stats["progression_checked"] = False
+            stats["progression_deferred"] = True
+            stats["progression_deferred_reason"] = (
+                "Queued Progression inspection was not run because this backup slot "
+                "was already consumed or the per-reset attempt cap was reached. "
+                "No new claim click was attempted."
+            )
+            stats["progression_claim_attempted"] = False
+        else:
+            p = claim_progression_program_rewards(driver, pid)
+            stats["progression"] = p
+            stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
+            stats["progression_unconfirmed_card_signature"] = getattr(driver, "_progression_unconfirmed_card_signature", None)
+            stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
+            stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
+            stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
+            stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
+        if stats["progression_checked"]:
+            stats["grenade_balance"] = _record_grenade_balance_for_player(
+                driver, pid, is_new_account=is_new, stats=stats
+            )
 
         # Loyalty
         if has_loyalty:
