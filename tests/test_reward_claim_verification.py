@@ -569,7 +569,7 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
         daily.assert_called_once_with(driver, "TESTPLAYER0001", max_attempts=1)
         store.assert_not_called()
         progression.assert_not_called()
-        self.assertTrue(recovered["progression_deferred"])
+        self.assertFalse(recovered["progression_deferred"])
         self.assertTrue(recovered["progression_unconfirmed"])
         self.assertTrue(driver.quit_called)
 
