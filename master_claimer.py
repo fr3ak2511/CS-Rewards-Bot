@@ -30,6 +30,11 @@ from event_rewards import (
 )
 from reward_popup_guard import dismiss_all_safe_popups
 from progression_claim_safety import claim_progression_rewards
+from progression_inspection_queue import (
+    get_pending_progression_inspection,
+    mark_progression_inspection_attempt,
+    record_progression_inspection_result,
+)
 from promotion_followups import (
     filter_followup_results, seed_legacy_popup_followups,
     update_promotion_followups, build_promotional_followup_section,
@@ -3283,6 +3288,115 @@ def claim_progression_program_rewards(driver, pid, *, target_card_signature=None
     return result
 
 
+def _run_queued_progression_inspection(driver, pid, stats, queue_entry):
+    """Reinspect Progression only; exact-target entries never fall back to generic clicks."""
+    if not isinstance(queue_entry, dict):
+        return stats
+    stats["progression_reinspection_attempted"] = True
+    stats["progression_checked"] = False
+
+    target_signature = str(queue_entry.get("target_card_signature") or "").strip()
+    requires_exact = bool(queue_entry.get("requires_exact_target"))
+    if requires_exact and not target_signature:
+        stats["progression_deferred"] = True
+        stats["progression_deferred_reason"] = (
+            "A previously attempted Progression card has no safe saved identity; "
+            "refusing a generic claim scan or any claim click."
+        )
+        stats["progression_claim_attempted"] = False
+        log(f"⏭️ {pid}: queued Progression reinspection held; exact target identity is unavailable.")
+        return stats
+
+    try:
+        claimed = claim_progression_program_rewards(
+            driver,
+            pid,
+            target_card_signature=target_signature or None,
+        )
+        stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
+        stats["progression_unconfirmed"] = bool(
+            getattr(driver, "_progression_unconfirmed", False)
+        )
+        stats["progression_unconfirmed_card_signature"] = getattr(
+            driver, "_progression_unconfirmed_card_signature", None
+        )
+        stats["progression_deferred"] = bool(
+            getattr(driver, "_progression_deferred", False)
+        )
+        stats["progression_deferred_reason"] = getattr(
+            driver, "_progression_deferred_reason", None
+        )
+        stats["progression_claim_attempted"] = bool(
+            getattr(driver, "_progression_claim_attempted", False)
+        )
+        stats["progression_checked"] = bool(
+            getattr(driver, "_progression_checked", not stats["progression_deferred"])
+        )
+        log(
+            f"{'⏭️' if stats['progression_deferred'] else ('🚩' if stats['progression_unconfirmed'] else '✅')} "
+            f"{pid}: queued Progression reinspection "
+            f"{'deferred' if stats['progression_deferred'] else ('still unconfirmed' if stats['progression_unconfirmed'] else 'completed')}; "
+            f"{stats['progression']} claim(s) portal-confirmed."
+        )
+    except Exception as exc:
+        # If a click may already have been dispatched, keep only the exact target
+        # supplied by the safety helper. Otherwise this remains an inspection defer.
+        attempted = bool(getattr(driver, "_progression_claim_attempted", False))
+        stats["progression_claim_attempted"] = attempted
+        stats["progression_unconfirmed"] = attempted
+        stats["progression_unconfirmed_card_signature"] = getattr(
+            driver, "_progression_unconfirmed_card_signature", None
+        ) or (target_signature or None)
+        stats["progression_deferred"] = not attempted
+        stats["progression_deferred_reason"] = (
+            None if attempted
+            else f"Queued Progression reinspection failed before a claim click ({type(exc).__name__})."
+        )
+        stats["progression_checked"] = False
+        log(f"🚩 {pid}: queued Progression reinspection raised {type(exc).__name__}.")
+    return stats
+
+
+def _mark_queued_progression_inspection_attempt(meta, pid, run_label):
+    """Reserve and persist this account's one allowed attempt for the current backup slot."""
+    entry = mark_progression_inspection_attempt(
+        meta,
+        pid,
+        slot_label=run_label,
+        reset_date=_current_reset_date(),
+        now=get_ist_time().isoformat(),
+    )
+    if entry:
+        save_bot_meta(meta)
+        log(f"🎯 Deferred Progression inspection reserved for account …{str(pid)[-4:]} in {run_label}.")
+    return entry
+
+
+def _record_queued_progression_inspection_result(meta, pid, result, run_label):
+    action = record_progression_inspection_result(
+        meta,
+        pid,
+        result,
+        run_label=run_label,
+        now=get_ist_time().isoformat(),
+        source_run_id=os.getenv("GITHUB_RUN_ID"),
+    )
+    if action:
+        save_bot_meta(meta)
+        log(
+            f"{'✅' if action == 'resolved' else '⏭️'} Deferred Progression queue "
+            f"{action} for account …{str(pid)[-4:]}."
+        )
+    return action
+
+
+def _non_progression_recovery_candidate(result):
+    """Ignore a queued Progression-only ambiguity when deciding broad recovery scope."""
+    candidate = dict(result or {})
+    candidate["progression_unconfirmed"] = False
+    return _full_claim_recovery_candidate(candidate)
+
+
 def _record_grenade_balance_for_player(driver, pid, *, is_new_account, stats):
     """Read the cumulative portal counter and update only its separate baseline file."""
     observed_at = get_ist_time()
@@ -3566,9 +3680,11 @@ def process_player(pid, has_loyalty, is_new, run_label):
         "store_unconfirmed_indices": [],
         "store_claimed_indices": [],
         "progression_unconfirmed": False,
+        "progression_unconfirmed_card_signature": None,
         "progression_deferred": False,
         "progression_deferred_reason": None,
         "progression_claim_attempted": False,
+        "progression_reinspection_attempted": False,
         "grenade_balance": None,
         "standard_rewards_checked": False,
         "progression_checked": True,
@@ -4372,8 +4488,8 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
     return result
 
 
-def process_player_promotions_only(pid, is_new, run_label):
-    """Check live Store offers and configured event rewards; skip daily/standard Store/progression/loyalty claims."""
+def process_player_promotions_only(pid, is_new, run_label, *, progression_reinspection=None):
+    """Check Store offers/events; optionally service one separately queued Progression inspection."""
     start = get_ist_time()
     stats = {
         "pid": pid,
@@ -4398,6 +4514,13 @@ def process_player_promotions_only(pid, is_new, run_label):
         "promotion_popup_blocked": False,
         "retry_required": False,
         "progression": 0,
+        "progression_checked": False,
+        "progression_unconfirmed": False,
+        "progression_unconfirmed_card_signature": None,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
+        "progression_reinspection_attempted": False,
         "loyalty": 0,
         "daily_skipped": False,
         "store_skipped": [False, False, False],
@@ -4443,6 +4566,8 @@ def process_player_promotions_only(pid, is_new, run_label):
         stats["event_rewards"] = run_event_reward_checks(driver, pid)
         stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
         stats["event_rewards_retry_required"] = event_retry_required(stats["event_rewards"])
+        if progression_reinspection:
+            _run_queued_progression_inspection(driver, pid, stats, progression_reinspection)
         stats["store_temp"] = sum(1 for promo in promotions if promo.get("status") == "claimed_this_run")
         stats["store_temp_possible"] = sum(int(promo.get("claimable_observed", 0) or 0) for promo in promotions)
         stats["possible"] = stats["store_temp_possible"]
@@ -4494,7 +4619,7 @@ def process_player_promotions_only(pid, is_new, run_label):
     return stats
 
 
-def process_player_backup_reconciliation(pid, is_new, run_label):
+def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_reinspection=None):
     """Perform the once-per-reset standard-reward audit plus promotions/events.
 
     Daily and all three standard Store cards are read from the live portal so stale
@@ -4598,21 +4723,26 @@ def process_player_backup_reconciliation(pid, is_new, run_label):
             time.sleep(3)
 
         # A newly recovered daily Store bonus may unlock a Progression milestone.
+        # A separately queued inspection is also serviced here, inside this same
+        # authenticated browser session, without reopening the other claim categories.
         recovered_store_indices = list(getattr(driver, "_store_daily_recovered_indices", []) or [])
-        if recovered_store_indices:
-            stats["progression_checked"] = True
-            p = claim_progression_program_rewards(driver, pid)
-            stats["progression"] = p
-            stats["progression_unconfirmed"] = bool(getattr(driver, "_progression_unconfirmed", False))
-            stats["progression_deferred"] = bool(getattr(driver, "_progression_deferred", False))
-            stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
-            stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
-            stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
-            stats["grenade_balance"] = _record_grenade_balance_for_player(
-                driver, pid, is_new_account=is_new, stats=stats
+        if recovered_store_indices or progression_reinspection:
+            if recovered_store_indices:
+                log("🎯 Reopening Progression after a portal-confirmed Store Bonus.")
+            _run_queued_progression_inspection(
+                driver,
+                pid,
+                stats,
+                progression_reinspection or {},
+            ) if progression_reinspection else _run_queued_progression_inspection(
+                driver, pid, stats, {}
             )
+            if stats["progression_checked"]:
+                stats["grenade_balance"] = _record_grenade_balance_for_player(
+                    driver, pid, is_new_account=is_new, stats=stats
+                )
         else:
-            log("ℹ️ Progression not reopened: no standard Store bonus changed from available to portal-confirmed")
+            log("ℹ️ Progression not reopened: no Store Bonus recovery and no deferred inspection is queued")
 
         stats["event_rewards"] = run_event_reward_checks(driver, pid)
         stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
@@ -7143,15 +7273,56 @@ def main():
                 r["daily_recovery_attempted"] = False
                 log(f"⏭️ {pid}: Daily-only recovery deferred; slot already used or per-reset retry limit reached.")
         elif is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
+            queued_progression = get_pending_progression_inspection(meta, pid)
+            progression_attempt = (
+                _mark_queued_progression_inspection_attempt(meta, pid, run_label)
+                if queued_progression else None
+            )
+            progression_slot_blocked = bool(queued_progression and not progression_attempt)
+
             if needs_standard_backup_audit(pid, meta):
-                r = process_player_backup_reconciliation(pid, new_id, run_label)
+                r = process_player_backup_reconciliation(
+                    pid, new_id, run_label,
+                    progression_reinspection=progression_attempt,
+                )
                 if _full_claim_recovery_candidate(r):
-                    r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
+                    # A dispatched-but-unconfirmed queued Progression target remains
+                    # in its exact-target queue. Do not immediately widen it into a
+                    # second browser recovery attempt unless another category failed.
+                    should_recover = (
+                        _non_progression_recovery_candidate(r)
+                        if r.get("progression_reinspection_attempted")
+                        else True
+                    )
+                    if should_recover:
+                        r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
                 if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
-                    _record_full_claim_coverage(meta, pid, r, run_label)
+                    coverage_result = dict(r)
+                    if r.get("progression_reinspection_attempted"):
+                        coverage_result["progression_unconfirmed"] = False
+                    _record_full_claim_coverage(meta, pid, coverage_result, run_label)
             else:
-                # Promotional-only rechecks never overwrite full-claim coverage.
-                r = process_player_promotions_only(pid, new_id, run_label)
+                # Promotional-only checks remain promotional-only for normal accounts.
+                # Queued Progression inspections are the sole scoped exception.
+                r = process_player_promotions_only(
+                    pid, new_id, run_label,
+                    progression_reinspection=progression_attempt,
+                )
+
+            if progression_slot_blocked:
+                r["progression_checked"] = False
+                r["progression_deferred"] = True
+                r["progression_unconfirmed"] = bool(queued_progression.get("requires_exact_target"))
+                r["progression_unconfirmed_card_signature"] = (
+                    queued_progression.get("target_card_signature")
+                )
+                r["progression_deferred_reason"] = (
+                    "Deferred Progression inspection remains queued; this backup slot "
+                    "was already attempted or the per-reset attempt cap was reached. "
+                    "No new claim click was attempted."
+                )
+                r["progression_claim_attempted"] = False
+                r["progression_reinspection_attempted"] = False
         else:
             if is_promotional_backup:
                 if new_id:
@@ -7162,6 +7333,7 @@ def main():
             if _full_claim_recovery_candidate(r):
                 r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
             _record_full_claim_coverage(meta, pid, r, run_label)
+        _record_queued_progression_inspection_result(meta, pid, r, run_label)
         mark_id_seen(pid, meta)
         results.append(r)
         time.sleep(0.5)
