@@ -7311,7 +7311,7 @@ def main():
                 )
                 r["daily_recovery_attempted"] = False
                 log(f"⏭️ {pid}: Daily-only recovery deferred; slot already used or per-reset retry limit reached.")
-        elif is_promotional_backup and has_complete_full_claim_coverage(pid, meta):
+        elif is_promotional_backup:
             queued_progression = get_pending_progression_inspection(meta, pid)
             progression_attempt = (
                 _mark_queued_progression_inspection_attempt(meta, pid, run_label)
@@ -7319,16 +7319,61 @@ def main():
             )
             progression_slot_blocked = bool(queued_progression and not progression_attempt)
 
-            if needs_standard_backup_audit(pid, meta):
-                r = process_player_backup_reconciliation(
-                    pid, new_id, run_label,
+            if has_complete_full_claim_coverage(pid, meta):
+                if needs_standard_backup_audit(pid, meta):
+                    r = process_player_backup_reconciliation(
+                        pid, new_id, run_label,
+                        progression_reinspection=progression_attempt,
+                        progression_inspection_blocked=progression_slot_blocked,
+                    )
+                    if _full_claim_recovery_candidate(r):
+                        # A queued Progression attempt is capped at one attempt per slot.
+                        # If it remains unconfirmed, allow immediate recovery for unrelated
+                        # categories only; preserve the Progression target for the next slot.
+                        if r.get("progression_reinspection_attempted") and r.get("progression_unconfirmed"):
+                            if _non_progression_recovery_candidate(r):
+                                progression_state = {
+                                    key: r.get(key)
+                                    for key in (
+                                        "progression", "progression_checked", "progression_unconfirmed",
+                                        "progression_unconfirmed_card_signature", "progression_deferred",
+                                        "progression_deferred_reason", "progression_claim_attempted",
+                                        "progression_reinspection_attempted",
+                                    )
+                                }
+                                recovery_input = dict(r)
+                                recovery_input["progression_unconfirmed"] = False
+                                recovery_input["progression_unconfirmed_card_signature"] = None
+                                r = immediate_recover_player_claims(
+                                    pid, has_loyalty, new_id, run_label, recovery_input
+                                )
+                                r.update(progression_state)
+                        else:
+                            r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
+                    if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
+                        coverage_result = dict(r)
+                        if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
+                            coverage_result["progression_unconfirmed"] = False
+                        _record_full_claim_coverage(meta, pid, coverage_result, run_label)
+                else:
+                    # Promotional-only checks remain promotional-only for normal accounts.
+                    # Queued Progression inspections are the sole scoped exception.
+                    r = process_player_promotions_only(
+                        pid, new_id, run_label,
+                        progression_reinspection=progression_attempt,
+                    )
+            else:
+                # An account with pending full-claim coverage keeps the full account
+                # pass, but a queued Progression item takes precedence over generic
+                # Progression discovery and remains isolated from broad retries.
+                if queued_progression:
+                    log(f"🎯 {pid}: servicing queued Progression inspection alongside the normal full-claim backup path.")
+                r = process_player(
+                    pid, has_loyalty, new_id, run_label,
                     progression_reinspection=progression_attempt,
                     progression_inspection_blocked=progression_slot_blocked,
                 )
                 if _full_claim_recovery_candidate(r):
-                    # A queued Progression attempt is capped at one attempt per slot.
-                    # If it remains unconfirmed, allow immediate recovery for unrelated
-                    # categories only; preserve the Progression target for the next slot.
                     if r.get("progression_reinspection_attempted") and r.get("progression_unconfirmed"):
                         if _non_progression_recovery_candidate(r):
                             progression_state = {
@@ -7349,18 +7394,10 @@ def main():
                             r.update(progression_state)
                     else:
                         r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
-                if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
-                    coverage_result = dict(r)
-                    if r.get("progression_reinspection_attempted"):
-                        coverage_result["progression_unconfirmed"] = False
-                    _record_full_claim_coverage(meta, pid, coverage_result, run_label)
-            else:
-                # Promotional-only checks remain promotional-only for normal accounts.
-                # Queued Progression inspections are the sole scoped exception.
-                r = process_player_promotions_only(
-                    pid, new_id, run_label,
-                    progression_reinspection=progression_attempt,
-                )
+                coverage_result = dict(r)
+                if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
+                    coverage_result["progression_unconfirmed"] = False
+                _record_full_claim_coverage(meta, pid, coverage_result, run_label)
 
             if progression_slot_blocked:
                 r["progression_checked"] = False
@@ -7377,11 +7414,6 @@ def main():
                 r["progression_claim_attempted"] = False
                 r["progression_reinspection_attempted"] = False
         else:
-            if is_promotional_backup:
-                if new_id:
-                    log(f"🆕 {pid}: new ID has no complete full-claim coverage; using full claim path at this backup.")
-                else:
-                    log(f"🔁 {pid}: no complete full-claim coverage for today's reset; retrying full claim path.")
             r = process_player(pid, has_loyalty, new_id, run_label)
             if _full_claim_recovery_candidate(r):
                 r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
