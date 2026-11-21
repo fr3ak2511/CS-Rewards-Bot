@@ -138,8 +138,14 @@ def record_progression_inspection_result(
         if signature:
             entry["target_card_signature"] = signature[:512]
             entry["requires_exact_target"] = True
-        elif entry.get("requires_exact_target"):
-            entry["target_card_signature"] = None
+        else:
+            # Once a claim may have been dispatched, never allow the next
+            # inspection to fall back to a generic scan. Preserve an older
+            # exact signature if one exists; otherwise fail closed on the next run.
+            entry["requires_exact_target"] = True
+            entry["target_card_signature"] = (
+                entry.get("target_card_signature") or None
+            )
         queue[pid] = entry
         return "retained"
 
