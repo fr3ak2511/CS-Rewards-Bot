@@ -96,7 +96,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             self.meta, "PLAYER0001", self._deferred(),
             run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
         )
-        for slot in ("Promotional Check #1", "Promotional Check #2", "Backup Run #3", "Backup Run #4"):
+        for slot in ("Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"):
             self.assertIsNotNone(mark_progression_inspection_attempt(
                 self.meta, "PLAYER0001", slot_label=slot,
                 reset_date="2026-11-21", now="2026-11-21T18:05:00+05:30",
