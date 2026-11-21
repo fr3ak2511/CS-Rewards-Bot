@@ -7369,8 +7369,8 @@ def main():
                         else:
                             r = immediate_recover_player_claims(
                                 pid, has_loyalty, new_id, run_label, r,
-                                progression_reinspection=None,
-                                progression_inspection_blocked=True,
+                                progression_reinspection=progression_attempt,
+                                progression_inspection_blocked=progression_slot_blocked,
                             )
                     if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
                         coverage_result = dict(r)
@@ -7419,8 +7419,8 @@ def main():
                     else:
                         r = immediate_recover_player_claims(
                             pid, has_loyalty, new_id, run_label, r,
-                            progression_reinspection=None,
-                            progression_inspection_blocked=True,
+                            progression_reinspection=progression_attempt,
+                            progression_inspection_blocked=progression_slot_blocked,
                         )
                 coverage_result = dict(r)
                 if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
