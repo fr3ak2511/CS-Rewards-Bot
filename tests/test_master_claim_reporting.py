@@ -555,6 +555,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("no claim click was attempted", report)
         self.assertIn("1 account requiring review", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>1 account</span>", report)
+        self.assertNotIn("<span>1 accounts</span>", report)
         self.assertIn("Attention Required", report)
         self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
