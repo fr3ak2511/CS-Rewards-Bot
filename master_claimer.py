@@ -3310,14 +3310,12 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         return stats
 
     try:
-        if queued:
+        if target_signature:
             claimed = claim_progression_program_rewards(
-                driver,
-                pid,
-                target_card_signature=target_signature or None,
+                driver, pid, target_card_signature=target_signature
             )
         else:
-            # Preserve the established Store-bonus recovery call contract.
+            # A first-time deferred inspection has no prior click target.
             claimed = claim_progression_program_rewards(driver, pid)
         stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
         stats["progression_unconfirmed"] = bool(
