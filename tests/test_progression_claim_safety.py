@@ -13,7 +13,8 @@ class BrowserStub:
 
 class ProgressionSafetyTests(unittest.TestCase):
     def _run(self, snapshots, *, dismiss_results=None, verify_polls=3,
-             target_card_signature=None, max_claims_per_visit=6):
+             target_card_signature=None, target_card_text_fragments=None,
+             max_claims_per_visit=6):
         driver = BrowserStub()
         click_calls = []
         history_calls = []
@@ -45,6 +46,7 @@ class ProgressionSafetyTests(unittest.TestCase):
             dismiss_popups=dismiss, scroll_carousel=lambda _d: False,
             sleep=lambda _seconds: None, verify_polls=verify_polls,
             target_card_signature=target_card_signature,
+            target_card_text_fragments=target_card_text_fragments,
             max_claims_per_visit=max_claims_per_visit,
         )
         return claimed, driver, click_calls, history_calls
@@ -225,6 +227,100 @@ class ProgressionSafetyTests(unittest.TestCase):
         self.assertFalse(driver._progression_unconfirmed)
 
 
+
+
+    def test_queued_text_selector_claims_only_the_unique_62_x20_milestone(self):
+        other_button = object()
+        target_button = object()
+        before = {
+            "valid_page": True, "claimable_count": 2, "delivered_count": 0,
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Milestone 65 | x80",
+                 "card_text": "Milestone 65\nx80"},
+                {"button": target_button, "button_text": "claim",
+                 "card_signature": "Milestone 62 | x20",
+                 "card_text": "Milestone 62\nx20"},
+            ],
+            "delivered_signatures": [],
+        }
+        after = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 1,
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Milestone 65 | x80",
+                 "card_text": "Milestone 65\nx80"},
+            ],
+            "delivered_signatures": ["Milestone 62 | x20"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            [before, after],
+            target_card_text_fragments=("62", "x20"),
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 1)
+        self.assertEqual(clicks, [target_button])
+        self.assertFalse(driver._progression_unconfirmed)
+        self.assertFalse(driver._progression_deferred)
+
+    def test_queued_text_selector_refuses_other_unlocked_milestone(self):
+        other_button = object()
+        snapshot = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 0,
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Milestone 65 | x80",
+                 "card_text": "Milestone 65\nx80"},
+            ],
+            "delivered_signatures": [],
+        }
+        claimed, driver, clicks, _history = self._run(
+            snapshot, target_card_text_fragments=("62", "x20")
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_claim_attempted)
+
+    def test_queued_text_selector_refuses_ambiguous_matching_cards(self):
+        first, second = object(), object()
+        snapshot = {
+            "valid_page": True, "claimable_count": 2, "delivered_count": 0,
+            "claimable_cards": [
+                {"button": first, "button_text": "claim",
+                 "card_signature": "Milestone 62 | x20 | A",
+                 "card_text": "Milestone 62\nx20\nA"},
+                {"button": second, "button_text": "claim",
+                 "card_signature": "Milestone 62 | x20 | B",
+                 "card_text": "Milestone 62\nx20\nB"},
+            ],
+            "delivered_signatures": [],
+        }
+        claimed, driver, clicks, _history = self._run(
+            snapshot, target_card_text_fragments=("62", "x20")
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertTrue(driver._progression_deferred)
+
+    def test_queued_text_selector_accepts_already_delivered_target_without_clicking_other_card(self):
+        other_button = object()
+        snapshot = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 1,
+            "claimable_cards": [
+                {"button": other_button, "button_text": "claim",
+                 "card_signature": "Milestone 65 | x80",
+                 "card_text": "Milestone 65\nx80"},
+            ],
+            "delivered_signatures": ["Milestone 62 | x20"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            snapshot, target_card_text_fragments=("62", "x20")
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertFalse(driver._progression_deferred)
+        self.assertTrue(driver._progression_checked)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
