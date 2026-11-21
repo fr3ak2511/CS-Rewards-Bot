@@ -14,6 +14,7 @@ class BrowserStub:
 class ProgressionSafetyTests(unittest.TestCase):
     def _run(self, snapshots, *, dismiss_results=None, verify_polls=3,
              target_card_signature=None, target_card_text_fragments=None,
+             require_unique_claimable_card=False, defer_if_more_claimable=False,
              max_claims_per_visit=6):
         driver = BrowserStub()
         click_calls = []
@@ -47,6 +48,8 @@ class ProgressionSafetyTests(unittest.TestCase):
             sleep=lambda _seconds: None, verify_polls=verify_polls,
             target_card_signature=target_card_signature,
             target_card_text_fragments=target_card_text_fragments,
+            require_unique_claimable_card=require_unique_claimable_card,
+            defer_if_more_claimable=defer_if_more_claimable,
             max_claims_per_visit=max_claims_per_visit,
         )
         return claimed, driver, click_calls, history_calls
@@ -321,6 +324,94 @@ class ProgressionSafetyTests(unittest.TestCase):
         )
         self.assertEqual(claimed, 0)
         self.assertEqual(clicks, [])
+        self.assertFalse(driver._progression_deferred)
+        self.assertTrue(driver._progression_checked)
+
+
+    def test_unscoped_queued_inspection_refuses_multiple_claimable_cards(self):
+        first, second = object(), object()
+        snapshot = {
+            "valid_page": True, "claimable_count": 2, "delivered_count": 0,
+            "claimable_cards": [
+                {"button": first, "button_text": "claim",
+                 "card_signature": "Milestone 62 | x20",
+                 "card_text": "Milestone 62\nx20"},
+                {"button": second, "button_text": "claim",
+                 "card_signature": "Milestone 65 | x80",
+                 "card_text": "Milestone 65\nx80"},
+            ],
+        }
+        claimed, driver, clicks, _history = self._run(
+            snapshot,
+            require_unique_claimable_card=True,
+            defer_if_more_claimable=True,
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_claim_attempted)
+        self.assertFalse(driver._progression_checked)
+
+    def test_unscoped_queued_inspection_stays_open_when_another_card_remains(self):
+        first_button, second_button = object(), object()
+        before = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 0,
+            "button": first_button, "button_text": "claim",
+            "card_signature": "First reward", "card_text": "First reward",
+            "claimable_cards": [
+                {"button": first_button, "button_text": "claim",
+                 "card_signature": "First reward", "card_text": "First reward"},
+            ],
+            "delivered_signatures": [],
+        }
+        after = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 1,
+            "button": second_button, "button_text": "claim",
+            "card_signature": "Second reward", "card_text": "Second reward",
+            "claimable_cards": [
+                {"button": second_button, "button_text": "claim",
+                 "card_signature": "Second reward", "card_text": "Second reward"},
+            ],
+            "delivered_signatures": ["First reward"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            [before, after, after],
+            require_unique_claimable_card=True,
+            defer_if_more_claimable=True,
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 1)
+        self.assertEqual(clicks, [first_button])
+        self.assertTrue(driver._progression_deferred)
+        self.assertTrue(driver._progression_claim_attempted)
+        self.assertFalse(driver._progression_checked)
+        self.assertIn("additional claimable cards remain", driver._progression_deferred_reason)
+
+    def test_unscoped_queued_inspection_resolves_after_one_card_and_complete_scan(self):
+        button = object()
+        before = {
+            "valid_page": True, "claimable_count": 1, "delivered_count": 0,
+            "button": button, "button_text": "claim",
+            "card_signature": "Only reward", "card_text": "Only reward",
+            "claimable_cards": [
+                {"button": button, "button_text": "claim",
+                 "card_signature": "Only reward", "card_text": "Only reward"},
+            ],
+            "delivered_signatures": [],
+        }
+        after = {
+            "valid_page": True, "claimable_count": 0, "delivered_count": 1,
+            "delivered_signatures": ["Only reward"],
+        }
+        claimed, driver, clicks, _history = self._run(
+            [before, after, after],
+            require_unique_claimable_card=True,
+            defer_if_more_claimable=True,
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 1)
+        self.assertEqual(clicks, [button])
         self.assertFalse(driver._progression_deferred)
         self.assertTrue(driver._progression_checked)
 
