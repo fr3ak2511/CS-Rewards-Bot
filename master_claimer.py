@@ -4040,7 +4040,10 @@ def _recovery_result_from_saved_targets(pid, targets):
     }
 
 
-def recover_player_from_saved_targets(pid, has_loyalty, is_new, run_label, targets):
+def recover_player_from_saved_targets(
+    pid, has_loyalty, is_new, run_label, targets, *,
+    progression_inspection_blocked=False,
+):
     """Run post-primary recovery only from the target identities saved by that run.
 
     Returns (result, coverage_was_rechecked). Missing/invalid target metadata is
@@ -4112,7 +4115,8 @@ def recover_player_from_saved_targets(pid, has_loyalty, is_new, run_label, targe
     # in-run pass. Login failure is the sole permitted full-account retry because
     # the original attempt never reached a reward page.
     recovered = immediate_recover_player_claims(
-        pid, has_loyalty, is_new, run_label, target_result
+        pid, has_loyalty, is_new, run_label, target_result,
+        progression_inspection_blocked=progression_inspection_blocked,
     )
     return recovered, True
 
@@ -7265,8 +7269,10 @@ def main():
             # source run. Missing metadata is deferred; it never falls back to
             # process_player() or a broad full-account reward sweep.
             targets = recovery_targets_by_player.get(pid)
+            queued_progression = get_pending_progression_inspection(meta, pid)
             r, coverage_rechecked = recover_player_from_saved_targets(
-                pid, has_loyalty, new_id, run_label, targets
+                pid, has_loyalty, new_id, run_label, targets,
+                progression_inspection_blocked=bool(queued_progression),
             )
             if coverage_rechecked:
                 _record_full_claim_coverage(meta, pid, r, run_label)
