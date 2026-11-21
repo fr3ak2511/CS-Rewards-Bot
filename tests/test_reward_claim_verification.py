@@ -596,17 +596,17 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
             "event_rewards_retry_required": False,
             "possible": 2,
         }
-        with patch.object(bot, "create_driver", return_value=driver), \\
-             patch.object(bot, "login_to_hub", return_value=True), \\
-             patch.object(bot, "capture_display_name", return_value="Test Player"), \\
-             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \\
-             patch.object(bot, "claim_progression_program_rewards") as progression, \\
-             patch.object(bot, "run_event_reward_checks", return_value=[]), \\
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
              patch.object(bot, "get_reward_status", return_value={
                  "daily_status": "claimed", "daily_next": "next reset",
                  "store_status": ["claimed", "portal_claimed", "portal_claimed"],
                  "store_next": [None] * 3,
-             }), \\
+             }), \
              patch.object(bot.time, "sleep"):
             recovered = bot.immediate_recover_player_claims(
                 "TESTPLAYER0001", False, False, "Primary Run", result
@@ -641,17 +641,17 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
             "event_rewards_retry_required": False,
             "possible": 2,
         }
-        with patch.object(bot, "create_driver", return_value=driver), \\
-             patch.object(bot, "login_to_hub", return_value=True), \\
-             patch.object(bot, "capture_display_name", return_value="Test Player"), \\
-             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \\
-             patch.object(bot, "claim_progression_program_rewards") as progression, \\
-             patch.object(bot, "run_event_reward_checks", return_value=[]), \\
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
              patch.object(bot, "get_reward_status", return_value={
                  "daily_status": "claimed", "daily_next": "next reset",
                  "store_status": ["claimed", "portal_claimed", "portal_claimed"],
                  "store_next": [None] * 3,
-             }), \\
+             }), \
              patch.object(bot.time, "sleep"):
             recovered = bot.immediate_recover_player_claims(
                 "TESTPLAYER0001", False, False, "Primary Run", result
