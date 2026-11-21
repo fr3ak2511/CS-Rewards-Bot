@@ -3402,6 +3402,29 @@ def _record_queued_progression_inspection_result(meta, pid, result, run_label):
     return action
 
 
+def _preserve_queued_progression_state(meta, pid, result, reason):
+    """Keep an unserviced queue item visible and prevent other recovery paths clearing it."""
+    entry = get_pending_progression_inspection(meta, pid)
+    if not entry:
+        return result
+    updated = dict(result or {})
+    updated["progression_checked"] = False
+    updated["progression_deferred"] = True
+    updated["progression_unconfirmed"] = bool(
+        updated.get("progression_unconfirmed") or entry.get("requires_exact_target")
+    )
+    updated["progression_unconfirmed_card_signature"] = (
+        updated.get("progression_unconfirmed_card_signature")
+        or entry.get("target_card_signature")
+    )
+    updated["progression_deferred_reason"] = str(reason or (
+        "Progression inspection remains queued; this execution path did not inspect Progression."
+    ))
+    updated["progression_claim_attempted"] = False
+    updated["progression_reinspection_attempted"] = False
+    return updated
+
+
 def _non_progression_recovery_candidate(result):
     """Ignore a queued Progression-only ambiguity when deciding broad recovery scope."""
     candidate = dict(result or {})
