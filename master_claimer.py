@@ -3370,7 +3370,7 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
 
 
 def _mark_queued_progression_inspection_attempt(meta, pid, run_label):
-    """Reserve and persist this account's one allowed attempt for the current backup slot."""
+    """Reserve this run label in local bot_meta before browser processing; workflow saves runtime-state."""
     entry = mark_progression_inspection_attempt(
         meta,
         pid,
