@@ -5974,7 +5974,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     elif attention_accounts:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} {attention_account_label}</span></div>"
             f"<p class='v2-muted-note'>{html.escape(attention_fallback_note)}</p>"
             "</section>"
         )
