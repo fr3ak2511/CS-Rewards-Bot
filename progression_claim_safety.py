@@ -214,12 +214,17 @@ def claim_progression_rewards(
                             required_fragments,
                         )
                     ]
-                    delivered_values = [
+                    # The portal snapshot exposes the same terminal identities
+                    # under both keys; deduplicate them so one Delivered card is
+                    # not mistaken for two ambiguous targets.
+                    delivered_values = list(dict.fromkeys(
                         str(item).strip()
-                        for item in list(before.get("delivered_signatures") or [])
-                        + list(before.get("terminal_card_signatures") or [])
+                        for item in (
+                            list(before.get("delivered_signatures") or [])
+                            + list(before.get("terminal_card_signatures") or [])
+                        )
                         if str(item).strip()
-                    ]
+                    ))
                     delivered_matches = [
                         item for item in delivered_values
                         if _matches_card_text_fragments(item, required_fragments)
