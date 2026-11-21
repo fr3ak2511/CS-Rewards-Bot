@@ -6074,6 +6074,9 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             (bool(result.get("progression_checked")) and not result.get("progression_deferred"))
             or (result.get("processing_mode", "full_claim") == "full_claim"
                 and not _is_hard_failure(result) and not result.get("progression_deferred"))
+            # Preserve portal-confirmed claims from a one-click queued inspection
+            # even when additional visible cards keep the inspection deferred.
+            or int(result.get("progression", 0) or 0) > 0
         )
     ]
     full_claim_results = [
@@ -6263,7 +6266,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         else:
             value = sum(int(result.get(claim_key, 0) or 0) for result in checked_results)
             account_word = "account" if len(checked_results) == 1 else "accounts"
-            note = f"{len(checked_results)} {account_word} checked"
+            partial_progression = sum(
+                1 for result in checked_results
+                if label == "Progression Rewards"
+                and result.get("progression_deferred")
+                and int(result.get("progression", 0) or 0) > 0
+            )
+            note = (
+                f"{len(checked_results)} {account_word} with confirmed claims · "
+                f"{partial_progression} inspection(s) still queued"
+                if partial_progression else f"{len(checked_results)} {account_word} checked"
+            )
         return (
             f"<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-{tone}'>"
             f"<span>{label}</span><strong>{value}</strong><small>{html.escape(note)}</small></div></td>"
