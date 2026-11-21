@@ -50,7 +50,7 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
             )
 
     def test_visible_challenge_text_and_element_are_challenge_signals(self):
-        for result in (
+        results = (
             {
                 "title": "CS Hub",
                 "visibleTextSignals": ["verify you are human"],
@@ -61,7 +61,8 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
                 "visibleTextSignals": [],
                 "visibleElementSignals": ["#challenge-form"],
             },
-        ):
+        )
+        for result in results:
             with self.subTest(result=result):
                 driver = DetectorDriver(result)
                 with patch.object(bot, "log"):
@@ -89,10 +90,10 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
 
     def test_bypass_returns_without_wait_when_no_visible_challenge_exists(self):
         driver = Mock()
-        with patch.object(bot, "_is_cloudflare_interstitial", return_value=False), \\
-             patch.object(bot.time, "sleep") as sleep, \\
-             patch.object(bot, "log"):
-            bot.bypass_cloudflare(driver)
+        with patch.object(bot, "_is_cloudflare_interstitial", return_value=False):
+            with patch.object(bot.time, "sleep") as sleep:
+                with patch.object(bot, "log"):
+                    bot.bypass_cloudflare(driver)
         sleep.assert_not_called()
         driver.find_elements.assert_not_called()
 
@@ -102,8 +103,10 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
         driver.find_elements.return_value = []
         with patch.object(
             bot, "_is_cloudflare_interstitial", side_effect=[True, False]
-        ), patch.object(bot.time, "sleep"), patch.object(bot, "log") as log:
-            bot.bypass_cloudflare(driver)
+        ):
+            with patch.object(bot.time, "sleep"):
+                with patch.object(bot, "log") as log:
+                    bot.bypass_cloudflare(driver)
         log.assert_any_call("🛡️ Visible Cloudflare challenge detected — waiting...")
         log.assert_any_call("✅ Cloudflare challenge cleared after 1/10 state checks")
 
@@ -113,8 +116,10 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
         driver.find_elements.return_value = []
         with patch.object(
             bot, "_is_cloudflare_interstitial", side_effect=[True] * 11
-        ), patch.object(bot.time, "sleep"), patch.object(bot, "log") as log:
-            bot.bypass_cloudflare(driver)
+        ):
+            with patch.object(bot.time, "sleep"):
+                with patch.object(bot, "log") as log:
+                    bot.bypass_cloudflare(driver)
         log.assert_any_call(
             "⚠️ Cloudflare challenge remained visible after 10 state checks; no clearance was confirmed"
         )
@@ -126,8 +131,10 @@ class CloudflareDiagnosticsTests(unittest.TestCase):
         driver.find_elements.return_value = [checkbox]
         with patch.object(
             bot, "_is_cloudflare_interstitial", side_effect=[True, False]
-        ), patch.object(bot.time, "sleep") as sleep, patch.object(bot, "log"):
-            bot.bypass_cloudflare(driver)
+        ):
+            with patch.object(bot.time, "sleep") as sleep:
+                with patch.object(bot, "log"):
+                    bot.bypass_cloudflare(driver)
         checkbox.click.assert_called_once_with()
         self.assertEqual([call.args[0] for call in sleep.call_args_list], [5, 3])
 
