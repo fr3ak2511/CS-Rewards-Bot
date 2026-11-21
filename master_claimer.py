@@ -7346,7 +7346,7 @@ def main():
                         # A queued Progression attempt is capped at one attempt per slot.
                         # If it remains unconfirmed, allow immediate recovery for unrelated
                         # categories only; preserve the Progression target for the next slot.
-                        if r.get("progression_reinspection_attempted") and r.get("progression_unconfirmed"):
+                        if r.get("progression_reinspection_attempted"):
                             if _non_progression_recovery_candidate(r):
                                 progression_state = {
                                     key: r.get(key)
@@ -7362,15 +7362,15 @@ def main():
                                 recovery_input["progression_unconfirmed_card_signature"] = None
                                 r = immediate_recover_player_claims(
                                     pid, has_loyalty, new_id, run_label, recovery_input,
-                                    progression_reinspection=progression_attempt,
-                                    progression_inspection_blocked=progression_slot_blocked,
+                                    progression_reinspection=None,
+                                    progression_inspection_blocked=True,
                                 )
                                 r.update(progression_state)
                         else:
                             r = immediate_recover_player_claims(
                                 pid, has_loyalty, new_id, run_label, r,
-                                progression_reinspection=progression_attempt,
-                                progression_inspection_blocked=progression_slot_blocked,
+                                progression_reinspection=None,
+                                progression_inspection_blocked=True,
                             )
                     if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
                         coverage_result = dict(r)
@@ -7396,7 +7396,7 @@ def main():
                     progression_inspection_blocked=progression_slot_blocked,
                 )
                 if _full_claim_recovery_candidate(r):
-                    if r.get("progression_reinspection_attempted") and r.get("progression_unconfirmed"):
+                    if r.get("progression_reinspection_attempted"):
                         if _non_progression_recovery_candidate(r):
                             progression_state = {
                                 key: r.get(key)
@@ -7412,15 +7412,15 @@ def main():
                             recovery_input["progression_unconfirmed_card_signature"] = None
                             r = immediate_recover_player_claims(
                                 pid, has_loyalty, new_id, run_label, recovery_input,
-                                progression_reinspection=progression_attempt,
-                                progression_inspection_blocked=progression_slot_blocked,
+                                progression_reinspection=None,
+                                progression_inspection_blocked=True,
                             )
                             r.update(progression_state)
                     else:
                         r = immediate_recover_player_claims(
                             pid, has_loyalty, new_id, run_label, r,
-                            progression_reinspection=progression_attempt,
-                            progression_inspection_blocked=progression_slot_blocked,
+                            progression_reinspection=None,
+                            progression_inspection_blocked=True,
                         )
                 coverage_result = dict(r)
                 if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
