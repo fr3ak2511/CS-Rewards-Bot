@@ -3334,12 +3334,13 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         stats["progression_checked"] = bool(
             getattr(driver, "_progression_checked", not stats["progression_deferred"])
         )
-        log(
-            f"{'⏭️' if stats['progression_deferred'] else ('🚩' if stats['progression_unconfirmed'] else '✅')} "
-            f"{pid}: queued Progression reinspection "
-            f"{'deferred' if stats['progression_deferred'] else ('still unconfirmed' if stats['progression_unconfirmed'] else 'completed')}; "
-            f"{stats['progression']} claim(s) portal-confirmed."
-        )
+        if queued:
+            log(
+                f"{'⏭️' if stats['progression_deferred'] else ('🚩' if stats['progression_unconfirmed'] else '✅')} "
+                f"{pid}: queued Progression reinspection "
+                f"{'deferred' if stats['progression_deferred'] else ('still unconfirmed' if stats['progression_unconfirmed'] else 'completed')}; "
+                f"{stats['progression']} claim(s) portal-confirmed."
+            )
     except Exception as exc:
         # If a click may already have been dispatched, keep only the exact target
         # supplied by the safety helper. Otherwise this remains an inspection defer.
@@ -4639,9 +4640,11 @@ def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_
         "standard_rewards_checked": False,
         "progression_checked": False,
         "progression_unconfirmed": False,
+        "progression_unconfirmed_card_signature": None,
         "progression_deferred": False,
         "progression_deferred_reason": None,
         "progression_claim_attempted": False,
+        "progression_reinspection_attempted": False,
         "daily": 0,
         "store": 0,
         "store_temp": 0,
@@ -4658,7 +4661,6 @@ def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_
         "promotion_popup_blocked": False,
         "retry_required": False,
         "progression": 0,
-        "progression_unconfirmed": False,
         "grenade_balance": None,
         "daily_unconfirmed": False,
         "store_unconfirmed_indices": [],
