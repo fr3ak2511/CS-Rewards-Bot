@@ -3273,7 +3273,8 @@ def _scroll_progression_carousel(driver):
 
 def claim_progression_program_rewards(
     driver, pid, *, target_card_signature=None,
-    target_card_text_fragments=None, max_claims_per_visit=6
+    target_card_text_fragments=None, max_claims_per_visit=6,
+    require_unique_claimable_card=False, defer_if_more_claimable=False
 ):
     """Claim card-bound Progression rewards with popup and portal verification."""
     log("🎯 Checking Progression Program...")
@@ -3293,6 +3294,8 @@ def claim_progression_program_rewards(
         max_claims_per_visit=max_claims_per_visit,
         target_card_signature=target_card_signature,
         target_card_text_fragments=target_card_text_fragments,
+        require_unique_claimable_card=require_unique_claimable_card,
+        defer_if_more_claimable=defer_if_more_claimable,
     )
     return result
 
@@ -3350,7 +3353,10 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
             # Queue servicing is always bounded to one claim. A target-specific
             # selector is preferred when the deferred inspection has a known card.
             claimed = claim_progression_program_rewards(
-                driver, pid, max_claims_per_visit=1
+                driver, pid,
+                max_claims_per_visit=1,
+                require_unique_claimable_card=True,
+                defer_if_more_claimable=True,
             )
         stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
         stats["progression_unconfirmed"] = bool(
