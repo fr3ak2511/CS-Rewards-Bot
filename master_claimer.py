@@ -3954,7 +3954,6 @@ def _recovery_targets_from_result(result):
         result.get("progression_unconfirmed")
         and not result.get("progression_deferred")
         and not result.get("progression_reinspection_attempted")
-        and not progression_inspection_blocked
     )
     return {
         "login_retry": status == "Login Failed",
