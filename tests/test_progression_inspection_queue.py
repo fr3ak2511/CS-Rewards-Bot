@@ -47,6 +47,17 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(self.meta["claim_history"]["PLAYER0001"]["progression"], history_before)
         self.assertEqual(self.meta["full_claim_coverage"]["PLAYER0001"], coverage_before)
 
+    def test_read_or_unrelated_result_does_not_create_empty_queue(self):
+        self.assertIsNone(get_pending_progression_inspection(self.meta, "PLAYER0001"))
+        self.assertNotIn("progression_deferred_inspections", self.meta)
+        action = record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {"status": "Promotional Check Complete", "progression_checked": False},
+            run_label="Promotional Check #1", now="2026-11-21T12:05:00+05:30",
+        )
+        self.assertIsNone(action)
+        self.assertNotIn("progression_deferred_inspections", self.meta)
+
     def test_queue_result_is_a_copy(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
