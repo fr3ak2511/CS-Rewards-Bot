@@ -511,6 +511,24 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "card_text": "Premium reward · Save 20% today",
         }))
 
+    def test_email_includes_obvious_link_to_browser_copy_report(self):
+        player = self.sample_player()
+        with patch.dict("os.environ", {
+            "GITHUB_RUN_ID": "12345",
+            "GITHUB_REPOSITORY": "fr3ak2511/CS-Rewards-Bot",
+        }):
+            report = build_email(
+                [player], "Manual Run", 1,
+                get_ist_time() - timedelta(minutes=2), {},
+            )
+        self.assertIn("Open Copyable Report", report)
+        self.assertIn(
+            "href='https://github.com/fr3ak2511/CS-Rewards-Bot/actions/runs/12345#artifacts'",
+            report,
+        )
+        self.assertIn("Email apps block clipboard scripts.", report)
+        self.assertIn("use its Copy Report button", report)
+
     def test_email_is_compact_and_does_not_surface_streak_or_schedule(self):
         player = self.sample_player()
         player["event_rewards"] = []
