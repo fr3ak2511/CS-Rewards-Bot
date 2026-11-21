@@ -166,6 +166,21 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(archived["resolution"], "inspection_completed")
         self.assertEqual(archived["resolution_run_id"], "4002")
 
+    def test_login_or_processing_failure_does_not_resolve_pending_inspection(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+        )
+        action = record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {"status": "Login Failed", "progression_checked": True,
+             "progression_deferred": False, "progression_unconfirmed": False},
+            run_label="Promotional Check #2", now="2026-11-21T18:05:00+05:30",
+        )
+        self.assertIsNone(action)
+        self.assertIsNotNone(get_pending_progression_inspection(self.meta, "PLAYER0001"))
+        self.assertEqual(self.meta["progression_deferred_inspection_history"], [])
+
     def test_successful_claim_during_reinspection_archives_as_confirmed(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
