@@ -499,6 +499,283 @@ class RecoveryEligibilityTests(unittest.TestCase):
         self.assertFalse(bot._result_needs_recovery(result))
 
 
+class QueuedProgressionFullClaimPathTests(unittest.TestCase):
+    def test_blocked_queue_slot_suppresses_generic_full_claim_progression_scan(self):
+        driver = FakeDriver()
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(0, [True, True, True], [], [], [])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "_record_grenade_balance_for_player") as grenade, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_next": "next reset", "store_next": [None] * 3,
+                 "loyalty_next": None, "daily_status": "claimed",
+                 "store_status": ["claimed"] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player(
+                "TESTPLAYER0001", False, False, "Promotional Check #2",
+                progression_inspection_blocked=True,
+            )
+
+        progression.assert_not_called()
+        grenade.assert_not_called()
+        self.assertTrue(result["progression_deferred"])
+        self.assertFalse(result["progression_checked"])
+        self.assertFalse(result["progression_claim_attempted"])
+        self.assertTrue(driver.quit_called)
+
+    def test_deferred_progression_target_is_not_replayed_during_daily_immediate_recovery(self):
+        driver = FakeDriver()
+        result = {
+            "pid": "TESTPLAYER0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 0,
+            "daily_unconfirmed": True,
+            "store": 3,
+            "store_unconfirmed_indices": [],
+            "store_skipped": [True, True, True],
+            "progression": 0,
+            "progression_deferred": False,
+            "progression_reinspection_attempted": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+            "progression_claim_attempted": True,
+            "event_rewards": [],
+            "event_rewards_retry_required": False,
+            "possible": 4,
+        }
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(1, False, False)) as daily, \
+             patch.object(bot, "claim_store_rewards") as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed"] * 3, "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Promotional Check #2", result
+            )
+
+        daily.assert_called_once_with(driver, "TESTPLAYER0001", max_attempts=1)
+        store.assert_not_called()
+        progression.assert_not_called()
+        self.assertFalse(recovered["progression_deferred"])
+        self.assertTrue(recovered["progression_unconfirmed"])
+        self.assertTrue(driver.quit_called)
+
+    def test_store_recovery_does_not_repeat_a_first_deferred_progression_inspection(self):
+        driver = FakeDriver()
+        result = {
+            "pid": "TESTPLAYER0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 1,
+            "daily_unconfirmed": False,
+            "store": 0,
+            "store_unconfirmed_indices": [1],
+            "store_skipped": [False, True, True],
+            "store_possible": 1,
+            "progression": 0,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_deferred_reason": "Popup guard deferred the first inspection",
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+            "progression_reinspection_attempted": False,
+            "event_rewards": [],
+            "event_rewards_retry_required": False,
+            "possible": 2,
+        }
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"],
+                 "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Primary Run", result
+            )
+
+        store.assert_called_once()
+        progression.assert_not_called()
+        self.assertTrue(recovered["progression_deferred"])
+        self.assertFalse(recovered["progression_claim_attempted"])
+        self.assertTrue(driver.quit_called)
+
+    def test_store_recovery_never_uses_generic_progression_after_unconfirmed_click_without_signature(self):
+        driver = FakeDriver()
+        result = {
+            "pid": "TESTPLAYER0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 1,
+            "daily_unconfirmed": False,
+            "store": 0,
+            "store_unconfirmed_indices": [1],
+            "store_skipped": [False, True, True],
+            "store_possible": 1,
+            "progression": 0,
+            "progression_checked": False,
+            "progression_deferred": False,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": None,
+            "progression_claim_attempted": True,
+            "progression_reinspection_attempted": False,
+            "event_rewards": [],
+            "event_rewards_retry_required": False,
+            "possible": 2,
+        }
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"],
+                 "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Primary Run", result
+            )
+
+        store.assert_called_once()
+        progression.assert_not_called()
+        self.assertTrue(recovered["progression_unconfirmed"])
+        self.assertTrue(driver.quit_called)
+
+    def test_store_recovery_does_not_reopen_progression_when_queue_hold_is_active(self):
+        driver = FakeDriver()
+        result = {
+            "pid": "TESTPLAYER0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 1,
+            "daily_unconfirmed": False,
+            "store": 0,
+            "store_unconfirmed_indices": [1],
+            "store_skipped": [False, True, True],
+            "store_possible": 1,
+            "progression": 0,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_deferred_reason": "Queued inspection held for this run label",
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+            "event_rewards": [],
+            "event_rewards_retry_required": False,
+            "possible": 2,
+        }
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"],
+                 "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Promotional Check #2", result,
+                progression_inspection_blocked=True,
+            )
+
+        store.assert_called_once()
+        progression.assert_not_called()
+        self.assertTrue(recovered["progression_deferred"])
+        self.assertFalse(recovered["progression_checked"])
+        self.assertFalse(recovered["progression_claim_attempted"])
+        self.assertTrue(driver.quit_called)
+
+    def test_login_recovery_threads_queued_progression_slot_hold(self):
+        original = {"pid": "TESTPLAYER0001", "status": "Login Failed", "processing_mode": "full_claim"}
+        retried = {
+            "pid": "TESTPLAYER0001", "status": "Success", "processing_mode": "full_claim",
+            "daily": 1, "store": 0, "progression": 0, "loyalty": 0,
+            "event_rewards": [], "duration_s": 1,
+        }
+        with patch.object(bot, "process_player", return_value=retried) as process, \
+             patch.object(bot, "get_ist_time", return_value=datetime(2026, 11, 21, 18, 10)):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Promotional Check #2", original,
+                progression_reinspection=None,
+                progression_inspection_blocked=True,
+            )
+
+        self.assertEqual(recovered["status"], "Success")
+        process.assert_called_once_with(
+            "TESTPLAYER0001", False, False, "Promotional Check #2",
+            progression_reinspection=None,
+            progression_inspection_blocked=True,
+        )
+
+    def test_queued_target_is_serviced_in_full_claim_path_instead_of_generic_scan(self):
+        driver = FakeDriver()
+        queue_entry = {
+            "status": "claim_unconfirmed",
+            "requires_exact_target": True,
+            "target_card_signature": "Exact queued card",
+        }
+        def reinspection(target_driver, player_id, stats, entry):
+            self.assertIs(target_driver, driver)
+            self.assertEqual(player_id, "TESTPLAYER0001")
+            self.assertEqual(entry, queue_entry)
+            stats.update({
+                "progression": 0, "progression_checked": True,
+                "progression_unconfirmed": False, "progression_deferred": False,
+                "progression_claim_attempted": False, "progression_reinspection_attempted": True,
+            })
+            return stats
+
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(0, [True, True, True], [], [], [])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "_run_queued_progression_inspection", side_effect=reinspection) as queued, \
+             patch.object(bot, "_record_grenade_balance_for_player"), \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_next": "next reset", "store_next": [None] * 3,
+                 "loyalty_next": None, "daily_status": "claimed",
+                 "store_status": ["claimed"] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player(
+                "TESTPLAYER0001", False, False, "Promotional Check #2",
+                progression_reinspection=queue_entry,
+            )
+
+        queued.assert_called_once()
+        progression.assert_not_called()
+        self.assertTrue(result["progression_reinspection_attempted"])
+        self.assertTrue(result["progression_checked"])
+        self.assertTrue(driver.quit_called)
+
+
 class BackupReconciliationTests(unittest.TestCase):
     def test_backup_revisits_daily_and_standard_store_cards(self):
         driver = FakeDriver()
@@ -548,6 +825,33 @@ class BackupReconciliationTests(unittest.TestCase):
         self.assertEqual(result["progression"], 1)
         self.assertEqual(result["status"], "Claims Made")
 
+
+    def test_queued_progression_slot_hold_blocks_store_recovery_generic_reopen(self):
+        driver = FakeDriver()
+        driver._store_daily_recovered_indices = [1]
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "portal_claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"], "store_next": [None] * 3,
+                 "loyalty_next": None,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player_backup_reconciliation(
+                "TESTPLAYER0001", False, "Promotional Check #2",
+                progression_inspection_blocked=True,
+            )
+
+        progression.assert_not_called()
+        self.assertFalse(result["progression_checked"])
+        self.assertEqual(result["progression"], 0)
+        self.assertEqual(result["status"], "Claims Made")
 
     def test_backup_reopens_progression_for_portal_confirmed_store_transition_even_if_click_was_ambiguous(self):
         driver = FakeDriver()
@@ -727,6 +1031,30 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         full_account.assert_not_called()
         self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
         self.assertTrue(driver.quit_called)
+
+    def test_saved_login_recovery_preserves_deferred_progression_hold(self):
+        targets = {
+            "login_retry": True,
+            "processing_error": False,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "progression_card_signature": None,
+            "event_retry_required": False,
+            "event_thresholds_by_program": {},
+            "event_rewards": [],
+        }
+        with patch.object(bot, "immediate_recover_player_claims", return_value={
+            "pid": "TARGET0003A", "status": "Success"
+        }) as immediate:
+            recovered, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0003A", False, False, "Recovery Run", targets,
+                progression_inspection_blocked=True,
+            )
+
+        self.assertTrue(coverage_rechecked)
+        self.assertEqual(recovered["status"], "Success")
+        self.assertTrue(immediate.call_args.kwargs["progression_inspection_blocked"])
 
     def test_post_run_recovery_replays_exact_progression_and_event_targets(self):
         driver = FakeDriver()

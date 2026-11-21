@@ -21,7 +21,10 @@ from master_claimer import (
     _player_claim_total,
     _promotion_detail_worthy,
     _record_full_claim_coverage,
+    _recovery_targets_from_result,
     _mark_daily_recovery_slot_attempt,
+    _preserve_queued_progression_state,
+    _run_queued_progression_inspection,
     _summary_counts,
     build_email,
     build_event_rewards_section,
@@ -32,6 +35,159 @@ from master_claimer import (
 
 
 class ClaimCountAndEmailReportingTests(unittest.TestCase):
+    def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
+        driver = type("ProgressionDriver", (), {})()
+
+        def inspect(target_driver, player_id):
+            target_driver._progression_unconfirmed = False
+            target_driver._progression_unconfirmed_card_signature = None
+            target_driver._progression_deferred = False
+            target_driver._progression_deferred_reason = None
+            target_driver._progression_claim_attempted = False
+            target_driver._progression_checked = True
+            return 0
+
+        stats = {"progression": 0}
+        with patch("master_claimer.claim_progression_program_rewards", side_effect=inspect) as claim:
+            _run_queued_progression_inspection(
+                driver, "PLAYER0001", stats,
+                {"status": "deferred", "requires_exact_target": False, "target_card_signature": None},
+            )
+        claim.assert_called_once_with(driver, "PLAYER0001")
+        self.assertTrue(stats["progression_reinspection_attempted"])
+        self.assertTrue(stats["progression_checked"])
+        self.assertFalse(stats["progression_deferred"])
+
+    def test_prior_unconfirmed_reinspection_passes_exact_target_signature(self):
+        driver = type("ProgressionDriver", (), {})()
+
+        def inspect(target_driver, player_id, *, target_card_signature):
+            self.assertEqual(player_id, "PLAYER0001")
+            self.assertEqual(target_card_signature, "Grenade reward 3")
+            target_driver._progression_unconfirmed = False
+            target_driver._progression_unconfirmed_card_signature = None
+            target_driver._progression_deferred = False
+            target_driver._progression_deferred_reason = None
+            target_driver._progression_claim_attempted = False
+            target_driver._progression_checked = True
+            return 1
+
+        stats = {"progression": 0}
+        with patch("master_claimer.claim_progression_program_rewards", side_effect=inspect) as claim:
+            _run_queued_progression_inspection(
+                driver, "PLAYER0001", stats,
+                {"status": "claim_unconfirmed", "requires_exact_target": True,
+                 "target_card_signature": "Grenade reward 3"},
+            )
+        claim.assert_called_once_with(
+            driver, "PLAYER0001", target_card_signature="Grenade reward 3"
+        )
+        self.assertEqual(stats["progression"], 1)
+        self.assertTrue(stats["progression_checked"])
+
+    def test_preclick_exception_preserves_prior_exact_target_as_unconfirmed(self):
+        driver = type("ProgressionDriver", (), {})()
+        stats = {"progression": 0}
+        with patch("master_claimer.claim_progression_program_rewards", side_effect=RuntimeError("inspection failed")):
+            _run_queued_progression_inspection(
+                driver, "PLAYER0001", stats,
+                {"status": "claim_unconfirmed", "requires_exact_target": True,
+                 "target_card_signature": "Grenade reward 3"},
+            )
+        self.assertTrue(stats["progression_deferred"])
+        self.assertTrue(stats["progression_unconfirmed"])
+        self.assertEqual(stats["progression_unconfirmed_card_signature"], "Grenade reward 3")
+        self.assertFalse(stats["progression_claim_attempted"])
+        self.assertFalse(stats["progression_checked"])
+
+    def test_prior_unconfirmed_without_signature_fails_closed_without_claim_call(self):
+        driver = type("ProgressionDriver", (), {})()
+        stats = {"progression": 0}
+        with patch("master_claimer.claim_progression_program_rewards") as claim:
+            _run_queued_progression_inspection(
+                driver, "PLAYER0001", stats,
+                {"status": "claim_unconfirmed", "requires_exact_target": True,
+                 "target_card_signature": None},
+            )
+        claim.assert_not_called()
+        self.assertTrue(stats["progression_deferred"])
+        self.assertTrue(stats["progression_unconfirmed"])
+        self.assertFalse(stats["progression_checked"])
+        self.assertFalse(stats["progression_claim_attempted"])
+
+
+    def test_deferred_unconfirmed_progression_stays_out_of_broad_recovery_scope(self):
+        deferred = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "progression_deferred": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+        }
+        self.assertFalse(_full_claim_recovery_candidate(deferred))
+        self.assertTrue(_full_claim_recovery_candidate({
+            **deferred, "daily_unconfirmed": True,
+        }))
+
+    def test_deferred_exact_progression_target_is_not_serialized_into_general_retry(self):
+        targets = _recovery_targets_from_result({
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [2],
+            "progression_deferred": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+            "event_rewards": [],
+        })
+        self.assertTrue(targets["daily_unconfirmed"])
+        self.assertEqual(targets["store_unconfirmed_indices"], [2])
+        self.assertFalse(targets["progression_unconfirmed"])
+        self.assertIsNone(targets["progression_card_signature"])
+
+    def test_queued_progression_click_unconfirmed_does_not_become_general_retry(self):
+        result = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "progression_deferred": False,
+            "progression_reinspection_attempted": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+        targets = _recovery_targets_from_result(result)
+        self.assertFalse(targets["progression_unconfirmed"])
+        self.assertIsNone(targets["progression_card_signature"])
+
+    def test_daily_only_or_other_non_inspection_run_preserves_queue(self):
+        meta = {
+            "progression_deferred_inspections": {
+                "PLAYER0001": {
+                    "status": "claim_unconfirmed",
+                    "requires_exact_target": True,
+                    "target_card_signature": "Exact queued card",
+                }
+            }
+        }
+        daily_result = {
+            "status": "Success",
+            "progression_checked": True,
+            "progression_deferred": False,
+            "progression_unconfirmed": False,
+        }
+        preserved = _preserve_queued_progression_state(
+            meta, "PLAYER0001", daily_result,
+            "Daily-only recovery does not inspect Progression.",
+        )
+        self.assertFalse(preserved["progression_checked"])
+        self.assertTrue(preserved["progression_deferred"])
+        self.assertTrue(preserved["progression_unconfirmed"])
+        self.assertEqual(
+            preserved["progression_unconfirmed_card_signature"],
+            "Exact queued card",
+        )
+        self.assertFalse(preserved["progression_claim_attempted"])
+        self.assertIn("Daily-only", preserved["progression_deferred_reason"])
+
     def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
         result = {
             "pid": "PROMO0001",

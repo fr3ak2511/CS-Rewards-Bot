@@ -51,6 +51,72 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
 
 
+    def test_non_promotional_full_runs_route_existing_queue_through_slot_gate(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        self.assertIn('slot_label=run_label', source)
+        self.assertIn('progression_reinspection=progression_attempt', source)
+        self.assertIn('progression_inspection_blocked=progression_slot_blocked', source)
+        self.assertIn('"Primary Run", "Manual Run"', queue)
+        self.assertIn("_preserve_queued_progression_state(", source)
+        self.assertIn("pending_progression = get_pending_progression_inspection(meta, pid)", source)
+        self.assertIn('and not r.get("progression_reinspection_attempted")', source)
+
+    def test_deferred_progression_queue_is_serviced_without_widening_retry_scope(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
+        self.assertIn("'progression_inspection_queue.py'", workflow)
+        self.assertIn("record_progression_inspection_result", source)
+        self.assertIn("_record_queued_progression_inspection_result(meta, pid, r, run_label)", source)
+        self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
+        self.assertIn("elif recovered_store_indices and not progression_inspection_blocked:", source)
+        self.assertIn("_run_queued_progression_inspection(driver, pid, stats, progression_reinspection)", source)
+        self.assertIn("if requires_exact and not target_signature:", source)
+        self.assertIn("target_card_signature=target_signature", source)
+        self.assertIn("claim_progression_program_rewards(driver, pid)", source)
+        self.assertIn("_non_progression_recovery_candidate", source)
+        self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
+        self.assertIn("elif is_promotional_backup:", source)
+        self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("not result.get(\"progression_deferred\")", source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0])
+        self.assertIn("requires_exact_target", queue)
+        self.assertIn("attempted_slots", queue)
+        recovery_predicate = source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0]
+        self.assertIn("progression_unconfirmed", recovery_predicate)
+        self.assertIn("and not result.get(\"progression_deferred\")", recovery_predicate)
+        self.assertIn("and not result.get(\"progression_reinspection_attempted\")", recovery_predicate)
+        self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
+        self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
+
+    def test_daily_only_backup_never_services_progression_queue_for_non_target_accounts(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "if DAILY_ONLY_RECOVERY and not is_promotional_backup and not MANUAL_DAILY_RECOVERY:",
+            source,
+        )
+        marker = source.index("# Other roster members in a Daily-only promotional backup remain")
+        start = source.rfind("elif ", 0, marker)
+        end = source.index("elif is_promotional_backup:", marker)
+        non_target_branch = source[start:end]
+        self.assertIn("process_player_promotions_only(pid, new_id, run_label)", non_target_branch)
+        self.assertNotIn("get_pending_progression_inspection", non_target_branch)
+        self.assertNotIn("progression_reinspection", non_target_branch)
+
+    def test_slot_block_preserves_exact_unconfirmed_progression_identity(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn("if progression_slot_blocked and queued_progression:", source)
+        self.assertIn(
+            'r["progression_unconfirmed"] = bool(queued_progression.get("requires_exact_target"))',
+            source,
+        )
+        self.assertIn(
+            'r["progression_unconfirmed_card_signature"] = (',
+            source,
+        )
+
     def test_daily_only_backup_recovery_preserves_roster_streak_and_coverage(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn("not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY", source)
