@@ -23,6 +23,7 @@ on:
       - '.github/scripts/primary_dispatch_policy.js'
       - '.github/scripts/runtime_state_branch.sh'
       - 'progression_claim_safety.py'
+      - 'progression_inspection_queue.py'
       - 'reward_popup_guard.py'
       - 'requirements.txt'
       - 'tests/**'
