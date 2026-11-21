@@ -7353,11 +7353,17 @@ def main():
                                 recovery_input["progression_unconfirmed"] = False
                                 recovery_input["progression_unconfirmed_card_signature"] = None
                                 r = immediate_recover_player_claims(
-                                    pid, has_loyalty, new_id, run_label, recovery_input
+                                    pid, has_loyalty, new_id, run_label, recovery_input,
+                                    progression_reinspection=progression_attempt,
+                                    progression_inspection_blocked=progression_slot_blocked,
                                 )
                                 r.update(progression_state)
                         else:
-                            r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
+                            r = immediate_recover_player_claims(
+                                pid, has_loyalty, new_id, run_label, r,
+                                progression_reinspection=progression_attempt,
+                                progression_inspection_blocked=progression_slot_blocked,
+                            )
                     if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
                         coverage_result = dict(r)
                         if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
@@ -7397,11 +7403,17 @@ def main():
                             recovery_input["progression_unconfirmed"] = False
                             recovery_input["progression_unconfirmed_card_signature"] = None
                             r = immediate_recover_player_claims(
-                                pid, has_loyalty, new_id, run_label, recovery_input
+                                pid, has_loyalty, new_id, run_label, recovery_input,
+                                progression_reinspection=progression_attempt,
+                                progression_inspection_blocked=progression_slot_blocked,
                             )
                             r.update(progression_state)
                     else:
-                        r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
+                        r = immediate_recover_player_claims(
+                            pid, has_loyalty, new_id, run_label, r,
+                            progression_reinspection=progression_attempt,
+                            progression_inspection_blocked=progression_slot_blocked,
+                        )
                 coverage_result = dict(r)
                 if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
                     coverage_result["progression_unconfirmed"] = False
