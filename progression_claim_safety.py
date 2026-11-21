@@ -131,6 +131,8 @@ def claim_progression_rewards(
     max_claims_per_visit: int = 6,
     target_card_signature: str | None = None,
     target_card_text_fragments: tuple[str, ...] | list[str] | None = None,
+    require_unique_claimable_card: bool = False,
+    defer_if_more_claimable: bool = False,
 ) -> int:
     """Claim visible Progression rewards, optionally restricting recovery to one exact card.
 
@@ -201,6 +203,22 @@ def claim_progression_rewards(
                     str(item).strip() for item in (target_card_text_fragments or ())
                     if str(item).strip()
                 )
+
+                if require_unique_claimable_card and not prior_target_signature and not required_fragments:
+                    try:
+                        visible_claimable_count = int(before.get("claimable_count", 0) or 0)
+                    except (TypeError, ValueError):
+                        visible_claimable_count = -1
+                    visible_cards = before.get("claimable_cards") or []
+                    if visible_claimable_count > 1 or len(visible_cards) > 1:
+                        _defer(
+                            "Multiple Progression cards are claimable but this queued inspection has no saved exact target; "
+                            "refusing to guess which card to click"
+                        )
+                        break
+                    if visible_claimable_count < 0:
+                        _defer("Queued Progression inspection could not establish a reliable claimable-card count")
+                        break
                 if prior_target_signature and required_fragments:
                     _defer("Progression queue supplied conflicting exact-card and text-fragment identities; refusing to click")
                     break
@@ -397,6 +415,63 @@ def claim_progression_rewards(
                 # milestone can appear after the prior reward is redeemed.
                 sweep = 0
 
+            if defer_if_more_claimable and claimed >= max_claims_per_visit:
+                # A queued generic inspection is allowed one claim per slot. Do
+                # not resolve its queue entry until a click-free carousel sweep
+                # proves no other claimable card remains.
+                scan_complete = False
+                for _remaining_sweep in range(7):
+                    popup_clear, popup_reason = _dismiss()
+                    if not popup_clear:
+                        _defer(
+                            "One Progression reward was confirmed, but the remaining-card scan "
+                            f"was blocked by the popup/overlay guard ({popup_reason})"
+                        )
+                        break
+                    remaining = _safe_snapshot(snapshot_fn, driver, log)
+                    if remaining is None:
+                        _defer(
+                            "One Progression reward was confirmed, but the remaining-card scan "
+                            "could not read a reliable page snapshot"
+                        )
+                        break
+                    if not remaining.get("valid_page", True):
+                        _defer(
+                            "One Progression reward was confirmed, but the remaining-card scan "
+                            "failed Progression page validation"
+                        )
+                        break
+                    try:
+                        remaining_count = int(remaining.get("claimable_count", 0) or 0)
+                    except (TypeError, ValueError):
+                        _defer(
+                            "One Progression reward was confirmed, but the remaining-card scan "
+                            "could not establish the claimable-card count"
+                        )
+                        break
+                    if remaining_count < 0:
+                        _defer(
+                            "One Progression reward was confirmed, but the remaining-card scan "
+                            "returned an invalid claimable-card count"
+                        )
+                        break
+                    if remaining_count > 0:
+                        _defer(
+                            "One Progression reward was portal-confirmed, but additional claimable "
+                            "cards remain; keeping the inspection queued for another eligible slot"
+                        )
+                        break
+                    moved = _scroll_carousel(scroll_carousel, driver)
+                    if not moved:
+                        scan_complete = True
+                        break
+                    sleep(0.25)
+                if not scan_complete and not deferred:
+                    _defer(
+                        "One Progression reward was confirmed, but the remaining-card carousel "
+                        "scan reached its safety limit before completeness could be established"
+                    )
+
     except Exception as exc:
         if claim_attempted:
             unconfirmed = True
@@ -410,7 +485,7 @@ def claim_progression_rewards(
         # Do not rewrite claim history as an unconfirmed claim merely because
         # inspection was blocked before any click. A saved old target remains
         # unconfirmed and is deliberately preserved during its deferred recheck.
-        if not deferred or prior_target_signature:
+        if not deferred or prior_target_signature or claim_attempted or claimed > 0:
             try:
                 update_history(player_id, "progression", claimed_count=claimed, unconfirmed=unconfirmed)
             except Exception as exc:
