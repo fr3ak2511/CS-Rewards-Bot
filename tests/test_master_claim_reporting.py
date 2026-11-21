@@ -1438,6 +1438,32 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("…3456", row)
 
 
+    def test_email_counts_confirmed_claim_when_progression_inspection_remains_deferred(self):
+        result = {
+            "pid": "F251D3D226496061",
+            "display_name": "Gvk9916",
+            "processing_mode": "full_claim",
+            "status": "Success",
+            "retry_required": False,
+            "progression": 1,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_claim_attempted": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": "additional claimable cards remain",
+            "daily": 0, "store": 0, "loyalty": 0,
+            "has_loyalty": False, "promotions_observed": [], "event_rewards": [],
+        }
+        report = build_email(
+            [result], "Promotional Check #2", 2,
+            get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
+        )
+        self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
+        self.assertIn("1 account with confirmed claims", report)
+        self.assertIn("1 inspection(s) still queued", report)
+        self.assertIn("Deferred Checks", report)
+        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
+
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
             "pid": "5429611A24A8F01A",
