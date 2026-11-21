@@ -3954,6 +3954,7 @@ def _recovery_targets_from_result(result):
         result.get("progression_unconfirmed")
         and not result.get("progression_deferred")
         and not result.get("progression_reinspection_attempted")
+        and not progression_inspection_blocked
     )
     return {
         "login_retry": status == "Login Failed",
@@ -4481,7 +4482,7 @@ def immediate_recover_player_claims(
                 except Exception as exc:
                     unresolved.append("Progression reward")
                     log(f"🚩 Immediate Progression recovery raised {type(exc).__name__} for {pid}")
-            elif recovered_store_claims > 0:
+            elif recovered_store_claims > 0 and not progression_inspection_blocked:
                 # A newly confirmed Store card can unlock Progression rewards.
                 try:
                     progression_count = claim_progression_program_rewards(
