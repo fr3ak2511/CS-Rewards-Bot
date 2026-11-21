@@ -3273,7 +3273,8 @@ def _scroll_progression_carousel(driver):
 
 def claim_progression_program_rewards(
     driver, pid, *, target_card_signature=None,
-    target_card_text_fragments=None, max_claims_per_visit=6
+    target_card_text_fragments=None, max_claims_per_visit=6,
+    require_unique_claimable_card=False, defer_if_more_claimable=False
 ):
     """Claim card-bound Progression rewards with popup and portal verification."""
     log("🎯 Checking Progression Program...")
@@ -3293,6 +3294,8 @@ def claim_progression_program_rewards(
         max_claims_per_visit=max_claims_per_visit,
         target_card_signature=target_card_signature,
         target_card_text_fragments=target_card_text_fragments,
+        require_unique_claimable_card=require_unique_claimable_card,
+        defer_if_more_claimable=defer_if_more_claimable,
     )
     return result
 
@@ -3350,7 +3353,10 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
             # Queue servicing is always bounded to one claim. A target-specific
             # selector is preferred when the deferred inspection has a known card.
             claimed = claim_progression_program_rewards(
-                driver, pid, max_claims_per_visit=1
+                driver, pid,
+                max_claims_per_visit=1,
+                require_unique_claimable_card=True,
+                defer_if_more_claimable=True,
             )
         stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
         stats["progression_unconfirmed"] = bool(
@@ -5351,6 +5357,13 @@ def build_deferred_checks_section(results):
                 "deferred, and no additional claim click was attempted. "
                 + reason
             )
+        elif result.get("progression_claim_attempted") or int(result.get("progression", 0) or 0) > 0:
+            detail = (
+                f"{int(result.get('progression', 0) or 0)} Progression reward(s) were portal-confirmed, "
+                "but the remaining-card inspection is incomplete and stays queued. "
+                "No further claim click was attempted. "
+                + reason
+            )
         else:
             detail = (
                 "Progression inspection was deferred; no claim click was attempted. "
@@ -6061,6 +6074,12 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             (bool(result.get("progression_checked")) and not result.get("progression_deferred"))
             or (result.get("processing_mode", "full_claim") == "full_claim"
                 and not _is_hard_failure(result) and not result.get("progression_deferred"))
+            # Preserve portal-confirmed claims from a one-click queued inspection
+            # even when additional visible cards keep the inspection deferred.
+            or (
+                bool(result.get("progression_deferred"))
+                and int(result.get("progression", 0) or 0) > 0
+            )
         )
     ]
     full_claim_results = [
@@ -6250,7 +6269,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         else:
             value = sum(int(result.get(claim_key, 0) or 0) for result in checked_results)
             account_word = "account" if len(checked_results) == 1 else "accounts"
-            note = f"{len(checked_results)} {account_word} checked"
+            partial_progression = sum(
+                1 for result in checked_results
+                if label == "Progression Rewards"
+                and result.get("progression_deferred")
+                and int(result.get("progression", 0) or 0) > 0
+            )
+            note = (
+                f"{len(checked_results)} {account_word} with confirmed claims · "
+                f"{partial_progression} inspection(s) still queued"
+                if partial_progression else f"{len(checked_results)} {account_word} checked"
+            )
         return (
             f"<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-{tone}'>"
             f"<span>{label}</span><strong>{value}</strong><small>{html.escape(note)}</small></div></td>"

@@ -38,8 +38,13 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
     def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
         driver = type("ProgressionDriver", (), {})()
 
-        def inspect(target_driver, player_id, *, max_claims_per_visit):
+        def inspect(
+            target_driver, player_id, *, max_claims_per_visit,
+            require_unique_claimable_card, defer_if_more_claimable
+        ):
             self.assertEqual(max_claims_per_visit, 1)
+            self.assertTrue(require_unique_claimable_card)
+            self.assertTrue(defer_if_more_claimable)
             target_driver._progression_unconfirmed = False
             target_driver._progression_unconfirmed_card_signature = None
             target_driver._progression_deferred = False
@@ -54,7 +59,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 driver, "PLAYER0001", stats,
                 {"status": "deferred", "requires_exact_target": False, "target_card_signature": None},
             )
-        claim.assert_called_once_with(driver, "PLAYER0001", max_claims_per_visit=1)
+        claim.assert_called_once_with(
+            driver, "PLAYER0001", max_claims_per_visit=1,
+            require_unique_claimable_card=True, defer_if_more_claimable=True,
+        )
         self.assertTrue(stats["progression_reinspection_attempted"])
         self.assertTrue(stats["progression_checked"])
         self.assertFalse(stats["progression_deferred"])
@@ -1438,6 +1446,32 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("…3456", row)
 
 
+    def test_email_counts_confirmed_claim_when_progression_inspection_remains_deferred(self):
+        result = {
+            "pid": "F251D3D226496061",
+            "display_name": "Gvk9916",
+            "processing_mode": "full_claim",
+            "status": "Success",
+            "retry_required": False,
+            "progression": 1,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_claim_attempted": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": "additional claimable cards remain",
+            "daily": 0, "store": 0, "loyalty": 0,
+            "has_loyalty": False, "promotions_observed": [], "event_rewards": [],
+        }
+        report = build_email(
+            [result], "Promotional Check #2", 2,
+            get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
+        )
+        self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
+        self.assertIn("1 account with confirmed claims", report)
+        self.assertIn("1 inspection(s) still queued", report)
+        self.assertIn("Deferred Checks", report)
+        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
+
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
             "pid": "5429611A24A8F01A",
@@ -1458,6 +1492,24 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("hgkme1", deferred)
         self.assertIn("no claim click was attempted", deferred)
         self.assertNotIn("Attention Required", deferred)
+
+
+    def test_email_deferred_checks_explain_partial_progression_confirmation(self):
+        result = {
+            "pid": "F251D3D226496061",
+            "display_name": "Gvk9916",
+            "progression": 1,
+            "progression_deferred": True,
+            "progression_claim_attempted": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": (
+                "One Progression reward was portal-confirmed, but additional claimable cards remain"
+            ),
+        }
+        section = build_deferred_checks_section([result])
+        self.assertIn("1 Progression reward(s) were portal-confirmed", section)
+        self.assertIn("remaining-card inspection is incomplete and stays queued", section)
+        self.assertNotIn("no claim click was attempted", section.lower())
 
     def test_deferred_recheck_keeps_a_real_prior_progression_failure_visible(self):
         result = {

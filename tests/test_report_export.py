@@ -206,6 +206,25 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Unconfirmed claims: <strong>0</strong>", report)
         self.assertIn("Progression</span><strong>0</strong>", report)
 
+
+    def test_deferred_progression_reports_partial_confirmation_truthfully(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression": 1,
+            "progression_deferred": True,
+            "progression_claim_attempted": True,
+            "progression_deferred_reason": (
+                "One Progression reward was portal-confirmed, but additional claimable cards remain"
+            ),
+            "progression_unconfirmed": False,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
+        self.assertIn("remaining-card inspection is incomplete and stays queued", report)
+        self.assertNotIn("no claim click was attempted", report.lower())
+
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
             build_copyable_report([])

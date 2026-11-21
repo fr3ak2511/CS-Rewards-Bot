@@ -136,6 +136,12 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
                 "A previously attempted Progression claim remains unconfirmed; "
                 "this recheck was deferred and no additional claim click was attempted."
             )
+        elif player.get("progression_claim_attempted") or int(player.get("progression", 0) or 0) > 0:
+            detail = (
+                f"{int(player.get('progression', 0) or 0)} Progression reward(s) were portal-confirmed, "
+                "but the remaining-card inspection is incomplete and stays queued. "
+                "No further claim click was attempted."
+            )
         else:
             detail = "Progression inspection was deferred; no claim click was attempted."
         deferred_rows.append(
