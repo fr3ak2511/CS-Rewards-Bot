@@ -3352,7 +3352,9 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         # supplied by the safety helper. Otherwise this remains an inspection defer.
         attempted = bool(getattr(driver, "_progression_claim_attempted", False))
         stats["progression_claim_attempted"] = attempted
-        stats["progression_unconfirmed"] = attempted
+        # An exact-target entry may represent a click from an earlier run.
+        # A new pre-click exception does not clear that older unconfirmed claim.
+        stats["progression_unconfirmed"] = bool(attempted or requires_exact)
         stats["progression_unconfirmed_card_signature"] = getattr(
             driver, "_progression_unconfirmed_card_signature", None
         ) or (target_signature or None)
