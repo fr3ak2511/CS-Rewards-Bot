@@ -97,8 +97,9 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
             "if DAILY_ONLY_RECOVERY and not is_promotional_backup and not MANUAL_DAILY_RECOVERY:",
             source,
         )
-        start = source.index("elif DAILY_ONLY_RECOVERY:")
-        end = source.index("elif is_promotional_backup:", start)
+        marker = source.index("# Other roster members in a Daily-only promotional backup remain")
+        start = source.rfind("elif ", 0, marker)
+        end = source.index("elif is_promotional_backup:", marker)
         non_target_branch = source[start:end]
         self.assertIn("process_player_promotions_only(pid, new_id, run_label)", non_target_branch)
         self.assertNotIn("get_pending_progression_inspection", non_target_branch)
