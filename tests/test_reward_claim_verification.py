@@ -573,6 +573,52 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
         self.assertTrue(recovered["progression_unconfirmed"])
         self.assertTrue(driver.quit_called)
 
+    def test_store_recovery_does_not_reopen_progression_when_queue_hold_is_active(self):
+        driver = FakeDriver()
+        result = {
+            "pid": "TESTPLAYER0001",
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "daily": 1,
+            "daily_unconfirmed": False,
+            "store": 0,
+            "store_unconfirmed_indices": [1],
+            "store_skipped": [False, True, True],
+            "store_possible": 1,
+            "progression": 0,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_deferred_reason": "Queued inspection held for this run label",
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+            "event_rewards": [],
+            "event_rewards_retry_required": False,
+            "possible": 2,
+        }
+        with patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])) as store, \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"],
+                 "store_next": [None] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            recovered = bot.immediate_recover_player_claims(
+                "TESTPLAYER0001", False, False, "Promotional Check #2", result,
+                progression_inspection_blocked=True,
+            )
+
+        store.assert_called_once()
+        progression.assert_not_called()
+        self.assertTrue(recovered["progression_deferred"])
+        self.assertFalse(recovered["progression_checked"])
+        self.assertFalse(recovered["progression_claim_attempted"])
+        self.assertTrue(driver.quit_called)
+
     def test_login_recovery_threads_queued_progression_slot_hold(self):
         original = {"pid": "TESTPLAYER0001", "status": "Login Failed", "processing_mode": "full_claim"}
         retried = {
