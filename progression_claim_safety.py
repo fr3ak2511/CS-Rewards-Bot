@@ -93,6 +93,27 @@ def _scroll_carousel(scroll_fn: Callable | None, driver) -> bool:
         return False
 
 
+def _matches_card_text_fragments(value: Any, fragments: tuple[str, ...]) -> bool:
+    """Match a card only when every required, independently visible identity token is present."""
+    text = re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+    if not text or not fragments:
+        return False
+    for raw_fragment in fragments:
+        fragment = re.sub(r"\s+", " ", str(raw_fragment or "")).strip().casefold()
+        if not fragment:
+            return False
+        if fragment.isdigit():
+            if not re.search(rf"(?<![0-9]){re.escape(fragment)}(?![0-9])", text):
+                return False
+        elif re.fullmatch(r"x\s*[0-9]+", fragment):
+            quantity = re.sub(r"[^0-9]", "", fragment)
+            if not re.search(rf"(?<![a-z0-9])x\s*{re.escape(quantity)}(?![0-9])", text):
+                return False
+        elif fragment not in text:
+            return False
+    return True
+
+
 def claim_progression_rewards(
     driver,
     player_id: str,
@@ -109,6 +130,7 @@ def claim_progression_rewards(
     poll_seconds: float = 0.5,
     max_claims_per_visit: int = 6,
     target_card_signature: str | None = None,
+    target_card_text_fragments: tuple[str, ...] | list[str] | None = None,
 ) -> int:
     """Claim visible Progression rewards, optionally restricting recovery to one exact card.
 
@@ -174,6 +196,60 @@ def claim_progression_rewards(
                         f"title={str(before.get('title') or '')[:100]!r})"
                     )
                     break
+
+                required_fragments = tuple(
+                    str(item).strip() for item in (target_card_text_fragments or ())
+                    if str(item).strip()
+                )
+                if prior_target_signature and required_fragments:
+                    _defer("Progression queue supplied conflicting exact-card and text-fragment identities; refusing to click")
+                    break
+
+                if required_fragments:
+                    claimable_matches = [
+                        card for card in (before.get("claimable_cards") or [])
+                        if isinstance(card, dict)
+                        and _matches_card_text_fragments(
+                            card.get("card_text") or card.get("card_signature"),
+                            required_fragments,
+                        )
+                    ]
+                    delivered_values = [
+                        str(item).strip()
+                        for item in list(before.get("delivered_signatures") or [])
+                        + list(before.get("terminal_card_signatures") or [])
+                        if str(item).strip()
+                    ]
+                    delivered_matches = [
+                        item for item in delivered_values
+                        if _matches_card_text_fragments(item, required_fragments)
+                    ]
+
+                    if len(claimable_matches) == 1 and not delivered_matches:
+                        target_card = claimable_matches[0]
+                        target_signature = str(target_card.get("card_signature") or "").strip()
+                        target_button = target_card.get("button")
+                        if not target_signature or target_button is None:
+                            _defer("Required Progression milestone matched but did not expose a stable card identity and native button")
+                            break
+                        before = dict(before)
+                        before.update({
+                            "button": target_button,
+                            "button_text": target_card.get("button_text") or "claim",
+                            "card_signature": target_signature,
+                            "card_text": target_card.get("card_text") or target_signature,
+                            "claimable_count": 1,
+                        })
+                        log("🎯 Progression queue selected one uniquely matching milestone card.")
+                    elif not claimable_matches and len(delivered_matches) == 1:
+                        log("✅ Progression queue target is already portal-confirmed Delivered; no other milestone will be clicked.")
+                        break
+                    else:
+                        _defer(
+                            "Required Progression milestone did not resolve to exactly one claimable or one Delivered card; "
+                            "refusing all other milestone clicks"
+                        )
+                        break
 
                 if prior_target_signature:
                     target_signature = prior_target_signature
