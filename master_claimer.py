@@ -5065,17 +5065,27 @@ def build_standard_attention_section(results):
     )
 
 
+def _deferred_progression_reason_summary(raw_reason):
+    """Keep user-facing reports concise; retain full popup diagnostics in run artifacts."""
+    raw = str(raw_reason or "").strip()
+    if not raw:
+        return "Popup/overlay safety guard blocked Progression inspection"
+    summary = raw.split("popup_context=", 1)[0].split(";", 1)[0].strip().rstrip(" ,")
+    if summary.endswith("("):
+        summary = summary[:-1].rstrip()
+    if "(" in summary and not summary.endswith(")"):
+        summary += ")"
+    return summary[:180].rstrip()
+
+
 def build_deferred_checks_section(results):
-    """Render safe checks that could not be completed without implying a failed claim."""
+    """Render incomplete Progression inspections without implying a failed claim."""
     rows = []
     for result in results:
         if not result.get("progression_deferred"):
             continue
         player = html.escape(_issue_identity_label(result))
-        reason = str(
-            result.get("progression_deferred_reason")
-            or "Progression inspection was blocked by a safety check"
-        )
+        reason = _deferred_progression_reason_summary(result.get("progression_deferred_reason"))
         if result.get("progression_unconfirmed"):
             detail = (
                 "A previously attempted claim remains unconfirmed; this recheck was "
@@ -5099,7 +5109,7 @@ def build_deferred_checks_section(results):
     return (
         "<section class='v2-section v2-deferred'>"
         "<div class='v2-section-head'><h2>Deferred Checks</h2>"
-        f"<span>{count} {account_word} · no new claim click attempted</span></div>"
+        f"<span>{count} {account_word} requiring review · no new claim click attempted</span></div>"
         + "".join(rows)
         + "</section>"
     )
@@ -5875,6 +5885,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             or bool(result.get("promotion_detection_failed"))
             or promo_attention
             or event_attention
+            or bool(result.get("progression_deferred"))
             or grenade_attention
         )
         if needs_attention:
@@ -5884,6 +5895,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 or result.get("promotion_detection_failed")
                 or promo_attention
                 or event_attention
+                or bool(result.get("progression_deferred"))
                 or grenade_attention
             )
             if status in hard_failures or not has_specific_detail:
@@ -5911,6 +5923,13 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 # retain one masked pending identity instead of double-counting it.
                 attention_player_ids.add("pending:" + suffix)
     attention_accounts = len(attention_player_ids)
+    attention_account_label = "account" if attention_accounts == 1 else "accounts"
+    deferred_check_count = sum(1 for result in results if result.get("progression_deferred"))
+    if deferred_check_count:
+        deferred_word = "inspection" if deferred_check_count == 1 else "inspections"
+        attention_note = f"Includes {deferred_check_count} deferred Progression {deferred_word}"
+    else:
+        attention_note = "Accounts with item-level exceptions"
 
     actual_failures = int(counts.get("actual_failures", 0) or 0)
     if account_count == 0 or (actual_failures and actual_failures == account_count):
@@ -5938,17 +5957,25 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         cycle_summary, results, display_name_map
     ) if is_recovery_rollup else ""
     exception_details = standard_attention_html + "".join(exception_cards)
+    if deferred_check_count:
+        attention_fallback_note = (
+            "Review Deferred Checks. Inspection was incomplete; this does not mean a claim click failed."
+        )
+    else:
+        attention_fallback_note = (
+            "Review the highlighted items in the reward, validation, promotion or event sections above."
+        )
     if exception_details:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} {attention_account_label}</span></div>"
             + exception_details + "</section>"
         )
     elif attention_accounts:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
-            "<p class='v2-muted-note'>Review the highlighted items in the reward, validation, promotion or event sections above.</p>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} {attention_account_label}</span></div>"
+            f"<p class='v2-muted-note'>{html.escape(attention_fallback_note)}</p>"
             "</section>"
         )
     else:
@@ -6036,7 +6063,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         (accounts_kpi_label, accounts_kpi_value, accounts_kpi_note, "accounts", "👥"),
         ("Confirmed claims", confirmed_claims, confirmed_note, "claims", "🎁"),
         (recovery_kpi_label, recovery_kpi_value, recovery_kpi_note, "recovery", "🔄"),
-        ("Need attention", attention_accounts, "Accounts with item-level exceptions", "attention", "⚠️"),
+        ("Need attention", attention_accounts, attention_note, "attention", "⚠️"),
     ]
     kpi_cells = "".join(
         "<td class='v2-kpi-cell' width='25%' valign='top'>"
@@ -6129,7 +6156,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         ".v2-good{color:#166534}"
         ".v2-attention{background-color:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
         ".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}"
-        ".v2-deferred{background-color:#f8fafc;border-color:#cbd5e1}"
+        ".v2-deferred{background-color:#fffbeb;border-color:#f4d2a4}"
         ".v2-exception{background-color:#fff;border:1px solid #e5e7eb;border-left:4px solid #d97706;border-radius:8px;padding:10px;margin:7px 0}"
         ".v2-exception div{display:block;margin-bottom:4px}"
         ".v2-exception p{margin:7px 0 0;color:#64748b;font-size:12px;line-height:1.45;overflow-wrap:anywhere}"

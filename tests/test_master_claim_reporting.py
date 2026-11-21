@@ -511,7 +511,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 account checked</small>", report)
 
 
-    def test_deferred_progression_is_not_counted_as_checked_or_attention_required(self):
+    def test_deferred_progression_is_not_counted_as_checked_but_requires_review(self):
         checked = [
             {
                 "pid": f"CHECKED{i:04d}",
@@ -536,7 +536,11 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "progression_checked": False,
             "progression_unconfirmed": False,
             "progression_deferred": True,
-            "progression_deferred_reason": "popup/overlay safety guard blocked inspection",
+            "progression_deferred_reason": (
+                "popup/overlay safety guard blocked inspection "
+                "(blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; overlays=1; "
+                "top_dialog='PRIVATE-POPUP-CONTEXT'; popup_context={\"url\":\"https://internal.invalid\"})"
+            ),
             "progression_claim_attempted": False,
             "daily": 1, "store": 3, "progression": 0, "loyalty": 0,
             "has_loyalty": False, "promotions_observed": [], "event_rewards": [],
@@ -549,8 +553,15 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Deferred Checks", report)
         self.assertIn("hgkme1", report)
         self.assertIn("no claim click was attempted", report)
-        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Completed", report)
+        self.assertIn("1 account requiring review", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>1 account</span>", report)
+        self.assertNotIn("<span>1 accounts</span>", report)
+        self.assertIn("Attention Required", report)
+        self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", report)
+        self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
+        self.assertNotIn("popup_context", report)
+        self.assertNotIn("unconfirmed standard reward", report.lower())
         self.assertNotIn("<span>Progression Rewards</span><strong>0</strong><small>35 accounts checked</small>", report)
 
     def test_generic_popup_blocker_remains_reportable(self):

@@ -177,6 +177,35 @@ class CopyableReportTests(unittest.TestCase):
             msg=f"Generated report JavaScript is invalid:\n{result.stderr}",
         )
 
+    def test_deferred_progression_is_actionable_without_becoming_a_claim_failure(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression_deferred": True,
+            "progression_deferred_reason": (
+                "popup/overlay safety guard blocked inspection "
+                "(blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; "
+                "top_dialog='PRIVATE-POPUP-CONTEXT'; popup_context={\"url\":\"https://internal.invalid\"})"
+            ),
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+
+        report = build_copyable_report(summary)
+        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn("<strong>1</strong><small>Includes 1 deferred Progression inspection", report)
+        self.assertIn("Deferred Checks", report)
+        self.assertIn("&lt;Player One&gt;", report)
+        self.assertIn(">Deferred check</span>", report)
+        self.assertIn("no claim click was attempted", report)
+        self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", report)
+        self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
+        self.assertNotIn("popup_context", report)
+        self.assertIn("Actual failures: <strong>0</strong>", report)
+        self.assertIn("Unconfirmed claims: <strong>0</strong>", report)
+        self.assertIn("Progression</span><strong>0</strong>", report)
+
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
             build_copyable_report([])
