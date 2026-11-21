@@ -21,6 +21,7 @@ from master_claimer import (
     _player_claim_total,
     _promotion_detail_worthy,
     _record_full_claim_coverage,
+    _recovery_targets_from_result,
     _mark_daily_recovery_slot_attempt,
     _run_queued_progression_inspection,
     _summary_counts,
@@ -98,6 +99,34 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(stats["progression_checked"])
         self.assertFalse(stats["progression_claim_attempted"])
 
+
+    def test_deferred_unconfirmed_progression_stays_out_of_broad_recovery_scope(self):
+        deferred = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "progression_deferred": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+        }
+        self.assertFalse(_full_claim_recovery_candidate(deferred))
+        self.assertTrue(_full_claim_recovery_candidate({
+            **deferred, "daily_unconfirmed": True,
+        }))
+
+    def test_deferred_exact_progression_target_is_not_serialized_into_general_retry(self):
+        targets = _recovery_targets_from_result({
+            "status": "Partial",
+            "daily_unconfirmed": True,
+            "store_unconfirmed_indices": [2],
+            "progression_deferred": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+            "event_rewards": [],
+        })
+        self.assertTrue(targets["daily_unconfirmed"])
+        self.assertEqual(targets["store_unconfirmed_indices"], [2])
+        self.assertFalse(targets["progression_unconfirmed"])
+        self.assertIsNone(targets["progression_card_signature"])
 
     def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
         result = {
