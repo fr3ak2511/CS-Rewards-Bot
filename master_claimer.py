@@ -6076,7 +6076,10 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 and not _is_hard_failure(result) and not result.get("progression_deferred"))
             # Preserve portal-confirmed claims from a one-click queued inspection
             # even when additional visible cards keep the inspection deferred.
-            or int(result.get("progression", 0) or 0) > 0
+            or (
+                bool(result.get("progression_deferred"))
+                and int(result.get("progression", 0) or 0) > 0
+            )
         )
     ]
     full_claim_results = [
