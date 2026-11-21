@@ -84,6 +84,21 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertEqual(stats["progression"], 1)
         self.assertTrue(stats["progression_checked"])
 
+    def test_preclick_exception_preserves_prior_exact_target_as_unconfirmed(self):
+        driver = type("ProgressionDriver", (), {})()
+        stats = {"progression": 0}
+        with patch("master_claimer.claim_progression_program_rewards", side_effect=RuntimeError("inspection failed")):
+            _run_queued_progression_inspection(
+                driver, "PLAYER0001", stats,
+                {"status": "claim_unconfirmed", "requires_exact_target": True,
+                 "target_card_signature": "Grenade reward 3"},
+            )
+        self.assertTrue(stats["progression_deferred"])
+        self.assertTrue(stats["progression_unconfirmed"])
+        self.assertEqual(stats["progression_unconfirmed_card_signature"], "Grenade reward 3")
+        self.assertFalse(stats["progression_claim_attempted"])
+        self.assertFalse(stats["progression_checked"])
+
     def test_prior_unconfirmed_without_signature_fails_closed_without_claim_call(self):
         driver = type("ProgressionDriver", (), {})()
         stats = {"progression": 0}
