@@ -92,7 +92,10 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             reset_date="2026-11-21", now="2026-11-21T18:05:00+05:30",
         )
         self.assertIsNotNone(second)
-        self.assertEqual(second["attempted_slots"], ["Promotional Check #1", "Promotional Check #2"])
+        self.assertEqual(
+            second["attempted_slots"],
+            ["Primary Run", "Promotional Check #1", "Promotional Check #2"],
+        )
 
     def test_primary_and_manual_full_runs_can_reserve_a_distinct_queue_slot(self):
         record_progression_inspection_result(
