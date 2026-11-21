@@ -5923,6 +5923,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 # retain one masked pending identity instead of double-counting it.
                 attention_player_ids.add("pending:" + suffix)
     attention_accounts = len(attention_player_ids)
+    attention_account_label = "account" if attention_accounts == 1 else "accounts"
     deferred_check_count = sum(1 for result in results if result.get("progression_deferred"))
     if deferred_check_count:
         deferred_word = "inspection" if deferred_check_count == 1 else "inspections"
@@ -5967,7 +5968,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     if exception_details:
         attention_html = (
             "<section class='v2-section v2-exceptions'>"
-            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} accounts</span></div>"
+            f"<div class='v2-section-head'><h2>Attention &amp; Exceptions</h2><span>{attention_accounts} {attention_account_label}</span></div>"
             + exception_details + "</section>"
         )
     elif attention_accounts:
