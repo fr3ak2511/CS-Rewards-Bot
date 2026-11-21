@@ -536,6 +536,17 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
             "requires_exact_target": True,
             "target_card_signature": "Exact queued card",
         }
+        def reinspection(target_driver, player_id, stats, entry):
+            self.assertIs(target_driver, driver)
+            self.assertEqual(player_id, "TESTPLAYER0001")
+            self.assertEqual(entry, queue_entry)
+            stats.update({
+                "progression": 0, "progression_checked": True,
+                "progression_unconfirmed": False, "progression_deferred": False,
+                "progression_claim_attempted": False, "progression_reinspection_attempted": True,
+            })
+            return stats
+
         with patch.object(bot, "init_player_history"), \
              patch.object(bot, "create_driver", return_value=driver), \
              patch.object(bot, "login_to_hub", return_value=True), \
@@ -543,11 +554,7 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
              patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
              patch.object(bot, "claim_store_rewards", return_value=(0, [True, True, True], [], [], [])), \
              patch.object(bot, "claim_progression_program_rewards") as progression, \
-             patch.object(bot, "_run_queued_progression_inspection", return_value={
-                 "progression": 0, "progression_checked": True,
-                 "progression_unconfirmed": False, "progression_deferred": False,
-                 "progression_claim_attempted": False, "progression_reinspection_attempted": True,
-             }) as queued, \
+             patch.object(bot, "_run_queued_progression_inspection", side_effect=reinspection) as queued, \
              patch.object(bot, "_record_grenade_balance_for_player"), \
              patch.object(bot, "run_event_reward_checks", return_value=[]), \
              patch.object(bot, "get_reward_status", return_value={
@@ -561,7 +568,7 @@ class QueuedProgressionFullClaimPathTests(unittest.TestCase):
                 progression_reinspection=queue_entry,
             )
 
-        queued.assert_called_once_with(driver, "TESTPLAYER0001", queued.call_args.args[2], queue_entry)
+        queued.assert_called_once()
         progression.assert_not_called()
         self.assertTrue(result["progression_reinspection_attempted"])
         self.assertTrue(result["progression_checked"])
