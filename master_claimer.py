@@ -1316,26 +1316,59 @@ def create_driver():
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def bypass_cloudflare(driver):
+    """Wait for a visible Cloudflare challenge using the shared DOM-aware detector.
+
+    The bounded wait and existing checkbox interaction are preserved. A generic
+    occurrence of the word "verifying" in bundled portal HTML is not sufficient
+    to trigger a challenge wait.
+    """
     try:
-        title  = driver.title.lower()
-        source = driver.page_source.lower()
-        if "just a moment" not in title and "verifying" not in source:
+        if not _is_cloudflare_interstitial(
+            driver,
+            log_no_challenge=False,
+            log_detected=False,
+            inconclusive_as_detected=True,
+        ):
             return
-        log("🛡️ Cloudflare detected — waiting...")
+
+        log("🛡️ Visible Cloudflare challenge detected — waiting...")
         time.sleep(5)
         try:
-            driver.find_elements(By.XPATH, "//input[@type='checkbox']")[0].click()
-            time.sleep(3)
-        except:
-            pass
-        for _ in range(10):
-            if ("hub.vertigogames.co" in driver.current_url
-                    and "verifying" not in driver.page_source.lower()):
-                log("✅ Cloudflare cleared")
+            checkboxes = driver.find_elements(By.XPATH, "//input[@type='checkbox']")
+            if checkboxes:
+                checkboxes[0].click()
+                time.sleep(3)
+        except Exception as exc:
+            log(f"⚠️ Cloudflare checkbox interaction unavailable ({type(exc).__name__}); continuing bounded wait")
+
+        last_challenge_detected = True
+        portal_host_reached = False
+        for poll in range(1, 11):
+            try:
+                last_challenge_detected = _is_cloudflare_interstitial(
+                    driver,
+                    log_no_challenge=False,
+                    log_detected=False,
+                    inconclusive_as_detected=True,
+                )
+                current_url = str(driver.current_url or "").lower()
+                portal_host_reached = "hub.vertigogames.co" in current_url
+            except Exception as exc:
+                log(f"⚠️ Cloudflare state poll {poll}/10 was inconclusive ({type(exc).__name__})")
+                time.sleep(1)
+                continue
+
+            if not last_challenge_detected and portal_host_reached:
+                log(f"✅ Cloudflare challenge cleared after {poll}/10 state checks")
                 return
             time.sleep(1)
-    except:
-        pass
+
+        if last_challenge_detected:
+            log("⚠️ Cloudflare challenge remained visible after 10 state checks; no clearance was confirmed")
+        else:
+            log("⚠️ Cloudflare challenge markers cleared, but the portal host was not confirmed after 10 state checks")
+    except Exception as exc:
+        log(f"⚠️ Cloudflare wait diagnostics could not complete ({type(exc).__name__}); continuing without an unverified clearance claim")
 
 
 def accept_cookies(driver):
@@ -6382,9 +6415,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     if run_id.isdigit() and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         run_url = f"https://github.com/{repository}/actions/runs/{run_id}"
         safe_url = html.escape(run_url, quote=True)
+        safe_artifacts_url = html.escape(f"{run_url}#artifacts", quote=True)
         run_link_html = (
-            f"<a href='{safe_url}'>View run details &amp; logs</a> · "
-            f"<a href='{safe_url}#artifacts'>Artifacts</a>"
+            f"<a href='{safe_url}'>View run details &amp; logs</a>"
+            f"<div style='margin:10px 0 5px'>"
+            f"<a href='{safe_artifacts_url}' "
+            "style='display:inline-block;background-color:#173968;color:#ffffff;"
+            "padding:9px 14px;border-radius:7px;text-decoration:none;font-weight:700'>"
+            "Open Copyable Report</a></div>"
+            "<div style='font-size:10px;color:#64748b;line-height:1.45'>"
+            "Email apps block clipboard scripts. Open the report artifact in a browser "
+            "and use its Copy Report button.</div>"
         )
     run_meta = []
     if run_id.isdigit():
@@ -6520,7 +6561,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     )
 
 
-def _is_cloudflare_interstitial(driver):
+def _is_cloudflare_interstitial(driver, *, log_no_challenge=True, log_detected=True, inconclusive_as_detected=False):
     """Detect an actually visible Cloudflare challenge, not incidental page source.
 
     Normal portal pages can load Cloudflare-related scripts or contain challenge
@@ -6574,7 +6615,7 @@ def _is_cloudflare_interstitial(driver):
         element_signals = signals.get('visibleElementSignals') or []
         detected = bool(title_signal or text_signals or element_signals)
 
-        if detected:
+        if detected and log_detected:
             reasons = []
             if title_signal:
                 reasons.append('challenge title')
@@ -6583,13 +6624,14 @@ def _is_cloudflare_interstitial(driver):
             if element_signals:
                 reasons.append('visible challenge UI: ' + ', '.join(element_signals))
             log('🛡️ Visible challenge indicators: ' + '; '.join(reasons))
-        else:
+        elif not detected and log_no_challenge:
             log(f"ℹ️ No visible Cloudflare challenge detected (title={signals.get('title', driver.title or '')!r})")
         return detected
     except Exception as exc:
-        # A detector error must not be treated as proof that a challenge exists.
-        log(f"⚠️ Challenge detection was inconclusive: {type(exc).__name__}; continuing with read-only UI inspection")
-        return False
+        # Callers choose whether detector uncertainty should conservatively keep
+        # the bounded challenge wait active. Diagnostic-only mode remains non-interactive.
+        log(f"⚠️ Challenge detection was inconclusive: {type(exc).__name__}")
+        return bool(inconclusive_as_detected)
 
 
 def _dom_snapshot_current_context(driver):
