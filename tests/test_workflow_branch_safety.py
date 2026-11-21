@@ -59,6 +59,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("record_progression_inspection_result", source)
         self.assertIn("_record_queued_progression_inspection_result(meta, pid, r, run_label)", source)
         self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
+        self.assertIn("elif recovered_store_indices and not progression_inspection_blocked:", source)
         self.assertIn("_run_queued_progression_inspection(driver, pid, stats, progression_reinspection)", source)
         self.assertIn("if requires_exact and not target_signature:", source)
         self.assertIn("target_card_signature=target_signature", source)
