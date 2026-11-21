@@ -4207,7 +4207,11 @@ def _refresh_player_status_after_immediate_recovery(result):
         result["fail_reason"] = None
 
 
-def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result):
+def immediate_recover_player_claims(
+    pid, has_loyalty, is_new, run_label, result, *,
+    progression_reinspection=None,
+    progression_inspection_blocked=False,
+):
     """Retry only unresolved targets in one fresh, sequential browser session.
 
     A login failure may receive one normal account pass because the failed first
@@ -4285,7 +4289,11 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
         recovery["attempted_at"] = started.isoformat()
         log(f"🔁 Immediate recovery: one fresh login retry for {pid} after the initial authentication failure")
         try:
-            retried = process_player(pid, has_loyalty, is_new, run_label)
+            retried = process_player(
+                pid, has_loyalty, is_new, run_label,
+                progression_reinspection=progression_reinspection,
+                progression_inspection_blocked=progression_inspection_blocked,
+            )
             resolved = not _full_claim_recovery_candidate(retried)
             recovery["resolved_categories"] = ["Login / full account"] if resolved else []
             if not resolved:
