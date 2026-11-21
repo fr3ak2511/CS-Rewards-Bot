@@ -374,6 +374,7 @@ def _full_claim_recovery_candidate(result):
     progression_retry_required = bool(
         result.get("progression_unconfirmed")
         and not result.get("progression_deferred")
+        and not result.get("progression_reinspection_attempted")
     )
     if (result.get("daily_unconfirmed")
             or result.get("store_unconfirmed_indices")
@@ -3929,6 +3930,7 @@ def _recovery_targets_from_result(result):
     progression_pending = bool(
         result.get("progression_unconfirmed")
         and not result.get("progression_deferred")
+        and not result.get("progression_reinspection_attempted")
     )
     return {
         "login_retry": status == "Login Failed",
@@ -4244,6 +4246,7 @@ def immediate_recover_player_claims(
     progression_pending = bool(
         result.get("progression_unconfirmed")
         and not result.get("progression_deferred")
+        and not result.get("progression_reinspection_attempted")
     )
     progression_signature = (
         str(result.get("progression_unconfirmed_card_signature") or "").strip()
