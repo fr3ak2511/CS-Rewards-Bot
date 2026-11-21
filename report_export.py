@@ -31,6 +31,19 @@ def _player_label(player: dict[str, Any]) -> str:
     return f"Player …{suffix}" if suffix else "Unknown player"
 
 
+def _deferred_reason_summary(raw_reason: Any) -> str:
+    """Summarise a deferred inspection reason without copying raw popup DOM context."""
+    raw = str(raw_reason or "").strip()
+    if not raw:
+        return "Popup/overlay safety guard blocked Progression inspection"
+    summary = raw.split("popup_context=", 1)[0].split(";", 1)[0].strip().rstrip(" ,")
+    if summary.endswith("("):
+        summary = summary[:-1].rstrip()
+    if "(" in summary and not summary.endswith(")"):
+        summary += ")"
+    return summary[:180].rstrip()
+
+
 def build_copyable_report(summary: dict[str, Any]) -> str:
     """Render a standalone report; only masked account suffixes are accepted."""
     if not isinstance(summary, dict):
@@ -51,6 +64,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
             or bool(player.get("daily_unconfirmed"))
             or bool(player.get("standard_store_unconfirmed_indices"))
             or bool(player.get("progression_unconfirmed"))
+            or bool(player.get("progression_deferred"))
         )
     )
     if not players:
@@ -111,6 +125,39 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     )
     grenade_section = grenade_summary + grenade_table
 
+    deferred_rows = []
+    for player in players:
+        if not isinstance(player, dict) or not player.get("progression_deferred"):
+            continue
+        label = _safe(_player_label(player))
+        reason = _safe(_deferred_reason_summary(player.get("progression_deferred_reason")))
+        if player.get("progression_unconfirmed"):
+            detail = (
+                "A previously attempted Progression claim remains unconfirmed; "
+                "this recheck was deferred and no additional claim click was attempted."
+            )
+        else:
+            detail = "Progression inspection was deferred; no claim click was attempted."
+        deferred_rows.append(
+            "<div class='deferred-item'><strong>" + label
+            + "</strong><span>Progression Program</span><p>" + _safe(detail)
+            + "</p><small class='reason'>" + reason + "</small></div>"
+        )
+    deferred_count = len(deferred_rows)
+    if deferred_rows:
+        deferred_word = "inspection" if deferred_count == 1 else "inspections"
+        deferred_section = (
+            "<section class='section deferred'><h2>Deferred Checks</h2>"
+            + f"<p>{deferred_count} Progression {deferred_word} require review. "
+            "No claim click is being reported as failed.</p>"
+            + "".join(deferred_rows)
+            + "</section>"
+        )
+        attention_note = f"Includes {deferred_count} deferred Progression {deferred_word}"
+    else:
+        deferred_section = ""
+        attention_note = "Accounts with unresolved items"
+
     health = "ATTENTION REQUIRED" if attention else "HEALTHY"
     health_class = "warn" if attention else "healthy"
 
@@ -133,9 +180,11 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if not isinstance(player, dict):
             continue
         status = str(player.get("status") or "Unknown")
+        if player.get("progression_deferred") and status in {"Success", "Claims Made"}:
+            status = "Deferred check"
         status_class = (
             "bad" if status in {"Login Failed", "Error", "Failed"}
-            else "warn" if status in {"Partial", "No Rewards"} or player.get("retry_required")
+            else "warn" if status in {"Partial", "No Rewards", "Deferred check"} or player.get("retry_required")
             else "good"
         )
         reason = str(player.get("fail_reason") or "").strip()
@@ -206,7 +255,12 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 .status.good{{color:#166534;background:#dcfce7}}
 .status.warn{{color:#92400e;background:#fef3c7}}
 .status.bad{{color:#991b1b;background:#fee2e2}}
-.reason{{display:block;max-width:260px;margin-top:4px;color:#92400e;line-height:1.4;overflow-wrap:anywhere}}
+ .reason{{display:block;max-width:260px;margin-top:4px;color:#92400e;line-height:1.4;overflow-wrap:anywhere}}
+.deferred{{background:#fffbeb;border-color:#f4d2a4}}
+.deferred-item{{padding:10px 0;border-top:1px solid #fed7aa}}
+.deferred-item strong{{display:block;font-size:12px}}
+.deferred-item span{{display:block;margin-top:3px;color:#64748b;font-size:10px}}
+.deferred-item p{{margin:6px 0 0;font-size:11px;line-height:1.4}}
 .footer{{padding:14px 18px;color:#64748b;font-size:10px;text-align:center;border-top:1px solid #e2e8f0}}
 @media(max-width:620px){{
  body{{padding:7px}}
@@ -242,9 +296,10 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <section class="kpis">
 <div class="kpi"><span>Confirmed claims</span><strong>{claims}</strong><small>Portal-confirmed during this run</small></div>
 <div class="kpi"><span>Accounts processed</span><strong>{accounts}/{configured}</strong><small>Configured roster coverage</small></div>
-<div class="kpi"><span>Need attention</span><strong>{attention}</strong><small>Accounts with unresolved items</small></div>
+<div class="kpi"><span>Need attention</span><strong>{attention}</strong><small>{attention_note}</small></div>
 </section>
 <section class="categories">{category_cards}</section>
+{deferred_section}
 <section class="section">
 <h2>Account results</h2>
 <div class="table-wrap">
