@@ -4092,6 +4092,16 @@ def recover_player_from_saved_targets(
         return result, False
 
     target_result = _recovery_result_from_saved_targets(pid, targets)
+    if progression_inspection_blocked:
+        # A queue-owned Progression target is not replayed by the general
+        # post-run observer. It stays visible in reporting and in the queue.
+        target_result["progression_deferred"] = True
+        target_result["progression_deferred_reason"] = (
+            "Progression remains in the deferred-inspection queue; the general "
+            "recovery observer did not retry this target."
+        )
+        target_result["progression_checked"] = False
+        target_result["progression_claim_attempted"] = False
     has_safe_target = bool(
         target_result.get("status") == "Login Failed"
         or target_result.get("processing_error")
