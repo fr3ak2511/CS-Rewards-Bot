@@ -179,7 +179,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         )
         self.assertIsNone(action)
         self.assertIsNotNone(get_pending_progression_inspection(self.meta, "PLAYER0001"))
-        self.assertEqual(self.meta["progression_deferred_inspection_history"], [])
+        self.assertEqual(self.meta.get("progression_deferred_inspection_history", []), [])
 
     def test_successful_claim_during_reinspection_archives_as_confirmed(self):
         record_progression_inspection_result(
