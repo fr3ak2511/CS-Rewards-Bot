@@ -7289,15 +7289,28 @@ def main():
                     progression_reinspection=progression_attempt,
                 )
                 if _full_claim_recovery_candidate(r):
-                    # A dispatched-but-unconfirmed queued Progression target remains
-                    # in its exact-target queue. Do not immediately widen it into a
-                    # second browser recovery attempt unless another category failed.
-                    should_recover = (
-                        _non_progression_recovery_candidate(r)
-                        if r.get("progression_reinspection_attempted")
-                        else True
-                    )
-                    if should_recover:
+                    # A queued Progression attempt is capped at one attempt per slot.
+                    # If it remains unconfirmed, allow immediate recovery for unrelated
+                    # categories only; preserve the Progression target for the next slot.
+                    if r.get("progression_reinspection_attempted") and r.get("progression_unconfirmed"):
+                        if _non_progression_recovery_candidate(r):
+                            progression_state = {
+                                key: r.get(key)
+                                for key in (
+                                    "progression", "progression_checked", "progression_unconfirmed",
+                                    "progression_unconfirmed_card_signature", "progression_deferred",
+                                    "progression_deferred_reason", "progression_claim_attempted",
+                                    "progression_reinspection_attempted",
+                                )
+                            }
+                            recovery_input = dict(r)
+                            recovery_input["progression_unconfirmed"] = False
+                            recovery_input["progression_unconfirmed_card_signature"] = None
+                            r = immediate_recover_player_claims(
+                                pid, has_loyalty, new_id, run_label, recovery_input
+                            )
+                            r.update(progression_state)
+                    else:
                         r = immediate_recover_player_claims(pid, has_loyalty, new_id, run_label, r)
                 if _full_claim_recovery_candidate(r) or r.get("standard_rewards_checked"):
                     coverage_result = dict(r)
