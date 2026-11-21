@@ -102,7 +102,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
                 reset_date="2026-11-21", now="2026-11-21T18:05:00+05:30",
             ))
         self.assertIsNone(mark_progression_inspection_attempt(
-            self.meta, "PLAYER0001", slot_label="Promotional Check #3",
+            self.meta, "PLAYER0001", slot_label="Promotional Check #1",
             reset_date="2026-11-21", now="2026-11-21T19:00:00+05:30",
         ))
 
