@@ -143,6 +143,20 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(targets["progression_unconfirmed"])
         self.assertIsNone(targets["progression_card_signature"])
 
+    def test_queued_progression_click_unconfirmed_does_not_become_general_retry(self):
+        result = {
+            "processing_mode": "full_claim",
+            "status": "Partial",
+            "progression_deferred": False,
+            "progression_reinspection_attempted": True,
+            "progression_unconfirmed": True,
+            "progression_unconfirmed_card_signature": "Exact queued card",
+        }
+        self.assertFalse(_full_claim_recovery_candidate(result))
+        targets = _recovery_targets_from_result(result)
+        self.assertFalse(targets["progression_unconfirmed"])
+        self.assertIsNone(targets["progression_card_signature"])
+
     def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
         result = {
             "pid": "PROMO0001",
