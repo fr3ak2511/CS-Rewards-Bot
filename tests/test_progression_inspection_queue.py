@@ -91,6 +91,31 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertIsNotNone(second)
         self.assertEqual(second["attempted_slots"], ["Promotional Check #1", "Promotional Check #2"])
 
+    def test_primary_and_manual_full_runs_can_reserve_a_distinct_queue_slot(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+        )
+        primary = mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Primary Run",
+            reset_date="2026-11-21", now="2026-11-21T06:00:00+05:30",
+        )
+        manual = mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Manual Run",
+            reset_date="2026-11-21", now="2026-11-21T14:00:00+05:30",
+        )
+        duplicate_primary = mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Primary Run",
+            reset_date="2026-11-21", now="2026-11-21T14:05:00+05:30",
+        )
+        self.assertIsNotNone(primary)
+        self.assertIsNotNone(manual)
+        self.assertIsNone(duplicate_primary)
+        self.assertEqual(
+            manual["attempted_slots"],
+            ["Primary Run", "Manual Run"],
+        )
+
     def test_attempt_cap_is_four_distinct_slots_per_reset(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
