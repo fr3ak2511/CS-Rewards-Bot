@@ -820,7 +820,7 @@ class BackupReconciliationTests(unittest.TestCase):
              patch.object(bot.time, "sleep"):
             result = bot.process_player_backup_reconciliation("TESTPLAYER0001", False, "Promotional Check #1")
 
-        progression.assert_called_once_with(driver, "TESTPLAYER0001")
+        progression.assert_called_once_with(driver, "TESTPLAYER0001", max_claims_per_visit=1)
         self.assertTrue(result["progression_checked"])
         self.assertEqual(result["progression"], 1)
         self.assertEqual(result["status"], "Claims Made")
@@ -871,7 +871,7 @@ class BackupReconciliationTests(unittest.TestCase):
              patch.object(bot.time, "sleep"):
             result = bot.process_player_backup_reconciliation("TESTPLAYER0001", False, "Promotional Check #1")
 
-        progression.assert_called_once_with(driver, "TESTPLAYER0001")
+        progression.assert_called_once_with(driver, "TESTPLAYER0001", max_claims_per_visit=1)
         self.assertTrue(result["progression_checked"])
         self.assertEqual(result["progression"], 1)
 

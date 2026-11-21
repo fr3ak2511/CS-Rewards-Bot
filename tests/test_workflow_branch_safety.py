@@ -75,7 +75,11 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("_run_queued_progression_inspection(driver, pid, stats, progression_reinspection)", source)
         self.assertIn("if requires_exact and not target_signature:", source)
         self.assertIn("target_card_signature=target_signature", source)
-        self.assertIn("claim_progression_program_rewards(driver, pid)", source)
+        queued_handler = source.split("def _run_queued_progression_inspection", 1)[1].split(
+            "def _record_queued_progression_inspection_result", 1
+        )[0]
+        self.assertIn("max_claims_per_visit=1", queued_handler)
+        self.assertIn("target_card_text_fragments=target_fragments", queued_handler)
         self.assertIn("_non_progression_recovery_candidate", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
         self.assertIn("elif is_promotional_backup:", source)

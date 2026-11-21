@@ -3271,7 +3271,10 @@ def _scroll_progression_carousel(driver):
         return False
 
 
-def claim_progression_program_rewards(driver, pid, *, target_card_signature=None, max_claims_per_visit=6):
+def claim_progression_program_rewards(
+    driver, pid, *, target_card_signature=None,
+    target_card_text_fragments=None, max_claims_per_visit=6
+):
     """Claim card-bound Progression rewards with popup and portal verification."""
     log("🎯 Checking Progression Program...")
     result = claim_progression_rewards(
@@ -3289,6 +3292,7 @@ def claim_progression_program_rewards(driver, pid, *, target_card_signature=None
         poll_seconds=0.5,
         max_claims_per_visit=max_claims_per_visit,
         target_card_signature=target_card_signature,
+        target_card_text_fragments=target_card_text_fragments,
     )
     return result
 
@@ -3302,7 +3306,22 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
     stats["progression_checked"] = False
 
     target_signature = str(queue_entry.get("target_card_signature") or "").strip()
+    raw_fragments = queue_entry.get("target_card_text_fragments")
+    target_fragments = ()
+    if isinstance(raw_fragments, (list, tuple)):
+        target_fragments = tuple(
+            str(item).strip() for item in raw_fragments if str(item).strip()
+        )
     requires_exact = bool(queue_entry.get("requires_exact_target"))
+    if raw_fragments is not None and not target_fragments:
+        stats["progression_deferred"] = True
+        stats["progression_unconfirmed"] = bool(requires_exact)
+        stats["progression_deferred_reason"] = (
+            "Queued Progression target selector is malformed; refusing a generic claim scan."
+        )
+        stats["progression_claim_attempted"] = False
+        log(f"⏭️ {pid}: queued Progression selector is invalid; no claim click permitted.")
+        return stats
     if requires_exact and not target_signature:
         stats["progression_deferred"] = True
         stats["progression_unconfirmed"] = True
@@ -3317,11 +3336,22 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
     try:
         if target_signature:
             claimed = claim_progression_program_rewards(
-                driver, pid, target_card_signature=target_signature
+                driver, pid,
+                target_card_signature=target_signature,
+                max_claims_per_visit=1,
+            )
+        elif target_fragments:
+            claimed = claim_progression_program_rewards(
+                driver, pid,
+                target_card_text_fragments=target_fragments,
+                max_claims_per_visit=1,
             )
         else:
-            # A first-time deferred inspection has no prior click target.
-            claimed = claim_progression_program_rewards(driver, pid)
+            # Queue servicing is always bounded to one claim. A target-specific
+            # selector is preferred when the deferred inspection has a known card.
+            claimed = claim_progression_program_rewards(
+                driver, pid, max_claims_per_visit=1
+            )
         stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
         stats["progression_unconfirmed"] = bool(
             getattr(driver, "_progression_unconfirmed", False)
