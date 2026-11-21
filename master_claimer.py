@@ -5357,6 +5357,13 @@ def build_deferred_checks_section(results):
                 "deferred, and no additional claim click was attempted. "
                 + reason
             )
+        elif result.get("progression_claim_attempted") or int(result.get("progression", 0) or 0) > 0:
+            detail = (
+                f"{int(result.get('progression', 0) or 0)} Progression reward(s) were portal-confirmed, "
+                "but the remaining-card inspection is incomplete and stays queued. "
+                "No further claim click was attempted. "
+                + reason
+            )
         else:
             detail = (
                 "Progression inspection was deferred; no claim click was attempted. "
