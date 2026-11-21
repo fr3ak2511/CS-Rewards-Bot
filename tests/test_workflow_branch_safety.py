@@ -75,6 +75,7 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         recovery_predicate = source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0]
         self.assertIn("progression_unconfirmed", recovery_predicate)
         self.assertIn("and not result.get(\"progression_deferred\")", recovery_predicate)
+        self.assertIn("and not result.get(\"progression_reinspection_attempted\")", recovery_predicate)
         self.assertIn("progression_reinspection=progression_attempt", source)
         self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
