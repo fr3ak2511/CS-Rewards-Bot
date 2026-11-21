@@ -72,7 +72,12 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("not result.get(\"progression_deferred\")", source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0])
         self.assertIn("requires_exact_target", queue)
         self.assertIn("attempted_slots", queue)
-        self.assertNotIn("progression_deferred", source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0])
+        recovery_predicate = source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0]
+        self.assertIn("progression_unconfirmed", recovery_predicate)
+        self.assertIn("and not result.get(\"progression_deferred\")", recovery_predicate)
+        self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
+        self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
 
     def test_daily_only_backup_recovery_preserves_roster_streak_and_coverage(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
