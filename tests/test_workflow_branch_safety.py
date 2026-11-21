@@ -54,6 +54,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
     def test_deferred_progression_queue_is_serviced_without_widening_retry_scope(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "event-tests.yml").read_text(encoding="utf-8")
+        self.assertIn("'progression_inspection_queue.py'", workflow)
         self.assertIn("record_progression_inspection_result", source)
         self.assertIn("_record_queued_progression_inspection_result(meta, pid, r, run_label)", source)
         self.assertIn("progression_reinspection=progression_attempt", source)
