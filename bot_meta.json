@@ -1271,6 +1271,7 @@
       "last_attempt_at": "2026-11-21T05:52:27.3481346+05:30",
       "last_attempt_slot": "Primary Run",
       "target_card_signature": null,
+      "target_card_text_fragments": ["62", "x20"],
       "requires_exact_target": false
     }
   }
