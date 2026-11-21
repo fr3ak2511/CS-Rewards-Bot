@@ -499,6 +499,75 @@ class RecoveryEligibilityTests(unittest.TestCase):
         self.assertFalse(bot._result_needs_recovery(result))
 
 
+class QueuedProgressionFullClaimPathTests(unittest.TestCase):
+    def test_blocked_queue_slot_suppresses_generic_full_claim_progression_scan(self):
+        driver = FakeDriver()
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(0, [True, True, True], [], [], [])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "_record_grenade_balance_for_player") as grenade, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_next": "next reset", "store_next": [None] * 3,
+                 "loyalty_next": None, "daily_status": "claimed",
+                 "store_status": ["claimed"] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player(
+                "TESTPLAYER0001", False, False, "Promotional Check #2",
+                progression_inspection_blocked=True,
+            )
+
+        progression.assert_not_called()
+        grenade.assert_not_called()
+        self.assertTrue(result["progression_deferred"])
+        self.assertFalse(result["progression_checked"])
+        self.assertFalse(result["progression_claim_attempted"])
+        self.assertTrue(driver.quit_called)
+
+    def test_queued_target_is_serviced_in_full_claim_path_instead_of_generic_scan(self):
+        driver = FakeDriver()
+        queue_entry = {
+            "status": "claim_unconfirmed",
+            "requires_exact_target": True,
+            "target_card_signature": "Exact queued card",
+        }
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(0, [True, True, True], [], [], [])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "_run_queued_progression_inspection", return_value={
+                 "progression": 0, "progression_checked": True,
+                 "progression_unconfirmed": False, "progression_deferred": False,
+                 "progression_claim_attempted": False, "progression_reinspection_attempted": True,
+             }) as queued, \
+             patch.object(bot, "_record_grenade_balance_for_player"), \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_next": "next reset", "store_next": [None] * 3,
+                 "loyalty_next": None, "daily_status": "claimed",
+                 "store_status": ["claimed"] * 3,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player(
+                "TESTPLAYER0001", False, False, "Promotional Check #2",
+                progression_reinspection=queue_entry,
+            )
+
+        queued.assert_called_once_with(driver, "TESTPLAYER0001", queued.call_args.args[2], queue_entry)
+        progression.assert_not_called()
+        self.assertTrue(result["progression_reinspection_attempted"])
+        self.assertTrue(result["progression_checked"])
+        self.assertTrue(driver.quit_called)
+
+
 class BackupReconciliationTests(unittest.TestCase):
     def test_backup_revisits_daily_and_standard_store_cards(self):
         driver = FakeDriver()
