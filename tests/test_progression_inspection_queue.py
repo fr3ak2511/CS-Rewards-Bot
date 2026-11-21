@@ -324,7 +324,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         )
         entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
         self.assertEqual(entry["first_source_run_id"], "3894")
-        self.assertEqual(entry["attempted_slots"], ["Promotional Check #1"])
+        self.assertEqual(entry["attempted_slots"], ["Primary Run", "Promotional Check #1"])
         self.assertEqual(entry["last_source_run_id"], "4001")
 
 
