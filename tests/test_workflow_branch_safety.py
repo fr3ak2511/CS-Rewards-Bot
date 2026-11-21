@@ -91,6 +91,31 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
 
+    def test_daily_only_backup_never_services_progression_queue_for_non_target_accounts(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "if DAILY_ONLY_RECOVERY and not is_promotional_backup and not MANUAL_DAILY_RECOVERY:",
+            source,
+        )
+        start = source.index("elif DAILY_ONLY_RECOVERY:\\n            # Other roster members in a Daily-only promotional backup remain")
+        end = source.index("elif is_promotional_backup:", start)
+        non_target_branch = source[start:end]
+        self.assertIn("process_player_promotions_only(pid, new_id, run_label)", non_target_branch)
+        self.assertNotIn("get_pending_progression_inspection", non_target_branch)
+        self.assertNotIn("progression_reinspection", non_target_branch)
+
+    def test_slot_block_preserves_exact_unconfirmed_progression_identity(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        self.assertIn("if progression_slot_blocked and queued_progression:", source)
+        self.assertIn(
+            'r["progression_unconfirmed"] = bool(queued_progression.get("requires_exact_target"))',
+            source,
+        )
+        self.assertIn(
+            'r["progression_unconfirmed_card_signature"] = (',
+            source,
+        )
+
     def test_daily_only_backup_recovery_preserves_roster_streak_and_coverage(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn("not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY", source)
