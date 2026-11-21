@@ -70,6 +70,7 @@ def record_progression_inspection_result(
     run_label: str,
     now: str,
     source_run_id: str | None = None,
+    reset_date: str | None = None,
 ) -> str | None:
     """Queue a deferred inspection, retain exact unconfirmed targets, or resolve it.
 
@@ -98,6 +99,11 @@ def record_progression_inspection_result(
     ).strip()
 
     if deferred:
+        if entry is not None and not result.get("progression_reinspection_attempted"):
+            # The queue was intentionally not serviced in this run (for example,
+            # a Daily-only pass or a slot already consumed). Preserve its original
+            # source/attempt metadata; do not record a skipped slot as a new defer.
+            return "retained"
         if entry is None:
             entry = {
                 "status": "deferred",
@@ -110,6 +116,17 @@ def record_progression_inspection_result(
                 "target_card_signature": None,
                 "requires_exact_target": False,
             }
+            # The run that first discovered the deferral has already spent this
+            # slot inspecting Progression. Count it so a duplicate dispatch with
+            # the same run label cannot immediately consume another queue attempt.
+            source_slot = str(run_label or "").strip()
+            source_reset = str(reset_date or str(now)[:10]).strip()
+            if source_slot in _ALLOWED_SLOTS and source_reset:
+                entry["attempt_reset_date"] = source_reset
+                entry["attempted_slots"] = [source_slot]
+                entry["total_attempts"] = 1
+                entry["last_attempt_at"] = now
+                entry["last_attempt_slot"] = source_slot
         entry["status"] = "claim_unconfirmed" if unconfirmed else "deferred"
         entry["last_deferred_at"] = now
         entry["last_source_run_label"] = str(run_label or "")
