@@ -42,6 +42,8 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(action, "queued")
         self.assertEqual(entry["status"], "deferred")
         self.assertEqual(entry["first_source_run_id"], "3894")
+        self.assertEqual(entry["attempted_slots"], ["Primary Run"])
+        self.assertEqual(entry["total_attempts"], 1)
         self.assertIn("popup/overlay safety guard", entry["last_reason"])
         self.assertNotIn("popup_context", entry["last_reason"])
         self.assertEqual(self.meta["claim_history"]["PLAYER0001"]["progression"], history_before)
@@ -80,6 +82,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             reset_date="2026-11-21", now="2026-11-21T12:05:00+05:30",
         )
         self.assertIsNotNone(first)
+        self.assertEqual(first["attempted_slots"], ["Primary Run", "Promotional Check #1"])
         self.assertIsNone(mark_progression_inspection_attempt(
             self.meta, "PLAYER0001", slot_label="Promotional Check #1",
             reset_date="2026-11-21", now="2026-11-21T12:06:00+05:30",
@@ -108,7 +111,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             self.meta, "PLAYER0001", slot_label="Primary Run",
             reset_date="2026-11-21", now="2026-11-21T14:05:00+05:30",
         )
-        self.assertIsNotNone(primary)
+        self.assertIsNone(primary)  # The source Primary Run already spent this slot.
         self.assertIsNotNone(manual)
         self.assertIsNone(duplicate_primary)
         self.assertEqual(
@@ -121,13 +124,17 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             self.meta, "PLAYER0001", self._deferred(),
             run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
         )
-        for slot in ("Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"):
+        for slot in ("Promotional Check #1", "Promotional Check #2", "Promotional Check #3"):
             self.assertIsNotNone(mark_progression_inspection_attempt(
                 self.meta, "PLAYER0001", slot_label=slot,
                 reset_date="2026-11-21", now="2026-11-21T18:05:00+05:30",
             ))
+        self.assertEqual(
+            get_pending_progression_inspection(self.meta, "PLAYER0001")["attempted_slots"],
+            ["Primary Run", "Promotional Check #1", "Promotional Check #2", "Promotional Check #3"],
+        )
         self.assertIsNone(mark_progression_inspection_attempt(
-            self.meta, "PLAYER0001", slot_label="Promotional Check #1",
+            self.meta, "PLAYER0001", slot_label="Promotional Check #4",
             reset_date="2026-11-21", now="2026-11-21T19:00:00+05:30",
         ))
 
@@ -276,6 +283,27 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             "claim_confirmed",
         )
 
+    def test_unserviced_queue_entry_is_not_rewritten_as_a_new_defer(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        before = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        action = record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Promotional Check #2", now="2026-11-21T18:05:00+05:30",
+            source_run_id="4002",
+        )
+        after = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(action, "retained")
+        self.assertEqual(after["first_source_run_id"], "3894")
+        self.assertEqual(after["last_source_run_id"], "3894")
+        self.assertEqual(after["attempted_slots"], ["Primary Run"])
+        self.assertEqual(after["total_attempts"], 1)
+        self.assertEqual(after["last_attempt_slot"], "Primary Run")
+        self.assertEqual(after["status"], before["status"])
+
     def test_repeated_defer_keeps_original_source_and_attempt_history(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
@@ -287,7 +315,7 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             reset_date="2026-11-21", now="2026-11-21T12:05:00+05:30",
         )
         record_progression_inspection_result(
-            self.meta, "PLAYER0001", self._deferred(),
+            self.meta, "PLAYER0001", self._deferred(progression_reinspection_attempted=True),
             run_label="Promotional Check #1", now="2026-11-21T12:10:00+05:30",
             source_run_id="4001",
         )
