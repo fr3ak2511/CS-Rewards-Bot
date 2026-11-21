@@ -198,10 +198,33 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(action, "retained")
         self.assertTrue(entry["requires_exact_target"])
         self.assertIsNone(entry["target_card_signature"])
-        self.assertIsNone(mark_progression_inspection_attempt(
+        attempt = mark_progression_inspection_attempt(
             self.meta, "PLAYER0001", slot_label="Promotional Check #2",
             reset_date="2026-11-21", now="2026-11-21T18:05:00+05:30",
-        )["target_card_signature"])
+        )
+        self.assertTrue(attempt["requires_exact_target"])
+        self.assertIsNone(attempt["target_card_signature"])
+
+    def test_unconfirmed_without_new_signature_preserves_older_exact_signature(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+        )
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {"progression_unconfirmed": True,
+             "progression_unconfirmed_card_signature": "Earlier exact card"},
+            run_label="Promotional Check #1", now="2026-11-21T12:05:00+05:30",
+        )
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {"progression_unconfirmed": True,
+             "progression_unconfirmed_card_signature": None},
+            run_label="Promotional Check #2", now="2026-11-21T18:05:00+05:30",
+        )
+        entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertTrue(entry["requires_exact_target"])
+        self.assertEqual(entry["target_card_signature"], "Earlier exact card")
 
     def test_successful_reinspection_archives_and_removes_queue_item(self):
         record_progression_inspection_result(
