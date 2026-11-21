@@ -371,9 +371,13 @@ def _full_claim_recovery_candidate(result):
         return False
     if str(result.get("status") or "") in ("Login Failed", "Error", "Failed"):
         return True
+    progression_retry_required = bool(
+        result.get("progression_unconfirmed")
+        and not result.get("progression_deferred")
+    )
     if (result.get("daily_unconfirmed")
             or result.get("store_unconfirmed_indices")
-            or result.get("progression_unconfirmed")
+            or progression_retry_required
             or result.get("event_rewards_retry_required")
             or event_retry_required(result.get("event_rewards"))):
         return True
@@ -3901,15 +3905,20 @@ def _recovery_targets_from_result(result):
     ]
     event_targets = _event_retry_targets(event_results)
     store_indices.sort()
+    progression_pending = bool(
+        result.get("progression_unconfirmed")
+        and not result.get("progression_deferred")
+    )
     return {
         "login_retry": status == "Login Failed",
         "processing_error": status in ("Error", "Failed") and status != "Login Failed",
         "daily_unconfirmed": bool(result.get("daily_unconfirmed")),
         "store_unconfirmed_indices": store_indices,
-        "progression_unconfirmed": bool(result.get("progression_unconfirmed")),
-        "progression_card_signature": str(
-            result.get("progression_unconfirmed_card_signature") or ""
-        ).strip() or None,
+        "progression_unconfirmed": progression_pending,
+        "progression_card_signature": (
+            str(result.get("progression_unconfirmed_card_signature") or "").strip() or None
+            if progression_pending else None
+        ),
         "event_retry_required": bool(
             result.get("event_rewards_retry_required") or event_results
         ),
@@ -4203,8 +4212,14 @@ def immediate_recover_player_claims(pid, has_loyalty, is_new, run_label, result)
         if index in STORE_DAILY_LABELS and index not in store_indices:
             store_indices.append(index)
 
-    progression_pending = bool(result.get("progression_unconfirmed"))
-    progression_signature = str(result.get("progression_unconfirmed_card_signature") or "").strip()
+    progression_pending = bool(
+        result.get("progression_unconfirmed")
+        and not result.get("progression_deferred")
+    )
+    progression_signature = (
+        str(result.get("progression_unconfirmed_card_signature") or "").strip()
+        if progression_pending else ""
+    )
     event_targets = _event_retry_targets(result.get("event_rewards"))
     deferred_categories = []
     if str(result.get("status") or "") in ("Error", "Failed") and not login_retry:
