@@ -137,7 +137,10 @@ def record_progression_inspection_result(
         queue[pid] = entry
         return "retained"
 
-    if result.get("progression_checked") is True:
+    if (
+        result.get("progression_checked") is True
+        and str(result.get("status") or "") not in {"Login Failed", "Error", "Failed"}
+    ):
         resolved = deepcopy(entry)
         resolved["status"] = "resolved"
         resolved["resolved_at"] = now
