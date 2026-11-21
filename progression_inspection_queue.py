@@ -53,7 +53,10 @@ def get_pending_progression_inspection(
     """Return a copy of a pending entry; never expose mutable metadata internals."""
     if not isinstance(meta, dict):
         return None
-    entry = _queue(meta).get(str(player_id or "").strip())
+    queue = meta.get(QUEUE_KEY)
+    if not isinstance(queue, dict):
+        return None
+    entry = queue.get(str(player_id or "").strip())
     if not isinstance(entry, dict):
         return None
     if entry.get("status") not in {"deferred", "claim_unconfirmed"}:
@@ -81,11 +84,16 @@ def record_progression_inspection_result(
     if not pid:
         return None
 
-    queue = _queue(meta)
+    deferred = bool(result.get("progression_deferred"))
+    queue = meta.get(QUEUE_KEY)
+    if not isinstance(queue, dict):
+        if not deferred:
+            return None
+        queue = {}
+        meta[QUEUE_KEY] = queue
     entry = queue.get(pid)
     entry = entry if isinstance(entry, dict) else None
 
-    deferred = bool(result.get("progression_deferred"))
     unconfirmed = bool(result.get("progression_unconfirmed"))
     signature = str(
         result.get("progression_unconfirmed_card_signature") or ""
