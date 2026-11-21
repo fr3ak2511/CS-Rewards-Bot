@@ -549,6 +549,33 @@ class BackupReconciliationTests(unittest.TestCase):
         self.assertEqual(result["status"], "Claims Made")
 
 
+    def test_queued_progression_slot_hold_blocks_store_recovery_generic_reopen(self):
+        driver = FakeDriver()
+        driver._store_daily_recovered_indices = [1]
+        with patch.object(bot, "init_player_history"), \
+             patch.object(bot, "create_driver", return_value=driver), \
+             patch.object(bot, "login_to_hub", return_value=True), \
+             patch.object(bot, "capture_display_name", return_value="Test Player"), \
+             patch.object(bot, "claim_daily_rewards", return_value=(0, True, False)), \
+             patch.object(bot, "claim_store_rewards", return_value=(1, [False, True, True], [], [], [1])), \
+             patch.object(bot, "claim_progression_program_rewards") as progression, \
+             patch.object(bot, "run_event_reward_checks", return_value=[]), \
+             patch.object(bot, "get_reward_status", return_value={
+                 "daily_status": "portal_claimed", "daily_next": "next reset",
+                 "store_status": ["claimed", "portal_claimed", "portal_claimed"], "store_next": [None] * 3,
+                 "loyalty_next": None,
+             }), \
+             patch.object(bot.time, "sleep"):
+            result = bot.process_player_backup_reconciliation(
+                "TESTPLAYER0001", False, "Promotional Check #2",
+                progression_inspection_blocked=True,
+            )
+
+        progression.assert_not_called()
+        self.assertFalse(result["progression_checked"])
+        self.assertEqual(result["progression"], 0)
+        self.assertEqual(result["status"], "Claims Made")
+
     def test_backup_reopens_progression_for_portal_confirmed_store_transition_even_if_click_was_ambiguous(self):
         driver = FakeDriver()
         with patch.object(bot, "init_player_history"), \
