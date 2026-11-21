@@ -3392,6 +3392,7 @@ def _record_queued_progression_inspection_result(meta, pid, result, run_label):
         run_label=run_label,
         now=get_ist_time().isoformat(),
         source_run_id=os.getenv("GITHUB_RUN_ID"),
+        reset_date=_current_reset_date(),
     )
     if action:
         save_bot_meta(meta)
@@ -4481,8 +4482,17 @@ def immediate_recover_player_claims(
                 except Exception as exc:
                     unresolved.append("Progression reward")
                     log(f"🚩 Immediate Progression recovery raised {type(exc).__name__} for {pid}")
-            elif recovered_store_claims > 0 and not progression_inspection_blocked:
-                # A newly confirmed Store card can unlock Progression rewards.
+            elif (
+                recovered_store_claims > 0
+                and not progression_inspection_blocked
+                and not result.get("progression_deferred")
+                and not result.get("progression_unconfirmed")
+                and not result.get("progression_reinspection_attempted")
+            ):
+                # A newly confirmed Store card can unlock Progression rewards only
+                # when this run has not already deferred, left uncertain, or
+                # explicitly re-inspected Progression. This prevents an unrelated
+                # Store recovery from bypassing the Progression queue slot cap.
                 try:
                     progression_count = claim_progression_program_rewards(
                         driver, pid, max_claims_per_visit=6
@@ -7271,6 +7281,9 @@ def main():
     is_promotional_backup = run_label in {
         "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"
     } and not RECOVERY_ONLY_FAILED
+    if DAILY_ONLY_RECOVERY and not is_promotional_backup and not MANUAL_DAILY_RECOVERY:
+        log("⛔ Daily-only recovery is restricted to a promotional backup slot or the exact manual Daily target; refusing broader execution.")
+        return 2
     daily_pending_targets = {}
     daily_recovery_eligible_ids = set()
     if DAILY_ONLY_RECOVERY and (is_promotional_backup or MANUAL_DAILY_RECOVERY):
@@ -7302,6 +7315,9 @@ def main():
 
     for pid, has_loyalty in players:
         new_id = is_new_id(pid, meta)
+        queued_progression = None
+        progression_attempt = None
+        progression_slot_blocked = False
         if RECOVERY_ONLY_FAILED:
             # Post-run recovery must replay the exact failed targets saved by the
             # source run. Missing metadata is deferred; it never falls back to
@@ -7363,6 +7379,11 @@ def main():
                 )
                 r["daily_recovery_attempted"] = False
                 log(f"⏭️ {pid}: Daily-only recovery deferred; slot already used or per-reset retry limit reached.")
+        elif DAILY_ONLY_RECOVERY:
+            # Other roster members in a Daily-only promotional backup remain
+            # promotional-only. Do not service their Progression queue or fall
+            # through to the normal full-claim path.
+            r = process_player_promotions_only(pid, new_id, run_label)
         elif is_promotional_backup:
             queued_progression = get_pending_progression_inspection(meta, pid)
             progression_attempt = (
@@ -7463,20 +7484,6 @@ def main():
                     coverage_result["progression_unconfirmed"] = False
                 _record_full_claim_coverage(meta, pid, coverage_result, run_label)
 
-            if progression_slot_blocked:
-                r["progression_checked"] = False
-                r["progression_deferred"] = True
-                r["progression_unconfirmed"] = bool(queued_progression.get("requires_exact_target"))
-                r["progression_unconfirmed_card_signature"] = (
-                    queued_progression.get("target_card_signature")
-                )
-                r["progression_deferred_reason"] = (
-                    "Deferred Progression inspection remains queued; this backup slot "
-                    "was already attempted or the per-reset attempt cap was reached. "
-                    "No new claim click was attempted."
-                )
-                r["progression_claim_attempted"] = False
-                r["progression_reinspection_attempted"] = False
         else:
             queued_progression = get_pending_progression_inspection(meta, pid)
             progression_attempt = (
@@ -7520,6 +7527,24 @@ def main():
             if r.get("progression_reinspection_attempted") or r.get("progression_deferred"):
                 coverage_result["progression_unconfirmed"] = False
             _record_full_claim_coverage(meta, pid, coverage_result, run_label)
+
+        if progression_slot_blocked and queued_progression:
+            # Preserve exact-target claim ambiguity when a slot/cap prevents a
+            # second inspection. This applies to Primary/Manual as well as promo
+            # backups, and must not downgrade a claim_unconfirmed queue entry.
+            r["progression_checked"] = False
+            r["progression_deferred"] = True
+            r["progression_unconfirmed"] = bool(queued_progression.get("requires_exact_target"))
+            r["progression_unconfirmed_card_signature"] = (
+                queued_progression.get("target_card_signature")
+            )
+            r["progression_deferred_reason"] = (
+                "Deferred Progression inspection remains queued; this run label "
+                "was already attempted or the per-reset attempt cap was reached. "
+                "No new claim click was attempted."
+            )
+            r["progression_claim_attempted"] = False
+            r["progression_reinspection_attempted"] = False
 
         # Daily-only recovery and post-run recovery are deliberately not queue
         # servicing modes. Keep any outstanding inspection visible and pending.
