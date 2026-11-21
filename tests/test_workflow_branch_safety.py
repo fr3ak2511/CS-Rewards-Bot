@@ -58,7 +58,8 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn('progression_reinspection=progression_attempt', source)
         self.assertIn('progression_inspection_blocked=progression_slot_blocked', source)
         self.assertIn('"Primary Run", "Manual Run"', queue)
-        self.assertIn('_preserve_queued_progression_state(meta, pid, r, run_label)', source)
+        self.assertIn('_preserve_queued_progression_state(meta, pid, r,', source)
+        self.assertIn('pending_progression and not r.get("progression_reinspection_attempted")', source)
 
     def test_deferred_progression_queue_is_serviced_without_widening_retry_scope(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
