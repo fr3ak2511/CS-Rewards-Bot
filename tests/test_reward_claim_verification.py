@@ -896,6 +896,30 @@ class SavedPostRunRecoveryTests(unittest.TestCase):
         self.assertEqual(recovered["immediate_recovery"]["status"], "resolved")
         self.assertTrue(driver.quit_called)
 
+    def test_saved_login_recovery_preserves_deferred_progression_hold(self):
+        targets = {
+            "login_retry": True,
+            "processing_error": False,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "progression_unconfirmed": False,
+            "progression_card_signature": None,
+            "event_retry_required": False,
+            "event_thresholds_by_program": {},
+            "event_rewards": [],
+        }
+        with patch.object(bot, "immediate_recover_player_claims", return_value={
+            "pid": "TARGET0003A", "status": "Success"
+        }) as immediate:
+            recovered, coverage_rechecked = bot.recover_player_from_saved_targets(
+                "TARGET0003A", False, False, "Recovery Run", targets,
+                progression_inspection_blocked=True,
+            )
+
+        self.assertTrue(coverage_rechecked)
+        self.assertEqual(recovered["status"], "Success")
+        self.assertTrue(immediate.call_args.kwargs["progression_inspection_blocked"])
+
     def test_post_run_recovery_replays_exact_progression_and_event_targets(self):
         driver = FakeDriver()
         driver._progression_unconfirmed = False
