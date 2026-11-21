@@ -252,6 +252,7 @@ class ProgressionSafetyTests(unittest.TestCase):
                  "card_text": "Milestone 65\nx80"},
             ],
             "delivered_signatures": ["Milestone 62 | x20"],
+            "terminal_card_signatures": ["Milestone 62 | x20"],
         }
         claimed, driver, clicks, _history = self._run(
             [before, after],
@@ -313,6 +314,7 @@ class ProgressionSafetyTests(unittest.TestCase):
                  "card_text": "Milestone 65\nx80"},
             ],
             "delivered_signatures": ["Milestone 62 | x20"],
+            "terminal_card_signatures": ["Milestone 62 | x20"],
         }
         claimed, driver, clicks, _history = self._run(
             snapshot, target_card_text_fragments=("62", "x20")
