@@ -51,6 +51,20 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("retry_ids = full_claim_retry_ids(prior)", source)
 
 
+    def test_deferred_progression_queue_is_serviced_without_widening_retry_scope(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        self.assertIn("record_progression_inspection_result", source)
+        self.assertIn("_record_queued_progression_inspection_result(meta, pid, r, run_label)", source)
+        self.assertIn("progression_reinspection=progression_attempt", source)
+        self.assertIn("_run_queued_progression_inspection(driver, pid, stats, progression_reinspection)", source)
+        self.assertIn("if requires_exact and not target_signature:", source)
+        self.assertIn("target_card_signature=target_signature or None", source)
+        self.assertIn("_non_progression_recovery_candidate", source)
+        self.assertIn("requires_exact_target", queue)
+        self.assertIn("attempted_slots", queue)
+        self.assertNotIn("progression_deferred", source.split("def _full_claim_recovery_candidate", 1)[1].split("def _record_full_claim_coverage", 1)[0])
+
     def test_daily_only_backup_recovery_preserves_roster_streak_and_coverage(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn("not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY", source)
