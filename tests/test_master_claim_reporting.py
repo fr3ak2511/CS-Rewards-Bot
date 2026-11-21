@@ -23,6 +23,7 @@ from master_claimer import (
     _record_full_claim_coverage,
     _recovery_targets_from_result,
     _mark_daily_recovery_slot_attempt,
+    _preserve_queued_progression_state,
     _run_queued_progression_inspection,
     _summary_counts,
     build_email,
@@ -156,6 +157,36 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         targets = _recovery_targets_from_result(result)
         self.assertFalse(targets["progression_unconfirmed"])
         self.assertIsNone(targets["progression_card_signature"])
+
+    def test_daily_only_or_other_non_inspection_run_preserves_queue(self):
+        meta = {
+            "progression_deferred_inspections": {
+                "PLAYER0001": {
+                    "status": "claim_unconfirmed",
+                    "requires_exact_target": True,
+                    "target_card_signature": "Exact queued card",
+                }
+            }
+        }
+        daily_result = {
+            "status": "Success",
+            "progression_checked": True,
+            "progression_deferred": False,
+            "progression_unconfirmed": False,
+        }
+        preserved = _preserve_queued_progression_state(
+            meta, "PLAYER0001", daily_result,
+            "Daily-only recovery does not inspect Progression.",
+        )
+        self.assertFalse(preserved["progression_checked"])
+        self.assertTrue(preserved["progression_deferred"])
+        self.assertTrue(preserved["progression_unconfirmed"])
+        self.assertEqual(
+            preserved["progression_unconfirmed_card_signature"],
+            "Exact queued card",
+        )
+        self.assertFalse(preserved["progression_claim_attempted"])
+        self.assertIn("Daily-only", preserved["progression_deferred_reason"])
 
     def test_promotional_only_popup_does_not_qualify_for_full_claim_recovery(self):
         result = {
