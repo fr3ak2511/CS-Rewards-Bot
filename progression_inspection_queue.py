@@ -13,8 +13,6 @@ QUEUE_KEY = "progression_deferred_inspections"
 HISTORY_KEY = "progression_deferred_inspection_history"
 _ALLOWED_SLOTS = {
     f"Promotional Check #{number}" for number in range(1, 5)
-} | {
-    f"Backup Run #{number}" for number in range(1, 5)
 }
 _MAX_ATTEMPTS_PER_RESET = 4
 _MAX_HISTORY = 50
