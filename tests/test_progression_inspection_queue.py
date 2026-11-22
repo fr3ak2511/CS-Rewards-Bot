@@ -123,6 +123,33 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             ["Primary Run", "Manual Run"],
         )
 
+    def test_manual_progression_slot_is_available_without_reusing_immediate_slot(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-22T05:52:00+05:30",
+            source_run_id="3899", reset_date="2026-11-22",
+        )
+        mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Immediate Progression Recovery",
+            reset_date="2026-11-22", now="2026-11-22T07:30:00+05:30",
+        )
+        eligible = eligible_progression_inspection_ids(
+            self.meta, ["PLAYER0001"], reset_date="2026-11-22",
+            slot_label="Manual Run", source_run_id="3899",
+        )
+        self.assertEqual(eligible, ["PLAYER0001"])
+        mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Manual Run",
+            reset_date="2026-11-22", now="2026-11-22T07:45:00+05:30",
+        )
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"], reset_date="2026-11-22",
+                slot_label="Manual Run", source_run_id="3899",
+            ),
+            [],
+        )
+
     def test_attempt_cap_is_four_distinct_slots_per_reset(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),

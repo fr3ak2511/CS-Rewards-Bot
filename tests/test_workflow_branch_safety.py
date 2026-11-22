@@ -97,6 +97,21 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
 
+    def test_manual_progression_recovery_is_exact_one_account_and_uses_shared_queue_slot(self):
+        workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        self.assertIn("manual_progression_recovery", workflow)
+        self.assertIn("manual_progression_player_id", workflow)
+        self.assertIn("manual_progression_source_run_id", workflow)
+        self.assertIn("slot_label='Manual Run'", workflow)
+        self.assertIn("MANUAL_PROGRESSION_RECOVERY", source)
+        self.assertIn("MANUAL_PROGRESSION_PLAYER_ID not in progression_queue_ids", source)
+        self.assertIn("len(players) != 1", source)
+        self.assertIn('slot_label=PROGRESSION_RECOVERY_SLOT', source)
+        self.assertIn('"Manual Run"', queue)
+        self.assertIn('concurrency:\n      group: rewards-claimer', workflow)
+
     def test_daily_only_backup_never_services_progression_queue_for_non_target_accounts(self):
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
         self.assertIn(

@@ -75,6 +75,9 @@ DAILY_CLAIM_DIAGNOSTICS_DIR = "daily_claim_diagnostics"
 RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
 PROGRESSION_QUEUE_ONLY = os.getenv("PROGRESSION_QUEUE_ONLY", "").strip().lower() == "true"
 PROGRESSION_SOURCE_RUN_ID = os.getenv("PROGRESSION_SOURCE_RUN_ID", "").strip()
+PROGRESSION_RECOVERY_SLOT = os.getenv("PROGRESSION_RECOVERY_SLOT", "Immediate Progression Recovery").strip()
+MANUAL_PROGRESSION_RECOVERY = os.getenv("MANUAL_PROGRESSION_RECOVERY", "").strip().lower() == "true"
+MANUAL_PROGRESSION_PLAYER_ID = os.getenv("MANUAL_PROGRESSION_PLAYER_ID", "").strip()
 DAILY_ONLY_RECOVERY = os.getenv("DAILY_ONLY_RECOVERY", "").strip().lower() == "true"
 MANUAL_DAILY_RECOVERY = os.getenv("MANUAL_DAILY_RECOVERY", "").strip().lower() == "true"
 MANUAL_DAILY_RECOVERY_PLAYER_ID = os.getenv("MANUAL_DAILY_RECOVERY_PLAYER_ID", "").strip()
@@ -7404,7 +7407,19 @@ def main():
 
     run_label, run_index = determine_run_context()
     if PROGRESSION_QUEUE_ONLY and not RECOVERY_ONLY_FAILED:
-        run_label, run_index = "Immediate Progression Recovery", 0
+        run_label, run_index = PROGRESSION_RECOVERY_SLOT, 0
+    if MANUAL_PROGRESSION_RECOVERY and (
+        not PROGRESSION_QUEUE_ONLY
+        or RECOVERY_ONLY_FAILED
+        or PROGRESSION_RECOVERY_SLOT != "Manual Run"
+        or not MANUAL_PROGRESSION_PLAYER_ID
+        or not PROGRESSION_SOURCE_RUN_ID.isdigit()
+    ):
+        log("⛔ MANUAL_PROGRESSION_RECOVERY_REJECTED: incomplete or conflicting one-account recovery scope; no browser started.")
+        return 2
+    if MANUAL_PROGRESSION_PLAYER_ID and not MANUAL_PROGRESSION_RECOVERY:
+        log("⛔ MANUAL_PROGRESSION_RECOVERY_REJECTED: Player ID supplied without explicit manual recovery mode; no browser started.")
+        return 2
     if os.getenv("GITHUB_EVENT_NAME") == "schedule" and run_label == "Unknown Scheduled Run":
         log(f"⛔ UNKNOWN_SCHEDULE_BLOCKED: unrecognized SCHEDULE_CRON={os.getenv('SCHEDULE_CRON', '')!r}; refusing claim execution.")
         return 2
@@ -7532,9 +7547,14 @@ def main():
             meta,
             player_ids,
             reset_date=_current_reset_date(),
-            slot_label="Immediate Progression Recovery",
+            slot_label=PROGRESSION_RECOVERY_SLOT,
             source_run_id=PROGRESSION_SOURCE_RUN_ID,
         ))
+        if MANUAL_PROGRESSION_RECOVERY:
+            if MANUAL_PROGRESSION_PLAYER_ID not in progression_queue_ids:
+                log("⛔ Manual Progression target changed or is no longer eligible after acquiring the shared claim lock; no browser started.")
+                return 2
+            progression_queue_ids = {MANUAL_PROGRESSION_PLAYER_ID}
         selected_ids = retry_set | progression_queue_ids
         if not selected_ids:
             log("⏭️ Combined immediate recovery skipped: no failed-ID targets or source-matched Progression queue entries remain after the concurrency lock.")
@@ -7544,9 +7564,12 @@ def main():
             log("❌ Immediate recovery selection did not match the validated production roster; no browser started.")
             return 2
         log(
-            f"🎯 Immediate recovery selection: {len(retry_set)} failed-ID account(s) "
+            f"🎯 Progression recovery selection: {len(retry_set)} failed-ID account(s) "
             f"plus {len(progression_queue_ids)} Progression queue account(s); duplicate accounts are processed once."
         )
+        if MANUAL_PROGRESSION_RECOVERY and len(players) != 1:
+            log("⛔ Manual Progression recovery did not resolve to exactly one roster account; no browser started.")
+            return 2
 
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
@@ -7644,7 +7667,7 @@ def main():
             if PROGRESSION_QUEUE_ONLY and pid in progression_queue_ids:
                 progression_attempt = (
                     _mark_queued_progression_inspection_attempt(
-                        meta, pid, "Immediate Progression Recovery"
+                        meta, pid, PROGRESSION_RECOVERY_SLOT
                     )
                     if queued_progression else None
                 )
@@ -7652,7 +7675,7 @@ def main():
                 if progression_attempt:
                     pp_result = process_player_progression_only(
                         pid, has_loyalty, new_id, progression_attempt,
-                        "Immediate Progression Recovery",
+                        PROGRESSION_RECOVERY_SLOT,
                     )
                     previous_progression = int(r.get("progression", 0) or 0)
                     for key in (
@@ -7675,7 +7698,7 @@ def main():
                         "attempted": True,
                         "status": pp_result.get("status"),
                         "reason": pp_result.get("fail_reason"),
-                        "slot": "Immediate Progression Recovery",
+                        "slot": PROGRESSION_RECOVERY_SLOT,
                     }
                     if pp_result.get("progression_deferred") or pp_result.get("progression_unconfirmed"):
                         if r.get("status") not in ("Login Failed", "Error", "Failed"):
@@ -7691,7 +7714,7 @@ def main():
             queued_progression = get_pending_progression_inspection(meta, pid)
             progression_attempt = (
                 _mark_queued_progression_inspection_attempt(
-                    meta, pid, "Immediate Progression Recovery"
+                    meta, pid, PROGRESSION_RECOVERY_SLOT
                 )
                 if queued_progression else None
             )
@@ -7699,7 +7722,7 @@ def main():
             if progression_attempt:
                 r = process_player_progression_only(
                     pid, has_loyalty, new_id, progression_attempt,
-                    "Immediate Progression Recovery",
+                    PROGRESSION_RECOVERY_SLOT,
                 )
             else:
                 r = {
@@ -7716,7 +7739,7 @@ def main():
                         queued_progression.get("target_card_signature") if queued_progression else None
                     ),
                     "progression_deferred": bool(queued_progression),
-                    "progression_deferred_reason": "Immediate Progression slot was unavailable; no browser session or claim click was started.",
+                    "progression_deferred_reason": f"{PROGRESSION_RECOVERY_SLOT} slot was unavailable; no browser session or claim click was started.",
                     "progression_claim_attempted": False,
                     "progression_reinspection_attempted": False,
                     "event_rewards": [],
