@@ -7663,6 +7663,7 @@ def main():
                         "progression_deferred_reason",
                         "progression_claim_attempted",
                         "progression_reinspection_attempted",
+                        "progression_inspection_complete",
                     ):
                         r[key] = pp_result.get(key)
                     r["progression"] = previous_progression + int(pp_result.get("progression", 0) or 0)
@@ -7815,7 +7816,7 @@ def main():
                                         "progression", "progression_checked", "progression_unconfirmed",
                                         "progression_unconfirmed_card_signature", "progression_deferred",
                                         "progression_deferred_reason", "progression_claim_attempted",
-                                        "progression_reinspection_attempted",
+                                        "progression_reinspection_attempted", "progression_inspection_complete",
                                     )
                                 }
                                 recovery_input = dict(r)
