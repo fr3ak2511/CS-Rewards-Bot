@@ -246,7 +246,8 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         action = record_progression_inspection_result(
             self.meta, "PLAYER0001",
             {"progression_checked": True, "progression_deferred": False,
-             "progression_unconfirmed": False, "progression": 0},
+             "progression_unconfirmed": False, "progression": 0,
+             "progression_inspection_complete": True},
             run_label="Promotional Check #2", now="2026-11-21T18:05:00+05:30",
             source_run_id="4002",
         )
@@ -255,6 +256,24 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         archived = self.meta["progression_deferred_inspection_history"][-1]
         self.assertEqual(archived["resolution"], "inspection_completed")
         self.assertEqual(archived["resolution_run_id"], "4002")
+
+    def test_zero_claim_reinspection_without_completion_evidence_remains_pending(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        action = record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {"progression_checked": True, "progression_deferred": False,
+             "progression_unconfirmed": False, "progression": 0},
+            run_label="Immediate Progression Recovery",
+            now="2026-11-21T06:05:00+05:30",
+            source_run_id="4002",
+        )
+        self.assertEqual(action, "retained")
+        self.assertIsNotNone(get_pending_progression_inspection(self.meta, "PLAYER0001"))
+        self.assertEqual(self.meta.get("progression_deferred_inspection_history", []), [])
 
     def test_login_or_processing_failure_does_not_resolve_pending_inspection(self):
         record_progression_inspection_result(

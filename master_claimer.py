@@ -3413,6 +3413,9 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         stats["progression_checked"] = bool(
             getattr(driver, "_progression_checked", not stats["progression_deferred"])
         )
+        stats["progression_inspection_complete"] = bool(
+            getattr(driver, "_progression_inspection_complete", False)
+        )
         if queued:
             log(
                 f"{'⏭️' if stats['progression_deferred'] else ('🚩' if stats['progression_unconfirmed'] else '✅')} "
@@ -7660,6 +7663,7 @@ def main():
                         "progression_deferred_reason",
                         "progression_claim_attempted",
                         "progression_reinspection_attempted",
+                        "progression_inspection_complete",
                     ):
                         r[key] = pp_result.get(key)
                     r["progression"] = previous_progression + int(pp_result.get("progression", 0) or 0)
@@ -7812,7 +7816,7 @@ def main():
                                         "progression", "progression_checked", "progression_unconfirmed",
                                         "progression_unconfirmed_card_signature", "progression_deferred",
                                         "progression_deferred_reason", "progression_claim_attempted",
-                                        "progression_reinspection_attempted",
+                                        "progression_reinspection_attempted", "progression_inspection_complete",
                                     )
                                 }
                                 recovery_input = dict(r)
