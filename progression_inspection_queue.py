@@ -170,13 +170,20 @@ def record_progression_inspection_result(
         result.get("progression_checked") is True
         and str(result.get("status") or "") not in {"Login Failed", "Error", "Failed"}
     ):
+        confirmed_claims = int(result.get("progression", 0) or 0)
+        inspection_complete = result.get("progression_inspection_complete") is True
+        if confirmed_claims <= 0 and not inspection_complete:
+            # Do not turn a momentary empty DOM snapshot into a resolved queue
+            # item. Keep it eligible for another bounded inspection slot.
+            return "retained"
+
         resolved = deepcopy(entry)
         resolved["status"] = "resolved"
         resolved["resolved_at"] = now
         resolved["resolution_run_label"] = str(run_label or "")
         resolved["resolution_run_id"] = str(source_run_id or "") or None
         resolved["resolution"] = (
-            "claim_confirmed" if int(result.get("progression", 0) or 0) > 0
+            "claim_confirmed" if confirmed_claims > 0
             else "inspection_completed"
         )
         queue.pop(pid, None)
