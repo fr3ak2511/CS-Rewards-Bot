@@ -97,6 +97,20 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("progression_inspection_blocked=progression_slot_blocked", source)
         self.assertIn("progression_inspection_blocked=bool(queued_progression)", source)
 
+    def test_manual_progression_runtime_guard_accepts_only_explicit_dispatch_routes(self):
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        policy = (ROOT / "progression_dispatch_policy.py").read_text(encoding="utf-8")
+        self.assertIn("from progression_dispatch_policy import is_valid_progression_queue_dispatch", source)
+        self.assertIn("if PROGRESSION_QUEUE_ONLY and not is_valid_progression_queue_dispatch(", source)
+        self.assertIn('event_name=os.getenv("GITHUB_EVENT_NAME", "")', source)
+        self.assertIn("manual_progression_recovery=MANUAL_PROGRESSION_RECOVERY", source)
+        self.assertIn("manual_progression_player_id=MANUAL_PROGRESSION_PLAYER_ID", source)
+        self.assertIn('event == "repository_dispatch"', policy)
+        self.assertIn('event == "workflow_dispatch"', policy)
+        self.assertIn('slot == "Manual Run"', policy)
+        self.assertIn("source.isdigit()", policy)
+        self.assertIn("Daily modes and conflicting dispatch inputs are rejected.", source)
+
     def test_manual_progression_recovery_is_exact_one_account_and_uses_shared_queue_slot(self):
         workflow = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
         source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")

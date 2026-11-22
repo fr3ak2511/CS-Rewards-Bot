@@ -36,6 +36,7 @@ from progression_inspection_queue import (
     mark_progression_inspection_attempt,
     record_progression_inspection_result,
 )
+from progression_dispatch_policy import is_valid_progression_queue_dispatch
 from promotion_followups import (
     filter_followup_results, seed_legacy_popup_followups,
     update_promotion_followups, build_promotional_followup_section,
@@ -7456,14 +7457,21 @@ def main():
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
 
-    if PROGRESSION_QUEUE_ONLY and (
-        os.getenv("GITHUB_EVENT_NAME") != "repository_dispatch"
-        or not PROGRESSION_SOURCE_RUN_ID
-        or DAILY_ONLY_RECOVERY
-        or MANUAL_DAILY_RECOVERY
-        or MANUAL_DAILY_RECOVERY_PLAYER_ID
+    if PROGRESSION_QUEUE_ONLY and not is_valid_progression_queue_dispatch(
+        event_name=os.getenv("GITHUB_EVENT_NAME", ""),
+        source_run_id=PROGRESSION_SOURCE_RUN_ID,
+        recovery_slot=PROGRESSION_RECOVERY_SLOT,
+        manual_progression_recovery=MANUAL_PROGRESSION_RECOVERY,
+        manual_progression_player_id=MANUAL_PROGRESSION_PLAYER_ID,
+        daily_only_recovery=DAILY_ONLY_RECOVERY,
+        manual_daily_recovery=MANUAL_DAILY_RECOVERY,
+        manual_daily_player_id=MANUAL_DAILY_RECOVERY_PLAYER_ID,
     ):
-        log("❌ Progression queue-only recovery requires its validated repository_dispatch source and cannot be combined with Daily/manual modes.")
+        log(
+            "❌ Progression queue-only recovery requires either a source-bound "
+            "repository_dispatch or the validated exact-player Manual Run "
+            "workflow_dispatch; Daily modes and conflicting dispatch inputs are rejected."
+        )
         return 2
 
     manual_daily_targets = {}
