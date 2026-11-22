@@ -67,7 +67,7 @@
     "retry_player_count": 0,
     "retry_targets_by_player": {},
     "total_claimed": 166,
-    "efficiency": 100.0,
+    "efficiency": 100,
     "efficiency_scope": "full_claim_accounts_only",
     "duration_seconds": 1373,
     "per_type": {
@@ -122,7 +122,7 @@
     "retry_player_count": 0,
     "retry_targets_by_player": {},
     "total_claimed": 166,
-    "efficiency": 100.0,
+    "efficiency": 100,
     "efficiency_scope": "full_claim_accounts_only",
     "duration_seconds": 1373,
     "per_type": {
@@ -686,20 +686,20 @@
     "5899855DAA167B36": "FREAK2511",
     "5D14D66D5B6C7B8F": "hgkme",
     "5429611A24A8F01A": "hgkme1",
-    "856EB1365FA9D02E": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+    "856EB1365FA9D02E": "ĦàmàśĞüřļ",
     "F251D3D226496061": "Gvk9916",
-    "3D9A901755C3B2D8": "T\u00f5p\u011c\u00fc\u00f1",
+    "3D9A901755C3B2D8": "TõpĜüñ",
     "86CD85689FAE9549": "Nick 11 11",
-    "A32124B011061E03": "VEN\u00d8M\u00d8\u00f9S",
-    "63989CEF5D15F053": "R\u00e5s\u00dclGh\u00fcL",
-    "B0036841F0183A12": "\u011e\u00f6Ku",
+    "A32124B011061E03": "VENØMØùS",
+    "63989CEF5D15F053": "RåsÜlGhüL",
+    "B0036841F0183A12": "ĞöKu",
     "A6DA56D3C46DF31B": "HareeshK",
-    "7E53CF9C948CED45": "retH\u00e8llG\u00d8D",
+    "7E53CF9C948CED45": "retHèllGØD",
     "E796C81690AB75C0": "DRSxSUJAN",
-    "F820398935D2C403": "R\u00e8t\u0111 K\u00e8\u00f1",
+    "F820398935D2C403": "Rètđ Kèñ",
     "C3960960443AF932": "LittleKane",
     "2B50290C73E02027": "top silly",
-    "188A50EA1ABE0765": "LULL\u00ef",
+    "188A50EA1ABE0765": "LULLï",
     "4D1AA8C2C628E73F": "SujanBckup",
     "B4BAE5FC4CACA8F7": "B4BAE5FC4CACA8F7",
     "8FC80EF0CC5B9D39": "RITZEE17",
@@ -708,7 +708,7 @@
     "6163D9F946C4BD48": "Mickypt 1",
     "B3ED965EAECB6F7C": "AnwrHatela",
     "BB382E889AA37C4F": "SAVAggEEEE",
-    "DA4C269DB53172C5": "\u0120od\u0141\u00eekeP\u015aR",
+    "DA4C269DB53172C5": "ĠodŁîkePŚR",
     "51001A5D6014F2DD": "Gupta00001",
     "4443B75C454AEFF8": "4443B75C454AEFF8",
     "809109186A2962E4": "annu411",
@@ -816,10 +816,10 @@
       "last_observed_at_ist": "2026-11-22T05:41:03.549139"
     },
     "856EB1365FA9D02E": {
-      "current_name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+      "current_name": "ĦàmàśĞüřļ",
       "names": [
         {
-          "name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
+          "name": "ĦàmàśĞüřļ",
           "first_seen_at_ist": "2026-11-13T17:39:53.493458",
           "last_seen_at_ist": "2026-11-22T05:41:16.157064",
           "observation_count": 25,
@@ -844,10 +844,10 @@
       "last_observed_at_ist": "2026-11-22T05:41:52.550957"
     },
     "3D9A901755C3B2D8": {
-      "current_name": "T\u00f5p\u011c\u00fc\u00f1",
+      "current_name": "TõpĜüñ",
       "names": [
         {
-          "name": "T\u00f5p\u011c\u00fc\u00f1",
+          "name": "TõpĜüñ",
           "first_seen_at_ist": "2026-11-13T17:41:18.857939",
           "last_seen_at_ist": "2026-11-22T07:29:11.339404",
           "observation_count": 26,
@@ -872,10 +872,10 @@
       "last_observed_at_ist": "2026-11-22T07:29:25.107573"
     },
     "A32124B011061E03": {
-      "current_name": "VEN\u00d8M\u00d8\u00f9S",
+      "current_name": "VENØMØùS",
       "names": [
         {
-          "name": "VEN\u00d8M\u00d8\u00f9S",
+          "name": "VENØMØùS",
           "first_seen_at_ist": "2026-11-13T17:42:43.026468",
           "last_seen_at_ist": "2026-11-22T05:43:36.921979",
           "observation_count": 25,
@@ -886,10 +886,10 @@
       "last_observed_at_ist": "2026-11-22T05:43:36.921979"
     },
     "63989CEF5D15F053": {
-      "current_name": "R\u00e5s\u00dclGh\u00fcL",
+      "current_name": "RåsÜlGhüL",
       "names": [
         {
-          "name": "R\u00e5s\u00dclGh\u00fcL",
+          "name": "RåsÜlGhüL",
           "first_seen_at_ist": "2026-11-13T17:43:24.612315",
           "last_seen_at_ist": "2026-11-22T05:44:14.576955",
           "observation_count": 26,
@@ -900,10 +900,10 @@
       "last_observed_at_ist": "2026-11-22T05:44:14.576955"
     },
     "B0036841F0183A12": {
-      "current_name": "\u011e\u00f6Ku",
+      "current_name": "ĞöKu",
       "names": [
         {
-          "name": "\u011e\u00f6Ku",
+          "name": "ĞöKu",
           "first_seen_at_ist": "2026-11-13T17:44:07.123635",
           "last_seen_at_ist": "2026-11-22T05:45:04.073424",
           "observation_count": 26,
@@ -928,10 +928,10 @@
       "last_observed_at_ist": "2026-11-22T05:45:41.499146"
     },
     "7E53CF9C948CED45": {
-      "current_name": "retH\u00e8llG\u00d8D",
+      "current_name": "retHèllGØD",
       "names": [
         {
-          "name": "retH\u00e8llG\u00d8D",
+          "name": "retHèllGØD",
           "first_seen_at_ist": "2026-11-13T17:45:32.901979",
           "last_seen_at_ist": "2026-11-22T05:46:19.074901",
           "observation_count": 25,
@@ -956,10 +956,10 @@
       "last_observed_at_ist": "2026-11-22T07:29:34.759881"
     },
     "F820398935D2C403": {
-      "current_name": "R\u00e8t\u0111 K\u00e8\u00f1",
+      "current_name": "Rètđ Kèñ",
       "names": [
         {
-          "name": "R\u00e8t\u0111 K\u00e8\u00f1",
+          "name": "Rètđ Kèñ",
           "first_seen_at_ist": "2026-11-13T17:46:57.023708",
           "last_seen_at_ist": "2026-11-22T05:47:26.812283",
           "observation_count": 25,
@@ -998,10 +998,10 @@
       "last_observed_at_ist": "2026-11-22T05:48:37.836771"
     },
     "188A50EA1ABE0765": {
-      "current_name": "LULL\u00ef",
+      "current_name": "LULLï",
       "names": [
         {
-          "name": "LULL\u00ef",
+          "name": "LULLï",
           "first_seen_at_ist": "2026-11-13T17:49:02.179514",
           "last_seen_at_ist": "2026-11-22T05:49:12.511668",
           "observation_count": 25,
@@ -1124,10 +1124,10 @@
       "last_observed_at_ist": "2026-11-22T07:30:00.044149"
     },
     "DA4C269DB53172C5": {
-      "current_name": "\u0120od\u0141\u00eekeP\u015aR",
+      "current_name": "ĠodŁîkePŚR",
       "names": [
         {
-          "name": "\u0120od\u0141\u00eekeP\u015aR",
+          "name": "ĠodŁîkePŚR",
           "first_seen_at_ist": "2026-11-13T17:55:24.146300",
           "last_seen_at_ist": "2026-11-22T05:54:41.727210",
           "observation_count": 25,
@@ -1254,7 +1254,100 @@
       "reconciled_at_ist": "2026-11-14T12:26:31+05:30"
     }
   ],
-  "progression_deferred_inspections": {},
+  "progression_deferred_inspections": {
+    "86CD85689FAE9549": {
+      "status": "deferred",
+      "first_deferred_at": "2026-11-22T05:43:29.223864",
+      "first_source_run_label": "Primary Run",
+      "first_source_run_id": "44964890496",
+      "attempt_reset_date": "2026-11-22",
+      "attempted_slots": [
+        "Primary Run",
+        "Immediate Progression Recovery"
+      ],
+      "total_attempts": 2,
+      "last_attempt_at": "2026-11-22T07:29:18.014789",
+      "last_attempt_slot": "Immediate Progression Recovery",
+      "last_deferred_at": "2026-11-22T05:43:29.223864",
+      "last_source_run_label": "Primary Run",
+      "last_source_run_id": "44964890496",
+      "last_reason": "Reopened after the prior empty Progression DOM snapshot was found to be non-authoritative; account remains pending for another inspection.",
+      "target_card_signature": null,
+      "requires_exact_target": false,
+      "reopened_from_resolution": "inspection_completed",
+      "reopened_from_resolution_run_id": "44973856377",
+      "reopened_player_name": "Nick 11 11"
+    },
+    "631FEB500E5C1EB7": {
+      "status": "deferred",
+      "first_deferred_at": "2026-11-22T05:52:49.712985",
+      "first_source_run_label": "Primary Run",
+      "first_source_run_id": "44964890496",
+      "attempt_reset_date": "2026-11-22",
+      "attempted_slots": [
+        "Primary Run",
+        "Immediate Progression Recovery"
+      ],
+      "total_attempts": 2,
+      "last_attempt_at": "2026-11-22T07:29:41.632804",
+      "last_attempt_slot": "Immediate Progression Recovery",
+      "last_deferred_at": "2026-11-22T05:52:49.712985",
+      "last_source_run_label": "Primary Run",
+      "last_source_run_id": "44964890496",
+      "last_reason": "Reopened after the prior empty Progression DOM snapshot was found to be non-authoritative; account remains pending for another inspection.",
+      "target_card_signature": null,
+      "requires_exact_target": false,
+      "reopened_from_resolution": "inspection_completed",
+      "reopened_from_resolution_run_id": "44973856377",
+      "reopened_player_name": "Mickypt"
+    },
+    "BB382E889AA37C4F": {
+      "status": "deferred",
+      "first_deferred_at": "2026-11-22T05:54:34.263311",
+      "first_source_run_label": "Primary Run",
+      "first_source_run_id": "44964890496",
+      "attempt_reset_date": "2026-11-22",
+      "attempted_slots": [
+        "Primary Run",
+        "Immediate Progression Recovery"
+      ],
+      "total_attempts": 2,
+      "last_attempt_at": "2026-11-22T07:29:53.061048",
+      "last_attempt_slot": "Immediate Progression Recovery",
+      "last_deferred_at": "2026-11-22T05:54:34.263311",
+      "last_source_run_label": "Primary Run",
+      "last_source_run_id": "44964890496",
+      "last_reason": "Reopened after the prior empty Progression DOM snapshot was found to be non-authoritative; account remains pending for another inspection.",
+      "target_card_signature": null,
+      "requires_exact_target": false,
+      "reopened_from_resolution": "inspection_completed",
+      "reopened_from_resolution_run_id": "44973856377",
+      "reopened_player_name": "SAVAggEEEE"
+    },
+    "809109186A2962E4": {
+      "status": "deferred",
+      "first_deferred_at": "2026-11-22T05:56:49.367355",
+      "first_source_run_label": "Primary Run",
+      "first_source_run_id": "44964890496",
+      "attempt_reset_date": "2026-11-22",
+      "attempted_slots": [
+        "Primary Run",
+        "Immediate Progression Recovery"
+      ],
+      "total_attempts": 2,
+      "last_attempt_at": "2026-11-22T07:30:18.606403",
+      "last_attempt_slot": "Immediate Progression Recovery",
+      "last_deferred_at": "2026-11-22T05:56:49.367355",
+      "last_source_run_label": "Primary Run",
+      "last_source_run_id": "44964890496",
+      "last_reason": "Reopened after the prior empty Progression DOM snapshot was found to be non-authoritative; account remains pending for another inspection.",
+      "target_card_signature": null,
+      "requires_exact_target": false,
+      "reopened_from_resolution": "inspection_completed",
+      "reopened_from_resolution_run_id": "44973856377",
+      "reopened_player_name": "annu411"
+    }
+  },
   "progression_deferred_inspection_history": [
     {
       "status": "resolved",
