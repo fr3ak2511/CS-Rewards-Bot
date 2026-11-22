@@ -926,11 +926,12 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         report = build_email(
             [player], "Primary Run", 1,
             get_ist_time() - timedelta(seconds=30), {},
-            configured_player_count=35,
+            configured_player_count=1,
         )
         self.assertIn("Above minimum", report)
         self.assertIn("34 / 24 · surplus 10 · next 56 (in 22 Grenades)", report)
-        self.assertNotIn("Need attention", report)
+        self.assertIn("Above minimum", report)
+        self.assertNotIn("Tracking Incomplete", report)
 
     def test_pending_baseline_is_informational_not_attention(self):
         player = self.sample_player()
@@ -946,6 +947,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("Tracking pending", report)
+        self.assertIn("Tracking Incomplete", report)
         self.assertNotIn("Need attention", report)
 
     def test_grenade_balance_email_uses_singular_account_count(self):
