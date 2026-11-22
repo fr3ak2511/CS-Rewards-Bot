@@ -4,6 +4,12 @@ on:
   workflow_run:
     workflows: ["CS Hub Rewards Claimer"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: "Completed Primary Run ID to service its deferred Progression queue"
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -12,7 +18,7 @@ permissions:
 jobs:
   dispatch-immediate-recovery:
     name: Dispatch serialized post-Primary recovery pass
-    if: (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch') && github.event.workflow_run.head_branch == github.event.repository.default_branch
+    if: (github.event_name == 'workflow_dispatch' && github.ref_name == 'prod') || (github.event_name == 'workflow_run' && (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch') && github.event.workflow_run.head_branch == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -30,11 +36,37 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const source = context.payload.workflow_run;
             const out = (dispatch, reason) => {
               core.setOutput('dispatch', dispatch ? 'true' : 'false');
               core.info(`${dispatch ? 'RECOVERY NEEDED' : 'NO RECOVERY'}: ${reason}`);
             };
+
+            let source;
+            if (context.eventName === 'workflow_dispatch') {
+              const sourceRunId = String(context.payload.inputs?.source_run_id || '').trim();
+              if (!/^\d+$/.test(sourceRunId)) {
+                out(false, 'manual catch-up requires one numeric completed Primary Run ID');
+                return;
+              }
+              try {
+                const response = await github.rest.actions.getWorkflowRun({
+                  owner, repo, run_id: Number(sourceRunId)
+                });
+                source = response.data;
+              } catch (error) {
+                out(false, `source run ${sourceRunId} could not be fetched; no dispatch performed`);
+                return;
+              }
+              if (source.name !== 'CS Hub Rewards Claimer'
+                  || source.status !== 'completed'
+                  || source.head_branch !== 'prod'
+                  || !['schedule', 'workflow_dispatch'].includes(source.event)) {
+                out(false, 'manual source must be a completed CS Hub Rewards Claimer Primary candidate from prod; no dispatch performed');
+                return;
+              }
+            } else {
+              source = context.payload.workflow_run;
+            }
 
             // Ignore lightweight/no-op runs where the Python claim step never executed.
             const jobsResponse = await github.rest.actions.listJobsForWorkflowRun({
@@ -118,7 +150,7 @@ jobs:
               repo: context.repo.repo,
               event_type: 'claim-recovery',
               client_payload: {
-                source_run_id: context.payload.workflow_run.id,
+                source_run_id: source.id,
                 retry_count: Number('${{ steps.decision.outputs.retry_count }}'),
                 progression_queue_only: '${{ steps.decision.outputs.progression_queue_only }}' === 'true'
               }

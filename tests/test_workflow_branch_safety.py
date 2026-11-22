@@ -397,5 +397,21 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertNotIn("_record_grenade_balance_for_player(", processor)
 
 
+
+    def test_recovery_dispatch_supports_manual_source_run_bound_catchup(self):
+        workflow = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
+        self.assertIn("  workflow_dispatch:", workflow)
+        self.assertIn("source_run_id:", workflow)
+        self.assertIn("github.event_name == 'workflow_dispatch' && github.ref_name == 'prod'", workflow)
+        self.assertIn("context.eventName === 'workflow_dispatch'", workflow)
+        self.assertIn("github.rest.actions.getWorkflowRun", workflow)
+        self.assertIn("source.name !== 'CS Hub Rewards Claimer'", workflow)
+        self.assertIn("source.status !== 'completed'", workflow)
+        self.assertIn("source_run_id: source.id", workflow)
+        self.assertIn(r"if (!/^\d+$/.test(sourceRunId))", workflow)
+        self.assertIn("evaluateImmediateProgressionQueueRecovery", workflow)
+        self.assertEqual(workflow.count("createDispatchEvent({"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
