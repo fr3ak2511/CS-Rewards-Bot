@@ -415,6 +415,21 @@ def claim_progression_rewards(
                 # milestone can appear after the prior reward is redeemed.
                 sweep = 0
 
+            if (
+                defer_if_more_claimable
+                and claimed == 0
+                and not deferred
+                and not unconfirmed
+            ):
+                # A zero-card DOM snapshot is not authoritative proof that no
+                # reward is available. Preserve this queued inspection for a
+                # later scheduled pass instead of silently resolving it.
+                _defer(
+                    "Queued Progression inspection found no currently visible claimable reward; "
+                    "keeping the queue open for a later pass because an empty snapshot is not "
+                    "authoritative proof that no reward is available."
+                )
+
             if defer_if_more_claimable and claimed >= max_claims_per_visit:
                 # A queued generic inspection is allowed one claim per slot. Do
                 # not resolve its queue entry until a click-free carousel sweep
@@ -497,6 +512,7 @@ def claim_progression_rewards(
             driver._progression_deferred_reason = deferred_reason if deferred else None
             driver._progression_claim_attempted = bool(claim_attempted)
             driver._progression_checked = not bool(deferred)
+            driver._progression_inspection_complete = bool(not deferred and not unconfirmed)
         except Exception:
             pass
 
