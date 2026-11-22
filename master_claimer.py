@@ -5838,7 +5838,7 @@ def build_mobile_cards(results, n):
 
 
 def build_grenade_balance_email_section(results):
-    """Render a clear balance status; absence of a snapshot is never called a pass."""
+    """Render compact actionable and informational balance exceptions."""
     records = []
     for result in results:
         balance = result.get("grenade_balance")
@@ -5873,29 +5873,49 @@ def build_grenade_balance_email_section(results):
         f"{len(records)} {account_word} checked · {captured} {balance_word} captured · "
         f"{passed} passed"
     )
+
     exceptions = []
     for result, balance, status in records:
-        if status == "pass":
-            continue
-        label = html.escape(_issue_identity_label(result))
         observed = balance.get("current_count")
         minimum = balance.get("expected_minimum")
+        milestone = balance.get("next_milestone")
+        remaining = balance.get("remaining_to_next_milestone")
         observed_text = "—" if observed is None else str(int(observed))
         minimum_text = "Pending baseline" if minimum is None else str(int(minimum))
+        milestone_text = (
+            f" · next {int(milestone)} (in {int(remaining)} Grenades)"
+            if milestone is not None and remaining is not None
+            else f" · next {int(milestone)}"
+            if milestone is not None
+            else ""
+        )
+
+        if status == "pass" and int(balance.get("surplus", 0) or 0) <= 0:
+            continue
+
+        label = html.escape(_issue_identity_label(result))
         if status == "below_minimum":
-            detail = f"{observed_text} / {minimum_text} · short {int(balance.get('deficit', 0) or 0)}"
+            detail = f"{observed_text} / {minimum_text} · short {int(balance.get('deficit', 0) or 0)}{milestone_text}"
             status_text = "Below minimum"
+            item_class = "v2-attention"
         elif status == "counter_regressed":
-            detail = f"{observed_text} observed · expected at least {minimum_text}"
+            detail = f"{observed_text} observed · expected at least {minimum_text}{milestone_text}"
             status_text = "Counter regressed"
+            item_class = "v2-attention"
+        elif status == "pass" and int(balance.get("surplus", 0) or 0) > 0:
+            detail = f"{observed_text} / {minimum_text} · surplus {int(balance.get('surplus', 0) or 0)}{milestone_text}"
+            status_text = "Above minimum"
+            item_class = "v2-item"
         elif status == "pending_baseline":
             detail = f"{observed_text} observed · baseline pending"
-            status_text = "Baseline pending"
+            status_text = "Tracking pending"
+            item_class = "v2-item"
         else:
             detail = str(balance.get("reason") or "Balance could not be validated")
             status_text = "Not validated"
+            item_class = "v2-item"
         exceptions.append(
-            "<div class='v2-item v2-attention'>"
+            "<div class='v2-item " + item_class + "'>"
             f"<div><strong>{label}</strong><small>{html.escape(status_text)}</small></div>"
             f"<span class='v2-result'>{html.escape(detail)}</span></div>"
         )
@@ -5906,13 +5926,17 @@ def build_grenade_balance_email_section(results):
     if regressed:
         flags.append(f"{regressed} regressed")
     if pending:
-        flags.append(f"{pending} baseline pending")
+        flags.append(f"{pending} tracking pending")
     if not_validated:
         flags.append(f"{not_validated} not validated")
-    state = "Attention Required" if below or regressed or pending or not_validated else "Passed"
-    state_class = "v2-state-warning" if state == "Attention Required" else "v2-state-success"
     if flags:
         summary += " · " + " · ".join(flags)
+
+    actionable = below or regressed
+    state = "Attention Required" if actionable else (
+        "Tracking Incomplete" if pending or not_validated else "Passed"
+    )
+    state_class = "v2-state-warning" if actionable else "v2-state-neutral" if pending or not_validated else "v2-state-success"
 
     return (
         "<section class='v2-section v2-grenade v2-validation-card'>"
@@ -5923,8 +5947,6 @@ def build_grenade_balance_email_section(results):
            "<p class='v2-all-clear'>All captured Grenade balances meet their expected minimum.</p>")
         + "</section>"
     )
-
-
 
 
 def _email_section_header(title, subtitle="", badge_text=None, badge_class=""):
