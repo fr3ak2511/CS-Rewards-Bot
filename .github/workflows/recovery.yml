@@ -44,7 +44,7 @@ jobs:
             let source;
             if (context.eventName === 'workflow_dispatch') {
               const sourceRunId = String(context.payload.inputs?.source_run_id || '').trim();
-              if (!/^\\d+$/.test(sourceRunId)) {
+              if (!/^\d+$/.test(sourceRunId)) {
                 out(false, 'manual catch-up requires one numeric completed Primary Run ID');
                 return;
               }
@@ -102,7 +102,7 @@ jobs:
               return;
             }
             const rosterText = Buffer.from(rosterResponse.data.content, 'base64').toString('utf8');
-            const playerIds = rosterText.split(/\\r?\\n/).slice(1)
+            const playerIds = rosterText.split(/\r?\n/).slice(1)
               .map(line => line.split(',')[0].trim())
               .filter(Boolean);
             if (!playerIds.length || new Set(playerIds).size !== playerIds.length) {
@@ -147,7 +147,7 @@ jobs:
         with:
           script: |
             const sourceRunId = '${{ steps.decision.outputs.dispatch_source_run_id }}';
-            if (!/^\\d+$/.test(sourceRunId)) {
+            if (!/^\d+$/.test(sourceRunId)) {
               core.setFailed('Decision step did not provide a valid source run ID; refusing dispatch');
               return;
             }
