@@ -54,6 +54,19 @@ on:
         description: "Exact Player ID for recover_pending_daily; the account must already be pending for the current reset"
         required: false
         type: string
+      manual_progression_recovery:
+        description: "Run a guarded Progression-only inspection for one exact queued Player ID; no other reward category or account"
+        required: false
+        type: boolean
+        default: false
+      manual_progression_player_id:
+        description: "Exact queued Player ID for manual_progression_recovery"
+        required: false
+        type: string
+      manual_progression_source_run_id:
+        description: "Source run ID currently recorded on that queue entry"
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -426,6 +439,9 @@ jobs:
           EXTERNAL_PROMOTIONAL_RUN_CREATED_AT: ${{ needs.preflight.outputs.scheduled_run_created_at }}
           MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
           MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
+          MANUAL_PROGRESSION_RECOVERY: ${{ inputs.manual_progression_recovery }}
+          MANUAL_PROGRESSION_PLAYER_ID: ${{ inputs.manual_progression_player_id }}
+          MANUAL_PROGRESSION_SOURCE_RUN_ID: ${{ inputs.manual_progression_source_run_id }}
           DIAGNOSE_LOGIN: ${{ inputs.diagnose_login }}
           LOGIN_TEST_ONLY: ${{ inputs.test_login_only }}
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
@@ -456,6 +472,9 @@ jobs:
           external_promotional_run_created_at = os.environ.get('EXTERNAL_PROMOTIONAL_RUN_CREATED_AT', '').strip()
           manual_daily_recovery = os.environ.get('MANUAL_DAILY_RECOVERY', '').strip().lower() == 'true'
           manual_daily_player_id = os.environ.get('MANUAL_DAILY_RECOVERY_PLAYER_ID', '').strip()
+          manual_progression_recovery = os.environ.get('MANUAL_PROGRESSION_RECOVERY', '').strip().lower() == 'true'
+          manual_progression_player_id = os.environ.get('MANUAL_PROGRESSION_PLAYER_ID', '').strip()
+          manual_progression_source_run_id = os.environ.get('MANUAL_PROGRESSION_SOURCE_RUN_ID', '').strip()
           diagnose_login = os.environ.get('DIAGNOSE_LOGIN', '').strip().lower() == 'true'
           login_test_only = os.environ.get('LOGIN_TEST_ONLY', '').strip().lower() == 'true'
           claim_test_only = os.environ.get('CLAIM_TEST_ONLY', '').strip().lower() == 'true'
@@ -465,12 +484,16 @@ jobs:
           retry_cron = '0-30/5 0 * * *'
           ist_tz = timezone(timedelta(hours=5, minutes=30))
 
-          def emit(execute, recovery, reason, daily_only=False, progression_only=False):
+          def emit(execute, recovery, reason, daily_only=False, progression_only=False,
+                   progression_player_id='', progression_source_run_id='', progression_slot=''):
               with open(out_path, 'a', encoding='utf-8') as handle:
                   handle.write(f"execute={'true' if execute else 'false'}\n")
                   handle.write(f"recovery={'true' if recovery else 'false'}\n")
                   handle.write(f"daily_only={'true' if daily_only else 'false'}\n")
                   handle.write(f"progression_only={'true' if progression_only else 'false'}\n")
+                  handle.write(f"progression_player_id={progression_player_id}\n")
+                  handle.write(f"progression_source_run_id={progression_source_run_id}\n")
+                  handle.write(f"progression_slot={progression_slot}\n")
                   handle.write(f'reason={reason}\n')
               print(f"{'RUN' if execute else 'SKIP'}: {reason}")
 
@@ -511,15 +534,26 @@ jobs:
               emit(False, False, f"production-only claimer; selected branch '{selected_branch or 'unknown'}' is not 'prod'")
               raise SystemExit(0)
 
+          if (manual_progression_player_id or manual_progression_source_run_id) and not manual_progression_recovery:
+              emit(False, False, 'manual Progression target/source fields require manual_progression_recovery=true; fail closed')
+              raise SystemExit(0)
+
+          if manual_progression_recovery and (
+              event != 'workflow_dispatch' or external_primary or external_promotional_backup
+          ):
+              emit(False, False, 'manual Progression recovery is valid only as its own workflow_dispatch mode on prod; fail closed')
+              raise SystemExit(0)
+
           if event == 'workflow_dispatch' and external_promotional_slot and not external_promotional_backup:
               emit(False, False, 'external_promotional_slot requires external_promotional_backup=true; fail closed')
               raise SystemExit(0)
 
           if event == 'workflow_dispatch' and external_promotional_backup:
               other_modes = (
-                  external_primary or manual_daily_recovery
+                  external_primary or manual_daily_recovery or manual_progression_recovery
                   or diagnose_login or login_test_only or claim_test_only
-                  or bool(manual_daily_player_id)
+                  or bool(manual_daily_player_id) or bool(manual_progression_player_id)
+                  or bool(manual_progression_source_run_id)
               )
               if other_modes or external_promotional_slot not in {'1', '2'}:
                   emit(False, False, 'external promotional backup requires exactly slot 1 or 2 and cannot be combined with another dispatch mode; fail closed')
@@ -530,6 +564,58 @@ jobs:
               raise SystemExit(0)
 
           if event == 'workflow_dispatch' and not external_primary and not external_promotional_backup:
+              if manual_progression_recovery:
+                  if (manual_daily_recovery or manual_daily_player_id or diagnose_login
+                      or login_test_only or claim_test_only):
+                      emit(False, False, 'manual Progression recovery cannot be combined with Daily recovery, login diagnostics, login tests, or one-player claim tests')
+                      raise SystemExit(0)
+                  if not manual_progression_player_id or not manual_progression_source_run_id.isdigit():
+                      emit(False, False, 'manual Progression recovery requires one exact Player ID and one numeric source run ID')
+                      raise SystemExit(0)
+
+                  meta = load_json('bot_meta.json', {})
+                  try:
+                      with open('players.csv', 'r', newline='', encoding='utf-8-sig') as handle:
+                          player_ids = [
+                              (row.get('player_id') or '').strip()
+                              for row in csv.DictReader(handle)
+                              if (row.get('player_id') or '').strip()
+                          ]
+                  except Exception as exc:
+                      emit(False, False, f'manual Progression recovery could not read players.csv ({type(exc).__name__}); fail closed')
+                      raise SystemExit(0)
+                  if not player_ids or len(player_ids) != len(set(player_ids)):
+                      emit(False, False, 'manual Progression recovery rejected: configured roster is empty or contains duplicate Player IDs')
+                      raise SystemExit(0)
+
+                  now = datetime.now(ist_tz).replace(tzinfo=None)
+                  reset_date = now.date()
+                  if now.time() < dt_time(5, 30):
+                      reset_date -= timedelta(days=1)
+                  candidates = eligible_progression_inspection_ids(
+                      meta,
+                      [manual_progression_player_id],
+                      reset_date=reset_date.isoformat(),
+                      slot_label='Manual Run',
+                      source_run_id=manual_progression_source_run_id,
+                  )
+                  if manual_progression_player_id not in player_ids:
+                      emit(False, False, 'manual Progression recovery rejected: requested Player ID is not in players.csv')
+                  elif candidates != [manual_progression_player_id]:
+                      emit(False, False, 'manual Progression recovery rejected: this exact account has no current-reset, source-matched pending queue entry with an unused Manual Run slot')
+                  else:
+                      emit(
+                          True,
+                          False,
+                          f'manual Progression-only recovery accepted for exactly Player ID {manual_progression_player_id}; only this account and Progression may be processed',
+                          False,
+                          True,
+                          manual_progression_player_id,
+                          manual_progression_source_run_id,
+                          'Manual Run',
+                      )
+                  raise SystemExit(0)
+
               if manual_daily_recovery:
                   if diagnose_login or login_test_only or claim_test_only:
                       emit(False, False, 'manual Daily recovery cannot be combined with login diagnostics, login tests, or one-player claim tests')
@@ -578,6 +664,9 @@ jobs:
 
               if manual_daily_player_id:
                   emit(False, False, 'daily_recovery_player_id requires recover_pending_daily=true; fail closed')
+                  raise SystemExit(0)
+              if manual_progression_player_id or manual_progression_source_run_id:
+                  emit(False, False, 'manual Progression target/source fields require manual_progression_recovery=true; fail closed')
                   raise SystemExit(0)
               emit(True, False, 'manual workflow_dispatch request on prod; run the selected manual mode')
               raise SystemExit(0)
@@ -828,9 +917,12 @@ jobs:
           CLAIM_TEST_ONLY: ${{ inputs.test_claims_one_player }}
           MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
           MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
+          MANUAL_PROGRESSION_RECOVERY: ${{ inputs.manual_progression_recovery }}
+          MANUAL_PROGRESSION_PLAYER_ID: ${{ steps.run_mode.outputs.progression_player_id }}
+          PROGRESSION_RECOVERY_SLOT: ${{ steps.run_mode.outputs.progression_slot || 'Immediate Progression Recovery' }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
           PROGRESSION_QUEUE_ONLY: ${{ steps.run_mode.outputs.progression_only }}
-          PROGRESSION_SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
+          PROGRESSION_SOURCE_RUN_ID: ${{ steps.run_mode.outputs.progression_source_run_id || github.event.client_payload.source_run_id }}
           DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
