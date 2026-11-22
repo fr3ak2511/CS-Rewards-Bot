@@ -3413,6 +3413,9 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         stats["progression_checked"] = bool(
             getattr(driver, "_progression_checked", not stats["progression_deferred"])
         )
+        stats["progression_inspection_complete"] = bool(
+            getattr(driver, "_progression_inspection_complete", False)
+        )
         if queued:
             log(
                 f"{'⏭️' if stats['progression_deferred'] else ('🚩' if stats['progression_unconfirmed'] else '✅')} "
