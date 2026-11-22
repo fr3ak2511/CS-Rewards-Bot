@@ -44,7 +44,7 @@ jobs:
             let source;
             if (context.eventName === 'workflow_dispatch') {
               const sourceRunId = String(context.payload.inputs?.source_run_id || '').trim();
-              if (!/^\d+$/.test(sourceRunId)) {
+              if (!/^\\d+$/.test(sourceRunId)) {
                 out(false, 'manual catch-up requires one numeric completed Primary Run ID');
                 return;
               }
@@ -102,7 +102,7 @@ jobs:
               return;
             }
             const rosterText = Buffer.from(rosterResponse.data.content, 'base64').toString('utf8');
-            const playerIds = rosterText.split(/\r?\n/).slice(1)
+            const playerIds = rosterText.split(/\\r?\\n/).slice(1)
               .map(line => line.split(',')[0].trim())
               .filter(Boolean);
             if (!playerIds.length || new Set(playerIds).size !== playerIds.length) {
@@ -126,6 +126,7 @@ jobs:
             });
 
             const dispatch = failedDecision.dispatch || progressionDecision.dispatch;
+            core.setOutput('dispatch_source_run_id', String(source.id));
             core.setOutput('failed_dispatch', failedDecision.dispatch ? 'true' : 'false');
             core.setOutput('progression_queue_only', progressionDecision.dispatch ? 'true' : 'false');
             core.setOutput('retry_count', String(failedDecision.retryIds.length));
@@ -145,17 +146,22 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            const sourceRunId = '${{ steps.decision.outputs.dispatch_source_run_id }}';
+            if (!/^\\d+$/.test(sourceRunId)) {
+              core.setFailed('Decision step did not provide a valid source run ID; refusing dispatch');
+              return;
+            }
             await github.rest.repos.createDispatchEvent({
               owner: context.repo.owner,
               repo: context.repo.repo,
               event_type: 'claim-recovery',
               client_payload: {
-                source_run_id: source.id,
+                source_run_id: Number(sourceRunId),
                 retry_count: Number('${{ steps.decision.outputs.retry_count }}'),
                 progression_queue_only: '${{ steps.decision.outputs.progression_queue_only }}' === 'true'
               }
             });
-            core.info('One serialized recovery dispatch requested. The receiver revalidates failed targets and source-matched Progression queue entries after acquiring the shared claim lock.')
+            core.info(`One serialized recovery dispatch requested for source run ${sourceRunId}. The receiver revalidates failed targets and source-matched Progression queue entries after acquiring the shared claim lock.`);
 
       - name: Report immediate recovery decision
         if: always()
