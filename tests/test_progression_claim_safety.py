@@ -353,6 +353,27 @@ class ProgressionSafetyTests(unittest.TestCase):
         self.assertFalse(driver._progression_claim_attempted)
         self.assertFalse(driver._progression_checked)
 
+    def test_unscoped_queued_empty_scan_is_deferred_not_marked_complete(self):
+        snapshot = {
+            "valid_page": True, "claimable_count": 0, "delivered_count": 0,
+            "claimable_cards": [], "delivered_signatures": [],
+            "terminal_card_signatures": [],
+        }
+        claimed, driver, clicks, history = self._run(
+            snapshot,
+            require_unique_claimable_card=True,
+            defer_if_more_claimable=True,
+            max_claims_per_visit=1,
+        )
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertTrue(driver._progression_deferred)
+        self.assertFalse(driver._progression_checked)
+        self.assertFalse(driver._progression_inspection_complete)
+        self.assertFalse(driver._progression_claim_attempted)
+        self.assertEqual(history, [])
+        self.assertIn("empty snapshot is not authoritative", driver._progression_deferred_reason)
+
     def test_unscoped_queued_inspection_stays_open_when_another_card_remains(self):
         first_button, second_button = object(), object()
         before = {
