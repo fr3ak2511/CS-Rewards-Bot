@@ -948,7 +948,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("Tracking pending", report)
         self.assertIn("Tracking Incomplete", report)
-        self.assertNotIn("Need attention", report)
+        self.assertIn("Need attention</span><strong>0</strong>", report)
 
     def test_grenade_balance_email_uses_singular_account_count(self):
         player = self.sample_player()
