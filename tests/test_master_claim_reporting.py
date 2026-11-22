@@ -901,6 +901,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "current_count": 27,
             "expected_minimum": 30,
             "deficit": 3,
+            "next_milestone": 56,
+            "remaining_to_next_milestone": 29,
         }
         report = build_email(
             [player], "Primary Run", 1,
@@ -908,9 +910,45 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("Grenade Balance Check", report)
-        self.assertIn("27 / 30 · short 3", report)
+        self.assertIn("27 / 30 · short 3 · next 56 (in 29 Grenades)", report)
         self.assertIn("Need attention", report)
         self.assertIn("<strong>1</strong>", report)
+
+    def test_email_reports_surplus_and_next_milestone_without_attention(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        player["grenade_balance"] = {
+            "status": "pass", "current_count": 34, "expected_minimum": 24,
+            "surplus": 10, "next_milestone": 56,
+            "remaining_to_next_milestone": 22,
+        }
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=1,
+        )
+        self.assertIn("Above minimum", report)
+        self.assertIn("34 / 24 · surplus 10 · next 56 (in 22 Grenades)", report)
+        self.assertIn("Above minimum", report)
+        self.assertNotIn("Tracking Incomplete", report)
+
+    def test_pending_baseline_is_informational_not_attention(self):
+        player = self.sample_player()
+        player["promotions_observed"] = []
+        player["event_rewards"] = []
+        player["grenade_balance"] = {
+            "status": "pending_baseline", "current_count": 34,
+            "expected_minimum": None, "next_milestone": 56,
+        }
+        report = build_email(
+            [player], "Primary Run", 1,
+            get_ist_time() - timedelta(seconds=30), {},
+            configured_player_count=1,
+        )
+        self.assertIn("Tracking pending", report)
+        self.assertIn("Tracking Incomplete", report)
+        self.assertIn("Need attention</span><strong>0</strong>", report)
 
     def test_grenade_balance_email_uses_singular_account_count(self):
         player = self.sample_player()

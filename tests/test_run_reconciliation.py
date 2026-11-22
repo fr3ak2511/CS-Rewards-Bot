@@ -84,7 +84,8 @@ class RunReconciliationTests(unittest.TestCase):
             totals=self._totals(), counters=self._counters(),
         )
         self.assertEqual(result["grenade_balance_validation"]["status"], "partial")
-        self.assertIn("grenade_balance_validation_incomplete", result["warnings"])
+        self.assertNotIn("grenade_balance_validation_incomplete", result["warnings"])
+        self.assertEqual(result["status"], "matched")
 
     def test_claim_count_mismatch_is_reported_without_mutating_inputs(self):
         row = self._clean_row()

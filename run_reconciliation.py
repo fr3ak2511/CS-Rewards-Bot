@@ -149,8 +149,8 @@ def build_run_reconciliation(
     grenade_balance = _grenade_balance_validation(rows)
     if grenade_balance["status"] == "attention_required":
         warnings.append("grenade_balance_minimum_not_met")
-    elif grenade_balance["status"] == "partial":
-        warnings.append("grenade_balance_validation_incomplete")
+    # Pending baselines and unavailable snapshots are informational tracking states.
+    # They remain visible in the balance section but do not make the run unhealthy.
 
     return {
         "status": "matched" if not warnings else "attention_required",
