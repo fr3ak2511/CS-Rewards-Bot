@@ -944,7 +944,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         report = build_email(
             [player], "Primary Run", 1,
             get_ist_time() - timedelta(seconds=30), {},
-            configured_player_count=35,
+            configured_player_count=1,
         )
         self.assertIn("Tracking pending", report)
         self.assertIn("Tracking Incomplete", report)
