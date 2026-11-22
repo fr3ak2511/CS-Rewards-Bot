@@ -6334,7 +6334,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         grenade_balance = result.get("grenade_balance")
         grenade_attention = bool(
             isinstance(grenade_balance, dict)
-            and str(grenade_balance.get("status") or "not_validated") != "pass"
+            and str(grenade_balance.get("status") or "not_validated")
+            in ("below_minimum", "counter_regressed")
         )
         # The claim engine retains retry/status telemetry for every observed offer.
         # The email, however, must not expose a filtered paid/discounted offer
