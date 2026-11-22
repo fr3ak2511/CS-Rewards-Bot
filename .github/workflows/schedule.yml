@@ -437,6 +437,7 @@ jobs:
           import json
           import os
           from datetime import datetime, timedelta, time as dt_time, timezone
+          from progression_inspection_queue import eligible_progression_inspection_ids
           from recovery_policy import (
               full_claim_retry_ids,
               has_complete_full_roster_coverage,
@@ -464,11 +465,12 @@ jobs:
           retry_cron = '0-30/5 0 * * *'
           ist_tz = timezone(timedelta(hours=5, minutes=30))
 
-          def emit(execute, recovery, reason, daily_only=False):
+          def emit(execute, recovery, reason, daily_only=False, progression_only=False):
               with open(out_path, 'a', encoding='utf-8') as handle:
                   handle.write(f"execute={'true' if execute else 'false'}\n")
                   handle.write(f"recovery={'true' if recovery else 'false'}\n")
                   handle.write(f"daily_only={'true' if daily_only else 'false'}\n")
+                  handle.write(f"progression_only={'true' if progression_only else 'false'}\n")
                   handle.write(f'reason={reason}\n')
               print(f"{'RUN' if execute else 'SKIP'}: {reason}")
 
@@ -479,6 +481,16 @@ jobs:
               except Exception as exc:
                   print(f'WARN: could not read {path}: {type(exc).__name__}')
                   return default
+
+          event_payload = load_json(os.environ.get('GITHUB_EVENT_PATH', ''), {})
+          client_payload = event_payload.get('client_payload', {}) if isinstance(event_payload, dict) else {}
+          progression_queue_requested = (
+              isinstance(client_payload, dict)
+              and client_payload.get('progression_queue_only') is True
+          )
+          progression_source_run_id = str(
+              client_payload.get('source_run_id') or ''
+          ).strip() if isinstance(client_payload, dict) else ''
 
           def parse_ist(value):
               try:
@@ -589,12 +601,57 @@ jobs:
               if dispatch_type and dispatch_type != 'claim-recovery':
                   emit(False, False, f'unsupported repository dispatch {dispatch_type!r}; fail closed')
                   raise SystemExit(0)
+
               retry_ids = full_claim_retry_ids(last)
-              if is_recent_full_claim_recovery(
-                      last, last_end=last_end, last_start=last_start, now=now, reset_at=reset_at):
-                  emit(True, True, f'immediate recovery dispatch for {len(retry_ids)} unresolved player ID(s)')
+              failed_id_dispatch = is_recent_full_claim_recovery(
+                  last, last_end=last_end, last_start=last_start, now=now, reset_at=reset_at
+              )
+
+              progression_ids = []
+              if progression_queue_requested:
+                  if not progression_source_run_id:
+                      emit(False, False, 'Progression queue dispatch payload is missing its source Primary Run ID; fail closed')
+                      raise SystemExit(0)
+                  try:
+                      with open('players.csv', 'r', newline='', encoding='utf-8-sig') as handle:
+                          configured_ids = [
+                              (row.get('player_id') or '').strip()
+                              for row in csv.DictReader(handle)
+                              if (row.get('player_id') or '').strip()
+                          ]
+                  except Exception as exc:
+                      emit(False, False, f'Progression queue recovery could not read players.csv ({type(exc).__name__}); fail closed')
+                      raise SystemExit(0)
+                  if not configured_ids or len(configured_ids) != len(set(configured_ids)):
+                      emit(False, False, 'Progression queue recovery rejected: configured roster is empty or contains duplicate Player IDs')
+                      raise SystemExit(0)
+                  progression_ids = eligible_progression_inspection_ids(
+                      meta,
+                      configured_ids,
+                      reset_date=reset_date.isoformat(),
+                      slot_label='Immediate Progression Recovery',
+                      source_run_id=progression_source_run_id,
+                  )
+
+              progression_dispatch = bool(progression_ids)
+              if not failed_id_dispatch and not progression_dispatch:
+                  emit(
+                      False, False,
+                      'no eligible recent failed-ID targets or source-matched current-reset Progression queue entries remain; no browser session will start',
+                  )
               else:
-                  emit(False, False, 'no eligible recent full-roster retry candidates; recovery dispatch is stale or already handled')
+                  reasons = []
+                  if failed_id_dispatch:
+                      reasons.append(f'{len(retry_ids)} unresolved full-claim ID(s)')
+                  if progression_dispatch:
+                      reasons.append(f'{len(progression_ids)} source-matched deferred Progression account(s)')
+                  emit(
+                      True,
+                      failed_id_dispatch,
+                      'immediate post-Primary recovery: ' + '; '.join(reasons),
+                      False,
+                      progression_dispatch,
+                  )
               raise SystemExit(0)
 
           if event == 'schedule' and cron not in {launcher_cron, retry_cron}:
@@ -772,13 +829,22 @@ jobs:
           MANUAL_DAILY_RECOVERY: ${{ inputs.recover_pending_daily }}
           MANUAL_DAILY_RECOVERY_PLAYER_ID: ${{ inputs.daily_recovery_player_id }}
           RECOVERY_ONLY_FAILED: ${{ steps.run_mode.outputs.recovery }}
+          PROGRESSION_QUEUE_ONLY: ${{ steps.run_mode.outputs.progression_only }}
+          PROGRESSION_SOURCE_RUN_ID: ${{ github.event.client_payload.source_run_id }}
           DAILY_ONLY_RECOVERY: ${{ steps.run_mode.outputs.daily_only }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
           EXTERNAL_PRIMARY: ${{ inputs.external_primary }}
           EXTERNAL_PROMOTIONAL_BACKUP: ${{ inputs.external_promotional_backup }}
           EXTERNAL_PROMOTIONAL_SLOT: ${{ inputs.external_promotional_slot }}
         run: |
-          if [[ "$MANUAL_DAILY_RECOVERY" == "true" ]]; then
+          if [[ "$PROGRESSION_QUEUE_ONLY" == "true" ]]; then
+            if [[ "$MANUAL_DAILY_RECOVERY" == "true" ]] || [[ "$DAILY_ONLY_RECOVERY" == "true" ]] || [[ -n "$MANUAL_DAILY_RECOVERY_PLAYER_ID" ]]; then
+              echo "Progression queue recovery cannot be combined with Daily-only/manual Daily mode."
+              exit 2
+            else
+              python master_claimer.py
+            fi
+          elif [[ "$MANUAL_DAILY_RECOVERY" == "true" ]]; then
             if [[ "$LOGIN_DIAGNOSTIC_ONLY" == "true" ]] || [[ "$LOGIN_TEST_ONLY" == "true" ]] || \
                [[ "$CLAIM_TEST_ONLY" == "true" ]] || [[ "$EXTERNAL_PRIMARY" == "true" ]] || \
                [[ "$EXTERNAL_PROMOTIONAL_BACKUP" == "true" ]] || \

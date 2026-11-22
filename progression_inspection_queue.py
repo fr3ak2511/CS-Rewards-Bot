@@ -13,7 +13,7 @@ QUEUE_KEY = "progression_deferred_inspections"
 HISTORY_KEY = "progression_deferred_inspection_history"
 _ALLOWED_SLOTS = {
     f"Promotional Check #{number}" for number in range(1, 5)
-} | {"Primary Run", "Manual Run"}
+} | {"Primary Run", "Manual Run", "Immediate Progression Recovery"}
 _MAX_ATTEMPTS_PER_RESET = 4
 _MAX_HISTORY = 50
 
@@ -188,6 +188,73 @@ def record_progression_inspection_result(
     return None
 
 
+
+def eligible_progression_inspection_ids(
+    meta: dict[str, Any],
+    player_ids: list[str] | tuple[str, ...],
+    *,
+    reset_date: str,
+    slot_label: str,
+    max_attempts: int = _MAX_ATTEMPTS_PER_RESET,
+    source_run_id: str | None = None,
+) -> list[str]:
+    """Return current-reset queued IDs eligible for one inspection slot.
+
+    This is read-only. The executor must reserve each ID again after it acquires
+    the shared claim concurrency lock.
+    """
+    if not isinstance(meta, dict):
+        return []
+    slot = str(slot_label or "").strip()
+    reset = str(reset_date or "").strip()
+    if slot not in _ALLOWED_SLOTS or not reset:
+        return []
+
+    queue = meta.get(QUEUE_KEY)
+    if not isinstance(queue, dict):
+        return []
+
+    selected: list[str] = []
+    seen: set[str] = set()
+    for raw_pid in player_ids or []:
+        pid = str(raw_pid or "").strip()
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        entry = queue.get(pid)
+        if not isinstance(entry, dict) or entry.get("status") not in {
+            "deferred", "claim_unconfirmed"
+        }:
+            continue
+        if str(entry.get("attempt_reset_date") or "") != reset:
+            continue
+        if source_run_id and str(entry.get("last_source_run_id") or "") != str(source_run_id).strip():
+            continue
+
+        attempted = entry.get("attempted_slots")
+        if not isinstance(attempted, list):
+            attempted = []
+        attempted = list(dict.fromkeys(
+            str(item).strip() for item in attempted if str(item).strip()
+        ))
+        if slot in attempted or len(attempted) >= max(1, int(max_attempts)):
+            continue
+
+        if entry.get("requires_exact_target"):
+            signature = str(entry.get("target_card_signature") or "").strip()
+            fragments = entry.get("target_card_text_fragments")
+            has_fragments = (
+                isinstance(fragments, (list, tuple))
+                and any(str(item).strip() for item in fragments)
+            )
+            if not signature and not has_fragments:
+                # Never convert a prior, unconfirmed click into a generic scan.
+                continue
+
+        selected.append(pid)
+    return selected
+
+
 def mark_progression_inspection_attempt(
     meta: dict[str, Any],
     player_id: str,
@@ -236,6 +303,7 @@ def mark_progression_inspection_attempt(
 
 __all__ = [
     "get_pending_progression_inspection",
+    "eligible_progression_inspection_ids",
     "mark_progression_inspection_attempt",
     "record_progression_inspection_result",
 ]

@@ -1,6 +1,7 @@
 import unittest
 
 from progression_inspection_queue import (
+    eligible_progression_inspection_ids,
     get_pending_progression_inspection,
     mark_progression_inspection_attempt,
     record_progression_inspection_result,
@@ -326,6 +327,104 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(entry["first_source_run_id"], "3894")
         self.assertEqual(entry["attempted_slots"], ["Primary Run", "Promotional Check #1"])
         self.assertEqual(entry["last_source_run_id"], "4001")
+
+
+    def test_immediate_progression_slot_is_selectable_after_primary_and_reserved_once(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        eligible = eligible_progression_inspection_ids(
+            self.meta, ["UNKNOWN", "PLAYER0001", "PLAYER0001"],
+            reset_date="2026-11-21",
+            slot_label="Immediate Progression Recovery",
+            source_run_id="3894",
+        )
+        self.assertEqual(eligible, ["PLAYER0001"])
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"],
+                reset_date="2026-11-21",
+                slot_label="Immediate Progression Recovery",
+                source_run_id="WRONG-RUN",
+            ),
+            [],
+        )
+        attempt = mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001",
+            slot_label="Immediate Progression Recovery",
+            reset_date="2026-11-21",
+            now="2026-11-21T06:05:00+05:30",
+        )
+        self.assertIsNotNone(attempt)
+        self.assertEqual(
+            attempt["attempted_slots"],
+            ["Primary Run", "Immediate Progression Recovery"],
+        )
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"],
+                reset_date="2026-11-21",
+                slot_label="Immediate Progression Recovery",
+                source_run_id="3894",
+            ),
+            [],
+        )
+
+    def test_immediate_progression_slot_keeps_existing_four_attempt_cap(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        for slot in (
+            "Immediate Progression Recovery",
+            "Promotional Check #1",
+            "Promotional Check #2",
+        ):
+            self.assertIsNotNone(mark_progression_inspection_attempt(
+                self.meta, "PLAYER0001", slot_label=slot,
+                reset_date="2026-11-21", now="2026-11-21T12:05:00+05:30",
+            ))
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"],
+                reset_date="2026-11-21",
+                slot_label="Promotional Check #3",
+                source_run_id="3894",
+            ),
+            [],
+        )
+
+    def test_immediate_queue_selector_rejects_stale_reset_and_missing_exact_identity(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            self._deferred(
+                progression_unconfirmed=True,
+                progression_unconfirmed_card_signature=None,
+            ),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"],
+                reset_date="2026-11-21",
+                slot_label="Immediate Progression Recovery",
+                source_run_id="3894",
+            ),
+            [],
+        )
+        self.assertEqual(
+            eligible_progression_inspection_ids(
+                self.meta, ["PLAYER0001"],
+                reset_date="2026-11-22",
+                slot_label="Immediate Progression Recovery",
+                source_run_id="3894",
+            ),
+            [],
+        )
 
 
 if __name__ == "__main__":
