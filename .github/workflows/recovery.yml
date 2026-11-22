@@ -1,4 +1,4 @@
-name: CS Hub Immediate Failed-ID Recovery
+name: CS Hub Immediate Recovery Dispatcher
 
 on:
   workflow_run:
@@ -10,8 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  recover-failed-ids:
-    name: Dispatch recovery for unresolved eligible claims
+  dispatch-immediate-recovery:
+    name: Dispatch serialized post-Primary recovery pass
     if: (github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch') && github.event.workflow_run.head_branch == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -62,25 +62,53 @@ jobs:
             const last = meta.last_run || {};
             const path = require('path');
             const policyPath = path.join(process.env.GITHUB_WORKSPACE, '.github', 'scripts', 'recovery_policy.js');
-            const { evaluateImmediateRecovery } = require(policyPath);
-            const decision = evaluateImmediateRecovery({
-              lastRun: last,
-              sourceRun: source,
-              nowEpochMs: Date.now()
+            const rosterResponse = await github.rest.repos.getContent({
+              owner, repo, path: 'players.csv', ref: 'prod'
             });
-
-            if (!decision.dispatch) {
-              out(false, decision.reason);
+            if (Array.isArray(rosterResponse.data) || !rosterResponse.data.content) {
+              out(false, 'players.csv was not readable from prod; refusing immediate recovery');
+              return;
+            }
+            const rosterText = Buffer.from(rosterResponse.data.content, 'base64').toString('utf8');
+            const playerIds = rosterText.split(/\r?\n/).slice(1)
+              .map(line => line.split(',')[0].trim())
+              .filter(Boolean);
+            if (!playerIds.length || new Set(playerIds).size !== playerIds.length) {
+              out(false, 'configured production roster is empty or contains duplicate IDs');
               return;
             }
 
-            // One dispatch per completed scheduled source run. The receiving workflow
-            // re-checks bot_meta.json after acquiring its concurrency slot; Recovery Run
-            // labels cannot trigger another workflow_run recovery loop.
-            core.setOutput('retry_count', String(decision.retryIds.length));
-            out(true, decision.reason);
+            const { evaluateImmediateRecovery, evaluateImmediateProgressionQueueRecovery } = require(policyPath);
+            const nowEpochMs = Date.now();
+            const failedDecision = evaluateImmediateRecovery({
+              lastRun: last,
+              sourceRun: source,
+              nowEpochMs
+            });
+            const progressionDecision = evaluateImmediateProgressionQueueRecovery({
+              lastRun: last,
+              meta,
+              sourceRun: source,
+              playerIds,
+              nowEpochMs
+            });
 
-      - name: Dispatch the main workflow in failed-ID recovery mode
+            const dispatch = failedDecision.dispatch || progressionDecision.dispatch;
+            core.setOutput('failed_dispatch', failedDecision.dispatch ? 'true' : 'false');
+            core.setOutput('progression_queue_only', progressionDecision.dispatch ? 'true' : 'false');
+            core.setOutput('retry_count', String(failedDecision.retryIds.length));
+            core.setOutput('progression_count', String(progressionDecision.progressionIds.length));
+
+            const reasons = [];
+            if (failedDecision.dispatch) reasons.push(failedDecision.reason);
+            if (progressionDecision.dispatch) reasons.push(progressionDecision.reason);
+            if (!reasons.length) {
+              reasons.push(`failed-ID lane: ${failedDecision.reason}`);
+              reasons.push(`Progression lane: ${progressionDecision.reason}`);
+            }
+            out(dispatch, reasons.join('; '));
+
+      - name: Dispatch one serialized post-Primary recovery pass
         if: steps.decision.outputs.dispatch == 'true'
         uses: actions/github-script@v9
         with:
@@ -91,24 +119,31 @@ jobs:
               event_type: 'claim-recovery',
               client_payload: {
                 source_run_id: context.payload.workflow_run.id,
-                retry_count: Number('${{ steps.decision.outputs.retry_count }}')
+                retry_count: Number('${{ steps.decision.outputs.retry_count }}'),
+                progression_queue_only: '${{ steps.decision.outputs.progression_queue_only }}' === 'true'
               }
             });
-            core.info('Recovery dispatched; the receiver revalidates freshness and retry candidates before starting the browser.')
+            core.info('One serialized recovery dispatch requested. The receiver revalidates failed targets and source-matched Progression queue entries after acquiring the shared claim lock.')
 
       - name: Report immediate recovery decision
         if: always()
         env:
           DISPATCH_DECISION: ${{ steps.decision.outputs.dispatch }}
+          FAILED_DISPATCH: ${{ steps.decision.outputs.failed_dispatch }}
+          PROGRESSION_DISPATCH: ${{ steps.decision.outputs.progression_queue_only }}
+          RETRY_COUNT: ${{ steps.decision.outputs.retry_count }}
+          PROGRESSION_COUNT: ${{ steps.decision.outputs.progression_count }}
         run: |
           {
-            echo "## Immediate recovery decision"
+            echo "## Immediate post-Primary recovery decision"
             if [[ "$DISPATCH_DECISION" == "true" ]]; then
-              echo "- **Dispatch:** requested"
-              echo "- The receiving claimer revalidates saved account targets before opening a browser."
+              echo "- **Serialized dispatch:** requested"
+              echo "- **Failed-ID targets:** $RETRY_COUNT (enabled: $FAILED_DISPATCH)"
+              echo "- **Deferred Progression accounts:** $PROGRESSION_COUNT (enabled: $PROGRESSION_DISPATCH)"
+              echo "- The receiver revalidates both scopes after acquiring the shared claim lock."
             else
               echo "- **Dispatch:** not performed"
-              echo "- This is a successful policy no-op, not evidence that the reward was claimed."
+              echo "- This is a successful policy no-op, not evidence that a reward was claimed."
               echo "- See the decision step log for the exact reason."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

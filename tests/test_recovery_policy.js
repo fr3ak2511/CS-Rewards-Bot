@@ -1,7 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { evaluateImmediateRecovery } = require('../.github/scripts/recovery_policy.js');
+const {
+  evaluateImmediateRecovery,
+  evaluateImmediateProgressionQueueRecovery
+} = require('../.github/scripts/recovery_policy.js');
 
 const nowEpochMs = Date.parse('2026-11-07T02:00:00Z'); // 07:30 IST
 const sourceRun = {
@@ -98,5 +101,155 @@ test('scheduled Daily-only recovery does not trigger a second immediate recovery
   assert.equal(result.dispatch, false);
   assert.match(result.reason, /next retry is reserved for a later backup slot/);
   assert.deepEqual(result.retryIds, []);
+});
+
+
+const progressionNowEpochMs = Date.parse('2026-11-22T00:35:00Z');
+const progressionSourceRun = {
+  id: 44964890496,
+  event: 'workflow_dispatch',
+  head_branch: 'prod',
+  created_at: '2026-11-22T00:05:09Z',
+  run_started_at: '2026-11-22T00:05:09Z',
+  updated_at: '2026-11-22T00:29:00Z'
+};
+const progressionLastRun = {
+  run_label: 'Primary Run',
+  timestamp: '2026-11-22T05:58:33.009976',
+  duration_seconds: 1373,
+  accounts_processed: 36,
+  full_claim_accounts: 36,
+  configured_player_count: 36
+};
+const progressionPlayerIds = ['PLAYER-A', 'PLAYER-B'];
+const progressionMeta = {
+  progression_deferred_inspections: {
+    'PLAYER-A': {
+      status: 'deferred', attempt_reset_date: '2026-11-22',
+      attempted_slots: ['Primary Run'], total_attempts: 1,
+      last_source_run_id: '44964890496',
+      requires_exact_target: false
+    },
+    'PLAYER-B': {
+      status: 'deferred', attempt_reset_date: '2026-11-22',
+      attempted_slots: ['Primary Run'], total_attempts: 1,
+      last_source_run_id: '44964890496',
+      requires_exact_target: false
+    }
+  }
+};
+
+function decideProgression(overrides = {}) {
+  return evaluateImmediateProgressionQueueRecovery({
+    lastRun: progressionLastRun,
+    meta: progressionMeta,
+    sourceRun: progressionSourceRun,
+    playerIds: progressionPlayerIds,
+    nowEpochMs: progressionNowEpochMs,
+    ...overrides
+  });
+}
+
+test('a completed full-roster Primary Run includes only current-reset queue entries from that source run', () => {
+  const result = decideProgression();
+  assert.equal(result.dispatch, true);
+  assert.deepEqual(result.progressionIds, ['PLAYER-A', 'PLAYER-B']);
+  assert.match(result.reason, /2 current-reset deferred Progression/);
+});
+
+test('Progression queue recovery rejects non-primary runs', () => {
+  const result = decideProgression({
+    lastRun: { ...progressionLastRun, run_label: 'Promotional Check #1' }
+  });
+  assert.equal(result.dispatch, false);
+  assert.match(result.reason, /only after a normal Primary Run/);
+});
+
+test('Progression queue recovery requires complete full-roster coverage', () => {
+  const result = decideProgression({
+    lastRun: { ...progressionLastRun, full_claim_accounts: 35 }
+  });
+  assert.equal(result.dispatch, false);
+  assert.match(result.reason, /did not complete the configured full roster/);
+});
+
+test('Progression queue recovery rejects stale or mismatched source runs', () => {
+  const result = decideProgression({
+    sourceRun: { ...progressionSourceRun, updated_at: '2026-11-21T00:29:00Z' }
+  });
+  assert.equal(result.dispatch, false);
+  assert.match(result.reason, /stale, does not match this workflow/);
+});
+
+test('Progression queue recovery ignores stale reset entries and IDs outside the roster', () => {
+  const result = decideProgression({
+    meta: {
+      progression_deferred_inspections: {
+        'PLAYER-A': {
+          status: 'deferred', attempt_reset_date: '2026-11-21',
+          attempted_slots: ['Primary Run'], last_source_run_id: '44964890496',
+          requires_exact_target: false
+        },
+        'NOT-IN-ROSTER': {
+          status: 'deferred', attempt_reset_date: '2026-11-22',
+          attempted_slots: ['Primary Run'], last_source_run_id: '44964890496',
+          requires_exact_target: false
+        }
+      }
+    }
+  });
+  assert.equal(result.dispatch, false);
+  assert.deepEqual(result.progressionIds, []);
+});
+
+test('Progression queue recovery rejects entries not written by this Primary Run', () => {
+  const result = decideProgression({
+    meta: {
+      progression_deferred_inspections: {
+        'PLAYER-A': {
+          status: 'deferred', attempt_reset_date: '2026-11-22',
+          attempted_slots: ['Primary Run'], last_source_run_id: 'OTHER-RUN',
+          requires_exact_target: false
+        }
+      }
+    }
+  });
+  assert.equal(result.dispatch, false);
+  assert.deepEqual(result.progressionIds, []);
+});
+
+test('Progression queue recovery rejects consumed slots and entries at the four-attempt cap', () => {
+  const result = decideProgression({
+    meta: {
+      progression_deferred_inspections: {
+        'PLAYER-A': {
+          status: 'deferred', attempt_reset_date: '2026-11-22',
+          attempted_slots: ['Primary Run', 'Immediate Progression Recovery'],
+          last_source_run_id: '44964890496', requires_exact_target: false
+        },
+        'PLAYER-B': {
+          status: 'deferred', attempt_reset_date: '2026-11-22',
+          attempted_slots: ['Primary Run', 'Promotional Check #1', 'Promotional Check #2', 'Promotional Check #3'],
+          last_source_run_id: '44964890496', requires_exact_target: false
+        }
+      }
+    }
+  });
+  assert.equal(result.dispatch, false);
+});
+
+test('Progression queue recovery fails closed when an exact claim target was not saved', () => {
+  const result = decideProgression({
+    meta: {
+      progression_deferred_inspections: {
+        'PLAYER-A': {
+          status: 'claim_unconfirmed', attempt_reset_date: '2026-11-22',
+          attempted_slots: ['Primary Run'], last_source_run_id: '44964890496',
+          requires_exact_target: true, target_card_signature: null
+        }
+      }
+    }
+  });
+  assert.equal(result.dispatch, false);
 });
 

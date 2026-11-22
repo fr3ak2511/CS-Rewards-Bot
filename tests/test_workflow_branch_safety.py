@@ -363,5 +363,39 @@ class WorkflowBranchSafetyTests(unittest.TestCase):
         self.assertIn("      - dev", pull_request)
         self.assertNotIn("    paths:", pull_request)
 
+
+    def test_immediate_progression_recovery_is_source_bound_serialized_and_category_isolated(self):
+        schedule = (ROOT / ".github" / "workflows" / "schedule.yml").read_text(encoding="utf-8")
+        recovery = (ROOT / ".github" / "workflows" / "recovery.yml").read_text(encoding="utf-8")
+        source = (ROOT / "master_claimer.py").read_text(encoding="utf-8")
+        queue = (ROOT / "progression_inspection_queue.py").read_text(encoding="utf-8")
+        policy = (ROOT / ".github" / "scripts" / "recovery_policy.js").read_text(encoding="utf-8")
+
+        self.assertIn("PROGRESSION_QUEUE_ONLY:", schedule)
+        self.assertIn("PROGRESSION_SOURCE_RUN_ID:", schedule)
+        self.assertIn("source_run_id=progression_source_run_id", schedule)
+        self.assertIn("group: rewards-claimer", schedule)
+        self.assertIn("progression_only={'true' if progression_only else 'false'}", schedule)
+
+        self.assertIn("evaluateImmediateProgressionQueueRecovery", recovery)
+        self.assertIn("progression_queue_only:", recovery)
+        self.assertEqual(recovery.count("createDispatchEvent({"), 1)
+        self.assertIn("sourceRun.id", policy)
+        self.assertIn("Immediate Progression Recovery", queue)
+        self.assertIn("source_run_id: str | None = None", queue)
+
+        self.assertIn("def process_player_progression_only(", source)
+        self.assertIn("source_run_id=PROGRESSION_SOURCE_RUN_ID", source)
+        self.assertIn('meta["last_progression_recovery"] = run_record', source)
+        processor = source.split("def process_player_progression_only(", 1)[1].split(
+            "def _mark_queued_progression_inspection_attempt(", 1
+        )[0]
+        self.assertIn("_run_queued_progression_inspection(", processor)
+        self.assertNotIn("claim_daily_rewards(", processor)
+        self.assertNotIn("claim_store_rewards(", processor)
+        self.assertNotIn("run_event_reward_checks(", processor)
+        self.assertNotIn("_record_grenade_balance_for_player(", processor)
+
+
 if __name__ == "__main__":
     unittest.main()

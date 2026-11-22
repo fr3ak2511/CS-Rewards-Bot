@@ -31,6 +31,7 @@ from event_rewards import (
 from reward_popup_guard import dismiss_all_safe_popups
 from progression_claim_safety import claim_progression_rewards
 from progression_inspection_queue import (
+    eligible_progression_inspection_ids,
     get_pending_progression_inspection,
     mark_progression_inspection_attempt,
     record_progression_inspection_result,
@@ -72,6 +73,8 @@ CLAIM_TEST_ARTIFACTS_DIR = "claim_test_artifacts"
 RUN_ARTIFACTS_DIR = "run_artifacts"
 DAILY_CLAIM_DIAGNOSTICS_DIR = "daily_claim_diagnostics"
 RECOVERY_ONLY_FAILED = os.getenv("RECOVERY_ONLY_FAILED", "").strip().lower() == "true"
+PROGRESSION_QUEUE_ONLY = os.getenv("PROGRESSION_QUEUE_ONLY", "").strip().lower() == "true"
+PROGRESSION_SOURCE_RUN_ID = os.getenv("PROGRESSION_SOURCE_RUN_ID", "").strip()
 DAILY_ONLY_RECOVERY = os.getenv("DAILY_ONLY_RECOVERY", "").strip().lower() == "true"
 MANUAL_DAILY_RECOVERY = os.getenv("MANUAL_DAILY_RECOVERY", "").strip().lower() == "true"
 MANUAL_DAILY_RECOVERY_PLAYER_ID = os.getenv("MANUAL_DAILY_RECOVERY_PLAYER_ID", "").strip()
@@ -3435,6 +3438,136 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         )
         stats["progression_checked"] = False
         log(f"🚩 {pid}: queued Progression reinspection raised {type(exc).__name__}.")
+    return stats
+
+
+
+
+def process_player_progression_only(pid, has_loyalty, is_new, queue_entry, run_label):
+    """Run one queued Progression inspection without touching other reward categories."""
+    start = get_ist_time()
+    stats = {
+        "pid": pid,
+        "display_name": None,
+        "display_name_captured_at_ist": None,
+        "is_new": bool(is_new),
+        "has_loyalty": bool(has_loyalty),
+        "processing_mode": "progression_queue_only",
+        "daily": 0,
+        "store": 0,
+        "store_temp": 0,
+        "store_possible": 0,
+        "store_temp_possible": 0,
+        "store_temp_skipped": True,
+        "store_temp_status": "not_checked",
+        "promotions_observed": [],
+        "promotion_scan_completed": False,
+        "promotion_popup_blocked": False,
+        "event_rewards": [],
+        "event_reward_claims": 0,
+        "event_rewards_retry_required": False,
+        "promotion_detection_failed": False,
+        "retry_required": False,
+        "progression": 0,
+        "progression_checked": False,
+        "progression_unconfirmed": False,
+        "progression_unconfirmed_card_signature": None,
+        "progression_deferred": False,
+        "progression_deferred_reason": None,
+        "progression_claim_attempted": False,
+        "progression_reinspection_attempted": True,
+        "loyalty": 0,
+        "daily_skipped": True,
+        "store_skipped": [True, True, True],
+        "loyalty_skipped": True,
+        "skipped_all": False,
+        "status": "Failed",
+        "fail_reason": None,
+        "duration_s": 0,
+        "possible": 0,
+        "daily_portal_status": "not_checked",
+        "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+        "daily_unconfirmed": False,
+        "store_unconfirmed_indices": [],
+        "store_claimed_indices": [],
+        "grenade_balance": None,
+        "standard_rewards_checked": False,
+    }
+
+    driver = None
+    try:
+        init_player_history(pid)
+        log(f"\n🎯 {pid}" + (" 🆕 NEW ID" if is_new else "") + f"  [{run_label}] — Progression queue-only recovery")
+        driver = create_driver()
+        if not login_to_hub(driver, pid):
+            stats["status"] = "Login Failed"
+            stats["fail_reason"] = "Could not authenticate for the Progression-only recovery session"
+            stats["progression_deferred"] = True
+            stats["progression_unconfirmed"] = bool(
+                (queue_entry or {}).get("requires_exact_target")
+            )
+            stats["progression_unconfirmed_card_signature"] = (
+                (queue_entry or {}).get("target_card_signature")
+            )
+            stats["progression_deferred_reason"] = (
+                "Immediate Progression recovery login failed; no Progression inspection or claim click was attempted."
+            )
+            stats["retry_required"] = True
+            return stats
+
+        display_name = capture_display_name(driver)
+        if display_name:
+            stats["display_name"] = display_name
+            stats["display_name_captured_at_ist"] = get_ist_time().isoformat()
+        driver._portal_claim_audit_enabled = True
+        driver._portal_claim_display_name = display_name
+        driver._portal_claim_run_label = run_label
+        driver._preexisting_portal_claims = []
+
+        _run_queued_progression_inspection(driver, pid, stats, queue_entry)
+        if stats.get("progression_deferred") or stats.get("progression_unconfirmed"):
+            stats["status"] = "Partial"
+            stats["fail_reason"] = stats.get("progression_deferred_reason") or (
+                "Progression inspection remains unresolved"
+            )
+            stats["retry_required"] = True
+        elif stats.get("progression_checked"):
+            stats["status"] = "Claims Made" if int(stats.get("progression", 0) or 0) else "Success"
+        else:
+            stats["status"] = "Partial"
+            stats["fail_reason"] = "Progression inspection did not complete"
+            stats["progression_deferred"] = True
+            stats["progression_deferred_reason"] = stats["fail_reason"]
+            stats["retry_required"] = True
+    except Exception as exc:
+        attempted = bool(getattr(driver, "_progression_claim_attempted", False)) if driver else False
+        stats["progression_claim_attempted"] = attempted
+        stats["progression_unconfirmed"] = bool(
+            getattr(driver, "_progression_unconfirmed", False) if driver else False
+        ) or attempted or bool((queue_entry or {}).get("requires_exact_target"))
+        stats["progression_unconfirmed_card_signature"] = (
+            getattr(driver, "_progression_unconfirmed_card_signature", None) if driver else None
+        ) or stats.get("progression_unconfirmed_card_signature") or (
+            (queue_entry or {}).get("target_card_signature")
+        )
+        stats["progression_deferred"] = not attempted
+        stats["progression_deferred_reason"] = (
+            None if attempted
+            else f"Progression-only recovery raised {type(exc).__name__}; inspection remains queued."
+        )
+        stats["status"] = "Partial"
+        stats["fail_reason"] = stats["progression_deferred_reason"] or (
+            "Progression claim delivery remains unconfirmed"
+        )
+        stats["retry_required"] = True
+        log(f"🚩 {pid}: Progression-only recovery raised {type(exc).__name__}.")
+    finally:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
+        stats["duration_s"] = max(0, int((get_ist_time() - start).total_seconds()))
     return stats
 
 
@@ -7267,6 +7400,8 @@ def main():
     log("=" * 60)
 
     run_label, run_index = determine_run_context()
+    if PROGRESSION_QUEUE_ONLY and not RECOVERY_ONLY_FAILED:
+        run_label, run_index = "Immediate Progression Recovery", 0
     if os.getenv("GITHUB_EVENT_NAME") == "schedule" and run_label == "Unknown Scheduled Run":
         log(f"⛔ UNKNOWN_SCHEDULE_BLOCKED: unrecognized SCHEDULE_CRON={os.getenv('SCHEDULE_CRON', '')!r}; refusing claim execution.")
         return 2
@@ -7277,7 +7412,7 @@ def main():
     log(f"📋 Run Context: {run_label}  |  {ist_now.strftime('%d-%b %H:%M IST')}")
 
     meta = load_bot_meta()
-    if not RECOVERY_ONLY_FAILED and should_skip_duplicate_scheduled_retry(meta):
+    if not RECOVERY_ONLY_FAILED and not PROGRESSION_QUEUE_ONLY and should_skip_duplicate_scheduled_retry(meta):
         log("⏭️ SCHEDULE_RETRY_SKIPPED=recent_run_completed")
         log("An earlier scheduled claim cycle completed recently; suppressing a duplicate fallback.")
         return 0
@@ -7303,9 +7438,19 @@ def main():
         log(f"❌ {PLAYER_ID_FILE} contains duplicate player IDs; refusing to process duplicate accounts.")
         return 1
 
+    if PROGRESSION_QUEUE_ONLY and (
+        os.getenv("GITHUB_EVENT_NAME") != "repository_dispatch"
+        or not PROGRESSION_SOURCE_RUN_ID
+        or DAILY_ONLY_RECOVERY
+        or MANUAL_DAILY_RECOVERY
+        or MANUAL_DAILY_RECOVERY_PLAYER_ID
+    ):
+        log("❌ Progression queue-only recovery requires its validated repository_dispatch source and cannot be combined with Daily/manual modes.")
+        return 2
+
     manual_daily_targets = {}
     if MANUAL_DAILY_RECOVERY:
-        if not DAILY_ONLY_RECOVERY or RECOVERY_ONLY_FAILED:
+        if not DAILY_ONLY_RECOVERY or RECOVERY_ONLY_FAILED or PROGRESSION_QUEUE_ONLY:
             log("❌ Manual Daily recovery requires the dedicated Daily-only mode and cannot be combined with general recovery.")
             return 2
         if not MANUAL_DAILY_RECOVERY_PLAYER_ID:
@@ -7331,6 +7476,7 @@ def main():
         return 2
 
     recovery_targets_by_player = {}
+    retry_set = set()
     if RECOVERY_ONLY_FAILED:
         prior = meta.get("last_run") or {}
         allowed_source_labels = {
@@ -7361,19 +7507,43 @@ def main():
             return 0
 
         retry_ids = full_claim_retry_ids(prior)
-        if not retry_ids:
+        if not retry_ids and not PROGRESSION_QUEUE_ONLY:
             log("⏭️ Recovery skipped: full-claim scope, unique candidate count, or run-mode metadata failed validation.")
             return 0
-        roster_ids = set(player_ids)
-        unknown = [pid for pid in retry_ids if pid not in roster_ids]
-        if unknown:
-            log(f"❌ Recovery aborted: {len(unknown)} retry IDs are not present in players.csv.")
-            return 1
+        if retry_ids:
+            roster_ids = set(player_ids)
+            unknown = [pid for pid in retry_ids if pid not in roster_ids]
+            if unknown:
+                log(f"❌ Recovery aborted: {len(unknown)} retry IDs are not present in players.csv.")
+                return 1
         retry_set = set(retry_ids)
-        players = [(pid, loyalty) for pid, loyalty in players if pid in retry_set]
+        if not PROGRESSION_QUEUE_ONLY:
+            players = [(pid, loyalty) for pid, loyalty in players if pid in retry_set]
         raw_targets = prior.get("retry_targets_by_player")
         recovery_targets_by_player = raw_targets if isinstance(raw_targets, dict) else {}
-        log(f"🔁 Recovery mode: checking {len(players)} unresolved ID(s) using saved reward targets only.")
+        log(f"🔁 Recovery mode: {len(retry_set)} unresolved ID(s) validated using saved reward targets only.")
+
+    progression_queue_ids = set()
+    if PROGRESSION_QUEUE_ONLY:
+        progression_queue_ids = set(eligible_progression_inspection_ids(
+            meta,
+            player_ids,
+            reset_date=_current_reset_date(),
+            slot_label="Immediate Progression Recovery",
+            source_run_id=PROGRESSION_SOURCE_RUN_ID,
+        ))
+        selected_ids = retry_set | progression_queue_ids
+        if not selected_ids:
+            log("⏭️ Combined immediate recovery skipped: no failed-ID targets or source-matched Progression queue entries remain after the concurrency lock.")
+            return 0
+        players = [(pid, loyalty) for pid, loyalty in players if pid in selected_ids]
+        if len(players) != len(selected_ids):
+            log("❌ Immediate recovery selection did not match the validated production roster; no browser started.")
+            return 2
+        log(
+            f"🎯 Immediate recovery selection: {len(retry_set)} failed-ID account(s) "
+            f"plus {len(progression_queue_ids)} Progression queue account(s); duplicate accounts are processed once."
+        )
 
     log(f"👥 Loaded {len(players)} players "
         f"({sum(1 for _, h in players if h)} with loyalty)")
@@ -7419,18 +7589,148 @@ def main():
         queued_progression = None
         progression_attempt = None
         progression_slot_blocked = False
+
         if RECOVERY_ONLY_FAILED:
-            # Post-run recovery must replay the exact failed targets saved by the
-            # source run. Missing metadata is deferred; it never falls back to
-            # process_player() or a broad full-account reward sweep.
-            targets = recovery_targets_by_player.get(pid)
+            # Failed-ID and deferred Progression work are separate scopes. An
+            # account in both sets runs the exact saved-target recovery first,
+            # then one isolated Progression-only session. A PP-only account must
+            # never be sent through the failed-target recovery path.
             queued_progression = get_pending_progression_inspection(meta, pid)
-            r, coverage_rechecked = recover_player_from_saved_targets(
-                pid, has_loyalty, new_id, run_label, targets,
-                progression_inspection_blocked=bool(queued_progression),
+            if pid in retry_set:
+                targets = recovery_targets_by_player.get(pid)
+                r, coverage_rechecked = recover_player_from_saved_targets(
+                    pid, has_loyalty, new_id, run_label, targets,
+                    progression_inspection_blocked=bool(queued_progression),
+                )
+                if coverage_rechecked:
+                    _record_full_claim_coverage(meta, pid, r, run_label)
+            else:
+                r = {
+                    "pid": pid,
+                    "display_name": None,
+                    "preexisting_portal_claims": [],
+                    "is_new": new_id,
+                    "has_loyalty": has_loyalty,
+                    "processing_mode": "progression_queue_only",
+                    "daily": 0, "store": 0, "store_temp": 0, "store_possible": 0,
+                    "store_temp_possible": 0, "loyalty": 0, "progression": 0,
+                    "daily_skipped": True,
+                    "store_skipped": [True, True, True],
+                    "loyalty_skipped": True,
+                    "daily_unconfirmed": False,
+                    "store_unconfirmed_indices": [],
+                    "daily_portal_status": "not_checked",
+                    "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+                    "progression_checked": False,
+                    "progression_unconfirmed": False,
+                    "progression_unconfirmed_card_signature": None,
+                    "progression_deferred": True,
+                    "progression_deferred_reason": "Queued Progression inspection is pending immediate recovery.",
+                    "progression_claim_attempted": False,
+                    "progression_reinspection_attempted": False,
+                    "event_rewards": [],
+                    "event_reward_claims": 0,
+                    "event_rewards_retry_required": False,
+                    "standard_rewards_checked": False,
+                    "duration_s": 0,
+                    "possible": 0,
+                    "status": "Success",
+                    "fail_reason": None,
+                }
+
+            if PROGRESSION_QUEUE_ONLY and pid in progression_queue_ids:
+                progression_attempt = (
+                    _mark_queued_progression_inspection_attempt(
+                        meta, pid, "Immediate Progression Recovery"
+                    )
+                    if queued_progression else None
+                )
+                progression_slot_blocked = bool(queued_progression and not progression_attempt)
+                if progression_attempt:
+                    pp_result = process_player_progression_only(
+                        pid, has_loyalty, new_id, progression_attempt,
+                        "Immediate Progression Recovery",
+                    )
+                    previous_progression = int(r.get("progression", 0) or 0)
+                    for key in (
+                        "progression_checked",
+                        "progression_unconfirmed",
+                        "progression_unconfirmed_card_signature",
+                        "progression_deferred",
+                        "progression_deferred_reason",
+                        "progression_claim_attempted",
+                        "progression_reinspection_attempted",
+                    ):
+                        r[key] = pp_result.get(key)
+                    r["progression"] = previous_progression + int(pp_result.get("progression", 0) or 0)
+                    if not r.get("display_name") and pp_result.get("display_name"):
+                        r["display_name"] = pp_result["display_name"]
+                        r["display_name_captured_at_ist"] = pp_result.get("display_name_captured_at_ist")
+                    r["duration_s"] = int(r.get("duration_s", 0) or 0) + int(pp_result.get("duration_s", 0) or 0)
+                    r["progression_recovery"] = {
+                        "attempted": True,
+                        "status": pp_result.get("status"),
+                        "reason": pp_result.get("fail_reason"),
+                        "slot": "Immediate Progression Recovery",
+                    }
+                    if pp_result.get("progression_deferred") or pp_result.get("progression_unconfirmed"):
+                        if r.get("status") not in ("Login Failed", "Error", "Failed"):
+                            r["status"] = "Partial"
+                        if pp_result.get("fail_reason"):
+                            r["fail_reason"] = pp_result["fail_reason"]
+                    elif pid not in retry_set:
+                        r["status"] = pp_result.get("status") or "Success"
+                        r["fail_reason"] = pp_result.get("fail_reason")
+                else:
+                    log(f"⏭️ {pid}: Progression recovery slot was already consumed or capped; preserving the existing queue entry.")
+        elif PROGRESSION_QUEUE_ONLY:
+            queued_progression = get_pending_progression_inspection(meta, pid)
+            progression_attempt = (
+                _mark_queued_progression_inspection_attempt(
+                    meta, pid, "Immediate Progression Recovery"
+                )
+                if queued_progression else None
             )
-            if coverage_rechecked:
-                _record_full_claim_coverage(meta, pid, r, run_label)
+            progression_slot_blocked = bool(queued_progression and not progression_attempt)
+            if progression_attempt:
+                r = process_player_progression_only(
+                    pid, has_loyalty, new_id, progression_attempt,
+                    "Immediate Progression Recovery",
+                )
+            else:
+                r = {
+                    "pid": pid,
+                    "display_name": None,
+                    "is_new": new_id,
+                    "has_loyalty": has_loyalty,
+                    "processing_mode": "progression_queue_only",
+                    "daily": 0, "store": 0, "store_temp": 0, "loyalty": 0,
+                    "progression": 0,
+                    "progression_checked": False,
+                    "progression_unconfirmed": bool(queued_progression and queued_progression.get("requires_exact_target")),
+                    "progression_unconfirmed_card_signature": (
+                        queued_progression.get("target_card_signature") if queued_progression else None
+                    ),
+                    "progression_deferred": bool(queued_progression),
+                    "progression_deferred_reason": "Immediate Progression slot was unavailable; no browser session or claim click was started.",
+                    "progression_claim_attempted": False,
+                    "progression_reinspection_attempted": False,
+                    "event_rewards": [],
+                    "event_reward_claims": 0,
+                    "daily_skipped": True,
+                    "store_skipped": [True, True, True],
+                    "loyalty_skipped": True,
+                    "daily_unconfirmed": False,
+                    "store_unconfirmed_indices": [],
+                    "daily_portal_status": "not_checked",
+                    "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+                    "duration_s": 0,
+                    "possible": 0,
+                    "status": "Partial",
+                    "fail_reason": "Progression queue slot was unavailable; no browser session or claim click was started.",
+                    "retry_required": True,
+                    "processing_mode": "progression_queue_only",
+                }
         elif DAILY_ONLY_RECOVERY and pid in daily_pending_targets:
             # Do not send this account through process_player(): the scheduled
             # safety-net is restricted to the exact saved Daily target only.
@@ -7661,18 +7961,24 @@ def main():
                 "it remains pending for an eligible full/backup run.",
             )
         _record_queued_progression_inspection_result(meta, pid, r, run_label)
-        mark_id_seen(pid, meta)
+        if not PROGRESSION_QUEUE_ONLY or RECOVERY_ONLY_FAILED:
+            mark_id_seen(pid, meta)
         results.append(r)
         time.sleep(0.5)
 
     # Metrics
     job_end = get_ist_time()
-    legacy_followup_seed = seed_legacy_popup_followups(meta, results, now=job_end)
-    if legacy_followup_seed.get("unmatched_suffixes"):
-        log("⚠️ Legacy promotion follow-up bootstrap deferred; suffixes not matched uniquely: " + ", ".join(legacy_followup_seed["unmatched_suffixes"]))
-    followup_results = filter_followup_results(results, meta, _promotion_detail_worthy)
-    followup_summary = update_promotion_followups(meta, followup_results, run_label, now=job_end)
-    followup_summary["legacy_seeded_count"] = legacy_followup_seed["seeded_count"]
+    if PROGRESSION_QUEUE_ONLY:
+        legacy_followup_seed = {"unmatched_suffixes": [], "seeded_count": 0}
+        followup_summary = update_promotion_followups(meta, [], run_label, now=job_end)
+        followup_summary["legacy_seeded_count"] = 0
+    else:
+        legacy_followup_seed = seed_legacy_popup_followups(meta, results, now=job_end)
+        if legacy_followup_seed.get("unmatched_suffixes"):
+            log("⚠️ Legacy promotion follow-up bootstrap deferred; suffixes not matched uniquely: " + ", ".join(legacy_followup_seed["unmatched_suffixes"]))
+        followup_results = filter_followup_results(results, meta, _promotion_detail_worthy)
+        followup_summary = update_promotion_followups(meta, followup_results, run_label, now=job_end)
+        followup_summary["legacy_seeded_count"] = legacy_followup_seed["seeded_count"]
     for player_result in results:
         player_id = str(player_result.get("pid") or "").strip()
         player_name = str(player_result.get("display_name") or "").strip()
@@ -7704,7 +8010,7 @@ def main():
         0.0 if tp_all == 0 and has_unresolved_result
         else (100.0 if tp_all == 0 else round(full_claim_confirmed / tp_all * 100, 1))
     )
-    eff_log = f"{eff:.1f}%" if eff is not None else "N/A (promotional-only)"
+    eff_log = f"{eff:.1f}%" if eff is not None else ("N/A (Progression-only)" if PROGRESSION_QUEUE_ONLY else "N/A (promotional-only)")
 
     timed   = [(r["pid"], r.get("duration_s", 0)) for r in results if not r.get("skipped_all")]
     avg_t   = round(sum(t for _, t in timed) / len(timed), 1) if timed else 0
@@ -7718,7 +8024,7 @@ def main():
     log(f"{'='*60}")
 
     # Subset recovery attempts must not recalculate the roster-wide daily streak.
-    if not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY:
+    if not RECOVERY_ONLY_FAILED and not DAILY_ONLY_RECOVERY and not PROGRESSION_QUEUE_ONLY:
         all_ok = compute_all_ok_today(players)
         if all_ok:
             log("✅ All daily+store claimed today — streak eligible")
@@ -7740,7 +8046,7 @@ def main():
     }
     counts = _summary_counts(results)
 
-    meta["last_run"] = {
+    run_record = {
         "timestamp":           job_end.isoformat(),
         "run_label":           run_label,
         "daily_only_recovery": DAILY_ONLY_RECOVERY,
@@ -7758,7 +8064,7 @@ def main():
         "retry_targets_by_player": retry_targets_by_player,
         "total_claimed":       tall,
         "efficiency":          eff,
-        "efficiency_scope":     "full_claim_accounts_only" if eff is not None else "not_applicable_promotional_only",
+        "efficiency_scope":     "full_claim_accounts_only" if eff is not None else ("not_applicable_progression_only" if PROGRESSION_QUEUE_ONLY else "not_applicable_promotional_only"),
         "duration_seconds":    dur_s,
         "per_type":            {"daily": td, "store": ts, "store_daily": ts_daily,
                                  "store_temp": ts_temp, "promotions": ts_temp,
@@ -7789,7 +8095,16 @@ def main():
         "backup_reconciliation_accounts": counts.get("backup_reconciliation_accounts", 0),
         "full_claim_accounts": counts["full_claim_accounts"],
         "configured_player_count": configured_player_count,
+        "progression_queue_only": PROGRESSION_QUEUE_ONLY,
     }
+    if PROGRESSION_QUEUE_ONLY:
+        meta["last_progression_recovery"] = run_record
+        if RECOVERY_ONLY_FAILED:
+            # A combined failed-ID + Progression pass retains established Recovery Run semantics.
+            meta["last_run"] = run_record
+    else:
+        meta["last_run"] = run_record
+
     cycle_claim_totals = {
         "daily": td,
         "store": ts_daily,
@@ -7798,21 +8113,23 @@ def main():
         "loyalty": tl,
         "events": event_reward_claims,
     }
-    cycle_summary = update_daily_cycle_summary(
-        meta,
-        reset_date=_current_reset_date(),
-        run_label=run_label,
-        configured_player_ids=player_ids,
-        claim_totals=cycle_claim_totals,
-        processed_player_ids=[str(result.get("pid") or "") for result in results],
-        run_key=f"{os.getenv('GITHUB_RUN_ID', 'local')}:{os.getenv('GITHUB_RUN_ATTEMPT', '1')}",
-        run_timestamp=job_end.isoformat(),
-        is_full_roster_run=(
-            not RECOVERY_ONLY_FAILED
-            and len(results) == configured_player_count
-            and counts.get("full_claim_accounts", 0) == configured_player_count
-        ),
-    )
+    cycle_summary = None
+    if not PROGRESSION_QUEUE_ONLY:
+        cycle_summary = update_daily_cycle_summary(
+            meta,
+            reset_date=_current_reset_date(),
+            run_label=run_label,
+            configured_player_ids=player_ids,
+            claim_totals=cycle_claim_totals,
+            processed_player_ids=[str(result.get("pid") or "") for result in results],
+            run_key=f"{os.getenv('GITHUB_RUN_ID', 'local')}:{os.getenv('GITHUB_RUN_ATTEMPT', '1')}",
+            run_timestamp=job_end.isoformat(),
+            is_full_roster_run=(
+                not RECOVERY_ONLY_FAILED
+                and len(results) == configured_player_count
+                and counts.get("full_claim_accounts", 0) == configured_player_count
+            ),
+        )
     meta_for_email = dict(meta)
     meta_for_email["last_run"] = prev_run   # email delta uses previous run
     if cycle_summary is not None:
@@ -7831,6 +8148,7 @@ def main():
         "Primary Run": "Primary",
         "Manual Run": "Manual",
         "Recovery Run": "Recovery",
+        "Immediate Progression Recovery": "Immediate PP Recovery",
         "Promotional Check #1": "Store Promo Check #1",
         "Promotional Check #2": "Store Promo Check #2",
         "Promotional Check #3": "Store Promo Check #3",
@@ -7858,11 +8176,19 @@ def main():
 
     log(f"📧 Sending email: {subject}")
     email_sent = send_email(html_body, subject)
-    meta["last_run"]["email_sent"] = bool(email_sent)
-    meta["last_run"]["player_count"] = n_players
+    if PROGRESSION_QUEUE_ONLY:
+        meta["last_progression_recovery"]["email_sent"] = bool(email_sent)
+        meta["last_progression_recovery"]["player_count"] = n_players
+        if RECOVERY_ONLY_FAILED:
+            meta["last_run"]["email_sent"] = bool(email_sent)
+            meta["last_run"]["player_count"] = n_players
+    else:
+        meta["last_run"]["email_sent"] = bool(email_sent)
+        meta["last_run"]["player_count"] = n_players
     # Keep the latest full-roster coverage separately so a subset recovery run
     # cannot erase the record that today's post-reset full cycle already ran.
     if (not RECOVERY_ONLY_FAILED
+            and not PROGRESSION_QUEUE_ONLY
             and len(results) == configured_player_count
             and all(result.get("processing_mode", "full_claim") == "full_claim" for result in results)
             and run_label in {"Primary Run", "Manual Run", "Promotional Check #1", "Promotional Check #2", "Promotional Check #3", "Promotional Check #4"}):

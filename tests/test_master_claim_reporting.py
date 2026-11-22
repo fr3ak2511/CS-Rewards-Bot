@@ -25,6 +25,7 @@ from master_claimer import (
     _mark_daily_recovery_slot_attempt,
     _preserve_queued_progression_state,
     _run_queued_progression_inspection,
+    process_player_progression_only,
     _summary_counts,
     build_email,
     build_event_rewards_section,
@@ -1697,6 +1698,122 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             self.assertEqual(saved["display_name"], "FREAKv20")
             self.assertEqual(saved["display_name_at_first_observation"], "FREAKv20")
             self.assertEqual(saved["last_observed_display_name"], "FREAKv2.0")
+
+
+    def test_progression_queue_only_processor_never_touches_other_reward_categories(self):
+        driver = type("ProgressionDriver", (), {"quit": lambda self: None})()
+        entry = {
+            "status": "deferred",
+            "requires_exact_target": False,
+            "target_card_signature": None,
+        }
+
+        def inspect(target_driver, player_id, stats, queue_entry):
+            self.assertIs(target_driver, driver)
+            self.assertEqual(player_id, "PLAYER0001")
+            self.assertEqual(queue_entry, entry)
+            stats.update({
+                "progression": 1,
+                "progression_checked": True,
+                "progression_unconfirmed": False,
+                "progression_unconfirmed_card_signature": None,
+                "progression_deferred": False,
+                "progression_deferred_reason": None,
+                "progression_claim_attempted": True,
+            })
+
+        with patch("master_claimer.init_player_history") as init_history, \
+             patch("master_claimer.create_driver", return_value=driver), \
+             patch("master_claimer.login_to_hub", return_value=True) as login, \
+             patch("master_claimer.capture_display_name", return_value="Test IGN"), \
+             patch("master_claimer._run_queued_progression_inspection", side_effect=inspect) as inspect_queue, \
+             patch("master_claimer.claim_daily_rewards") as daily, \
+             patch("master_claimer.claim_store_rewards") as store, \
+             patch("master_claimer.run_event_reward_checks") as events, \
+             patch("master_claimer._record_grenade_balance_for_player") as grenade:
+            result = process_player_progression_only(
+                "PLAYER0001", False, False, entry, "Immediate Progression Recovery"
+            )
+
+        init_history.assert_called_once_with("PLAYER0001")
+        login.assert_called_once_with(driver, "PLAYER0001")
+        inspect_queue.assert_called_once_with(
+            driver, "PLAYER0001", inspect_queue.call_args.args[2], entry
+        )
+        daily.assert_not_called()
+        store.assert_not_called()
+        events.assert_not_called()
+        grenade.assert_not_called()
+        self.assertEqual(result["processing_mode"], "progression_queue_only")
+        self.assertEqual(result["progression"], 1)
+        self.assertEqual(result["status"], "Claims Made")
+        self.assertTrue(result["progression_checked"])
+        self.assertTrue(result["progression_claim_attempted"])
+        self.assertEqual(result["daily"], 0)
+        self.assertEqual(result["store"], 0)
+        self.assertEqual(result["loyalty"], 0)
+        self.assertEqual(result["event_rewards"], [])
+        self.assertTrue(result["daily_skipped"])
+        self.assertEqual(result["store_skipped"], [True, True, True])
+
+    def test_progression_queue_only_login_failure_leaves_the_queue_deferred_without_claiming(self):
+        driver = type("ProgressionDriver", (), {"quit": lambda self: None})()
+        with patch("master_claimer.init_player_history"), \
+             patch("master_claimer.create_driver", return_value=driver), \
+             patch("master_claimer.login_to_hub", return_value=False), \
+             patch("master_claimer._run_queued_progression_inspection") as inspect_queue:
+            result = process_player_progression_only(
+                "PLAYER0001", False, False,
+                {
+                    "status": "claim_unconfirmed",
+                    "requires_exact_target": True,
+                    "target_card_signature": "Milestone 62 | x20",
+                },
+                "Immediate Progression Recovery",
+            )
+        inspect_queue.assert_not_called()
+        self.assertEqual(result["status"], "Login Failed")
+        self.assertTrue(result["progression_deferred"])
+        self.assertTrue(result["progression_unconfirmed"])
+        self.assertEqual(
+            result["progression_unconfirmed_card_signature"],
+            "Milestone 62 | x20",
+        )
+        self.assertFalse(result["progression_claim_attempted"])
+        self.assertEqual(result["progression"], 0)
+
+
+
+    def test_progression_queue_only_exception_after_click_keeps_exact_target_unconfirmed(self):
+        driver = type("ProgressionDriver", (), {"quit": lambda self: None})()
+        target = "Milestone 62 | x20"
+
+        def fail_after_click(target_driver, _player_id, _stats, _entry):
+            target_driver._progression_claim_attempted = True
+            target_driver._progression_unconfirmed = True
+            target_driver._progression_unconfirmed_card_signature = target
+            raise RuntimeError("portal verification interrupted")
+
+        with patch("master_claimer.init_player_history"), \
+             patch("master_claimer.create_driver", return_value=driver), \
+             patch("master_claimer.login_to_hub", return_value=True), \
+             patch("master_claimer.capture_display_name", return_value="Test IGN"), \
+             patch("master_claimer._run_queued_progression_inspection", side_effect=fail_after_click):
+            result = process_player_progression_only(
+                "PLAYER0001", False, False,
+                {
+                    "status": "deferred",
+                    "requires_exact_target": False,
+                    "target_card_signature": None,
+                },
+                "Immediate Progression Recovery",
+            )
+
+        self.assertTrue(result["progression_claim_attempted"])
+        self.assertTrue(result["progression_unconfirmed"])
+        self.assertFalse(result["progression_deferred"])
+        self.assertEqual(result["progression_unconfirmed_card_signature"], target)
+        self.assertEqual(result["status"], "Partial")
 
 if __name__ == "__main__":
     unittest.main()
