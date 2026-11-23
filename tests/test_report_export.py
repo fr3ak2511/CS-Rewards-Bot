@@ -290,6 +290,23 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("remaining-card inspection is incomplete and stays queued", report)
         self.assertNotIn("no claim click was attempted", report.lower())
 
+    def test_unexpected_progression_inspection_exception_remains_attention(self):
+        deferred = dict(self.summary["player_results"][0])
+        reason = "Progression-only recovery raised RuntimeError; inspection remains queued."
+        deferred.update({
+            "status": "Partial",
+            "retry_required": True,
+            "progression_deferred": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": reason,
+            "fail_reason": reason,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn("<strong>1</strong><small>Accounts with claim / validation exceptions", report)
+
     def test_saved_grenade_deficit_remains_attention_when_inspection_is_deferred(self):
         deferred = dict(self.summary["player_results"][0])
         deferred.update({
