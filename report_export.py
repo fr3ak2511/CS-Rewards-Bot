@@ -98,6 +98,11 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
             or bool(player.get("daily_unconfirmed"))
             or bool(player.get("standard_store_unconfirmed_indices"))
             or bool(player.get("progression_unconfirmed"))
+            or (
+                isinstance(player.get("grenade_balance_carry_forward"), dict)
+                and str(player["grenade_balance_carry_forward"].get("status_at_observation") or "")
+                    in {"below_minimum", "counter_regressed"}
+            )
         )
     )
     if not players:
