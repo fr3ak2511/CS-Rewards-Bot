@@ -852,7 +852,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("66 minimum then", report)
         self.assertIn("69 date floor as of 2026-11-23", report)
         self.assertIn("Last observed target 123 · 57 remaining then", report)
-        self.assertIn("not a live counter", report.lower())
+        self.assertIn("did not read a fresh portal counter", report.lower())
         self.assertNotIn("Attention Required", report)
 
     def test_generic_popup_blocker_remains_reportable(self):
