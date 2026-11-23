@@ -306,7 +306,7 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("<strong>1</strong><small>Accounts with claim / validation exceptions", report)
+        self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
 
     def test_saved_grenade_deficit_remains_attention_when_inspection_is_deferred(self):
         deferred = dict(self.summary["player_results"][0])
