@@ -65,7 +65,7 @@ return {
     const r = el.getBoundingClientRect(), s = getComputedStyle(el);
     return {
       tag: String(el.tagName || '').toLowerCase(),
-      className: String(el.className || '').replace(/\\s+/g, ' ').trim().slice(0, 180),
+      className: String(el.className || '').replace(/\s+/g, ' ').trim().slice(0, 180),
       position: s.position,
       zIndex: s.zIndex,
       pointerEvents: s.pointerEvents,
