@@ -897,6 +897,20 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("below minimum at observation", deficit_report)
         self.assertIn("Attention Required", deficit_report)
 
+        # Legacy observations without a saved status must not be presented as a pass.
+        legacy_entry = saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"]
+        legacy_entry.update({"last_observed_count": 66})
+        legacy_entry.pop("last_observed_status", None)
+        with patch("master_claimer.load_grenade_balance_state", return_value=saved_state), \
+             patch("master_claimer.get_ist_time", return_value=fixed_now):
+            legacy_report = build_email(
+                [player], "Promotional Check #1", 1,
+                fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
+            )
+        self.assertIn("0 passed at last observation", legacy_report)
+        self.assertIn("1 status not retained", legacy_report)
+        self.assertIn("status not retained at observation", legacy_report)
+
     def test_generic_popup_blocker_remains_reportable(self):
         generic = {
             "key": "store-popup-blocked",
