@@ -6738,7 +6738,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             for result in progression_activity_results
         )
         inspected_word = "account" if len(progression_activity_results) == 1 else "accounts"
-        note = f"{len(progression_activity_results)} {inspected_word} inspected"
+        note = f"{len(progression_activity_results)} {inspected_word} checked"
         if pending_progression:
             note += f" · {pending_progression} still pending"
         progression_category_card = (
