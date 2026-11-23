@@ -133,7 +133,13 @@ def build_run_reconciliation(
     full_claim_accounts = _integer(counters.get("full_claim_accounts"))
     promotional_only_accounts = _integer(counters.get("promotional_only_accounts"))
     backup_reconciliation_accounts = _integer(counters.get("backup_reconciliation_accounts"))
-    mode_total = full_claim_accounts + promotional_only_accounts + backup_reconciliation_accounts
+    progression_queue_only_accounts = sum(
+        1 for row in rows if row.get("processing_mode") == "progression_queue_only"
+    )
+    mode_total = (
+        full_claim_accounts + promotional_only_accounts
+        + backup_reconciliation_accounts + progression_queue_only_accounts
+    )
 
     checks: dict[str, bool | None] = {
         "per_account_claims_match_category_totals": per_account_claims == category_claims,
@@ -161,6 +167,7 @@ def build_run_reconciliation(
             "full_claim": full_claim_accounts,
             "promotional_only": promotional_only_accounts,
             "backup_reconciliation": backup_reconciliation_accounts,
+            "progression_queue_only": progression_queue_only_accounts,
             "sum": mode_total,
         },
         "claim_counts": {
