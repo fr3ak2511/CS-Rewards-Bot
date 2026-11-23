@@ -66,6 +66,11 @@ def _deferred_progression_is_only_issue(player: dict[str, Any]) -> bool:
         "below_minimum", "counter_regressed"
     }:
         return False
+    carry = player.get("grenade_balance_carry_forward")
+    if isinstance(carry, dict) and str(carry.get("status_at_observation") or "") in {
+        "below_minimum", "counter_regressed"
+    }:
+        return False
     fail_reason = str(player.get("fail_reason") or "").strip()
     deferred_reason = str(player.get("progression_deferred_reason") or "").strip()
     return not fail_reason or fail_reason == deferred_reason
