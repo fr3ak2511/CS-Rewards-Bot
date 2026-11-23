@@ -5613,7 +5613,17 @@ def _deferred_progression_only(result):
         return False
     fail_reason = str(result.get("fail_reason") or "").strip()
     deferred_reason = str(result.get("progression_deferred_reason") or "").strip()
-    return not fail_reason or fail_reason == deferred_reason
+    reason_lower = (fail_reason or deferred_reason).lower()
+    if any(marker in reason_lower for marker in (" raised ", "exception", "runtime error", "could not authenticate")):
+        return False
+    known_nonclaim_inspection = any(marker in reason_lower for marker in (
+        "no currently visible claimable reward",
+        "popup/overlay safety guard",
+        "unknown_fullscreen_overlay_blocks_page",
+        "does not inspect progression",
+        "held for this backup slot",
+    ))
+    return known_nonclaim_inspection and (not fail_reason or fail_reason == deferred_reason)
 
 
 def _attach_grenade_balance_carry_forward(results):
