@@ -743,7 +743,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("1 blocked by overlay", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention Required", report)
-        self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", report)
+        self.assertIn("unknown_fullscreen_overlay_blocks_page", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertNotIn("unconfirmed standard reward", report.lower())
@@ -894,7 +894,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", deficit_report)
-        self.assertIn("Below minimum", deficit_report)
+        self.assertIn("below minimum at observation", deficit_report)
         self.assertIn("Attention Required", deficit_report)
 
     def test_generic_popup_blocker_remains_reportable(self):
@@ -1673,7 +1673,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
         self.assertIn("1 account with confirmed claims", report)
         self.assertIn("1 inspection(s) still queued", report)
-        self.assertIn("Deferred Checks", report)
+        self.assertIn("Progression Inspections Pending", report)
         self.assertIn("1 Progression reward(s) were portal-confirmed", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
@@ -1692,7 +1692,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(_full_claim_recovery_candidate(result))
         self.assertEqual(build_standard_attention_section([result]), "")
         deferred = build_deferred_checks_section([result])
-        self.assertIn("Deferred Checks", deferred)
+        self.assertIn("Progression Inspections Pending", deferred)
         self.assertIn("hgkme1", deferred)
         self.assertIn("no claim click was attempted", deferred)
         self.assertNotIn("Attention Required", deferred)
