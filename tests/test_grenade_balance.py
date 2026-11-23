@@ -6,6 +6,7 @@ from grenade_balance import (
     eligible_cycle_days,
     evaluate_progression_balance,
     parse_progression_balance_panel,
+    summarize_saved_progression_balance,
 )
 
 
@@ -244,13 +245,17 @@ class GrenadeBalanceTests(unittest.TestCase):
                 }
             },
         }
-        _, result = evaluate_progression_balance(
+        updated, result = evaluate_progression_balance(
             {**self.snapshot, "current_count": 33}, state, "ACCOUNT_A",
             reset_date=date(2026, 11, 8),
             is_new_account=False,
             store_rewards_fully_checked=True,
         )
         self.assertEqual(result["status"], "counter_regressed")
+        self.assertEqual(
+            updated["cycles"]["2026-11"]["players"]["ACCOUNT_A"]["last_observed_status"],
+            "counter_regressed",
+        )
 
     def test_accounts_present_in_prior_cycle_start_new_cycle_from_zero(self):
         state = {
@@ -289,6 +294,109 @@ class GrenadeBalanceTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "not_validated")
         self.assertEqual(updated["cycles"], {})
+
+    def test_evaluation_persists_last_observed_milestone_for_carry_forward(self):
+        state = {
+            "schema_version": 1,
+            "cycles": {
+                "2026-11": {
+                    "players": {
+                        "ACCOUNT_A": {
+                            "baseline_status": "active",
+                            "baseline_count": 0,
+                            "baseline_date": "2026-11-01",
+                            "tracking_start_date": "2026-11-01",
+                            "baseline_source": "cycle_start_existing_account",
+                        }
+                    }
+                }
+            },
+        }
+        updated, result = evaluate_progression_balance(
+            {**self.snapshot, "current_count": 66, "next_milestone": 123},
+            state, "ACCOUNT_A",
+            reset_date=date(2026, 11, 22),
+            is_new_account=False,
+            store_rewards_fully_checked=True,
+        )
+        entry = updated["cycles"]["2026-11"]["players"]["ACCOUNT_A"]
+        self.assertEqual(entry["last_observed_expected_minimum"], 66)
+        self.assertEqual(entry["last_observed_status"], "pass")
+        self.assertEqual(entry["last_observed_next_milestone"], 123)
+        self.assertEqual(entry["last_observed_remaining_to_next_milestone"], 57)
+        self.assertEqual(result["remaining_to_next_milestone"], 57)
+
+    def test_saved_balance_summary_separates_last_actual_from_current_date_floor(self):
+        state = {
+            "schema_version": 1,
+            "cycles": {
+                "2026-11": {
+                    "players": {
+                        "ACCOUNT_A": {
+                            "baseline_status": "active",
+                            "baseline_count": 0,
+                            "baseline_date": "2026-11-01",
+                            "tracking_start_date": "2026-11-01",
+                            "baseline_source": "cycle_start_existing_account",
+                            "last_observed_count": 66,
+                            "last_observed_date": "2026-11-22",
+                            "last_observed_at_ist": "2026-11-22T05:36:58+05:30",
+                            "last_observed_expected_minimum": 66,
+                            "last_observed_status": "pass",
+                            "last_observed_next_milestone": 123,
+                            "last_observed_remaining_to_next_milestone": 57,
+                        }
+                    }
+                }
+            },
+        }
+        before = repr(state)
+        summary = summarize_saved_progression_balance(
+            state, "ACCOUNT_A", reset_date=date(2026, 11, 23)
+        )
+        self.assertEqual(summary["last_observed_count"], 66)
+        self.assertEqual(summary["last_observed_date"], "2026-11-22")
+        self.assertEqual(summary["expected_minimum_at_observation"], 66)
+        self.assertEqual(summary["expected_minimum_as_of"], 69)
+        self.assertEqual(summary["next_milestone_at_observation"], 123)
+        self.assertEqual(summary["remaining_to_milestone_at_observation"], 57)
+        self.assertEqual(summary["status_at_observation"], "pass")
+        self.assertEqual(repr(state), before, "Report summary must not mutate runtime state")
+
+    def test_saved_balance_summary_handles_legacy_entries_without_milestone(self):
+        state = {
+            "schema_version": 1,
+            "cycles": {
+                "2026-11": {
+                    "players": {
+                        "ACCOUNT_A": {
+                            "baseline_status": "active",
+                            "baseline_count": 30,
+                            "tracking_start_date": "2026-11-11",
+                            "baseline_source": "first_verified_observation_after_rollout",
+                            "last_observed_count": 63,
+                            "last_observed_date": "2026-11-21",
+                            "last_observed_at_ist": "2026-11-21T06:43:07+05:30",
+                        }
+                    }
+                }
+            },
+        }
+        summary = summarize_saved_progression_balance(
+            state, "ACCOUNT_A", reset_date=date(2026, 11, 23)
+        )
+        self.assertEqual(summary["expected_minimum_at_observation"], 63)
+        self.assertEqual(summary["expected_minimum_as_of"], 69)
+        self.assertIsNone(summary["next_milestone_at_observation"])
+        self.assertIsNone(summary["remaining_to_milestone_at_observation"])
+        self.assertEqual(summary["status_at_observation"], "status_not_retained")
+
+        # A legacy count below its known minimum is still an actionable deficit.
+        state["cycles"]["2026-11"]["players"]["ACCOUNT_A"]["last_observed_count"] = 60
+        below_minimum = summarize_saved_progression_balance(
+            state, "ACCOUNT_A", reset_date=date(2026, 11, 23)
+        )
+        self.assertEqual(below_minimum["status_at_observation"], "below_minimum")
 
     def test_eligible_cycle_days_is_inclusive_and_handles_reversed_ranges(self):
         self.assertEqual(

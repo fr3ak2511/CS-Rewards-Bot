@@ -357,12 +357,18 @@ def evaluate_progression_balance(
     entry["last_observed_date"] = reset_date.isoformat()
     entry["last_observed_at_ist"] = snapshot.get("observed_at_ist")
 
+    remaining_to_next = max(0, next_milestone - current_count)
+    entry["last_observed_expected_minimum"] = expected_minimum
+    entry["last_observed_status"] = status
+    entry["last_observed_next_milestone"] = next_milestone
+    entry["last_observed_remaining_to_next_milestone"] = remaining_to_next
+
     result = {
         "status": status,
         "cycle_id": cycle_id,
         "current_count": current_count,
         "next_milestone": next_milestone,
-        "remaining_to_next_milestone": max(0, next_milestone - current_count),
+        "remaining_to_next_milestone": remaining_to_next,
         "baseline_count": baseline_count,
         "baseline_date": entry.get("baseline_date"),
         "tracking_start_date": tracking_start.isoformat(),
@@ -377,6 +383,98 @@ def evaluate_progression_balance(
         "historical_gap_from": entry.get("join_date"),
     }
     return updated, result
+
+
+def summarize_saved_progression_balance(
+    state: dict[str, Any],
+    player_id: str,
+    *,
+    reset_date: date,
+) -> dict[str, Any] | None:
+    """Build a read-only carry-forward view from the last saved portal observation.
+
+    This is deliberately not a live validation. The returned actual count and
+    milestone belong to the last observation date; the current-date minimum is
+    recalculated from the saved account baseline and completed reset dates.
+    """
+    pid = str(player_id or "").strip()
+    if not pid or not isinstance(state, dict):
+        return None
+    cycles = state.get("cycles")
+    if not isinstance(cycles, dict):
+        return None
+    cycle = cycles.get(reset_date.strftime("%Y-%m"))
+    if not isinstance(cycle, dict):
+        return None
+    players = cycle.get("players")
+    if not isinstance(players, dict):
+        return None
+    entry = players.get(pid)
+    if not isinstance(entry, dict) or entry.get("baseline_status") != "active":
+        return None
+
+    try:
+        baseline_count = int(entry.get("baseline_count", 0))
+        tracking_start = date.fromisoformat(str(entry.get("tracking_start_date") or ""))
+        observed_date = date.fromisoformat(str(entry.get("last_observed_date") or ""))
+        observed_count = int(entry.get("last_observed_count"))
+    except (TypeError, ValueError):
+        return None
+    if baseline_count < 0 or observed_count < 0 or observed_date > reset_date:
+        return None
+
+    expected_at_observation = baseline_count + DAILY_GRENADE_MINIMUM * eligible_cycle_days(
+        tracking_start, observed_date
+    )
+    expected_as_of = baseline_count + DAILY_GRENADE_MINIMUM * eligible_cycle_days(
+        tracking_start, reset_date
+    )
+    saved_expected = entry.get("last_observed_expected_minimum")
+    try:
+        if saved_expected is not None:
+            expected_at_observation = int(saved_expected)
+    except (TypeError, ValueError):
+        pass
+
+    saved_milestone = entry.get("last_observed_next_milestone")
+    try:
+        milestone = int(saved_milestone) if saved_milestone is not None else None
+    except (TypeError, ValueError):
+        milestone = None
+    saved_remaining = entry.get("last_observed_remaining_to_next_milestone")
+    try:
+        remaining = int(saved_remaining) if saved_remaining is not None else (
+            max(0, milestone - observed_count) if milestone is not None else None
+        )
+    except (TypeError, ValueError):
+        remaining = max(0, milestone - observed_count) if milestone is not None else None
+
+    saved_status = str(entry.get("last_observed_status") or "").strip()
+    if saved_status:
+        status = saved_status
+    elif observed_count < expected_at_observation:
+        # A legacy count below its date floor is definitely short, even if its
+        # original counter-regression flag was not persisted.
+        status = "below_minimum"
+    else:
+        # Older records never stored the original status. A count above the
+        # minimum cannot prove that the previous observation did not regress.
+        status = "status_not_retained"
+    return {
+        "source": "saved_portal_observation",
+        "status_at_observation": status,
+        "last_observed_count": observed_count,
+        "last_observed_date": observed_date.isoformat(),
+        "last_observed_at_ist": entry.get("last_observed_at_ist"),
+        "expected_minimum_at_observation": expected_at_observation,
+        "expected_minimum_as_of": expected_as_of,
+        "next_milestone_at_observation": milestone,
+        "remaining_to_milestone_at_observation": remaining,
+        "baseline_count": baseline_count,
+        "tracking_start_date": tracking_start.isoformat(),
+        "as_of_reset_date": reset_date.isoformat(),
+        "baseline_source": entry.get("baseline_source"),
+    }
 
 
 def load_grenade_balance_state(path: str = "grenade_balance_baselines.json") -> dict[str, Any]:

@@ -44,6 +44,48 @@ def _deferred_reason_summary(raw_reason: Any) -> str:
     return summary[:180].rstrip()
 
 
+def _deferred_progression_is_only_issue(player: dict[str, Any]) -> bool:
+    """Identify an inspection-only deferral without hiding unrelated claim failures."""
+    if not player.get("progression_deferred") or player.get("progression_unconfirmed"):
+        return False
+    if str(player.get("status") or "") in {"Login Failed", "Error", "Failed", "No Rewards"}:
+        return False
+    if (
+        player.get("daily_unconfirmed")
+        or player.get("standard_store_unconfirmed_indices")
+        or player.get("promotion_detection_failed")
+    ):
+        return False
+    if any(
+        isinstance(event, dict) and event.get("retry_required")
+        for event in (player.get("event_rewards") or [])
+    ):
+        return False
+    balance = player.get("grenade_balance")
+    if isinstance(balance, dict) and str(balance.get("status") or "") in {
+        "below_minimum", "counter_regressed"
+    }:
+        return False
+    carry = player.get("grenade_balance_carry_forward")
+    if isinstance(carry, dict) and str(carry.get("status_at_observation") or "") in {
+        "below_minimum", "counter_regressed"
+    }:
+        return False
+    fail_reason = str(player.get("fail_reason") or "").strip()
+    deferred_reason = str(player.get("progression_deferred_reason") or "").strip()
+    reason_lower = (fail_reason or deferred_reason).lower()
+    if any(marker in reason_lower for marker in (" raised ", "exception", "runtime error", "could not authenticate")):
+        return False
+    known_nonclaim_inspection = any(marker in reason_lower for marker in (
+        "no currently visible claimable reward",
+        "popup/overlay safety guard",
+        "unknown_fullscreen_overlay_blocks_page",
+        "does not inspect progression",
+        "held for this backup slot",
+    ))
+    return known_nonclaim_inspection and (not fail_reason or fail_reason == deferred_reason)
+
+
 def build_copyable_report(summary: dict[str, Any]) -> str:
     """Render a standalone report; only masked account suffixes are accepted."""
     if not isinstance(summary, dict):
@@ -56,7 +98,9 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     claims = _number(totals.get("all_claims_this_run", summary.get("claims_made")))
     attention = sum(
         1 for player in players
-        if isinstance(player, dict) and (
+        if isinstance(player, dict)
+        and not _deferred_progression_is_only_issue(player)
+        and (
             bool(player.get("retry_required"))
             or str(player.get("status") or "") in {
                 "Partial", "No Rewards", "Login Failed", "Error", "Failed"
@@ -64,7 +108,11 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
             or bool(player.get("daily_unconfirmed"))
             or bool(player.get("standard_store_unconfirmed_indices"))
             or bool(player.get("progression_unconfirmed"))
-            or bool(player.get("progression_deferred"))
+            or (
+                isinstance(player.get("grenade_balance_carry_forward"), dict)
+                and str(player["grenade_balance_carry_forward"].get("status_at_observation") or "")
+                    in {"below_minimum", "counter_regressed"}
+            )
         )
     )
     if not players:
@@ -125,12 +173,63 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     )
     grenade_section = grenade_summary + grenade_table
 
+    carry_forward_rows = []
+    for player in players:
+        if not isinstance(player, dict):
+            continue
+        balance = player.get("grenade_balance_carry_forward")
+        if not isinstance(balance, dict):
+            continue
+        observed = "—" if balance.get("last_observed_count") is None else str(_number(balance.get("last_observed_count")))
+        minimum_then = "—" if balance.get("expected_minimum_at_observation") is None else str(_number(balance.get("expected_minimum_at_observation")))
+        minimum_now = "—" if balance.get("expected_minimum_as_of") is None else str(_number(balance.get("expected_minimum_as_of")))
+        observed_date = _safe(balance.get("last_observed_date"))
+        milestone = balance.get("next_milestone_at_observation")
+        remaining = balance.get("remaining_to_milestone_at_observation")
+        milestone_text = (
+            f"{_number(milestone)} (then { _number(remaining) } remaining)"
+            if milestone is not None and remaining is not None
+            else "Not retained in saved baseline"
+        )
+        status = str(balance.get("status_at_observation") or "not_validated")
+        status_class = "good" if status == "pass" else "bad" if status in {"below_minimum", "counter_regressed"} else "warn"
+        carry_forward_rows.append(
+            "<tr><td><strong>" + _safe(_player_label(player)) + "</strong></td>"
+            + "<td>" + observed + "</td><td>" + minimum_then + "</td>"
+            + "<td>" + observed_date + "</td><td>" + minimum_now + "</td>"
+            + "<td>" + _safe(milestone_text) + "</td><td><span class='status " + status_class + "'>"
+            + _safe(status.replace("_", " ")) + "</span></td></tr>"
+        )
+    carry_forward_section = (
+        "<section class='section'><h2>Last Verified Grenade Progress</h2>"
+        "<p>These are saved portal observations, not live balances from this run. "
+        "The date-based minimum is recalculated from the stored baseline at the current 05:30 IST reset date. "
+        "Milestone and remaining values refer only to the last observation. Older records may not retain the milestone "
+        "or original validation status; missing status is shown as not retained, never inferred as a pass.</p>"
+        "<div class='table-wrap'><table><thead><tr><th>Account</th><th>Last actual</th>"
+        "<th>Minimum then</th><th>Observed</th><th>Date floor now</th><th>Last milestone</th><th>Status then</th>"
+        "</tr></thead><tbody>" + "".join(carry_forward_rows) + "</tbody></table></div></section>"
+        if carry_forward_rows else ""
+    )
+
     deferred_rows = []
+    deferred_empty_count = 0
+    deferred_blocked_count = 0
     for player in players:
         if not isinstance(player, dict) or not player.get("progression_deferred"):
             continue
         label = _safe(_player_label(player))
-        reason = _safe(_deferred_reason_summary(player.get("progression_deferred_reason")))
+        raw_reason = str(player.get("progression_deferred_reason") or "")
+        reason_lower = raw_reason.lower()
+        if "no currently visible claimable reward" in reason_lower:
+            deferred_empty_count += 1
+            category = "No claimable reward visible"
+        elif "popup/overlay" in reason_lower or "fullscreen_overlay" in reason_lower:
+            deferred_blocked_count += 1
+            category = "Inspection blocked by overlay"
+        else:
+            category = "Inspection deferred"
+        reason = _safe(_deferred_reason_summary(raw_reason))
         if player.get("progression_unconfirmed"):
             detail = (
                 "A previously attempted Progression claim remains unconfirmed; "
@@ -143,29 +242,42 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
                 "No further claim click was attempted."
             )
         else:
-            detail = "Progression inspection was deferred; no claim click was attempted."
+            detail = "Progression inspection remains queued; no claim click was attempted."
         deferred_rows.append(
             "<div class='deferred-item'><strong>" + label
-            + "</strong><span>Progression Program</span><p>" + _safe(detail)
+            + "</strong><span>" + _safe(category) + "</span><p>" + _safe(detail)
             + "</p><small class='reason'>" + reason + "</small></div>"
         )
     deferred_count = len(deferred_rows)
     if deferred_rows:
         deferred_word = "inspection" if deferred_count == 1 else "inspections"
+        causes = []
+        if deferred_empty_count:
+            causes.append(f"{deferred_empty_count} no claimable reward visible")
+        if deferred_blocked_count:
+            causes.append(f"{deferred_blocked_count} blocked by overlay")
+        deferred_note = " · ".join(causes) if causes else "No claim click was attempted"
         deferred_section = (
-            "<section class='section deferred'><h2>Deferred Checks</h2>"
-            + f"<p>{deferred_count} Progression {deferred_word} require review. "
-            "No claim click is being reported as failed.</p>"
+            "<section class='section deferred'><h2>Progression Inspections Pending</h2>"
+            + f"<p>{deferred_count} {deferred_word} remain queued · {_safe(deferred_note)}. "
+            "These are not counted as failed claims or Grenade deficits.</p>"
             + "".join(deferred_rows)
             + "</section>"
         )
-        attention_note = f"Includes {deferred_count} deferred Progression {deferred_word}"
+        attention_note = "Claim / validation exceptions only; pending inspections are shown separately"
     else:
         deferred_section = ""
-        attention_note = "Accounts with unresolved items"
+        attention_note = "Accounts with claim / validation exceptions"
 
-    health = "ATTENTION REQUIRED" if attention else "HEALTHY"
-    health_class = "warn" if attention else "healthy"
+    if attention:
+        health = "ATTENTION REQUIRED"
+        health_class = "warn"
+    elif deferred_count:
+        health = "COMPLETED — INSPECTIONS PENDING"
+        health_class = "neutral"
+    else:
+        health = "HEALTHY"
+        health_class = "healthy"
 
     categories = [
         ("Daily", totals.get("daily_claimed_this_run", 0)),
@@ -186,7 +298,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if not isinstance(player, dict):
             continue
         status = str(player.get("status") or "Unknown")
-        if player.get("progression_deferred") and status in {"Success", "Claims Made"}:
+        if _deferred_progression_is_only_issue(player):
             status = "Deferred check"
         status_class = (
             "bad" if status in {"Login Failed", "Error", "Failed"}
@@ -239,6 +351,7 @@ h1{{font-size:24px;margin:8px 0}}
 .health{{display:inline-block;margin-top:12px;padding:7px 12px;border-radius:18px;font-size:11px;font-weight:700}}
 .health.healthy{{color:#166534;background:#dcfce7}}
 .health.warn{{color:#92400e;background:#fef3c7}}
+.health.neutral{{color:#1e40af;background:#dbeafe}}
 .toolbar{{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0}}
 button{{border:0;border-radius:8px;padding:11px 16px;background:#1d4ed8;color:#fff;font-weight:700;font-size:13px;cursor:pointer}}
 button:focus{{outline:3px solid #93c5fd;outline-offset:2px}}
@@ -306,6 +419,7 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 </section>
 <section class="categories">{category_cards}</section>
 {deferred_section}
+{carry_forward_section}
 <section class="section">
 <h2>Account results</h2>
 <div class="table-wrap">
