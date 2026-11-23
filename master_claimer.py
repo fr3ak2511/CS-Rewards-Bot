@@ -6596,7 +6596,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     exception_details = standard_attention_html + "".join(exception_cards)
     if deferred_check_count:
         attention_fallback_note = (
-            "Review Deferred Checks. Inspection was incomplete; this does not mean a claim click failed."
+            "Progression Inspections Pending are shown separately; review the attention items above."
         )
     else:
         attention_fallback_note = (
