@@ -943,7 +943,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("Progression pending</span><strong>3</strong>", report)
-        self.assertIn("3 rechecked · 0 claims confirmed", report)
+        self.assertIn("3 accounts checked this run · 0 claims confirmed", report)
         self.assertIn("<span>Progression Checks</span><strong>3</strong>", report)
         self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
         self.assertIn("No claimable reward card visible", report)
@@ -1777,7 +1777,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
         )
         self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
-        self.assertIn("1 account inspected · 1 still pending", report)
+        self.assertIn("1 account checked · 1 still pending", report)
         self.assertIn("Progression — checks still open", report)
         self.assertIn("1 Progression reward confirmed; 1 account remains open", report)
 
@@ -1816,7 +1816,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             ),
         }
         section = build_deferred_checks_section([result])
-        self.assertIn("1 Progression reward(s) were confirmed", section)
+        self.assertIn("1 Progression reward confirmed", section)
         self.assertIn("1 account remains open", section)
         self.assertNotIn("No claim button was clicked", section)
 
