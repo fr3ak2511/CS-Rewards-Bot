@@ -5658,10 +5658,23 @@ def build_grenade_balance_carry_forward_section(results):
     ]
     if not records:
         return ""
-    passed = sum(
-        1 for result in records
-        if result["grenade_balance_carry_forward"].get("status_at_observation") == "pass"
-    )
+    statuses = [
+        str(result["grenade_balance_carry_forward"].get("status_at_observation") or "not_validated")
+        for result in records
+    ]
+    passed = sum(1 for status in statuses if status == "pass")
+    below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
+    status_not_retained = sum(1 for status in statuses if status == "status_not_retained")
+    other_status = len(statuses) - passed - below_minimum - status_not_retained
+    summary_parts = []
+    if passed:
+        summary_parts.append(f"{passed} passed at last observation")
+    if below_minimum:
+        summary_parts.append(f"{below_minimum} below minimum / regressed")
+    if status_not_retained:
+        summary_parts.append(f"{status_not_retained} status not retained")
+    if other_status:
+        summary_parts.append(f"{other_status} status unavailable")
     rows = []
     for result in records:
         balance = result["grenade_balance_carry_forward"]
@@ -5691,10 +5704,10 @@ def build_grenade_balance_carry_forward_section(results):
     return (
         "<section class='v2-section v2-grenade v2-validation-card'>"
         "<div class='v2-section-head'><h2>Last Verified Grenade Progress</h2>"
-        f"<span>{passed}/{len(records)} on track at last observation</span></div>"
+        f"<span>{html.escape(' · '.join(summary_parts) or 'No retained validation status')}</span></div>"
         "<p class='v2-muted-note'>Carry-forward values only; this run did not read a fresh portal counter. "
-        "The date floor is recalculated from the saved baseline. A last-observed milestone is not a live target "
-        "and is shown only when it was retained with that observation.</p>"
+        "The date floor is recalculated from the saved baseline. A last-observed milestone is not a live target. "
+        "Older records without a saved validation status are shown as not retained, never inferred as a pass.</p>"
         + "".join(rows)
         + "</section>"
     )
