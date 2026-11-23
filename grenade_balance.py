@@ -449,9 +449,17 @@ def summarize_saved_progression_balance(
     except (TypeError, ValueError):
         remaining = max(0, milestone - observed_count) if milestone is not None else None
 
-    status = str(entry.get("last_observed_status") or (
-        "pass" if observed_count >= expected_at_observation else "below_minimum"
-    ))
+    saved_status = str(entry.get("last_observed_status") or "").strip()
+    if saved_status:
+        status = saved_status
+    elif observed_count < expected_at_observation:
+        # A legacy count below its date floor is definitely short, even if its
+        # original counter-regression flag was not persisted.
+        status = "below_minimum"
+    else:
+        # Older records never stored the original status. A count above the
+        # minimum cannot prove that the previous observation did not regress.
+        status = "status_not_retained"
     return {
         "source": "saved_portal_observation",
         "status_at_observation": status,
