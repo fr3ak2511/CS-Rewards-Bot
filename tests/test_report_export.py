@@ -177,13 +177,13 @@ class CopyableReportTests(unittest.TestCase):
             msg=f"Generated report JavaScript is invalid:\n{result.stderr}",
         )
 
-    def test_deferred_progression_is_actionable_without_becoming_a_claim_failure(self):
+    def test_deferred_progression_is_informational_and_keeps_overlay_visible(self):
         deferred = dict(self.summary["player_results"][0])
         deferred.update({
             "progression_deferred": True,
             "progression_deferred_reason": (
                 "popup/overlay safety guard blocked inspection "
-                "(blocking_dialog_has_no_unambiguous_safe_close; dialogs=1; "
+                "(unknown_fullscreen_overlay_blocks_page; dialogs=0; overlays=1; "
                 "top_dialog='PRIVATE-POPUP-CONTEXT'; popup_context={\"url\":\"https://internal.invalid\"})"
             ),
             "progression_unconfirmed": False,
@@ -193,18 +193,83 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
 
         report = build_copyable_report(summary)
-        self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("<strong>1</strong><small>Includes 1 deferred Progression inspection", report)
-        self.assertIn("Deferred Checks", report)
+        self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
+        self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
+        self.assertIn("Progression Inspections Pending", report)
+        self.assertIn("Inspection blocked by overlay", report)
         self.assertIn("&lt;Player One&gt;", report)
         self.assertIn(">Deferred check</span>", report)
         self.assertIn("no claim click was attempted", report)
-        self.assertIn("blocking_dialog_has_no_unambiguous_safe_close", report)
+        self.assertIn("unknown_fullscreen_overlay_blocks_page", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertIn("Actual failures: <strong>0</strong>", report)
         self.assertIn("Unconfirmed claims: <strong>0</strong>", report)
         self.assertIn("Progression</span><strong>0</strong>", report)
+
+    def test_queue_only_partial_retry_is_not_counted_as_attention(self):
+        deferred = dict(self.summary["player_results"][0])
+        reason = (
+            "Queued Progression inspection found no currently visible claimable reward; "
+            "keeping the queue open for a later pass."
+        )
+        deferred.update({
+            "status": "Partial",
+            "retry_required": True,
+            "progression_deferred": True,
+            "progression_deferred_reason": reason,
+            "fail_reason": reason,
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
+        self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
+        self.assertIn("No claimable reward visible", report)
+
+    def test_unconfirmed_progression_claim_remains_attention(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression_deferred": True,
+            "progression_unconfirmed": True,
+            "progression_deferred_reason": "Prior Progression claim remains unconfirmed.",
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn("<strong>1</strong><small>Accounts with claim / validation exceptions", report)
+
+    def test_carry_forward_balance_is_explicitly_not_live_and_does_not_raise_attention(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression_deferred": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance_carry_forward": {
+                "source": "saved_portal_observation",
+                "status_at_observation": "pass",
+                "last_observed_count": 66,
+                "last_observed_date": "2026-11-22",
+                "expected_minimum_at_observation": 66,
+                "expected_minimum_as_of": 69,
+                "next_milestone_at_observation": 123,
+                "remaining_to_milestone_at_observation": 57,
+                "as_of_reset_date": "2026-11-23",
+            },
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn("Last Verified Grenade Progress", report)
+        self.assertIn("66", report)
+        self.assertIn("69", report)
+        self.assertIn("Last observed target", report)
+        self.assertIn("These are saved portal observations, not live balances", report)
+        self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
+        self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
 
     def test_deferred_progression_reports_partial_confirmation_truthfully(self):
