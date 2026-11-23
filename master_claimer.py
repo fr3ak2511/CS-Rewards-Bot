@@ -5592,7 +5592,7 @@ def build_deferred_checks_section(results):
     return (
         "<section class='v2-section v2-deferred'>"
         "<div class='v2-section-head'><h2>Progression — checks still open</h2>"
-        f"<span>{len(pending)} {('account' if len(pending) == 1 else 'accounts')} need another check</span></div>"
+        f"<span>{len(pending)} {('account needs' if len(pending) == 1 else 'accounts need')} another check</span></div>"
         f"<p class='v2-muted-note'>{html.escape(summary)}</p>"
         "<p class='v2-muted-note' style='margin-top:6px'>An empty scan does not prove that no reward is available. "
         "The queue stays open until a later safe check confirms the result.</p>"
@@ -5710,7 +5710,8 @@ def build_grenade_balance_carry_forward_section(results):
     passed = sum(1 for status in statuses if status == "pass")
     below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
     unavailable = len(statuses) - passed - below_minimum
-    summary_parts = [f"{len(records)} accounts"]
+    record_word = "account" if len(records) == 1 else "accounts"
+    summary_parts = [f"{len(records)} {record_word}"]
     if passed:
         summary_parts.append(f"{passed} met the minimum at last check")
     if below_minimum:
@@ -6801,19 +6802,22 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             f"{int(cycle_summary.get('recovery_claims_added', 0) or 0)} additional claims confirmed"
         )
     elif deferred_check_count:
-        pp_reinspected = sum(
+        pp_checked = sum(
             1 for result in results
-            if result.get("progression_reinspection_attempted") is True
+            if (
+                result.get("progression_reinspection_attempted") is True
+                or result.get("progression_checked") is True
+                or result.get("progression_claim_attempted") is True
+            )
         )
         pp_claims_confirmed = sum(
             int(result.get("progression", 0) or 0)
-            for result in results
-            if result.get("progression_reinspection_attempted") is True
+            for result in results if result.get("progression_deferred")
         )
         recovery_kpi_value = deferred_check_count
         recovery_kpi_label = "Progression pending"
         recovery_kpi_note = (
-            f"{pp_reinspected} rechecked · {pp_claims_confirmed} claims confirmed"
+            f"{pp_checked} checked this run · {pp_claims_confirmed} claims confirmed"
         )
     else:
         recovery_kpi_value = immediate_attempted
