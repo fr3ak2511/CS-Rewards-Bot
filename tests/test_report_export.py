@@ -229,6 +229,24 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
         self.assertIn("No claimable reward visible", report)
 
+    def test_promotion_detection_failure_is_not_hidden_by_deferred_progression(self):
+        deferred = dict(self.summary["player_results"][0])
+        reason = "No currently visible claimable reward."
+        deferred.update({
+            "status": "Partial",
+            "retry_required": True,
+            "progression_deferred": True,
+            "progression_deferred_reason": reason,
+            "fail_reason": reason,
+            "promotion_detection_failed": True,
+            "progression_unconfirmed": False,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
+
     def test_unconfirmed_progression_claim_remains_attention(self):
         deferred = dict(self.summary["player_results"][0])
         deferred.update({
