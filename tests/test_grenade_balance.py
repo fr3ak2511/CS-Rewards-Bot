@@ -385,6 +385,14 @@ class GrenadeBalanceTests(unittest.TestCase):
         self.assertEqual(summary["expected_minimum_as_of"], 69)
         self.assertIsNone(summary["next_milestone_at_observation"])
         self.assertIsNone(summary["remaining_to_milestone_at_observation"])
+        self.assertEqual(summary["status_at_observation"], "status_not_retained")
+
+        # A legacy count below its known minimum is still an actionable deficit.
+        state["cycles"]["2026-11"]["players"]["ACCOUNT_A"]["last_observed_count"] = 60
+        below_minimum = summarize_saved_progression_balance(
+            state, "ACCOUNT_A", reset_date=date(2026, 11, 23)
+        )
+        self.assertEqual(below_minimum["status_at_observation"], "below_minimum")
 
     def test_eligible_cycle_days_is_inclusive_and_handles_reversed_ranges(self):
         self.assertEqual(
