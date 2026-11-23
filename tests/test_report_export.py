@@ -290,6 +290,28 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("remaining-card inspection is incomplete and stays queued", report)
         self.assertNotIn("no claim click was attempted", report.lower())
 
+    def test_saved_grenade_deficit_remains_attention_when_inspection_is_deferred(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression_deferred": True,
+            "progression_unconfirmed": False,
+            "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance_carry_forward": {
+                "status_at_observation": "below_minimum",
+                "last_observed_count": 60,
+                "last_observed_date": "2026-11-22",
+                "expected_minimum_at_observation": 66,
+                "expected_minimum_as_of": 69,
+                "as_of_reset_date": "2026-11-23",
+            },
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
+        self.assertIn("below minimum", report)
+
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
             build_copyable_report([])
