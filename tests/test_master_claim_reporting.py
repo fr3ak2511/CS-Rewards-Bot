@@ -990,7 +990,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             }}},
         }
         fixed_now = datetime(2026, 11, 23, 12, 30)
-        with patch("master_claimer.load_grenade_balance_state", return_value=saved_state), \\
+        with patch("master_claimer.load_grenade_balance_state", return_value=saved_state), \
              patch("master_claimer.get_ist_time", return_value=fixed_now):
             report = build_email(
                 [player1, player2], "Promotional Check #1", 1,
