@@ -56,6 +56,7 @@ from grenade_balance import (
     evaluate_progression_balance,
     load_grenade_balance_state,
     save_grenade_balance_state,
+    summarize_saved_progression_balance,
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5517,13 +5518,27 @@ def _deferred_progression_reason_summary(raw_reason):
 
 
 def build_deferred_checks_section(results):
-    """Render incomplete Progression inspections without implying a failed claim."""
+    """Render queued inspections as informational work, separate from claim failures."""
     rows = []
+    no_reward_visible = 0
+    overlay_blocked = 0
+    other_deferred = 0
     for result in results:
         if not result.get("progression_deferred"):
             continue
         player = html.escape(_issue_identity_label(result))
-        reason = _deferred_progression_reason_summary(result.get("progression_deferred_reason"))
+        raw_reason = str(result.get("progression_deferred_reason") or "")
+        reason_lower = raw_reason.lower()
+        if "no currently visible claimable reward" in reason_lower:
+            category = "No claimable reward visible"
+            no_reward_visible += 1
+        elif "popup/overlay" in reason_lower or "fullscreen_overlay" in reason_lower:
+            category = "Inspection blocked by overlay"
+            overlay_blocked += 1
+        else:
+            category = "Inspection deferred"
+            other_deferred += 1
+        reason = _deferred_progression_reason_summary(raw_reason)
         if result.get("progression_unconfirmed"):
             detail = (
                 "A previously attempted claim remains unconfirmed; this recheck was "
@@ -5539,22 +5554,137 @@ def build_deferred_checks_section(results):
             )
         else:
             detail = (
-                "Progression inspection was deferred; no claim click was attempted. "
+                "Progression inspection remains queued; no claim click was attempted. "
                 + reason
             )
         rows.append(
             "<div class='v2-item'>"
-            f"<div><strong>{player}</strong><small>Progression Program</small></div>"
+            f"<div><strong>{player}</strong><small>{html.escape(category)}</small></div>"
             f"<span class='v2-result'>{html.escape(detail)}</span></div>"
         )
     if not rows:
         return ""
     count = len(rows)
     account_word = "account" if count == 1 else "accounts"
+    causes = []
+    if no_reward_visible:
+        causes.append(f"{no_reward_visible} no claimable reward visible")
+    if overlay_blocked:
+        causes.append(f"{overlay_blocked} blocked by overlay")
+    if other_deferred:
+        causes.append(f"{other_deferred} other deferred")
     return (
         "<section class='v2-section v2-deferred'>"
-        "<div class='v2-section-head'><h2>Deferred Checks</h2>"
-        f"<span>{count} {account_word} requiring review · no new claim click attempted</span></div>"
+        "<div class='v2-section-head'><h2>Progression Inspections Pending</h2>"
+        f"<span>{count} {account_word} · {html.escape(' · '.join(causes) or 'inspection queued')}</span></div>"
+        "<p class='v2-muted-note'>Deferred inspections are not counted as failed claims. "
+        "The queue remains open until a safe inspection can establish the result.</p>"
+        + "".join(rows)
+        + "</section>"
+    )
+
+
+def _deferred_progression_only(result):
+    """True only when deferral is the sole reason a result is partial/retryable."""
+    if not result.get("progression_deferred") or result.get("progression_unconfirmed"):
+        return False
+    if str(result.get("status") or "") in {"Login Failed", "Error", "Failed", "No Rewards"}:
+        return False
+    if (
+        result.get("daily_unconfirmed")
+        or result.get("store_unconfirmed_indices")
+        or result.get("promotion_detection_failed")
+    ):
+        return False
+    if any(
+        isinstance(event, dict) and event.get("retry_required")
+        for event in (result.get("event_rewards") or [])
+    ):
+        return False
+    balance = result.get("grenade_balance")
+    if isinstance(balance, dict) and str(balance.get("status") or "") in {
+        "below_minimum", "counter_regressed"
+    }:
+        return False
+    carry = result.get("grenade_balance_carry_forward")
+    if isinstance(carry, dict) and str(carry.get("status_at_observation") or "") in {
+        "below_minimum", "counter_regressed"
+    }:
+        return False
+    fail_reason = str(result.get("fail_reason") or "").strip()
+    deferred_reason = str(result.get("progression_deferred_reason") or "").strip()
+    return not fail_reason or fail_reason == deferred_reason
+
+
+def _attach_grenade_balance_carry_forward(results):
+    """Attach saved last-observation values for deferred IDs without changing runtime state."""
+    try:
+        state = load_grenade_balance_state(GRENADE_BALANCE_FILE)
+        as_of = daily_reset_date(get_ist_time())
+        for result in results:
+            if not isinstance(result, dict) or not result.get("progression_deferred"):
+                continue
+            live = result.get("grenade_balance")
+            if isinstance(live, dict) and live.get("current_count") is not None:
+                continue
+            player_id = str(result.get("pid") or "").strip()
+            if not player_id:
+                continue
+            saved = summarize_saved_progression_balance(
+                state, player_id, reset_date=as_of
+            )
+            if saved:
+                result["grenade_balance_carry_forward"] = saved
+    except Exception as exc:
+        # A report fallback must never invalidate claim or email execution.
+        log(f"⚠️ Grenade carry-forward report data unavailable: {type(exc).__name__}.")
+
+
+def build_grenade_balance_carry_forward_section(results):
+    """Show saved portal values with their age and a separately labelled date floor."""
+    records = [
+        result for result in results
+        if isinstance(result.get("grenade_balance_carry_forward"), dict)
+    ]
+    if not records:
+        return ""
+    passed = sum(
+        1 for result in records
+        if result["grenade_balance_carry_forward"].get("status_at_observation") == "pass"
+    )
+    rows = []
+    for result in records:
+        balance = result["grenade_balance_carry_forward"]
+        actual = balance.get("last_observed_count")
+        minimum_then = balance.get("expected_minimum_at_observation")
+        minimum_now = balance.get("expected_minimum_as_of")
+        milestone = balance.get("next_milestone_at_observation")
+        remaining = balance.get("remaining_to_milestone_at_observation")
+        milestone_text = (
+            f"Last observed target {int(milestone)} · {int(remaining)} remaining then"
+            if milestone is not None and remaining is not None
+            else "Last observed target not retained in baseline"
+        )
+        status = str(balance.get("status_at_observation") or "not_validated")
+        state_class = "v2-state-success" if status == "pass" else "v2-state-warning"
+        rows.append(
+            "<div class='v2-item'>"
+            f"<div><strong>{html.escape(_issue_identity_label(result))}</strong>"
+            f"<small>Last observed {html.escape(str(balance.get('last_observed_date') or '—'))}</small></div>"
+            f"<span class='v2-result'>{html.escape(str(actual if actual is not None else '—'))} actual · "
+            f"{html.escape(str(minimum_then if minimum_then is not None else '—'))} minimum then · "
+            f"{html.escape(str(minimum_now if minimum_now is not None else '—'))} date floor as of "
+            f"{html.escape(str(balance.get('as_of_reset_date') or '—'))} · "
+            f"{html.escape(milestone_text)} · "
+            f"<span class='{state_class}'>{html.escape(status.replace('_', ' '))} at observation</span></span></div>"
+        )
+    return (
+        "<section class='v2-section v2-grenade v2-validation-card'>"
+        "<div class='v2-section-head'><h2>Last Verified Grenade Progress</h2>"
+        f"<span>{passed}/{len(records)} on track at last observation</span></div>"
+        "<p class='v2-muted-note'>Carry-forward values only; this run did not read a fresh portal counter. "
+        "The date floor is recalculated from the saved baseline. A last-observed milestone is not a live target "
+        "and is shown only when it was retained with that observation.</p>"
         + "".join(rows)
         + "</section>"
     )
@@ -6229,6 +6359,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         pid = str(result.get("pid") or "").strip()
         if pid and not result.get("display_name") and display_name_map.get(pid):
             result["display_name"] = str(display_name_map[pid])
+    _attach_grenade_balance_carry_forward(results)
     followup_summary = followup_summary if isinstance(followup_summary, dict) else {}
     for collection_name in ("open_items", "updated_items"):
         for item in (followup_summary.get(collection_name) or []):
@@ -6351,16 +6482,25 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             and str(result.get("fail_reason") or "").strip()
                 == "At least one observed promotional claim was not confirmed by the portal"
         )
+        carry = result.get("grenade_balance_carry_forward")
+        carry_grenade_attention = bool(
+            isinstance(carry, dict)
+            and str(carry.get("status_at_observation") or "")
+                in ("below_minimum", "counter_regressed")
+        )
+        deferred_only = _deferred_progression_only(result)
         needs_attention = (
             status in hard_failures
-            or (status in ("Partial", "No Rewards") and not hidden_promo_only_failure)
-            or (bool(result.get("retry_required")) and not hidden_promo_only_failure)
+            or (status in ("Partial", "No Rewards")
+                and not hidden_promo_only_failure and not deferred_only)
+            or (bool(result.get("retry_required"))
+                and not hidden_promo_only_failure and not deferred_only)
             or standard_attention
             or bool(result.get("promotion_detection_failed"))
             or promo_attention
             or event_attention
-            or bool(result.get("progression_deferred"))
             or grenade_attention
+            or carry_grenade_attention
         )
         if needs_attention:
             attention_player_ids.add(str(result.get("pid") or _display_label(result)))
@@ -6369,8 +6509,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 or result.get("promotion_detection_failed")
                 or promo_attention
                 or event_attention
-                or bool(result.get("progression_deferred"))
                 or grenade_attention
+                or carry_grenade_attention
             )
             if status in hard_failures or not has_specific_detail:
                 reason = str(result.get("fail_reason") or "One or more items need review")
@@ -6400,10 +6540,11 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     attention_account_label = "account" if attention_accounts == 1 else "accounts"
     deferred_check_count = sum(1 for result in results if result.get("progression_deferred"))
     if deferred_check_count:
-        deferred_word = "inspection" if deferred_check_count == 1 else "inspections"
-        attention_note = f"Includes {deferred_check_count} deferred Progression {deferred_word}"
+        attention_note = (
+            "Claim / validation exceptions only; deferred Progression inspections shown separately"
+        )
     else:
-        attention_note = "Accounts with item-level exceptions"
+        attention_note = "Accounts with claim / validation exceptions"
 
     actual_failures = int(counts.get("actual_failures", 0) or 0)
     if account_count == 0 or (actual_failures and actual_failures == account_count):
@@ -6419,8 +6560,9 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
     grenade_html = build_grenade_balance_email_section(results)
+    grenade_carry_forward_html = build_grenade_balance_carry_forward_section(results)
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
-    validation_html = grenade_html + reconciliation_html
+    validation_html = grenade_html + grenade_carry_forward_html + reconciliation_html
     # A run-level reconciliation mismatch is an execution attention state even
     # when no individual account was attributed as the cause.
     if "v2-state-warning" in reconciliation_html and health_label != "Failed":
@@ -7255,6 +7397,7 @@ def _full_claim_efficiency(results):
 
 def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None, promotional_followups=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
+    _attach_grenade_balance_carry_forward(results)
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
     daily = sum(int(r.get("daily", 0) or 0) for r in results)
     store_daily = sum(int(r.get("store", 0) or 0) for r in results)
@@ -7363,6 +7506,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "progression_checked": bool(r.get("progression_checked", False)),
                 "immediate_recovery": r.get("immediate_recovery"),
                 "grenade_balance": r.get("grenade_balance"),
+                "grenade_balance_carry_forward": r.get("grenade_balance_carry_forward"),
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
                 "promotion_scan_completed": bool(r.get("promotion_scan_completed", False)),
