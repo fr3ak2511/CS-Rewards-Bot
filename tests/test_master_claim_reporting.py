@@ -736,7 +736,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             checked + [deferred], "Primary Run", 1,
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=35,
         )
-        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked</small>", report)
+        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked · 1 still pending</small>", report)
         self.assertIn("Progression — checks still open", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("1 account", report)
@@ -942,7 +942,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             players, "Promotional Check #2", 1,
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
-        self.assertIn("<span>Progression pending</span><strong>3</strong>", report)
+        self.assertIn("Progression pending</span><strong>3</strong>", report)
         self.assertIn("3 rechecked · 0 claims confirmed", report)
         self.assertIn("<span>Progression Checks</span><strong>3</strong>", report)
         self.assertIn("3 accounts remain open", report)
