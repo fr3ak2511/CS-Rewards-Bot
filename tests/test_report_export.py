@@ -111,7 +111,7 @@ class CopyableReportTests(unittest.TestCase):
         healthy["player_results"] = [dict(self.summary["player_results"][0])]
         report = build_copyable_report(healthy)
         self.assertIn(">HEALTHY</span>", report)
-        self.assertIn("<strong>0</strong><small>Accounts with unresolved items", report)
+        self.assertIn("<strong>0</strong><small>Accounts with claim / validation exceptions", report)
 
     def test_report_includes_masked_progression_balance_validation(self):
         report = build_copyable_report(self.summary)
@@ -240,7 +240,7 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("<strong>1</strong><small>Accounts with claim / validation exceptions", report)
+        self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
 
     def test_carry_forward_balance_is_explicitly_not_live_and_does_not_raise_attention(self):
         deferred = dict(self.summary["player_results"][0])
@@ -266,7 +266,8 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Last Verified Grenade Progress", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Last observed target", report)
+        self.assertIn("Last milestone", report)
+        self.assertIn("123 (then 57 remaining)", report)
         self.assertIn("These are saved portal observations, not live balances", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
@@ -288,7 +289,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("1 Progression reward(s) were portal-confirmed", report)
         self.assertIn("remaining-card inspection is incomplete and stays queued", report)
-        self.assertNotIn("no claim click was attempted", report.lower())
+        self.assertIn("No further claim click was attempted", report)
 
     def test_unexpected_progression_inspection_exception_remains_attention(self):
         deferred = dict(self.summary["player_results"][0])
