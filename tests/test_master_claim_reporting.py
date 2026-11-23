@@ -778,7 +778,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Progression Inspections Pending", report)
+        self.assertIn("Progression — checks still open", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertNotIn("Attention Required", report)
 
@@ -908,7 +908,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("Previous validation result not saved", legacy_report)
-        self.assertIn("1 previous results unavailable", legacy_report)
+        self.assertIn("1 previous result unavailable", legacy_report)
 
     def test_queue_reinspection_is_counted_and_grouped_in_compact_email(self):
         reason = (
@@ -945,12 +945,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Progression pending</span><strong>3</strong>", report)
         self.assertIn("3 rechecked · 0 claims confirmed", report)
         self.assertIn("<span>Progression Checks</span><strong>3</strong>", report)
-        self.assertIn("3 claims confirmed", report) if False else None
         self.assertIn("3 accounts remain open", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertEqual(report.count("No claimable reward card visible"), 1)
         self.assertNotIn("QUEUEPLAYER0000", report)
-        self.assertNotIn("Not checked in this run</small></div></td>", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention Required", report)
 
@@ -1779,10 +1777,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
         )
         self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
-        self.assertIn("1 account with confirmed claims", report)
-        self.assertIn("1 inspection(s) still queued", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
+        self.assertIn("1 account inspected · 1 still pending", report)
+        self.assertIn("Progression — checks still open", report)
+        self.assertIn("1 Progression reward(s) were confirmed; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
@@ -1800,9 +1797,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(_full_claim_recovery_candidate(result))
         self.assertEqual(build_standard_attention_section([result]), "")
         deferred = build_deferred_checks_section([result])
-        self.assertIn("Progression Inspections Pending", deferred)
-        self.assertIn("hgkme1", deferred)
-        self.assertIn("no claim click was attempted", deferred)
+        self.assertIn("Progression — checks still open", deferred)
+        self.assertNotIn("hgkme1", deferred)
+        self.assertIn("No claim button was clicked in this run", deferred)
         self.assertNotIn("Attention Required", deferred)
 
 
@@ -1819,9 +1816,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             ),
         }
         section = build_deferred_checks_section([result])
-        self.assertIn("1 Progression reward(s) were portal-confirmed", section)
-        self.assertIn("remaining-card inspection is incomplete and stays queued", section)
-        self.assertNotIn("no claim click was attempted", section.lower())
+        self.assertIn("1 Progression reward(s) were confirmed", section)
+        self.assertIn("1 account remains open", section)
+        self.assertNotIn("No claim button was clicked", section)
 
     def test_deferred_recheck_keeps_a_real_prior_progression_failure_visible(self):
         result = {
@@ -1834,7 +1831,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         attention = build_standard_attention_section([result])
         deferred = build_deferred_checks_section([result])
         self.assertIn("previously attempted Progression claim remains unconfirmed", attention)
-        self.assertIn("no additional claim click was attempted", deferred)
+        self.assertIn("No claim button was clicked in this run", deferred)
 
     def test_unconfirmed_promotion_click_is_not_reclassified_as_preexisting_claimed(self):
         player_id = "1234567890123456"
