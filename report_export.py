@@ -73,7 +73,17 @@ def _deferred_progression_is_only_issue(player: dict[str, Any]) -> bool:
         return False
     fail_reason = str(player.get("fail_reason") or "").strip()
     deferred_reason = str(player.get("progression_deferred_reason") or "").strip()
-    return not fail_reason or fail_reason == deferred_reason
+    reason_lower = (fail_reason or deferred_reason).lower()
+    if any(marker in reason_lower for marker in (" raised ", "exception", "runtime error", "could not authenticate")):
+        return False
+    known_nonclaim_inspection = any(marker in reason_lower for marker in (
+        "no currently visible claimable reward",
+        "popup/overlay safety guard",
+        "unknown_fullscreen_overlay_blocks_page",
+        "does not inspect progression",
+        "held for this backup slot",
+    ))
+    return known_nonclaim_inspection and (not fail_reason or fail_reason == deferred_reason)
 
 
 def build_copyable_report(summary: dict[str, Any]) -> str:
