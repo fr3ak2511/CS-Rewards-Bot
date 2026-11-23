@@ -273,6 +273,31 @@ class CopyableReportTests(unittest.TestCase):
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
 
+    def test_legacy_carry_forward_status_is_not_inferred_as_pass(self):
+        deferred = dict(self.summary["player_results"][0])
+        deferred.update({
+            "progression_deferred": True,
+            "progression_deferred_reason": "No currently visible claimable reward.",
+            "progression_unconfirmed": False,
+            "grenade_balance_carry_forward": {
+                "status_at_observation": "status_not_retained",
+                "last_observed_count": 66,
+                "last_observed_date": "2026-11-22",
+                "expected_minimum_at_observation": 66,
+                "expected_minimum_as_of": 69,
+                "next_milestone_at_observation": None,
+                "remaining_to_milestone_at_observation": None,
+                "as_of_reset_date": "2026-11-23",
+            },
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [deferred]
+        report = build_copyable_report(summary)
+        self.assertIn("status not retained", report)
+        self.assertIn("missing status is shown as not retained", report)
+        self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
+        self.assertNotIn(">ATTENTION REQUIRED</span>", report)
+
     def test_deferred_progression_reports_partial_confirmation_truthfully(self):
         deferred = dict(self.summary["player_results"][0])
         deferred.update({
