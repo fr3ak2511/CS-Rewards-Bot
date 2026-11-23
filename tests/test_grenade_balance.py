@@ -245,13 +245,17 @@ class GrenadeBalanceTests(unittest.TestCase):
                 }
             },
         }
-        _, result = evaluate_progression_balance(
+        updated, result = evaluate_progression_balance(
             {**self.snapshot, "current_count": 33}, state, "ACCOUNT_A",
             reset_date=date(2026, 11, 8),
             is_new_account=False,
             store_rewards_fully_checked=True,
         )
         self.assertEqual(result["status"], "counter_regressed")
+        self.assertEqual(
+            updated["cycles"]["2026-11"]["players"]["ACCOUNT_A"]["last_observed_status"],
+            "counter_regressed",
+        )
 
     def test_accounts_present_in_prior_cycle_start_new_cycle_from_zero(self):
         state = {
