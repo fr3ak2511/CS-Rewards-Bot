@@ -298,7 +298,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if not isinstance(player, dict):
             continue
         status = str(player.get("status") or "Unknown")
-        if player.get("progression_deferred") and status in {"Success", "Claims Made"}:
+        if _deferred_progression_is_only_issue(player):
             status = "Deferred check"
         status_class = (
             "bad" if status in {"Login Failed", "Error", "Failed"}
