@@ -5666,9 +5666,7 @@ def build_grenade_balance_carry_forward_section(results):
     below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
     status_not_retained = sum(1 for status in statuses if status == "status_not_retained")
     other_status = len(statuses) - passed - below_minimum - status_not_retained
-    summary_parts = []
-    if passed:
-        summary_parts.append(f"{passed} passed at last observation")
+    summary_parts = [f"{passed} passed at last observation"]
     if below_minimum:
         summary_parts.append(f"{below_minimum} below minimum / regressed")
     if status_not_retained:
