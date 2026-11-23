@@ -790,6 +790,35 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("Attention Required", report)
 
+    def test_unexpected_progression_inspection_exception_remains_attention(self):
+        player = self.sample_player()
+        reason = "Progression-only recovery raised RuntimeError; inspection remains queued."
+        player.update({
+            "processing_mode": "progression_queue_only",
+            "status": "Partial",
+            "retry_required": True,
+            "fail_reason": reason,
+            "progression_deferred": True,
+            "progression_deferred_reason": reason,
+            "progression_checked": False,
+            "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+            "daily": 0, "store": 0, "progression": 0,
+            "standard_rewards_checked": False,
+            "daily_unconfirmed": False,
+            "store_unconfirmed_indices": [],
+            "grenade_balance": None,
+            "promotions_observed": [],
+            "event_rewards": [],
+        })
+        report = build_email(
+            [player], "Immediate Progression Recovery", 1,
+            get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
+        )
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
+        self.assertIn("Attention Required", report)
+        self.assertIn("RuntimeError", report)
+
     def test_deferred_progression_email_includes_read_only_grenade_carry_forward(self):
         player = self.sample_player()
         deferred_reason = (
