@@ -5559,7 +5559,7 @@ def build_deferred_checks_section(results):
         account_word = "account" if inspected_count == 1 else "accounts"
         summary = (
             f"The bot checked {inspected_count} {account_word} in this run. "
-            f"{confirmed_claims} Progression reward(s) were confirmed; "
+            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} confirmed; "
             f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open."
         )
         if click_attempts == 0:
