@@ -228,6 +228,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
         self.assertIn("No claimable reward visible", report)
+        self.assertIn(">Deferred check</span>", report)
 
     def test_promotion_detection_failure_is_not_hidden_by_deferred_progression(self):
         deferred = dict(self.summary["player_results"][0])
