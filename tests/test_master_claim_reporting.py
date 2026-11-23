@@ -14,8 +14,6 @@ from master_claimer import (
     build_preexisting_portal_claim_section,
     build_standard_attention_section,
     build_deferred_checks_section,
-    _attach_grenade_balance_carry_forward,
-    build_grenade_balance_carry_forward_section,
     record_preexisting_portal_claim,
     record_player_display_name,
     _clear_promotion_unconfirmed_attempt,
@@ -854,6 +852,21 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Last observed target 123 · 57 remaining then", report)
         self.assertIn("did not read a fresh portal counter", report.lower())
         self.assertNotIn("Attention Required", report)
+
+        saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
+            "last_observed_count": 60,
+            "last_observed_expected_minimum": 66,
+            "last_observed_status": "below_minimum",
+        })
+        with patch("master_claimer.load_grenade_balance_state", return_value=saved_state), \
+             patch("master_claimer.get_ist_time", return_value=fixed_now):
+            deficit_report = build_email(
+                [player], "Promotional Check #1", 1,
+                fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
+            )
+        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", deficit_report)
+        self.assertIn("Below minimum", deficit_report)
+        self.assertIn("Attention Required", deficit_report)
 
     def test_generic_popup_blocker_remains_reportable(self):
         generic = {
