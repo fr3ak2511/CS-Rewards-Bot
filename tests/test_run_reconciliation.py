@@ -138,6 +138,36 @@ class RunReconciliationTests(unittest.TestCase):
         )
         self.assertIn("processing_modes_match_processed_accounts", result["warnings"])
 
+    def test_progression_queue_only_accounts_are_counted_as_a_processing_mode(self):
+        row = {
+            "processing_mode": "progression_queue_only",
+            "daily": 0, "store": 0, "store_temp": 0,
+            "progression": 0, "loyalty": 0, "event_rewards": [],
+        }
+        totals = {
+            "daily_claimed_this_run": 0,
+            "standard_store_claimed_this_run": 0,
+            "promotional_claims_this_run": 0,
+            "event_reward_claims_this_run": 0,
+            "progression_claimed_this_run": 0,
+            "loyalty_claimed_this_run": 0,
+            "all_claims_this_run": 0,
+        }
+        counters = {
+            "claims_made": 0,
+            "full_claim_accounts": 0,
+            "promotional_only_accounts": 0,
+            "backup_reconciliation_accounts": 0,
+        }
+        result = build_run_reconciliation(
+            [row], run_label="Immediate Progression Recovery",
+            configured_player_count=36, totals=totals, counters=counters,
+        )
+        self.assertEqual(result["status"], "matched")
+        self.assertTrue(result["checks"]["processing_modes_match_processed_accounts"])
+        self.assertEqual(result["processing_mode_counts"]["progression_queue_only"], 1)
+        self.assertEqual(result["processing_mode_counts"]["sum"], 1)
+
     def test_claim_counter_mismatch_is_reported(self):
         counters = dict(self._counters())
         counters["claims_made"] = 7
