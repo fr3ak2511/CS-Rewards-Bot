@@ -40,6 +40,7 @@ class LayerDriver:
         dialog_text=None, action_text="Buy now", extra_action=False,
         residual_success_inspections=0,
         transition_residue_inspections=0,
+        close_validation_reason=None,
     ):
         self.overlay_only = overlay_only
         self.dialogs = []
@@ -52,6 +53,7 @@ class LayerDriver:
         self.residual_dialog = None
         self.transition_residue_inspections = transition_residue_inspections
         self.transition_residue = None
+        self.close_validation_reason = close_validation_reason
         for i in range(layers):
             description = dialog_text if dialog_text is not None else f"Promotional offer layer {i+1}"
             dialog = Element(
@@ -141,10 +143,26 @@ class LayerDriver:
                 "dialogSummaries": [{"text": d.text} for d in self.dialogs if d.is_displayed()],
                 "fullscreenOverlayCount": 1 if self.overlay_only else 0,
                 "fullscreenOverlayClasses": ["fixed overlay"] if self.overlay_only else [],
+                "fullscreenOverlayDetails": ([{
+                    "tag": "div", "className": "fixed inset-0 bg-modal-overlay",
+                    "position": "fixed", "zIndex": "2000", "pointerEvents": "auto",
+                    "rect": {"x": 0, "y": 0, "width": 1920, "height": 993},
+                }] if self.overlay_only else []),
                 "url": "https://hub.vertigogames.co/progression-program",
             }
         if "REWARD_POPUP_CLOSE_CONTROL_CHECK_V2" in script:
             button, dialog = args
+            if self.close_validation_reason:
+                return {
+                    "ok": False, "reason": self.close_validation_reason,
+                    "text": button.text.strip().lower(),
+                    "aria": str(button.get_attribute("aria-label") or "").lower(),
+                    "title": str(button.get_attribute("title") or "").lower(),
+                    "testid": str(button.get_attribute("data-testid") or "").lower(),
+                    "className": str(button.get_attribute("class") or "").lower(),
+                    "topmost": False, "zIndex": 900 + len(self.dialogs),
+                    "stackOrder": 0, "pointerEvents": "auto",
+                }
             is_top = bool(self.dialogs and dialog is self.dialogs[-1])
             button_text = button.text.strip().lower()
             is_close = button in dialog.children and (
@@ -481,11 +499,22 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(driver.close_count, 0)
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
-    def test_fullscreen_overlay_without_dialog_fails_closed(self):
+    def test_fullscreen_overlay_without_dialog_fails_closed_with_blocker_geometry(self):
         driver = LayerDriver(layers=0, overlay_only=True)
         ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
         self.assertFalse(ok)
         self.assertIn("unknown_fullscreen_overlay", reason)
+        self.assertIn("fullscreen_overlay_details=", reason)
+        self.assertIn("1920", reason)
+
+    def test_explicit_close_rejection_reason_is_logged_without_clicking(self):
+        driver = LayerDriver(layers=1, close_validation_reason="close_button_not_topmost")
+        ok, reason = dismiss_all_safe_popups(driver, log=lambda _m: None, timeout=0.2)
+        self.assertFalse(ok)
+        self.assertIn("close_rejections=", reason)
+        self.assertIn("close_button_not_topmost", reason)
+        self.assertEqual(driver.close_count, 0)
+        self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
     def test_ambiguous_close_controls_are_not_guessed(self):
         driver = LayerDriver(layers=1, ambiguous=True)

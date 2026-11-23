@@ -61,6 +61,20 @@ return {
   })),
   fullscreenOverlayCount: overlays.length,
   fullscreenOverlayClasses: overlays.map(el => String(el.className || '').slice(0, 180)),
+  fullscreenOverlayDetails: overlays.slice(0, 6).map(el => {
+    const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+    return {
+      tag: String(el.tagName || '').toLowerCase(),
+      className: String(el.className || '').replace(/\s+/g, ' ').trim().slice(0, 180),
+      position: s.position,
+      zIndex: s.zIndex,
+      pointerEvents: s.pointerEvents,
+      rect: {
+        x: Math.round(r.x), y: Math.round(r.y),
+        width: Math.round(r.width), height: Math.round(r.height)
+      }
+    };
+  }),
   url: location.href
 };"""
 
@@ -291,6 +305,8 @@ return {
     : !topmost ? 'wrapper_close_not_topmost'
     : 'validated',
   zIndex: Number.parseInt(ws.zIndex || getComputedStyle(dialog).zIndex || '0', 10) || 0,
+  text, aria, title, testid, className:cls.slice(0,180),
+  pointerEvents:getComputedStyle(button).pointerEvents,
   stackOrder:Array.from(document.querySelectorAll('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'))
     .filter(visible).indexOf(dialog),
   topmost, nearTopRight, viewportWrapper
@@ -749,6 +765,61 @@ def _try_safe_backdrop_dismissal(
     return False, "safe_backdrop_click_did_not_dismiss_dialog", check
 
 
+def _is_explicit_close_validation(validation: dict) -> bool:
+    """Identify rejected controls that advertised an explicit close action."""
+    text = str(validation.get("text") or "").strip().lower()
+    aria = str(validation.get("aria") or "").strip().lower()
+    title = str(validation.get("title") or "").strip().lower()
+    testid = str(validation.get("testid") or "").strip().lower()
+    class_name = str(validation.get("className") or "").lower()
+    return bool(
+        testid == "close"
+        or aria in {"close", "close dialog", "dismiss"}
+        or title in {"close", "dismiss"}
+        or any(marker in class_name for marker in ("button-close", "modal-close", "dialog-close"))
+        or text in {"x", "×", "close", "dismiss"}
+    )
+
+
+def _close_rejection_diagnostics(items: list[dict]) -> str:
+    """Serialize only a few explicit-close rejection reasons and safe metadata."""
+    safe = []
+    for item in items[:6]:
+        safe.append({
+            key: str(item.get(key) or "")[:120]
+            for key in ("reason", "text", "aria", "title", "testid", "className")
+        } | {
+            "topmost": bool(item.get("topmost")),
+            "zIndex": int(item.get("zIndex", 0) or 0),
+            "stackOrder": int(item.get("stackOrder", -1) or 0),
+            "pointerEvents": str(item.get("pointerEvents") or "")[:24],
+        })
+    return json.dumps(safe, ensure_ascii=True, separators=(",", ":"))[:1400]
+
+
+def _fullscreen_overlay_diagnostics(state: dict) -> str:
+    """Return bounded geometry for only the elements that triggered the blocker."""
+    details = state.get("fullscreenOverlayDetails")
+    if not isinstance(details, list):
+        details = []
+    safe = []
+    for item in details[:6]:
+        if not isinstance(item, dict):
+            continue
+        rect = item.get("rect") if isinstance(item.get("rect"), dict) else {}
+        safe.append({
+            "tag": str(item.get("tag") or "")[:16],
+            "className": str(item.get("className") or "")[:180],
+            "position": str(item.get("position") or "")[:20],
+            "zIndex": str(item.get("zIndex") or "")[:20],
+            "pointerEvents": str(item.get("pointerEvents") or "")[:20],
+            "rect": {key: int(rect.get(key) or 0) for key in ("x", "y", "width", "height")},
+        })
+    if not safe:
+        safe = [{"className": str(x)[:180]} for x in (state.get("fullscreenOverlayClasses") or [])[:6]]
+    return json.dumps(safe, ensure_ascii=True, separators=(",", ":"))[:1600]
+
+
 def dismiss_all_safe_popups(
     driver,
     *,
@@ -792,6 +863,7 @@ def dismiss_all_safe_popups(
                 return False, f"dialog_lookup_failed:{type(exc).__name__}; dismissed={dismissed}"
 
             candidates = []
+            rejected_close_controls = []
             seen_button_ids = set()
             for dialog in dialogs:
                 if not _is_visible(dialog):
@@ -820,6 +892,8 @@ def dismiss_all_safe_popups(
                             0 if validation.get("safeRewardContinue") else 1,
                             button_id, dialog, button, validation, None,
                         ))
+                    elif isinstance(validation, dict) and _is_explicit_close_validation(validation):
+                        rejected_close_controls.append(validation)
 
                 # The portal's own X can live in a fixed wrapper as a sibling
                 # of the role=dialog node. Only explicit close controls in the
@@ -852,6 +926,8 @@ def dismiss_all_safe_popups(
                             int(validation.get("stackOrder", 0) or 0),
                             1, button_id, dialog, button, validation, wrapper,
                         ))
+                    elif isinstance(validation, dict) and _is_explicit_close_validation(validation):
+                        rejected_close_controls.append(validation)
 
             if not candidates:
                 # The portal can leave a short-lived, non-interactive wrapper
@@ -927,16 +1003,20 @@ def dismiss_all_safe_popups(
 
                 diagnostics = _popup_context_diagnostics(driver)
                 if overlay_count and not dialog_count:
+                    overlay_details = _fullscreen_overlay_diagnostics(state)
                     return False, (
                         "unknown_fullscreen_overlay_blocks_page; "
-                        f"dismissed={dismissed}; {diagnostics}"
+                        f"dismissed={dismissed}; fullscreen_overlay_details={overlay_details}; {diagnostics}"
                     )
                 summary = state.get("dialogSummaries") or []
                 description = summary[0].get("text", "")[:100] if summary else ""
+                close_rejections = _close_rejection_diagnostics(rejected_close_controls)
+                overlay_details = _fullscreen_overlay_diagnostics(state)
                 return False, (
                     f"blocking_dialog_has_no_unambiguous_safe_close; dialogs={dialog_count}; "
                     f"overlays={overlay_count}; top_dialog={description!r}; "
-                    f"backdrop={backdrop_reason}; dismissed={dismissed}; {diagnostics}"
+                    f"backdrop={backdrop_reason}; dismissed={dismissed}; "
+                    f"close_rejections={close_rejections}; fullscreen_overlay_details={overlay_details}; {diagnostics}"
                 )
 
             # Only one close control should be topmost at its click point. Prefer
