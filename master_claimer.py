@@ -5518,68 +5518,86 @@ def _deferred_progression_reason_summary(raw_reason):
 
 
 def build_deferred_checks_section(results):
-    """Render queued inspections as informational work, separate from claim failures."""
-    rows = []
-    no_reward_visible = 0
-    overlay_blocked = 0
-    other_deferred = 0
-    for result in results:
-        if not result.get("progression_deferred"):
-            continue
-        player = html.escape(_issue_identity_label(result))
-        raw_reason = str(result.get("progression_deferred_reason") or "")
-        reason_lower = raw_reason.lower()
-        if "no currently visible claimable reward" in reason_lower:
-            category = "No claimable reward visible"
-            no_reward_visible += 1
-        elif "popup/overlay" in reason_lower or "fullscreen_overlay" in reason_lower:
-            category = "Inspection blocked by overlay"
-            overlay_blocked += 1
-        else:
-            category = "Inspection deferred"
-            other_deferred += 1
-        reason = _deferred_progression_reason_summary(raw_reason)
-        if result.get("progression_unconfirmed"):
-            detail = (
-                "A previously attempted claim remains unconfirmed; this recheck was "
-                "deferred, and no additional claim click was attempted. "
-                + reason
-            )
-        elif result.get("progression_claim_attempted") or int(result.get("progression", 0) or 0) > 0:
-            detail = (
-                f"{int(result.get('progression', 0) or 0)} Progression reward(s) were portal-confirmed, "
-                "but the remaining-card inspection is incomplete and stays queued. "
-                "No further claim click was attempted. "
-                + reason
-            )
-        else:
-            detail = (
-                "Progression inspection remains queued; no claim click was attempted. "
-                + reason
-            )
-        rows.append(
-            "<div class='v2-item'>"
-            f"<div><strong>{player}</strong><small>{html.escape(category)}</small></div>"
-            f"<span class='v2-result'>{html.escape(detail)}</span></div>"
-        )
-    if not rows:
+    """Summarise open Progression inspections without repeating one row per account."""
+    pending = [
+        result for result in results
+        if result.get("progression_deferred")
+    ]
+    if not pending:
         return ""
-    count = len(rows)
-    account_word = "account" if count == 1 else "accounts"
-    causes = []
-    if no_reward_visible:
-        causes.append(f"{no_reward_visible} no claimable reward visible")
-    if overlay_blocked:
-        causes.append(f"{overlay_blocked} blocked by overlay")
-    if other_deferred:
-        causes.append(f"{other_deferred} other deferred")
+
+    inspected = [
+        result for result in results
+        if result.get("progression_reinspection_attempted") is True
+        or result.get("progression_checked") is True
+        or result.get("progression_claim_attempted") is True
+    ]
+    inspected_count = len(inspected)
+    confirmed_claims = sum(int(result.get("progression", 0) or 0) for result in pending)
+    click_attempts = sum(
+        1 for result in pending if result.get("progression_claim_attempted")
+    )
+
+    groups = {
+        "no_reward": 0,
+        "overlay": 0,
+        "unconfirmed": 0,
+        "other": 0,
+    }
+    for result in pending:
+        reason = str(result.get("progression_deferred_reason") or "").lower()
+        if result.get("progression_unconfirmed"):
+            groups["unconfirmed"] += 1
+        elif "no currently visible claimable reward" in reason:
+            groups["no_reward"] += 1
+        elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+            groups["overlay"] += 1
+        else:
+            groups["other"] += 1
+
+    if inspected_count:
+        account_word = "account" if inspected_count == 1 else "accounts"
+        summary = (
+            f"The bot checked {inspected_count} {account_word} in this run. "
+            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} confirmed; "
+            f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open."
+        )
+        if click_attempts == 0:
+            summary += " No claim button was clicked."
+    else:
+        summary = (
+            f"{len(pending)} {('account has' if len(pending) == 1 else 'accounts have')} an open "
+            "Progression check. The queue was not checked in this run. No claim button was clicked in this run."
+        )
+
+    group_rows = []
+    group_labels = (
+        ("no_reward", "No claimable reward card visible"),
+        ("overlay", "Blocked by an on-screen popup or overlay"),
+        ("unconfirmed", "A previous claim still needs confirmation"),
+        ("other", "Other inspection issue"),
+    )
+    for key, label in group_labels:
+        count = groups[key]
+        if not count:
+            continue
+        word = "account" if count == 1 else "accounts"
+        group_rows.append(
+            "<div class='v2-group-row'>"
+            f"<strong>{html.escape(label)}</strong>"
+            f"<span>{count} {word}</span>"
+            "</div>"
+        )
+
     return (
         "<section class='v2-section v2-deferred'>"
-        "<div class='v2-section-head'><h2>Progression Inspections Pending</h2>"
-        f"<span>{count} {account_word} · {html.escape(' · '.join(causes) or 'inspection queued')}</span></div>"
-        "<p class='v2-muted-note'>Deferred inspections are not counted as failed claims. "
-        "The queue remains open until a safe inspection can establish the result.</p>"
-        + "".join(rows)
+        "<div class='v2-section-head'><h2>Progression — checks still open</h2>"
+        f"<span>{len(pending)} {('account needs' if len(pending) == 1 else 'accounts need')} another check</span></div>"
+        f"<p class='v2-muted-note'>{html.escape(summary)}</p>"
+        "<p class='v2-muted-note' style='margin-top:6px'>An empty scan does not prove that no reward is available. "
+        "The queue stays open until a later safe check confirms the result.</p>"
+        + "".join(group_rows)
+        + "<p class='v2-muted-note' style='margin-top:8px'>Account-by-account details are available in Copy Report.</p>"
         + "</section>"
     )
 
@@ -5651,62 +5669,90 @@ def _attach_grenade_balance_carry_forward(results):
 
 
 def build_grenade_balance_carry_forward_section(results):
-    """Show saved portal values with their age and a separately labelled date floor."""
+    """Group identical saved Grenade readings into compact email rows."""
     records = [
         result for result in results
         if isinstance(result.get("grenade_balance_carry_forward"), dict)
     ]
     if not records:
         return ""
+
+    status_labels = {
+        "pass": "Met the minimum at last check",
+        "below_minimum": "Below minimum at last check",
+        "counter_regressed": "Counter was lower than before",
+        "status_not_retained": "Previous validation result not saved",
+        "pending_baseline": "Tracking baseline pending",
+        "not_validated": "Could not validate at last check",
+    }
+    grouped = {}
+    for result in records:
+        balance = result["grenade_balance_carry_forward"]
+        status = str(balance.get("status_at_observation") or "not_validated")
+        milestone = balance.get("next_milestone_at_observation")
+        remaining = balance.get("remaining_to_milestone_at_observation")
+        key = (
+            str(balance.get("last_observed_date") or "—"),
+            str(balance.get("last_observed_count") if balance.get("last_observed_count") is not None else "—"),
+            str(balance.get("expected_minimum_at_observation") if balance.get("expected_minimum_at_observation") is not None else "—"),
+            str(balance.get("expected_minimum_as_of") if balance.get("expected_minimum_as_of") is not None else "—"),
+            str(balance.get("as_of_reset_date") or "—"),
+            str(milestone if milestone is not None else "—"),
+            str(remaining if remaining is not None else "—"),
+            status,
+        )
+        grouped.setdefault(key, []).append(result)
+
     statuses = [
         str(result["grenade_balance_carry_forward"].get("status_at_observation") or "not_validated")
         for result in records
     ]
     passed = sum(1 for status in statuses if status == "pass")
     below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
-    status_not_retained = sum(1 for status in statuses if status == "status_not_retained")
-    other_status = len(statuses) - passed - below_minimum - status_not_retained
-    summary_parts = [f"{passed} passed at last observation"]
+    unavailable = len(statuses) - passed - below_minimum
+    record_word = "account" if len(records) == 1 else "accounts"
+    summary_parts = [f"{len(records)} {record_word}"]
+    if passed:
+        summary_parts.append(f"{passed} met the minimum at last check")
     if below_minimum:
-        summary_parts.append(f"{below_minimum} below minimum / regressed")
-    if status_not_retained:
-        summary_parts.append(f"{status_not_retained} status not retained")
-    if other_status:
-        summary_parts.append(f"{other_status} status unavailable")
+        summary_parts.append(f"{below_minimum} need review")
+    if unavailable:
+        summary_parts.append(f"{unavailable} previous " + ("result" if unavailable == 1 else "results") + " unavailable")
+
     rows = []
-    for result in records:
-        balance = result["grenade_balance_carry_forward"]
-        actual = balance.get("last_observed_count")
-        minimum_then = balance.get("expected_minimum_at_observation")
-        minimum_now = balance.get("expected_minimum_as_of")
-        milestone = balance.get("next_milestone_at_observation")
-        remaining = balance.get("remaining_to_milestone_at_observation")
+    for key, members in sorted(grouped.items(), key=lambda item: item[0][0], reverse=True):
+        observed_date, actual, minimum_then, minimum_now, as_of_date, milestone, remaining, status = key
         milestone_text = (
-            f"Last observed target {int(milestone)} · {int(remaining)} remaining then"
-            if milestone is not None and remaining is not None
-            else "Last observed target not retained in baseline"
+            f"Next milestone {milestone} · {remaining} to go at last check"
+            if milestone != "—" and remaining != "—"
+            else "Next milestone was not saved"
         )
-        status = str(balance.get("status_at_observation") or "not_validated")
-        state_class = "v2-state-success" if status == "pass" else "v2-state-warning"
+        status_text = status_labels.get(status, "Previous validation result unavailable")
+        word = "account" if len(members) == 1 else "accounts"
         rows.append(
-            "<div class='v2-item'>"
-            f"<div><strong>{html.escape(_issue_identity_label(result))}</strong>"
-            f"<small>Last observed {html.escape(str(balance.get('last_observed_date') or '—'))}</small></div>"
-            f"<span class='v2-result'>{html.escape(str(actual if actual is not None else '—'))} actual · "
-            f"{html.escape(str(minimum_then if minimum_then is not None else '—'))} minimum then · "
-            f"{html.escape(str(minimum_now if minimum_now is not None else '—'))} date floor as of "
-            f"{html.escape(str(balance.get('as_of_reset_date') or '—'))} · "
-            f"{html.escape(milestone_text)} · "
-            f"<span class='{state_class}'>{html.escape(status.replace('_', ' '))} at observation</span></span></div>"
+            "<div class='v2-group-row'>"
+            "<div>"
+            f"<strong>{len(members)} {word} · Last checked {html.escape(observed_date)}</strong>"
+            f"<small>{html.escape(milestone_text)}</small>"
+            "</div>"
+            "<span>"
+            f"{html.escape(actual)} Grenades recorded · "
+            f"{html.escape(minimum_then)} expected at last check · "
+            f"{html.escape(minimum_now)} expected by {html.escape(as_of_date)} · "
+            f"{html.escape(status_text)}"
+            "</span>"
+            "</div>"
         )
+
     return (
         "<section class='v2-section v2-grenade v2-validation-card'>"
-        "<div class='v2-section-head'><h2>Last Verified Grenade Progress</h2>"
-        f"<span>{html.escape(' · '.join(summary_parts) or 'No retained validation status')}</span></div>"
-        "<p class='v2-muted-note'>Carry-forward values only; this run did not read a fresh portal counter. "
-        "The date floor is recalculated from the saved baseline. A last-observed milestone is not a live target. "
-        "Older records without a saved validation status are shown as not retained, never inferred as a pass.</p>"
+        "<div class='v2-section-head'><h2>Grenade Balance — last saved readings</h2>"
+        f"<span>{html.escape(' · '.join(summary_parts))}</span></div>"
+        "<p class='v2-muted-note'>These are previous portal readings, not fresh balances from this run. "
+        "The expected minimum is recalculated for the current reset date. Older records may not contain "
+        "their original validation result or next milestone; missing history is shown as unavailable, not assumed to be a pass.</p>"
         + "".join(rows)
+        + "<p class='v2-muted-note' style='margin-top:8px'>Full account-level readings are available in Copy Report.</p>"
         + "</section>"
     )
 
@@ -6652,10 +6698,66 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         result for result in results
         if isinstance(result.get("event_rewards"), list) and result.get("event_rewards")
     ]
+    progression_reinspection_results = [
+        result for result in results
+        if result.get("progression_reinspection_attempted") is True
+    ]
+    progression_activity_results = [
+        result for result in results
+        if result in progression_checked_results
+        or result.get("progression_reinspection_attempted") is True
+    ]
+    if is_recovery_rollup:
+        progression_category_card = _category_card(
+            "Progression Rewards", progression_checked_results,
+            "progression", "progression", "progression",
+        )
+    elif progression_reinspection_results and not progression_checked_results:
+        pending_progression = sum(
+            1 for result in results if result.get("progression_deferred")
+        )
+        confirmed_progression = sum(
+            int(result.get("progression", 0) or 0)
+            for result in progression_reinspection_results
+        )
+        note = (
+            f"{confirmed_progression} claims confirmed · "
+            f"{pending_progression} still pending"
+        )
+        progression_category_card = (
+            "<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-progression'>"
+            "<span>Progression Checks</span>"
+            f"<strong>{len(progression_reinspection_results)}</strong>"
+            f"<small>{html.escape(note)}</small></div></td>"
+        )
+    elif progression_activity_results:
+        pending_progression = sum(
+            1 for result in results if result.get("progression_deferred")
+        )
+        confirmed_progression = sum(
+            int(result.get("progression", 0) or 0)
+            for result in progression_activity_results
+        )
+        inspected_word = "account" if len(progression_activity_results) == 1 else "accounts"
+        note = f"{len(progression_activity_results)} {inspected_word} checked"
+        if pending_progression:
+            note += f" · {pending_progression} still pending"
+        progression_category_card = (
+            "<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-progression'>"
+            "<span>Progression Rewards</span>"
+            f"<strong>{confirmed_progression}</strong>"
+            f"<small>{html.escape(note)}</small></div></td>"
+        )
+    else:
+        progression_category_card = _category_card(
+            "Progression Rewards", progression_checked_results,
+            "progression", "progression", "progression",
+        )
+
     category_cards = [
         _category_card("Daily Rewards", standard_checked_results, "daily", "daily", "daily"),
         _category_card("Store Rewards", standard_checked_results, "store", "store", "store"),
-        _category_card("Progression Rewards", progression_checked_results, "progression", "progression", "progression"),
+        progression_category_card,
         _category_card(
             "Loyalty Rewards", loyalty_checked_results, "loyalty", "loyalty", "loyalty",
             "No enrolled accounts" if full_claim_results else "Not checked in this run",
@@ -6698,6 +6800,27 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         recovery_kpi_label = "Recovery accounts"
         recovery_kpi_note = (
             f"{int(cycle_summary.get('recovery_claims_added', 0) or 0)} additional claims confirmed"
+        )
+    elif deferred_check_count:
+        pp_checked = sum(
+            1 for result in results
+            if (
+                result.get("progression_reinspection_attempted") is True
+                or result.get("progression_checked") is True
+                or result.get("progression_claim_attempted") is True
+            )
+        )
+        pp_claims_confirmed = sum(
+            int(result.get("progression", 0) or 0)
+            for result in results if result.get("progression_deferred")
+        )
+        recovery_kpi_value = deferred_check_count
+        pp_checked_word = "account" if pp_checked == 1 else "accounts"
+        pp_claim_word = "claim" if pp_claims_confirmed == 1 else "claims"
+        recovery_kpi_label = "Progression pending"
+        recovery_kpi_note = (
+            f"{pp_checked} {pp_checked_word} checked this run · "
+            f"{pp_claims_confirmed} {pp_claim_word} confirmed"
         )
     else:
         recovery_kpi_value = immediate_attempted
@@ -6808,6 +6931,13 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         ".v2-item>.v2-result{display:table-cell;width:58%;vertical-align:top;padding:10px 0 10px 8px;max-width:none;text-align:right;color:#475569;font-size:11px;line-height:1.45;overflow-wrap:anywhere}"
         ".v2-item strong{display:block;overflow-wrap:anywhere;color:#253b5b}"
         ".v2-item small{display:block;color:#64748b;font-size:11px;margin-top:3px;line-height:1.4}"
+        ".v2-group-row{display:table;width:100%;table-layout:fixed;border-top:1px solid #edf1f6;font-size:12px}"
+        ".v2-group-row:first-of-type{border-top:0}"
+        ".v2-group-row>div,.v2-group-row>span{display:table-cell;vertical-align:top;padding:9px 8px 9px 0;line-height:1.45}"
+        ".v2-group-row>div{width:43%}"
+        ".v2-group-row>span{width:57%;text-align:right;color:#475569;overflow-wrap:anywhere}"
+        ".v2-group-row strong{display:block;color:#253b5b}"
+        ".v2-group-row small{display:block;margin-top:3px;color:#64748b;font-size:11px}"
         ".v2-good{color:#166534}"
         ".v2-attention{background-color:#fffbeb;padding:10px;border:1px solid #fde68a;border-radius:8px;margin:6px 0}"
         ".v2-exceptions{background-color:#fffbeb;border-color:#fcd34d}"
@@ -6855,6 +6985,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         " .v2-section-head h2{font-size:15px}"
         " .v2-item{display:block;width:100%}"
         " .v2-item>div,.v2-item>.v2-result{display:block;width:100%;text-align:left;padding:6px 0;max-width:none}"
+        " .v2-group-row{display:block;width:100%}"
+        " .v2-group-row>div,.v2-group-row>span{display:block;width:100%;text-align:left;padding:6px 0}"
         " .v2-offer-row{display:block;width:100%}"
         " .v2-offer-row>div,.v2-offer-row>span{display:block;width:100%;text-align:left;padding:6px 0}"
         " .v2-footer{font-size:11px}"
@@ -6873,8 +7005,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + category_html
         + "</section>"
         + (daily_cycle_html or "")
-        + validation_html
         + (deferred_checks_html or "")
+        + validation_html
         + (immediate_recovery_html or "")
         + attention_html
         + (preexisting_portal_claim_html or "")

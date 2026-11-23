@@ -736,14 +736,14 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             checked + [deferred], "Primary Run", 1,
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=35,
         )
-        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked</small>", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("hgkme1", report)
-        self.assertIn("no claim click was attempted", report)
-        self.assertIn("1 blocked by overlay", report)
+        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked · 1 still pending</small>", report)
+        self.assertIn("Progression — checks still open", report)
+        self.assertIn("Blocked by an on-screen popup or overlay", report)
+        self.assertIn("1 account", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention Required", report)
-        self.assertIn("unknown_fullscreen_overlay_blocks_page", report)
+        self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
+        self.assertNotIn("hgkme1", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertNotIn("unconfirmed standard reward", report.lower())
@@ -778,8 +778,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("No claimable reward visible", report)
+        self.assertIn("Progression — checks still open", report)
+        self.assertIn("No claimable reward card visible", report)
         self.assertNotIn("Attention Required", report)
 
         player["progression_unconfirmed"] = True
@@ -874,12 +874,12 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Last Verified Grenade Progress", report)
-        self.assertIn("66 actual", report)
-        self.assertIn("66 minimum then", report)
-        self.assertIn("69 date floor as of 2026-11-23", report)
-        self.assertIn("Last observed target 123 · 57 remaining then", report)
-        self.assertIn("did not read a fresh portal counter", report.lower())
+        self.assertIn("Grenade Balance — last saved readings", report)
+        self.assertIn("66 Grenades recorded", report)
+        self.assertIn("66 expected at last check", report)
+        self.assertIn("69 expected by 2026-11-23", report)
+        self.assertIn("Next milestone 123 · 57 to go at last check", report)
+        self.assertIn("not fresh balances from this run", report.lower())
         self.assertNotIn("Attention Required", report)
 
         saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
@@ -894,7 +894,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", deficit_report)
-        self.assertIn("below minimum at observation", deficit_report)
+        self.assertIn("Below minimum at last check", deficit_report)
         self.assertIn("Attention Required", deficit_report)
 
         # Legacy observations without a saved status must not be presented as a pass.
@@ -907,9 +907,101 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 [player], "Promotional Check #1", 1,
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
-        self.assertIn("0 passed at last observation", legacy_report)
-        self.assertIn("1 status not retained", legacy_report)
-        self.assertIn("status not retained at observation", legacy_report)
+        self.assertIn("Previous validation result not saved", legacy_report)
+        self.assertIn("1 previous result unavailable", legacy_report)
+
+    def test_queue_reinspection_is_counted_and_grouped_in_compact_email(self):
+        reason = (
+            "Queued Progression inspection found no currently visible claimable reward; "
+            "keeping the queue open for a later pass because an empty snapshot is not authoritative proof."
+        )
+        players = []
+        for index in range(3):
+            players.append({
+                "pid": f"QUEUEPLAYER{index:04d}",
+                "display_name": f"Queued Player {index}",
+                "processing_mode": "progression_queue_only",
+                "status": "Partial",
+                "retry_required": True,
+                "fail_reason": reason,
+                "progression_deferred": True,
+                "progression_deferred_reason": reason,
+                "progression_reinspection_attempted": True,
+                "progression_checked": False,
+                "progression_unconfirmed": False,
+                "progression_claim_attempted": False,
+                "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+                "standard_rewards_checked": False,
+                "daily_unconfirmed": False,
+                "store_unconfirmed_indices": [],
+                "grenade_balance": None,
+                "promotions_observed": [],
+                "event_rewards": [],
+            })
+        report = build_email(
+            players, "Promotional Check #2", 1,
+            get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
+        )
+        self.assertIn("Progression pending</span><strong>3</strong>", report)
+        self.assertIn("3 accounts checked this run · 0 claims confirmed", report)
+        self.assertIn("<span>Progression Checks</span><strong>3</strong>", report)
+        self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
+        self.assertIn("No claimable reward card visible", report)
+        self.assertEqual(report.count("No claimable reward card visible"), 1)
+        self.assertNotIn("QUEUEPLAYER0000", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
+        self.assertNotIn("Attention Required", report)
+
+    def test_identical_saved_grenade_readings_are_grouped(self):
+        reason = (
+            "Queued Progression inspection found no currently visible claimable reward; "
+            "keeping the queue open for a later pass."
+        )
+        player1 = self.sample_player()
+        player1.update({
+            "pid": "GROUPPLAYER0001", "display_name": "Group Player One",
+            "processing_mode": "progression_queue_only", "status": "Partial",
+            "retry_required": True, "fail_reason": reason,
+            "progression_deferred": True, "progression_deferred_reason": reason,
+            "progression_reinspection_attempted": True,
+            "progression_checked": False, "progression_unconfirmed": False,
+            "progression_claim_attempted": False,
+            "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+            "standard_rewards_checked": False, "has_loyalty": False,
+            "grenade_balance": None, "promotions_observed": [], "event_rewards": [],
+        })
+        player2 = dict(player1)
+        player2.update({"pid": "GROUPPLAYER0002", "display_name": "Group Player Two"})
+        saved_player = {
+            "baseline_status": "active", "baseline_count": 0,
+            "baseline_date": "2026-11-01", "tracking_start_date": "2026-11-01",
+            "baseline_source": "roster_present_before_cycle_start",
+            "last_observed_count": 66, "last_observed_date": "2026-11-22",
+            "last_observed_at_ist": "2026-11-22T05:36:58+05:30",
+            "last_observed_expected_minimum": 66, "last_observed_status": "pass",
+            "last_observed_next_milestone": 123,
+            "last_observed_remaining_to_next_milestone": 57,
+        }
+        saved_state = {
+            "schema_version": 1,
+            "cycles": {"2026-11": {"players": {
+                "GROUPPLAYER0001": dict(saved_player),
+                "GROUPPLAYER0002": dict(saved_player),
+            }}},
+        }
+        fixed_now = datetime(2026, 11, 23, 12, 30)
+        with patch("master_claimer.load_grenade_balance_state", return_value=saved_state), \
+             patch("master_claimer.get_ist_time", return_value=fixed_now):
+            report = build_email(
+                [player1, player2], "Promotional Check #1", 1,
+                fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
+            )
+        self.assertIn("2 accounts · Last checked 2026-11-22", report)
+        self.assertIn("66 Grenades recorded", report)
+        self.assertEqual(report.count("66 Grenades recorded"), 1)
+        self.assertNotIn("GROUPPLAYER0001", report)
+        self.assertNotIn("GROUPPLAYER0002", report)
+
 
     def test_generic_popup_blocker_remains_reportable(self):
         generic = {
@@ -1685,10 +1777,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
         )
         self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
-        self.assertIn("1 account with confirmed claims", report)
-        self.assertIn("1 inspection(s) still queued", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
+        self.assertIn("1 account checked · 1 still pending", report)
+        self.assertIn("Progression — checks still open", report)
+        self.assertIn("1 Progression reward confirmed; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
@@ -1706,9 +1797,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(_full_claim_recovery_candidate(result))
         self.assertEqual(build_standard_attention_section([result]), "")
         deferred = build_deferred_checks_section([result])
-        self.assertIn("Progression Inspections Pending", deferred)
-        self.assertIn("hgkme1", deferred)
-        self.assertIn("no claim click was attempted", deferred)
+        self.assertIn("Progression — checks still open", deferred)
+        self.assertNotIn("hgkme1", deferred)
+        self.assertIn("No claim button was clicked in this run", deferred)
         self.assertNotIn("Attention Required", deferred)
 
 
@@ -1725,9 +1816,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             ),
         }
         section = build_deferred_checks_section([result])
-        self.assertIn("1 Progression reward(s) were portal-confirmed", section)
-        self.assertIn("remaining-card inspection is incomplete and stays queued", section)
-        self.assertNotIn("no claim click was attempted", section.lower())
+        self.assertIn("1 Progression reward confirmed", section)
+        self.assertIn("1 account remains open", section)
+        self.assertNotIn("No claim button was clicked", section)
 
     def test_deferred_recheck_keeps_a_real_prior_progression_failure_visible(self):
         result = {
@@ -1740,7 +1831,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         attention = build_standard_attention_section([result])
         deferred = build_deferred_checks_section([result])
         self.assertIn("previously attempted Progression claim remains unconfirmed", attention)
-        self.assertIn("no additional claim click was attempted", deferred)
+        self.assertIn("No claim button was clicked in this run", deferred)
 
     def test_unconfirmed_promotion_click_is_not_reclassified_as_preexisting_claimed(self):
         player_id = "1234567890123456"
