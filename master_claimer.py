@@ -6815,9 +6815,12 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             for result in results if result.get("progression_deferred")
         )
         recovery_kpi_value = deferred_check_count
+        pp_checked_word = "account" if pp_checked == 1 else "accounts"
+        pp_claim_word = "claim" if pp_claims_confirmed == 1 else "claims"
         recovery_kpi_label = "Progression pending"
         recovery_kpi_note = (
-            f"{pp_checked} checked this run · {pp_claims_confirmed} claims confirmed"
+            f"{pp_checked} {pp_checked_word} checked this run · "
+            f"{pp_claims_confirmed} {pp_claim_word} confirmed"
         )
     else:
         recovery_kpi_value = immediate_attempted
