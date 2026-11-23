@@ -5529,11 +5529,13 @@ def build_deferred_checks_section(results):
     inspected = [
         result for result in results
         if result.get("progression_reinspection_attempted") is True
+        or result.get("progression_checked") is True
+        or result.get("progression_claim_attempted") is True
     ]
     inspected_count = len(inspected)
-    confirmed_claims = sum(int(result.get("progression", 0) or 0) for result in inspected)
+    confirmed_claims = sum(int(result.get("progression", 0) or 0) for result in pending)
     click_attempts = sum(
-        1 for result in inspected if result.get("progression_claim_attempted")
+        1 for result in pending if result.get("progression_claim_attempted")
     )
 
     groups = {
@@ -5556,7 +5558,7 @@ def build_deferred_checks_section(results):
     if inspected_count:
         account_word = "account" if inspected_count == 1 else "accounts"
         summary = (
-            f"The bot rechecked {inspected_count} {account_word} in this run. "
+            f"The bot checked {inspected_count} {account_word} in this run. "
             f"{confirmed_claims} Progression reward(s) were confirmed; "
             f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open."
         )
@@ -5565,7 +5567,7 @@ def build_deferred_checks_section(results):
     else:
         summary = (
             f"{len(pending)} {('account has' if len(pending) == 1 else 'accounts have')} an open "
-            "Progression check. The queue was not rechecked in this run."
+            "Progression check. The queue was not checked in this run. No claim button was clicked in this run."
         )
 
     group_rows = []
@@ -5714,7 +5716,7 @@ def build_grenade_balance_carry_forward_section(results):
     if below_minimum:
         summary_parts.append(f"{below_minimum} need review")
     if unavailable:
-        summary_parts.append(f"{unavailable} previous results unavailable")
+        summary_parts.append(f"{unavailable} previous " + ("result" if unavailable == 1 else "results") + " unavailable")
 
     rows = []
     for key, members in sorted(grouped.items(), key=lambda item: item[0][0], reverse=True):
@@ -6976,6 +6978,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         " .v2-section-head h2{font-size:15px}"
         " .v2-item{display:block;width:100%}"
         " .v2-item>div,.v2-item>.v2-result{display:block;width:100%;text-align:left;padding:6px 0;max-width:none}"
+        " .v2-group-row{display:block;width:100%}"
+        " .v2-group-row>div,.v2-group-row>span{display:block;width:100%;text-align:left;padding:6px 0}"
         " .v2-offer-row{display:block;width:100%}"
         " .v2-offer-row>div,.v2-offer-row>span{display:block;width:100%;text-align:left;padding:6px 0}"
         " .v2-footer{font-size:11px}"
