@@ -356,7 +356,7 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(pp["repeated_outcome_count"], 1)
         html = render_cycle_health_overview(snapshot)
         self.assertIn("1 account(s) require manual attention", html)
-        self.assertIn("Primary Run of the next reset", html)
+        self.assertIn("Primary Run (~05:35 IST)", html)
 
     def test_inconsistent_cycle_counts_are_not_marked_available(self):
         snapshot = build_cycle_health_overview(
