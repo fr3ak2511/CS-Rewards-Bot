@@ -7,6 +7,7 @@ or mutate runtime state.
 from __future__ import annotations
 
 from collections import Counter
+import calendar
 from datetime import date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -49,10 +50,7 @@ def is_last_calendar_day(value: Any) -> bool:
     parsed = _to_ist(value)
     if parsed is None:
         return False
-    return parsed.date().day == (date(parsed.year, parsed.month, 28).replace(day=28)
-                                  .replace(day=1).replace(month=parsed.month % 12 + 1,
-                                    year=parsed.year + (1 if parsed.month == 12 else 0))
-                                  - date.resolution).day
+    return parsed.date().day == calendar.monthrange(parsed.year, parsed.month)[1]
 
 
 def month_cycle_key(value: Any) -> str | None:
@@ -60,7 +58,12 @@ def month_cycle_key(value: Any) -> str | None:
     return parsed.strftime("%Y-%m") if parsed else None
 
 
-def month_end_schedule(value: Any, *, primary_finished_at: Any = None) -> dict[str, Any]:
+def month_end_schedule(
+    value: Any,
+    *,
+    primary_finished_at: Any = None,
+    immediate_recovery_finished_at: Any = None,
+) -> dict[str, Any]:
     """Return the due phase for the last day; all timestamps are IST-aware."""
     now = _to_ist(value)
     if now is None:
@@ -90,6 +93,7 @@ def month_end_schedule(value: Any, *, primary_finished_at: Any = None) -> dict[s
             "deadlines_ist": deadlines,
         }
     primary_end = _to_ist(primary_finished_at)
+    recovery_end = _to_ist(immediate_recovery_finished_at)
     if now >= datetime.combine(day, FINAL_REPORT_DEADLINE_IST, tzinfo=IST):
         return {
             "phase": "final_report",
@@ -103,6 +107,14 @@ def month_end_schedule(value: Any, *, primary_finished_at: Any = None) -> dict[s
         return {
             "phase": "waiting_for_primary",
             "action": "wait_for_primary_and_immediate_recovery",
+            "is_month_end": True,
+            "cycle_key": month_cycle_key(now),
+            "deadlines_ist": deadlines,
+        }
+    if recovery_end is None or recovery_end > now:
+        return {
+            "phase": "waiting_for_immediate_recovery",
+            "action": "wait_for_immediate_recovery_completion",
             "is_month_end": True,
             "cycle_key": month_cycle_key(now),
             "deadlines_ist": deadlines,
@@ -141,7 +153,14 @@ def _milestone_entry(ledger: dict[str, Any], player_id: str, threshold: int) -> 
     return value if isinstance(value, dict) else ({"status": value} if isinstance(value, str) else {})
 
 
-def _verified_milestone_state(entry: dict[str, Any]) -> tuple[str, str | None]:
+def _verified_milestone_state(
+    entry: dict[str, Any],
+    *,
+    report_date: date,
+) -> tuple[str, str | None]:
+    observed_at = _to_ist(entry.get("observed_at_ist"))
+    if observed_at is None or observed_at.date() != report_date:
+        return "unverified", "milestone_not_observed_on_closeout_date"
     raw_status = str(entry.get("status") or "").strip().casefold()
     if raw_status not in _DELIVERY_STATES:
         return "unverified", "missing_or_unknown_status"
@@ -217,7 +236,7 @@ def evaluate_month_end_closeout(
         attention = []
         for threshold in reached:
             entry = _milestone_entry(ledger, pid, threshold)
-            status, reason = _verified_milestone_state(entry)
+            status, reason = _verified_milestone_state(entry, report_date=as_of)
             item = {
                 "threshold": threshold,
                 "status": status,

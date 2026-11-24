@@ -28,6 +28,7 @@ class MonthEndCloseoutPolicyTests(unittest.TestCase):
 
     def test_schedule_waits_for_primary_then_runs_two_retries_and_final_report(self):
         primary_end = datetime(2026, 11, 30, 6, 25, tzinfo=IST)
+        recovery_end = datetime(2026, 11, 30, 6, 40, tzinfo=IST)
         cases = [
             (datetime(2026, 11, 30, 6, 0, tzinfo=IST), "waiting_for_primary", "wait_for_primary_and_immediate_recovery"),
             (datetime(2026, 11, 30, 7, 0, tzinfo=IST), "primary_closeout", "run_full_roster_closeout"),
@@ -36,13 +37,21 @@ class MonthEndCloseoutPolicyTests(unittest.TestCase):
             (datetime(2026, 11, 30, 12, 30, tzinfo=IST), "final_report", "publish_final_report"),
         ]
         for now, phase, action in cases:
-            result = month_end_schedule(now, primary_finished_at=primary_end)
+            result = month_end_schedule(
+                now, primary_finished_at=primary_end,
+                immediate_recovery_finished_at=recovery_end,
+            )
             self.assertEqual(result["phase"], phase)
             self.assertEqual(result["action"], action)
         before = month_end_schedule(datetime(2026, 11, 30, 5, 20, tzinfo=IST))
         self.assertEqual(before["phase"], "before_reset")
         no_primary = month_end_schedule(datetime(2026, 11, 30, 7, 30, tzinfo=IST))
         self.assertEqual(no_primary["phase"], "waiting_for_primary")
+        no_recovery = month_end_schedule(
+            datetime(2026, 11, 30, 7, 30, tzinfo=IST),
+            primary_finished_at=primary_end,
+        )
+        self.assertEqual(no_recovery["phase"], "waiting_for_immediate_recovery")
         not_end = month_end_schedule(datetime(2026, 11, 29, 7, 30, tzinfo=IST), primary_finished_at=primary_end)
         self.assertEqual(not_end["phase"], "not_month_end")
         self.assertEqual(FINAL_REPORT_DEADLINE_IST.strftime("%H:%M"), "12:30")
@@ -113,6 +122,22 @@ class MonthEndCloseoutPolicyTests(unittest.TestCase):
         self.assertEqual(result["status"], "ATTENTION_REQUIRED")
         self.assertEqual(result["totals"]["reached_but_locked"], 1)
         self.assertEqual(result["totals"]["reached_but_unverified"], 1)
+
+    def test_prior_month_milestone_delivery_evidence_is_not_fresh_closeout_evidence(self):
+        roster = ["PLAYER0001"]
+        balance = {"PLAYER0001": {"observed_count": 72, "observed_date": "2026-11-30"}}
+        ledger = self._delivered_ledger("PLAYER0001", 72)
+        ledger["PLAYER0001"]["65"]["observed_at_ist"] = "2026-11-29T07:30:00+05:30"
+        result = evaluate_month_end_closeout(
+            report_date="2026-11-30", configured_player_ids=roster,
+            balance_records=balance, milestone_ledger=ledger, expected_roster_count=1,
+        )
+        self.assertEqual(result["status"], "ATTENTION_REQUIRED")
+        self.assertEqual(result["totals"]["reached_but_unverified"], 1)
+        self.assertEqual(
+            next(x for x in result["accounts"][0]["milestone_states"] if x["threshold"] == 65)["reason"],
+            "milestone_not_observed_on_closeout_date",
+        )
 
     def test_missing_stale_balance_missing_tier_and_roster_drift_are_not_cleared(self):
         roster = ["PLAYER0001", "PLAYER0002"]
