@@ -54,17 +54,21 @@ def build_cycle_health_overview(
     }
 
     cycle = daily_cycle_summary if isinstance(daily_cycle_summary, dict) else {}
+    cycle_complete_count = _count(cycle.get("accounts_complete"))
+    cycle_pending_count = _count(cycle.get("accounts_pending"))
     cycle_valid = (
         str(cycle.get("reset_date") or "") == str(reset_date)
         and _count(cycle.get("configured_player_count")) == configured
         and configured > 0
+        and cycle_complete_count <= configured
+        and cycle_pending_count == configured - cycle_complete_count
     )
     core_cycle = {
         "available": cycle_valid,
         "reset_date": str(cycle.get("reset_date") or ""),
         "configured": configured,
-        "complete": _count(cycle.get("accounts_complete")) if cycle_valid else 0,
-        "pending": _count(cycle.get("accounts_pending")) if cycle_valid else configured,
+        "complete": cycle_complete_count if cycle_valid else 0,
+        "pending": cycle_pending_count if cycle_valid else configured,
         "source_run_label": str(cycle.get("primary_run_label") or "") if cycle_valid else "",
         "source_timestamp": str(cycle.get("primary_run_timestamp") or "") if cycle_valid else "",
     }
@@ -100,29 +104,48 @@ def build_cycle_health_overview(
             grenade["other_status_today"] += 1
 
     queue = progression_queue if isinstance(progression_queue, dict) else {}
-    pending_entries = [
-        entry for entry in queue.values()
-        if isinstance(entry, dict) and entry.get("status") in {"deferred", "claim_unconfirmed"}
-    ]
+    roster_set = set(roster)
+    pending_entries: list[tuple[str, dict[str, Any]]] = []
+    pending_outside_roster = 0
+    for raw_pid, entry in queue.items():
+        if not isinstance(entry, dict) or entry.get("status") not in {"deferred", "claim_unconfirmed"}:
+            continue
+        pid = str(raw_pid or "").strip()
+        if pid not in roster_set:
+            pending_outside_roster += 1
+            continue
+        pending_entries.append((pid, entry))
+
     reasons = Counter()
     attempt_counts = Counter()
-    latest_slots = Counter()
-    for entry in pending_entries:
-        reason = str(entry.get("last_reason") or "").lower()
-        if "no currently visible claimable reward" in reason:
-            reasons["no_visible_claimable_card"] += 1
-        elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
-            reasons["blocked_by_overlay"] += 1
+    latest_attempt_at = ""
+    latest_attempt_slot = ""
+    for _pid, entry in pending_entries:
+        if entry.get("status") == "claim_unconfirmed":
+            # An attempted claim with no portal confirmation is materially
+            # different from a deferred inspection that never clicked.
+            reasons["claim_unconfirmed"] += 1
         else:
-            reasons["other_pending"] += 1
+            reason = str(entry.get("last_reason") or "").lower()
+            if "no currently visible claimable reward" in reason:
+                reasons["no_visible_claimable_card"] += 1
+            elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+                reasons["blocked_by_overlay"] += 1
+            else:
+                reasons["other_pending"] += 1
         slots = entry.get("attempted_slots")
         slots = list(dict.fromkeys(
             str(slot).strip() for slot in slots
             if isinstance(slot, str) and slot.strip()
         )) if isinstance(slots, list) else []
         attempt_counts[len(slots)] += 1
-        if entry.get("last_attempt_slot"):
-            latest_slots[str(entry["last_attempt_slot"])] += 1
+        slot = str(entry.get("last_attempt_slot") or "").strip()
+        attempted_at = str(entry.get("last_attempt_at") or "").strip()
+        # Queue timestamps are ISO-8601 strings; lexical ordering is stable
+        # for the consistently formatted timestamps written by the claimer.
+        if slot and (not latest_attempt_at or attempted_at >= latest_attempt_at):
+            latest_attempt_at = attempted_at
+            latest_attempt_slot = slot
 
     most_common_attempt_count = (
         attempt_counts.most_common(1)[0][0] if attempt_counts else 0
@@ -134,13 +157,14 @@ def build_cycle_health_overview(
         "pending": len(pending_entries),
         "no_visible_claimable_card": reasons["no_visible_claimable_card"],
         "blocked_by_overlay": reasons["blocked_by_overlay"],
+        "claim_unconfirmed": reasons["claim_unconfirmed"],
         "other_pending": reasons["other_pending"],
+        "outside_current_roster": pending_outside_roster,
         "most_common_slots_used": most_common_attempt_count,
         "accounts_at_most_common_slots_used": accounts_at_common_attempt_count,
         "max_slots_per_reset": MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET,
-        "latest_attempt_slot": (
-            latest_slots.most_common(1)[0][0] if latest_slots else ""
-        ),
+        "latest_attempt_at": latest_attempt_at,
+        "latest_attempt_slot": latest_attempt_slot,
     }
 
     return {
@@ -199,6 +223,8 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         f'{pending}/{configured} inspections pending'
         f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
         f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
+        f' · {_count(progression.get("claim_unconfirmed"))} with claim outcome unconfirmed'
+        f' · {_count(progression.get("other_pending"))} other pending'
     )
     slots_used = _count(progression.get("most_common_slots_used"))
     slots_note = ""
@@ -210,10 +236,19 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
             f'{_count(progression.get("max_slots_per_reset"))} inspection slots this reset'
             f' ({left} remaining for those accounts).'
         )
+    outside_roster_note = ""
+    outside_roster = _count(progression.get("outside_current_roster"))
+    if outside_roster:
+        outside_roster_note = (
+            f" {outside_roster} queued record(s) outside the current roster are excluded "
+            "from the account count."
+        )
     pp_note = (
-        "Pending inspections are not failed claims. An empty scan is not treated as "
-        "proof that an account has no Progression reward."
+        "Pending inspections are not automatically failed claims. An empty scan is not "
+        "proof that no Progression reward exists; an unconfirmed claim outcome is shown "
+        "separately from a deferred inspection."
         + slots_note
+        + outside_roster_note
     )
 
     rows = [
