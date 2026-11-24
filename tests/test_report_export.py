@@ -189,7 +189,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("1 blocked by overlay", report)
         self.assertIn("Need attention", report)
         self.assertIn("class='cycle-health-table'", report)
-        self.assertIn(".cycle-health-table{{min-width:0 !important", report)
+        self.assertIn(".cycle-health-table{min-width:0 !important", report)
 
     def test_generated_inline_copy_script_passes_node_syntax_check(self):
         node = shutil.which("node")
