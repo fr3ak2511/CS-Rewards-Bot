@@ -487,12 +487,12 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
     pending = _count(progression.get("pending"))
     pp_text = (
         f'{pending}/{configured} inspections pending'
-        f' · {_count(progression.get("no_visible_claimable_card"))} empty scans'
-        f' · {_count(progression.get("blocked_by_overlay"))} overlay blocks'
+        f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
+        f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
         f' · {_count(progression.get("login_failed"))} login failures'
         f' · {_count(progression.get("incomplete_scan"))} incomplete scans'
-        f' · {_count(progression.get("claim_unconfirmed"))} claims unconfirmed'
-        f' · {_count(progression.get("other_pending"))} other'
+        f' · {_count(progression.get("claim_unconfirmed"))} with claim outcome unconfirmed'
+        f' · {_count(progression.get("other_pending"))} other pending'
     )
     slots_used = _count(progression.get("most_common_slots_used"))
     slots_note = ""
@@ -521,7 +521,7 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         )
         + (
             f" {_count(progression.get('retry_exhausted'))} account(s) exhausted this reset's four inspection slots; "
-            "their next scheduled opportunity is the next reset's Primary Run at approximately 05:35 IST."
+            "their next scheduled opportunity is the Primary Run of the next reset at approximately 05:35 IST."
             if _count(progression.get("retry_exhausted")) else ""
         )
         + slots_note
