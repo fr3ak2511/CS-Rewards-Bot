@@ -126,6 +126,15 @@ def build_cycle_health_overview(
         cycle_players = {}
     display_names = player_display_names if isinstance(player_display_names, dict) else {}
     as_of_date = date.fromisoformat(str(reset_date))
+    early_queue = progression_queue if isinstance(progression_queue, dict) else {}
+    early_roster_set = set(roster)
+    queue_entries_by_pid = {
+        str(raw_pid or "").strip(): entry
+        for raw_pid, entry in early_queue.items()
+        if str(raw_pid or "").strip() in early_roster_set
+        and isinstance(entry, dict)
+        and entry.get("status") in {"deferred", "claim_unconfirmed"}
+    }
 
     for pid in roster:
         row = by_pid.get(pid, {})
@@ -320,13 +329,6 @@ def build_cycle_health_overview(
 
     queue = progression_queue if isinstance(progression_queue, dict) else {}
     roster_set = set(roster)
-    queue_entries_by_pid = {
-        str(raw_pid or "").strip(): entry
-        for raw_pid, entry in queue.items()
-        if str(raw_pid or "").strip() in roster_set
-        and isinstance(entry, dict)
-        and entry.get("status") in {"deferred", "claim_unconfirmed"}
-    }
     pending_entries: list[tuple[str, dict[str, Any]]] = []
     pending_outside_roster = 0
     for raw_pid, entry in queue.items():
