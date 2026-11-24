@@ -533,6 +533,47 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Email apps block clipboard scripts.", report)
         self.assertIn("use its Copy Report button", report)
 
+    def test_email_surfaces_full_cycle_grenade_and_progression_status_separately(self):
+        snapshot = {
+            "reset_date": "2026-11-24",
+            "configured": 36,
+            "core_cycle": {
+                "available": True, "complete": 36, "pending": 0,
+                "source_run_label": "Primary Run",
+                "source_timestamp": "2026-11-24T05:35:38+05:30",
+            },
+            "grenade": {
+                "observed_today": 11, "passed_today": 11,
+                "below_minimum_today": 0, "counter_regressed_today": 0,
+                "other_status_today": 0, "not_checked_today": 25,
+            },
+            "progression": {
+                "pending": 25, "no_visible_claimable_card": 24,
+                "blocked_by_overlay": 1, "other_pending": 0,
+                "most_common_slots_used": 3,
+                "accounts_at_most_common_slots_used": 25,
+                "max_slots_per_reset": 4,
+                "latest_attempt_slot": "Promotional Check #1",
+            },
+        }
+        with patch("master_claimer._cycle_health_snapshot_for_report", return_value=snapshot):
+            report = build_email(
+                [self.sample_player()], "Promotional Check #1", 1,
+                get_ist_time() - timedelta(minutes=2),
+                {"daily_cycle_email_summary": {
+                    "reset_date": _current_reset_date(),
+                    "configured_player_count": 36,
+                }},
+                configured_player_count=36,
+            )
+        self.assertIn("Overall reset-cycle health", report)
+        self.assertIn("36/36 accounts complete", report)
+        self.assertIn("11 PASS today", report)
+        self.assertIn("25 not checked today", report)
+        self.assertIn("24 with no visible claimable card", report)
+        self.assertIn("1 blocked by overlay", report)
+        self.assertIn("empty scan is not treated as proof", report)
+
     def test_email_is_compact_and_does_not_surface_streak_or_schedule(self):
         player = self.sample_player()
         player["event_rewards"] = []

@@ -50,6 +50,7 @@ from recovery_policy import (
 from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
 from email_cycle_summary import update_daily_cycle_summary
+from cycle_health_report import build_cycle_health_overview, render_cycle_health_overview
 from grenade_balance import (
     capture_progression_balance,
     daily_reset_date,
@@ -6458,6 +6459,61 @@ def build_run_reconciliation_email_section(results, run_label, configured_player
 
 
 
+def _cycle_health_snapshot_for_report(results, configured_player_count, meta, daily_cycle_summary=None):
+    """Build a read-only, full-roster status roll-up for the email and run artifact."""
+    try:
+        configured = max(0, int(configured_player_count or 0))
+        if configured <= 0:
+            return None
+
+        roster = []
+        try:
+            with open(PLAYER_ID_FILE, "r", newline="", encoding="utf-8-sig") as handle:
+                roster = list(dict.fromkeys(
+                    str(row.get("player_id") or "").strip()
+                    for row in csv.DictReader(handle)
+                    if str(row.get("player_id") or "").strip()
+                ))
+        except Exception:
+            roster = []
+
+        if len(roster) != configured:
+            result_ids = list(dict.fromkeys(
+                str(result.get("pid") or "").strip()
+                for result in (results or [])
+                if isinstance(result, dict) and str(result.get("pid") or "").strip()
+            ))
+            if len(result_ids) == configured:
+                roster = result_ids
+            else:
+                log(
+                    "ℹ️ Cycle health overview omitted: configured roster could not be "
+                    f"resolved uniquely ({len(roster) or len(result_ids)}/{configured})."
+                )
+                return None
+
+        reporting_meta = meta if isinstance(meta, dict) else {}
+        cycle = (
+            daily_cycle_summary
+            if isinstance(daily_cycle_summary, dict)
+            else reporting_meta.get("daily_cycle_email_summary")
+        )
+        grenade_state = load_grenade_balance_state(GRENADE_BALANCE_FILE)
+        return build_cycle_health_overview(
+            results if isinstance(results, list) else [],
+            configured_player_ids=roster,
+            reset_date=_current_reset_date(),
+            grenade_state=grenade_state,
+            daily_cycle_summary=cycle if isinstance(cycle, dict) else None,
+            progression_queue=reporting_meta.get("progression_deferred_inspections"),
+            full_claim_coverage=reporting_meta.get("full_claim_coverage"),
+        )
+    except Exception as exc:
+        # Reporting must never affect claims, queue state, or email delivery.
+        log(f"⚠️ Cycle health overview unavailable: {type(exc).__name__}.")
+        return None
+
+
 def build_email(results, run_label, run_index, job_start, meta, followup_summary=None, configured_player_count=None):
     """Build the compact Email V2 report; streak remains internal in bot_meta.json."""
     ist_now = get_ist_time()
@@ -6480,6 +6536,10 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         if pid and not result.get("display_name") and display_name_map.get(pid):
             result["display_name"] = str(display_name_map[pid])
     _attach_grenade_balance_carry_forward(results)
+    cycle_health_snapshot = _cycle_health_snapshot_for_report(
+        results, configured_count, meta, daily_cycle_summary=cycle_summary
+    )
+    cycle_health_html = render_cycle_health_overview(cycle_health_snapshot)
     followup_summary = followup_summary if isinstance(followup_summary, dict) else {}
     for collection_name in ("open_items", "updated_items"):
         for item in (followup_summary.get(collection_name) or []):
@@ -7076,6 +7136,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         f"<span class='v2-health {health_class}'>{health_label}</span>"
         "</header>"
         + kpi_html
+        + (cycle_health_html or "")
         + processing_html
         + (
             "<section class='v2-section v2-rewards'>"
@@ -7629,9 +7690,15 @@ def _full_claim_efficiency(results):
     return round(confirmed / possible * 100, 1)
 
 
-def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None, promotional_followups=None):
+def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None, promotional_followups=None, reporting_meta=None, daily_cycle_summary=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
     _attach_grenade_balance_carry_forward(results)
+    cycle_health_snapshot = _cycle_health_snapshot_for_report(
+        results,
+        len(results) if configured_player_count is None else configured_player_count,
+        reporting_meta if isinstance(reporting_meta, dict) else {},
+        daily_cycle_summary=daily_cycle_summary,
+    )
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
     daily = sum(int(r.get("daily", 0) or 0) for r in results)
     store_daily = sum(int(r.get("store", 0) or 0) for r in results)
@@ -7674,6 +7741,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
     summary = {
         "version": VERSION,
         "run_label": run_label,
+        "cycle_health_overview": cycle_health_snapshot,
         "started_at_ist": started_at.isoformat(),
         "finished_at_ist": finished_at.isoformat(),
         "configured_player_count": len(results) if configured_player_count is None else int(configured_player_count),
@@ -8633,7 +8701,13 @@ def main():
         # Mixed promotional backups and subset recovery never erase it.
         meta["last_full_run"] = dict(meta["last_run"])
     save_bot_meta(meta)
-    write_run_summary(results, run_label, job_start, job_end, email_sent, configured_player_count=configured_player_count, promotional_followups=followup_summary)
+    write_run_summary(
+        results, run_label, job_start, job_end, email_sent,
+        configured_player_count=configured_player_count,
+        promotional_followups=followup_summary,
+        reporting_meta=meta,
+        daily_cycle_summary=cycle_summary,
+    )
     log("EMAIL_DELIVERY_RESULT=SUCCESS" if email_sent else "EMAIL_DELIVERY_RESULT=FAILED")
 
     if not email_sent:

@@ -156,6 +156,41 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("ATTENTION REQUIRED", report)
         self.assertIn("pending baseline", report)
 
+    def test_report_shows_full_cycle_health_separately_from_run_attention(self):
+        summary = dict(self.summary)
+        summary["cycle_health_overview"] = {
+            "reset_date": "2026-11-24",
+            "configured": 36,
+            "core_cycle": {
+                "available": True, "complete": 36, "pending": 0,
+                "source_run_label": "Primary Run",
+                "source_timestamp": "2026-11-24T05:35:38+05:30",
+            },
+            "grenade": {
+                "observed_today": 11, "passed_today": 11,
+                "below_minimum_today": 0, "counter_regressed_today": 0,
+                "other_status_today": 0, "not_checked_today": 25,
+            },
+            "progression": {
+                "pending": 25, "no_visible_claimable_card": 24,
+                "blocked_by_overlay": 1, "other_pending": 0,
+                "most_common_slots_used": 3,
+                "accounts_at_most_common_slots_used": 25,
+                "max_slots_per_reset": 4,
+                "latest_attempt_slot": "Promotional Check #1",
+            },
+        }
+        report = build_copyable_report(summary)
+        self.assertIn("Overall reset-cycle health", report)
+        self.assertIn("36/36 accounts complete", report)
+        self.assertIn("11 PASS today", report)
+        self.assertIn("25 not checked today", report)
+        self.assertIn("24 with no visible claimable card", report)
+        self.assertIn("1 blocked by overlay", report)
+        self.assertIn("Need attention", report)
+        self.assertIn("class='cycle-health-table'", report)
+        self.assertIn(".cycle-health-table{min-width:0 !important", report)
+
     def test_generated_inline_copy_script_passes_node_syntax_check(self):
         node = shutil.which("node")
         self.assertIsNotNone(node, "Node.js must be available for generated report syntax checks.")
