@@ -270,6 +270,6 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         "<h2 style='font-size:15px;margin:0 0 8px'>Overall reset-cycle health</h2>"
         f"<p style='font-size:11px;color:#64748b;margin:0 0 8px'>Reset date: {escape(str(snapshot.get('reset_date') or '—'))} · "
         "The cycle, balance and inspection figures are separate measures.</p>"
-        "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
+        "<table class='cycle-health-table' role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
         f"{row_html}</table></section>"
     )
