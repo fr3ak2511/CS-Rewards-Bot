@@ -10,6 +10,8 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from cycle_health_report import render_cycle_health_overview
+
 
 def _number(value: Any) -> int:
     try:
@@ -333,6 +335,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     email_state = "Sent" if summary.get("email_sent") else "Not sent"
     efficiency = summary.get("full_claim_efficiency")
     efficiency_text = f"{_number(efficiency)}%" if efficiency is not None else "—"
+    cycle_health_html = render_cycle_health_overview(summary.get("cycle_health_overview"))
 
     return f"""<!doctype html>
 <html lang="en">
@@ -417,6 +420,7 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div class="kpi"><span>Accounts processed</span><strong>{accounts}/{configured}</strong><small>Configured roster coverage</small></div>
 <div class="kpi"><span>Need attention</span><strong>{attention}</strong><small>{attention_note}</small></div>
 </section>
+{cycle_health_html}
 <section class="categories">{category_cards}</section>
 {deferred_section}
 {carry_forward_section}
