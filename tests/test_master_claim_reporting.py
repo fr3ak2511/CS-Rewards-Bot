@@ -948,9 +948,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("Progression pending</span><strong>3</strong>", report)
         self.assertIn("3 queued reinspection attempts made.", report)
-        self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
+        self.assertIn("0 Progression rewards confirmed in this run; 3 accounts remain open", report)
         self.assertNotIn("<span>Progression Checks</span>", report)
-        self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
+        self.assertIn("0 Progression rewards confirmed in this run; 3 accounts remain open", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertEqual(report.count("No claimable reward card visible"), 1)
         self.assertNotIn("QUEUEPLAYER0000", report)
@@ -1783,7 +1783,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
-        self.assertIn("1 Progression reward confirmed; 1 account remains open", report)
+        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
