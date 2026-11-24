@@ -204,7 +204,8 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
     if pending and slots_used:
         left = max(0, _count(progression.get("max_slots_per_reset")) - slots_used)
         slots_note = (
-            f' Most commonly used: {slots_used}/'
+            f' For {_count(progression.get("accounts_at_most_common_slots_used"))} pending accounts, '
+            f'the most common usage is {slots_used}/'
             f'{_count(progression.get("max_slots_per_reset"))} inspection slots this reset'
             f' ({left} remaining for those accounts).'
         )
