@@ -24,6 +24,11 @@ def _count(value: Any) -> int:
         return 0
 
 
+def _is_nonnegative_int(value: Any) -> bool:
+    """Accept only persisted integer evidence, not booleans or coerced strings."""
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
 def _dedupe_ids(values: Any) -> list[str]:
     result: list[str] = []
     seen: set[str] = set()
@@ -54,12 +59,18 @@ def build_cycle_health_overview(
     }
 
     cycle = daily_cycle_summary if isinstance(daily_cycle_summary, dict) else {}
-    cycle_complete_count = _count(cycle.get("accounts_complete"))
-    cycle_pending_count = _count(cycle.get("accounts_pending"))
+    cycle_configured_count = cycle.get("configured_player_count")
+    cycle_complete_raw = cycle.get("accounts_complete")
+    cycle_pending_raw = cycle.get("accounts_pending")
+    cycle_complete_count = _count(cycle_complete_raw)
+    cycle_pending_count = _count(cycle_pending_raw)
     cycle_valid = (
         str(cycle.get("reset_date") or "") == str(reset_date)
-        and _count(cycle.get("configured_player_count")) == configured
+        and _is_nonnegative_int(cycle_configured_count)
+        and cycle_configured_count == configured
         and configured > 0
+        and _is_nonnegative_int(cycle_complete_raw)
+        and _is_nonnegative_int(cycle_pending_raw)
         and cycle_complete_count <= configured
         and cycle_pending_count == configured - cycle_complete_count
     )
@@ -143,7 +154,7 @@ def build_cycle_health_overview(
         attempted_at = str(entry.get("last_attempt_at") or "").strip()
         # Queue timestamps are ISO-8601 strings; lexical ordering is stable
         # for the consistently formatted timestamps written by the claimer.
-        if slot and (not latest_attempt_at or attempted_at >= latest_attempt_at):
+        if slot and attempted_at and (not latest_attempt_at or attempted_at >= latest_attempt_at):
             latest_attempt_at = attempted_at
             latest_attempt_slot = slot
 
