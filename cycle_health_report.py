@@ -236,8 +236,38 @@ def build_cycle_health_overview(
             and next_threshold is not None
             and str(portal_next_milestone) != str(next_threshold)
         )
+        queue_entry = queue_entries_by_pid.get(pid)
+        queue_entry = queue_entry if isinstance(queue_entry, dict) else None
+        queue_slots = queue_entry.get("attempted_slots") if queue_entry else []
+        queue_slots = queue_slots if isinstance(queue_slots, list) else []
+        queue_slots = list(dict.fromkeys(
+            str(slot).strip() for slot in queue_slots if str(slot).strip()
+        ))
+        queue_category = str(queue_entry.get("last_outcome_category") or "") if queue_entry else ""
+        if queue_entry and not queue_category:
+            legacy_reason = str(queue_entry.get("last_reason") or "").casefold()
+            if "login failed" in legacy_reason or "could not authenticate" in legacy_reason:
+                queue_category = "login_failed"
+            elif "no currently visible claimable reward" in legacy_reason:
+                queue_category = "empty_scan"
+            elif "popup/overlay" in legacy_reason or "fullscreen_overlay" in legacy_reason:
+                queue_category = "overlay_blocked"
+            else:
+                queue_category = "other_pending"
         balance_accounts.append({
             "player_id": pid,
+            "pp_queue_status": str(queue_entry.get("status") or "") if queue_entry else "",
+            "pp_last_outcome_category": queue_category,
+            "pp_same_outcome_count": _count(queue_entry.get("same_outcome_count")) if queue_entry else 0,
+            "pp_manual_attention_required": bool(queue_entry.get("manual_attention_required")) if queue_entry else False,
+            "pp_slots_used": len(queue_slots),
+            "pp_retry_exhausted": bool(queue_entry and len(queue_slots) >= MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET),
+            "pp_next_retry": (
+                "Next reset · Primary Run (~05:35 IST)"
+                if queue_entry and len(queue_slots) >= MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET
+                else "Next eligible unused slot (dispatch gates apply)"
+                if queue_entry else "No active deferred inspection record"
+            ),
             "display_name": str(display_names.get(pid) or "").strip(),
             "last_four": pid[-4:],
             "observed_count": observed_count,
@@ -290,6 +320,13 @@ def build_cycle_health_overview(
 
     queue = progression_queue if isinstance(progression_queue, dict) else {}
     roster_set = set(roster)
+    queue_entries_by_pid = {
+        str(raw_pid or "").strip(): entry
+        for raw_pid, entry in queue.items()
+        if str(raw_pid or "").strip() in roster_set
+        and isinstance(entry, dict)
+        and entry.get("status") in {"deferred", "claim_unconfirmed"}
+    }
     pending_entries: list[tuple[str, dict[str, Any]]] = []
     pending_outside_roster = 0
     for raw_pid, entry in queue.items():
@@ -305,25 +342,51 @@ def build_cycle_health_overview(
     attempt_counts = Counter()
     latest_attempt_at = ""
     latest_attempt_slot = ""
+    manual_attention_count = 0
+    retry_exhausted_count = 0
+    repeated_outcome_count = 0
     for _pid, entry in pending_entries:
-        if entry.get("status") == "claim_unconfirmed":
-            # An attempted claim with no portal confirmation is materially
-            # different from a deferred inspection that never clicked.
+        current_result = by_pid.get(_pid, {})
+        current_status = str(current_result.get("status") or "").strip().casefold()
+        latest_category = str(entry.get("last_outcome_category") or "").strip().casefold()
+        # New evidence in the current run overrides an older persisted reason.
+        if current_status == "login failed" and current_result.get("progression_reinspection_attempted"):
+            latest_category = "login_failed"
+        if entry.get("status") == "claim_unconfirmed" or latest_category == "claim_unconfirmed":
             reasons["claim_unconfirmed"] += 1
         else:
-            reason = str(entry.get("last_reason") or "").lower()
-            if "no currently visible claimable reward" in reason:
-                reasons["no_visible_claimable_card"] += 1
-            elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
-                reasons["blocked_by_overlay"] += 1
+            if not latest_category:
+                reason = str(entry.get("last_reason") or "").lower()
+                if "login failed" in reason or "could not authenticate" in reason:
+                    latest_category = "login_failed"
+                elif "no currently visible claimable reward" in reason:
+                    latest_category = "empty_scan"
+                elif "popup/overlay" in reason or "fullscreen_overlay" in reason or "blocking_dialog" in reason:
+                    latest_category = "overlay_blocked"
+                elif "snapshot" in reason or "incomplete" in reason or "carousel scan" in reason:
+                    latest_category = "incomplete_scan"
+                elif "processing failed" in reason or "could not process" in reason:
+                    latest_category = "processing_failed"
+                else:
+                    latest_category = "other_pending"
+            if latest_category in {"empty_scan", "overlay_blocked", "login_failed", "incomplete_scan", "processing_failed"}:
+                reasons[latest_category] += 1
             else:
                 reasons["other_pending"] += 1
+
+        same_count = _count(entry.get("same_outcome_count"))
+        if same_count >= 2:
+            repeated_outcome_count += 1
+        if entry.get("manual_attention_required"):
+            manual_attention_count += 1
         slots = entry.get("attempted_slots")
         slots = list(dict.fromkeys(
             str(slot).strip() for slot in slots
             if isinstance(slot, str) and slot.strip()
         )) if isinstance(slots, list) else []
         attempt_counts[len(slots)] += 1
+        if len(slots) >= MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET:
+            retry_exhausted_count += 1
         slot = str(entry.get("last_attempt_slot") or "").strip()
         attempted_at = str(entry.get("last_attempt_at") or "").strip()
         # Queue timestamps are ISO-8601 strings; lexical ordering is stable
@@ -340,10 +403,16 @@ def build_cycle_health_overview(
     )
     progression = {
         "pending": len(pending_entries),
-        "no_visible_claimable_card": reasons["no_visible_claimable_card"],
-        "blocked_by_overlay": reasons["blocked_by_overlay"],
+        "no_visible_claimable_card": reasons["empty_scan"],
+        "blocked_by_overlay": reasons["overlay_blocked"],
+        "login_failed": reasons["login_failed"],
+        "incomplete_scan": reasons["incomplete_scan"],
+        "processing_failed": reasons["processing_failed"],
         "claim_unconfirmed": reasons["claim_unconfirmed"],
         "other_pending": reasons["other_pending"],
+        "manual_attention_required": manual_attention_count,
+        "repeated_outcome_count": repeated_outcome_count,
+        "retry_exhausted": retry_exhausted_count,
         "outside_current_roster": pending_outside_roster,
         "most_common_slots_used": most_common_attempt_count,
         "accounts_at_most_common_slots_used": accounts_at_common_attempt_count,
@@ -416,10 +485,12 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
     pending = _count(progression.get("pending"))
     pp_text = (
         f'{pending}/{configured} inspections pending'
-        f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
-        f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
-        f' · {_count(progression.get("claim_unconfirmed"))} with claim outcome unconfirmed'
-        f' · {_count(progression.get("other_pending"))} other pending'
+        f' · {_count(progression.get("no_visible_claimable_card"))} empty scans'
+        f' · {_count(progression.get("blocked_by_overlay"))} overlay blocks'
+        f' · {_count(progression.get("login_failed"))} login failures'
+        f' · {_count(progression.get("incomplete_scan"))} incomplete scans'
+        f' · {_count(progression.get("claim_unconfirmed"))} claims unconfirmed'
+        f' · {_count(progression.get("other_pending"))} other'
     )
     slots_used = _count(progression.get("most_common_slots_used"))
     slots_note = ""
@@ -439,9 +510,18 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
             "from the account count."
         )
     pp_note = (
-        "Pending inspections are not automatically failed claims. An empty scan is not treated "
-        "as proof that no Progression reward exists; an unconfirmed claim outcome is shown "
-        "separately from a deferred inspection."
+        "Pending inspections are not automatically failed claims. Empty/incomplete scans, login failures, "
+        "and popup blocks remain unresolved until a reliable inspection completes or a same-card claim is confirmed. "
+        "Repeated identical outcomes are flagged for manual attention without suppressing the next reset's retry."
+        + (
+            f" {_count(progression.get('manual_attention_required'))} account(s) require manual attention after repeated identical outcomes."
+            if _count(progression.get("manual_attention_required")) else ""
+        )
+        + (
+            f" {_count(progression.get('retry_exhausted'))} account(s) exhausted this reset's four inspection slots; "
+            "their next scheduled opportunity is the next reset's Primary Run at approximately 05:35 IST."
+            if _count(progression.get("retry_exhausted")) else ""
+        )
         + slots_note
         + outside_roster_note
     )
@@ -558,6 +638,18 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
                 f" · Thresholds reached by balance: {reached}/25</td></tr>"
                 "<tr><td colspan='2' style='font-size:10px;color:#64748b;padding-top:3px'>"
                 f"Balance validation: {escape(validation)} · Reward delivery: not established by balance</td></tr>"
+                f"<tr><td colspan='2' style='font-size:10px;color:#64748b;padding-top:3px'>"
+                f"PP queue: {escape(str(item.get('pp_queue_status') or 'no active deferred record'))}"
+                + (
+                    f" · latest outcome: {escape(str(item.get('pp_last_outcome_category') or 'unknown').replace('_', ' '))}"
+                    f" · same outcome: {escape(str(_count(item.get('pp_same_outcome_count'))))}"
+                    f" · slots used: {escape(str(_count(item.get('pp_slots_used'))))}/4"
+                    f" · {'manual attention required' if item.get('pp_manual_attention_required') else 'retry status monitored'}"
+                    f" · next: {escape(str(item.get('pp_next_retry') or 'not scheduled'))}"
+                    if item.get("pp_queue_status") else
+                    " · no active deferred queue record; this alone is not proof of milestone delivery"
+                )
+                + "</td></tr>"
                 "</table></td></tr>"
             )
         register_rows.append(

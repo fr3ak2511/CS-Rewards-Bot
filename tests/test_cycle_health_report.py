@@ -305,6 +305,59 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(progression["latest_attempt_slot"], "Promotional Check #1")
         self.assertEqual(progression["latest_attempt_at"], "2026-11-24T13:00:00+05:30")
 
+    def test_current_login_failure_overrides_stale_empty_snapshot_reason(self):
+        pid = self.roster[0]
+        queue = {
+            pid: {
+                "status": "deferred",
+                "last_reason": "Queued Progression inspection found no currently visible claimable reward",
+                "last_outcome_category": "empty_scan",
+                "same_outcome_count": 1,
+                "attempted_slots": ["Primary Run", "Immediate Progression Recovery"],
+                "last_attempt_slot": "Immediate Progression Recovery",
+                "last_attempt_at": "2026-11-24T06:00:00+05:30",
+            }
+        }
+        result = {
+            "pid": pid,
+            "status": "Login Failed",
+            "progression_reinspection_attempted": True,
+            "progression_deferred": True,
+            "progression_checked": False,
+        }
+        snapshot = build_cycle_health_overview(
+            [result], configured_player_ids=[pid], reset_date="2026-11-24",
+            grenade_state={"schema_version": 1, "cycles": {}},
+            daily_cycle_summary=None, progression_queue=queue,
+        )
+        self.assertEqual(snapshot["progression"]["login_failed"], 1)
+        self.assertEqual(snapshot["progression"]["no_visible_claimable_card"], 0)
+
+    def test_manual_attention_and_exhausted_retry_budget_are_reported(self):
+        queue = {
+            self.roster[0]: {
+                "status": "deferred",
+                "last_outcome_category": "overlay_blocked",
+                "same_outcome_count": 3,
+                "manual_attention_required": True,
+                "attempted_slots": ["Primary Run", "Immediate Progression Recovery", "Promotional Check #1", "Promotional Check #2"],
+                "last_attempt_slot": "Promotional Check #2",
+                "last_attempt_at": "2026-11-24T18:05:00+05:30",
+            }
+        }
+        snapshot = build_cycle_health_overview(
+            [], configured_player_ids=[self.roster[0]], reset_date="2026-11-24",
+            grenade_state={"schema_version": 1, "cycles": {}},
+            daily_cycle_summary=None, progression_queue=queue,
+        )
+        pp = snapshot["progression"]
+        self.assertEqual(pp["manual_attention_required"], 1)
+        self.assertEqual(pp["retry_exhausted"], 1)
+        self.assertEqual(pp["repeated_outcome_count"], 1)
+        html = render_cycle_health_overview(snapshot)
+        self.assertIn("1 account(s) require manual attention", html)
+        self.assertIn("next reset's Primary Run", html)
+
     def test_inconsistent_cycle_counts_are_not_marked_available(self):
         snapshot = build_cycle_health_overview(
             [],

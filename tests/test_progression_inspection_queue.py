@@ -169,6 +169,86 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
             reset_date="2026-11-21", now="2026-11-21T19:00:00+05:30",
         ))
 
+    def test_repeated_identical_outcomes_increment_and_flag_manual_attention(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894", reset_date="2026-11-21",
+        )
+        entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(entry["last_outcome_category"], "overlay_blocked")
+        self.assertEqual(entry["same_outcome_count"], 1)
+        self.assertFalse(entry["manual_attention_required"])
+
+        for slot, moment, expected in (
+            ("Promotional Check #1", "2026-11-21T12:05:00+05:30", 2),
+            ("Promotional Check #2", "2026-11-21T18:05:00+05:30", 3),
+        ):
+            mark_progression_inspection_attempt(
+                self.meta, "PLAYER0001", slot_label=slot,
+                reset_date="2026-11-21", now=moment,
+            )
+            record_progression_inspection_result(
+                self.meta, "PLAYER0001",
+                self._deferred(progression_reinspection_attempted=True),
+                run_label=slot, now=moment,
+                source_run_id=str(expected + 4000), reset_date="2026-11-21",
+            )
+            entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
+            self.assertEqual(entry["same_outcome_count"], expected)
+        self.assertTrue(entry["manual_attention_required"])
+        self.assertEqual(entry["manual_attention_reason"], "3 consecutive PP attempts produced the same overlay blocked outcome")
+        self.assertEqual(entry["status"], "deferred")
+
+    def test_changed_outcome_resets_consecutive_repeat_counter(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+        )
+        mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Promotional Check #1",
+            reset_date="2026-11-21", now="2026-11-21T12:05:00+05:30",
+        )
+        login_failure = {
+            "status": "Login Failed",
+            "progression_reinspection_attempted": True,
+            "progression_checked": False,
+            "progression_deferred": False,
+            "progression_unconfirmed": False,
+        }
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", login_failure,
+            run_label="Promotional Check #1", now="2026-11-21T12:05:00+05:30",
+            source_run_id="4001", reset_date="2026-11-21",
+        )
+        entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(entry["last_outcome_category"], "login_failed")
+        self.assertEqual(entry["same_outcome_count"], 1)
+        self.assertEqual(entry["last_reason"], "Login failed before the reserved Progression inspection; no PP page was inspected and no claim click was attempted.")
+        self.assertFalse(entry["manual_attention_required"])
+
+    def test_claim_unconfirmed_is_immediately_manual_attention_without_repeat(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+        )
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {
+                "progression_unconfirmed": True,
+                "progression_unconfirmed_card_signature": "Milestone 62 | x20",
+                "progression_deferred_reason": "Same-card Delivered confirmation missing",
+                "progression_reinspection_attempted": True,
+            },
+            run_label="Promotional Check #1",
+            now="2026-11-21T12:05:00+05:30",
+        )
+        entry = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(entry["last_outcome_category"], "claim_unconfirmed")
+        self.assertEqual(entry["same_outcome_count"], 1)
+        self.assertTrue(entry["manual_attention_required"])
+        self.assertTrue(entry["requires_exact_target"])
+
     def test_attempt_slots_reset_on_new_daily_cycle_but_preserve_target(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
