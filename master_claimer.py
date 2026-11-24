@@ -5524,7 +5524,24 @@ def build_deferred_checks_section(results):
         if result.get("progression_deferred")
     ]
     confirmed_claims = sum(
-        int(result.get("progression", 0) or 0) for result in results
+        int(result.get("progression", 0) or 0)
+        for result in results
+        if (
+            result.get("progression_checked") is True
+            or (
+                result.get("processing_mode", "full_claim") == "full_claim"
+                and not result.get("progression_deferred")
+                and str(result.get("status") or "") not in {"Login Failed", "Error", "Failed"}
+            )
+            or (
+                result.get("progression_deferred")
+                and int(result.get("progression", 0) or 0) > 0
+            )
+            or (
+                result.get("processing_mode") == "progression_queue_only"
+                and result.get("progression_claim_attempted") is True
+            )
+        )
     )
     if not pending:
         if not confirmed_claims:
@@ -5581,7 +5598,8 @@ def build_deferred_checks_section(results):
     else:
         summary = (
             f"{len(pending)} {('account has' if len(pending) == 1 else 'accounts have')} an open "
-            "Progression check. No queued reinspection ran in this run."
+            "Progression check. No queued reinspection ran in this run. "
+            "No claim button was clicked in this run."
         )
 
     group_rows = []
@@ -6444,8 +6462,10 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     duration_seconds = max(0, int((ist_now - job_start).total_seconds()))
     duration_text = f"{duration_seconds // 60}m {duration_seconds % 60}s"
     account_count = len(results)
-    is_progression_only_run = bool(results) and all(
-        result.get("processing_mode") == "progression_queue_only" for result in results
+    is_progression_only_run = (
+        run_label == "Immediate Progression Recovery"
+        and bool(results)
+        and all(result.get("processing_mode") == "progression_queue_only" for result in results)
     )
     try:
         configured_count = max(account_count, int(configured_player_count if configured_player_count is not None else account_count))
@@ -6803,7 +6823,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             cycle_claim_totals.get("store", 0) or 0
         )
     core_claims_value = (
-        f"{core_claims_confirmed}/{configured_count * 4}"
+        "—" if not standard_checked_results and not is_recovery_rollup
+        else f"{core_claims_confirmed}/{configured_count * 4}"
         if (not is_recovery_rollup and configured_count > 0
             and counts.get("full_claim_accounts", 0) == configured_count
             and account_count == configured_count)
