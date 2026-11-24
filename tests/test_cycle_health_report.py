@@ -28,6 +28,7 @@ class CycleHealthReportTests(unittest.TestCase):
         for index, pid in enumerate(self.roster[11:]):
             queue[pid] = {
                 "status": "deferred",
+                "attempt_reset_date": "2026-11-24",
                 "last_reason": (
                     "Popup/overlay safety guard blocked inspection"
                     if index == 24 else
@@ -38,6 +39,7 @@ class CycleHealthReportTests(unittest.TestCase):
             }
         queue["REMOVED_PLAYER"] = {
             "status": "deferred",
+            "attempt_reset_date": "2026-11-24",
             "last_reason": "Queued Progression inspection found no currently visible claimable reward",
             "attempted_slots": slots,
             "last_attempt_slot": "Promotional Check #1",
@@ -260,6 +262,7 @@ class CycleHealthReportTests(unittest.TestCase):
         queue = {
             self.roster[0]: {
                 "status": "claim_unconfirmed",
+                "attempt_reset_date": "2026-11-24",
                 "last_reason": "A previously attempted Progression card has no safe saved identity",
                 "attempted_slots": ["Primary Run"],
                 "last_attempt_at": "2026-11-24T10:00:00+05:30",
@@ -267,6 +270,7 @@ class CycleHealthReportTests(unittest.TestCase):
             },
             self.roster[1]: {
                 "status": "deferred",
+                "attempt_reset_date": "2026-11-24",
                 "last_reason": "Popup/overlay safety guard blocked Progression inspection",
                 "attempted_slots": ["Primary Run", "Promotional Check #1"],
                 "last_attempt_at": "2026-11-24T12:00:00+05:30",
@@ -274,6 +278,7 @@ class CycleHealthReportTests(unittest.TestCase):
             },
             self.roster[2]: {
                 "status": "deferred",
+                "attempt_reset_date": "2026-11-24",
                 "last_reason": "Unexpected Progression page state; inspection was deferred",
                 "attempted_slots": ["Primary Run"],
                 "last_attempt_at": "2026-11-24T13:00:00+05:30",
@@ -281,6 +286,7 @@ class CycleHealthReportTests(unittest.TestCase):
             },
             "REMOVED_PLAYER": {
                 "status": "deferred",
+                "attempt_reset_date": "2026-11-24",
                 "last_reason": "Queued Progression inspection found no currently visible claimable reward",
                 "attempted_slots": ["Primary Run"],
                 "last_attempt_at": "2026-11-24T14:00:00+05:30",
@@ -313,6 +319,7 @@ class CycleHealthReportTests(unittest.TestCase):
                 "last_reason": "Queued Progression inspection found no currently visible claimable reward",
                 "last_outcome_category": "empty_scan",
                 "same_outcome_count": 1,
+                "attempt_reset_date": "2026-11-24",
                 "attempted_slots": ["Primary Run", "Immediate Progression Recovery"],
                 "last_attempt_slot": "Immediate Progression Recovery",
                 "last_attempt_at": "2026-11-24T06:00:00+05:30",
@@ -340,6 +347,7 @@ class CycleHealthReportTests(unittest.TestCase):
                 "last_outcome_category": "overlay_blocked",
                 "same_outcome_count": 3,
                 "manual_attention_required": True,
+                "attempt_reset_date": "2026-11-24",
                 "attempted_slots": ["Primary Run", "Immediate Progression Recovery", "Promotional Check #1", "Promotional Check #2"],
                 "last_attempt_slot": "Promotional Check #2",
                 "last_attempt_at": "2026-11-24T18:05:00+05:30",
@@ -357,6 +365,45 @@ class CycleHealthReportTests(unittest.TestCase):
         html = render_cycle_health_overview(snapshot)
         self.assertIn("1 account(s) require manual attention", html)
         self.assertIn("Primary Run (~05:35 IST)", html)
+
+    def test_previous_reset_slots_do_not_exhaust_current_reset_primary_retry(self):
+        pid = self.roster[0]
+        queue = {
+            pid: {
+                "status": "deferred",
+                "last_outcome_category": "empty_scan",
+                "same_outcome_count": 4,
+                "manual_attention_required": True,
+                "attempt_reset_date": "2026-11-24",
+                "attempted_slots": [
+                    "Primary Run",
+                    "Immediate Progression Recovery",
+                    "Promotional Check #1",
+                    "Promotional Check #2",
+                ],
+                "last_attempt_slot": "Promotional Check #2",
+                "last_attempt_at": "2026-11-24T18:05:00+05:30",
+            }
+        }
+        snapshot = build_cycle_health_overview(
+            [], configured_player_ids=[pid], reset_date="2026-11-25",
+            grenade_state={"schema_version": 1, "cycles": {}},
+            daily_cycle_summary=None, progression_queue=queue,
+        )
+        account = next(
+            item for item in snapshot["grenade"]["accounts"]
+            if item["player_id"] == pid
+        )
+        progression = snapshot["progression"]
+        self.assertEqual(account["pp_slots_used"], 0)
+        self.assertFalse(account["pp_retry_exhausted"])
+        self.assertEqual(
+            account["pp_next_retry"],
+            "Current reset · Primary Run (~05:35 IST)",
+        )
+        self.assertEqual(progression["retry_exhausted"], 0)
+        self.assertEqual(progression["most_common_slots_used"], 0)
+        self.assertEqual(progression["accounts_at_most_common_slots_used"], 1)
 
     def test_inconsistent_cycle_counts_are_not_marked_available(self):
         snapshot = build_cycle_health_overview(
