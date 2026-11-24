@@ -186,6 +186,7 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         f'{_count(grenade.get("passed_today"))} PASS today'
         f' · {_count(grenade.get("below_minimum_today"))} below minimum'
         f' · {_count(grenade.get("counter_regressed_today"))} counter regressions'
+        f' · {_count(grenade.get("other_status_today"))} other / baseline-pending'
         f' · {_count(grenade.get("not_checked_today"))} not checked today'
     )
     grenade_note = (
@@ -195,7 +196,7 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
 
     pending = _count(progression.get("pending"))
     pp_text = (
-        f'{pending} inspections pending'
+        f'{pending}/{configured} inspections pending'
         f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
         f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
     )
