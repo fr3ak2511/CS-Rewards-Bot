@@ -5526,14 +5526,13 @@ def build_deferred_checks_section(results):
     if not pending:
         return ""
 
-    inspected = [
-        result for result in results
+    queue_reinspection_attempts = sum(
+        1 for result in results
         if result.get("progression_reinspection_attempted") is True
-        or result.get("progression_checked") is True
-        or result.get("progression_claim_attempted") is True
-    ]
-    inspected_count = len(inspected)
-    confirmed_claims = sum(int(result.get("progression", 0) or 0) for result in pending)
+    )
+    confirmed_claims = sum(
+        int(result.get("progression", 0) or 0) for result in results
+    )
     click_attempts = sum(
         1 for result in pending if result.get("progression_claim_attempted")
     )
@@ -5555,19 +5554,25 @@ def build_deferred_checks_section(results):
         else:
             groups["other"] += 1
 
-    if inspected_count:
-        account_word = "account" if inspected_count == 1 else "accounts"
+    pending_word = "account remains" if len(pending) == 1 else "accounts remain"
+    if queue_reinspection_attempts:
+        attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
         summary = (
-            f"The bot checked {inspected_count} {account_word} in this run. "
-            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} confirmed; "
-            f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open."
+            f"{queue_reinspection_attempts} queued reinspection {attempt_word} made. "
+            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
+            f"confirmed in this run; {len(pending)} {pending_word} open."
         )
         if click_attempts == 0:
-            summary += " No claim button was clicked."
+            summary += " No claim button was clicked for these pending inspections."
+    elif confirmed_claims:
+        summary = (
+            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
+            f"confirmed in this run; {len(pending)} {pending_word} open."
+        )
     else:
         summary = (
             f"{len(pending)} {('account has' if len(pending) == 1 else 'accounts have')} an open "
-            "Progression check. The queue was not checked in this run. No claim button was clicked in this run."
+            "Progression check. No queued reinspection ran in this run."
         )
 
     group_rows = []
@@ -5711,13 +5716,22 @@ def build_grenade_balance_carry_forward_section(results):
     below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
     unavailable = len(statuses) - passed - below_minimum
     record_word = "account" if len(records) == 1 else "accounts"
-    summary_parts = [f"{len(records)} {record_word}"]
+    if unavailable == len(records):
+        return (
+            "<section class='v2-section v2-grenade v2-validation-card'>"
+            "<div class='v2-section-head'><h2>Grenade Balance History</h2>"
+            f"<span>{len(records)} historical {record_word} · validation details not saved</span></div>"
+            "<p class='v2-muted-note'>Previous portal readings exist, but their original validation status and milestone details were not retained. "
+            "They are not treated as current checks. Full account-level history remains in Copy Report.</p>"
+            "</section>"
+        )
+    summary_parts = [f"{len(records)} historical {record_word}"]
     if passed:
         summary_parts.append(f"{passed} met the minimum at last check")
     if below_minimum:
         summary_parts.append(f"{below_minimum} need review")
     if unavailable:
-        summary_parts.append(f"{unavailable} previous " + ("result" if unavailable == 1 else "results") + " unavailable")
+        summary_parts.append(f"{unavailable} validation details not saved")
 
     rows = []
     for key, members in sorted(grouped.items(), key=lambda item: item[0][0], reverse=True):
@@ -6309,7 +6323,12 @@ def build_processing_overview_section(counts, results=None, run_label=""):
             ("Promotional-only", int(counts.get("promotional_only_accounts", 0) or 0),
              "Store promotional scans; core rewards not checked",
              "teal", "#E8F8F5"),
+            ("Progression-only", sum(1 for result in results
+                                     if result.get("processing_mode") == "progression_queue_only"),
+             "Queued Progression inspections only; Daily and Store not checked",
+             "green", "#E8F8EF"),
         ]
+        modes = [mode for mode in modes if mode[1] > 0]
         total = sum(value for _, value, _, _, _ in modes)
         active_paths = sum(1 for _, value, _, _, _ in modes if value)
         account_word = "account" if total == 1 else "accounts"
@@ -6626,8 +6645,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
-    grenade_html = build_grenade_balance_email_section(results)
-    grenade_carry_forward_html = build_grenade_balance_carry_forward_section(results)
+    grenade_html = "" if is_progression_only_run else build_grenade_balance_email_section(results)
+    grenade_carry_forward_html = "" if is_progression_only_run else build_grenade_balance_carry_forward_section(results)
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
     validation_html = grenade_html + grenade_carry_forward_html + reconciliation_html
     # A run-level reconciliation mismatch is an execution attention state even
@@ -6665,7 +6684,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         # The zero-attention state is already clear from the KPI; omit a redundant section.
         attention_html = ""
 
-    def _category_card(label, checked_results, claim_key, cycle_key, tone, empty_note="Not checked in this run"):
+    def _category_card(label, checked_results, claim_key, cycle_key, tone, empty_note="Not checked in this run", cell_width="25%"):
         if is_recovery_rollup:
             value = int((cycle_summary.get("claim_totals") or {}).get(cycle_key, 0) or 0)
             note = "confirmed in today's cycle"
@@ -6686,7 +6705,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 if partial_progression else f"{len(checked_results)} {account_word} checked"
             )
         return (
-            f"<td class='v2-category-cell' width='25%'><div class='v2-category v2-category-{tone}'>"
+            f"<td class='v2-category-cell' width='{cell_width}'><div class='v2-category v2-category-{tone}'>"
             f"<span>{label}</span><strong>{value}</strong><small>{html.escape(note)}</small></div></td>"
         )
 
@@ -6754,23 +6773,37 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             "progression", "progression", "progression",
         )
 
+    is_progression_only_run = bool(results) and all(
+        result.get("processing_mode") == "progression_queue_only" for result in results
+    )
     category_cards = [
-        _category_card("Daily Rewards", standard_checked_results, "daily", "daily", "daily"),
-        _category_card("Store Rewards", standard_checked_results, "store", "store", "store"),
-        progression_category_card,
-        _category_card(
-            "Loyalty Rewards", loyalty_checked_results, "loyalty", "loyalty", "loyalty",
-            "No enrolled accounts" if full_claim_results else "Not checked in this run",
-        ),
+        _category_card("Daily Rewards", standard_checked_results, "daily", "daily", "daily", cell_width="50%"),
+        _category_card("Standard Store Rewards", standard_checked_results, "store", "store", "store", cell_width="50%"),
     ]
     category_html = (
         "<table role='presentation' class='v2-category-table' width='100%' cellpadding='0' cellspacing='0' border='0'><tr>"
         + "".join(category_cards)
         + "</tr></table>"
-    )
+    ) if standard_checked_results and not is_progression_only_run else ""
     generated = ist_now.strftime("%d %b %Y · %I:%M %p IST")
     safe_run_label = html.escape(str(run_label or "Reward Run"))
-    confirmed_note = "Total confirmed in today's cycle" if is_recovery_rollup else "Portal-confirmed during this run"
+    core_claims_confirmed = daily_claims + store_claims
+    if is_recovery_rollup:
+        cycle_claim_totals = cycle_summary.get("claim_totals") or {}
+        core_claims_confirmed = int(cycle_claim_totals.get("daily", 0) or 0) + int(
+            cycle_claim_totals.get("store", 0) or 0
+        )
+    core_claims_value = (
+        f"{core_claims_confirmed}/{configured_count * 4}"
+        if (not is_recovery_rollup and configured_count > 0
+            and counts.get("full_claim_accounts", 0) == configured_count
+            and account_count == configured_count)
+        else core_claims_confirmed
+    )
+    core_claims_note = (
+        "Not checked in this run" if not standard_checked_results and not is_recovery_rollup
+        else "Daily + standard Store only"
+    )
     accounts_kpi_label = "Accounts complete" if is_recovery_rollup else "Accounts processed"
     accounts_kpi_value = (
         f"{int(cycle_summary.get('accounts_complete', 0) or 0)} / {configured_count}"
@@ -6801,26 +6834,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         recovery_kpi_note = (
             f"{int(cycle_summary.get('recovery_claims_added', 0) or 0)} additional claims confirmed"
         )
-    elif deferred_check_count:
-        pp_checked = sum(
+    elif deferred_check_count or progression_claims or progression_reinspection_results:
+        queue_reinspection_attempts = sum(
             1 for result in results
-            if (
-                result.get("progression_reinspection_attempted") is True
-                or result.get("progression_checked") is True
-                or result.get("progression_claim_attempted") is True
-            )
+            if result.get("progression_reinspection_attempted") is True
         )
-        pp_claims_confirmed = sum(
-            int(result.get("progression", 0) or 0)
-            for result in results if result.get("progression_deferred")
-        )
+        pp_claim_word = "claim" if progression_claims == 1 else "claims"
         recovery_kpi_value = deferred_check_count
-        pp_checked_word = "account" if pp_checked == 1 else "accounts"
-        pp_claim_word = "claim" if pp_claims_confirmed == 1 else "claims"
         recovery_kpi_label = "Progression pending"
         recovery_kpi_note = (
-            f"{pp_checked} {pp_checked_word} checked this run · "
-            f"{pp_claims_confirmed} {pp_claim_word} confirmed"
+            f"{queue_reinspection_attempts} queued reinspection attempts · "
+            f"{progression_claims} {pp_claim_word} confirmed"
         )
     else:
         recovery_kpi_value = immediate_attempted
@@ -6831,7 +6855,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         )
     kpi_items = [
         (accounts_kpi_label, accounts_kpi_value, accounts_kpi_note, "accounts", "👥"),
-        ("Confirmed claims", confirmed_claims, confirmed_note, "claims", "🎁"),
+        ("Core claims", core_claims_value, core_claims_note, "claims", "🎁"),
         (recovery_kpi_label, recovery_kpi_value, recovery_kpi_note, "recovery", "🔄"),
         ("Need attention", attention_accounts, attention_note, "attention", "⚠️"),
     ]
@@ -6850,11 +6874,11 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + "</tr></table>"
     )
     processing_html = build_processing_overview_section(counts, results, run_label)
-    rewards_heading = "Reward Claims (Today's Cycle)" if is_recovery_rollup else "Reward Claims (This Run)"
+    rewards_heading = "Core Daily Claims"
     rewards_subtitle = (
-        "Cumulative portal-confirmed totals from the primary and recovery runs"
+        "Cumulative Daily + standard Store claims in today's cycle"
         if is_recovery_rollup else
-        "Portal-confirmed counts for reward categories checked in this run"
+        "1 Daily + 3 standard Store rewards per eligible account · Progression tracked separately"
     )
 
     run_id = str(os.getenv("GITHUB_RUN_ID") or "").strip()
@@ -7000,19 +7024,22 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         "</header>"
         + kpi_html
         + processing_html
-        + "<section class='v2-section v2-rewards'>"
-        + _email_section_header(rewards_heading, rewards_subtitle)
-        + category_html
-        + "</section>"
+        + (
+            "<section class='v2-section v2-rewards'>"
+            + _email_section_header(rewards_heading, rewards_subtitle)
+            + category_html
+            + "</section>"
+            if category_html else ""
+        )
         + (daily_cycle_html or "")
         + (deferred_checks_html or "")
         + validation_html
         + (immediate_recovery_html or "")
         + attention_html
         + (preexisting_portal_claim_html or "")
-        + (promotion_html or "")
+        + ("" if is_progression_only_run else (promotion_html or ""))
         + (followup_html or "")
-        + (event_html or "")
+        + ("" if is_progression_only_run else (event_html or ""))
         + f"<footer class='v2-footer'>CS Rewards Bot {html.escape(str(VERSION))} · {html.escape(footer_meta)}"
         + (f"<div>{run_link_html}</div>" if run_link_html else "")
         + "</footer></div></body></html>"
