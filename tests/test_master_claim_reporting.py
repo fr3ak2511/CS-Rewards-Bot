@@ -486,7 +486,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
         )
         # The core headline is Daily + standard Store only; other claims stay separate.
-        self.assertIn("<span>🎁 Core claims</span><strong>3</strong>", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>3/4</strong>", report)
         self.assertIn("Progression Program", report)
         self.assertIn("1 reward confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
@@ -743,7 +743,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Progression — checks still open", report)
         self.assertIn("1 account remains open", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
-        self.assertIn("1 account", report)
+        self.assertIn("1 account remains open", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention Required", report)
         self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
@@ -947,8 +947,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("Progression pending</span><strong>3</strong>", report)
-        self.assertIn("3 accounts checked this run · 0 claims confirmed", report)
-        self.assertIn("<span>Progression Checks</span><strong>3</strong>", report)
+        self.assertIn("3 queued reinspection attempts made.", report)
+        self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
+        self.assertNotIn("<span>Progression Checks</span>", report)
         self.assertIn("0 Progression rewards confirmed; 3 accounts remain open", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertEqual(report.count("No claimable reward card visible"), 1)
@@ -1146,8 +1147,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("<span>👥 Accounts processed</span><strong>1 / 35</strong>", report)
-        self.assertIn("<span>Store Rewards</span>", report)
-        self.assertNotIn("Standard Store", report)
+        self.assertIn("<span>Standard Store Rewards</span>", report)
 
     def test_email_includes_compact_grenade_balance_result_and_flags_shortfall(self):
         player = self.sample_player()
@@ -1608,8 +1608,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             )
         self.assertIn("Targeted Recovery", report)
         self.assertIn("Replayed exact saved target(s): Daily Reward", report)
-        self.assertIn("Reward Claims (Today&#x27;s Cycle)", report)
-        self.assertIn("Cumulative portal-confirmed totals from the primary and recovery runs", report)
+        self.assertIn("Core Daily Claims", report)
+        self.assertIn("Cumulative Daily + standard Store claims in today&#x27;s cycle", report)
         self.assertIn("Recovery Run Consistency", report)
         self.assertIn("1 targeted account(s) represented", report)
         self.assertNotIn("Full Claim Path", report)
@@ -1783,7 +1783,6 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
-        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
         self.assertIn("1 Progression reward confirmed; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
