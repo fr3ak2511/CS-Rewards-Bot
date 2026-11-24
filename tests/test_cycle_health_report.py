@@ -220,6 +220,25 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(snapshot["core_cycle"]["complete"], 0)
         self.assertEqual(snapshot["core_cycle"]["pending"], 36)
 
+    def test_string_cycle_counts_are_not_accepted_as_verified_evidence(self):
+        snapshot = build_cycle_health_overview(
+            [],
+            configured_player_ids=self.roster,
+            reset_date="2026-11-24",
+            grenade_state={"schema_version": 1, "cycles": {}},
+            daily_cycle_summary={
+                "reset_date": "2026-11-24",
+                "configured_player_count": 36,
+                "accounts_complete": "36",
+                "accounts_pending": 0,
+                "primary_run_label": "Primary Run",
+            },
+            progression_queue={},
+        )
+        self.assertFalse(snapshot["core_cycle"]["available"])
+        self.assertEqual(snapshot["core_cycle"]["complete"], 0)
+        self.assertEqual(snapshot["core_cycle"]["pending"], 36)
+
     def test_rendered_overview_explains_unconfirmed_and_stale_queue_entries(self):
         html = render_cycle_health_overview({
             "reset_date": "2026-11-24",
