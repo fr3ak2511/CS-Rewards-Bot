@@ -247,11 +247,18 @@ def build_cycle_health_overview(
         )
         queue_entry = queue_entries_by_pid.get(pid)
         queue_entry = queue_entry if isinstance(queue_entry, dict) else None
+        queue_attempt_reset_date = (
+            str(queue_entry.get("attempt_reset_date") or "") if queue_entry else ""
+        )
         queue_slots = queue_entry.get("attempted_slots") if queue_entry else []
         queue_slots = queue_slots if isinstance(queue_slots, list) else []
         queue_slots = list(dict.fromkeys(
             str(slot).strip() for slot in queue_slots if str(slot).strip()
         ))
+        # Slot budgets are reset-scoped. Historical slots from an earlier reset
+        # must not make this reset's Primary Run appear exhausted.
+        if queue_entry and queue_attempt_reset_date != str(reset_date):
+            queue_slots = []
         queue_category = str(queue_entry.get("last_outcome_category") or "") if queue_entry else ""
         if queue_entry and not queue_category:
             legacy_reason = str(queue_entry.get("last_reason") or "").casefold()
@@ -274,6 +281,8 @@ def build_cycle_health_overview(
             "pp_next_retry": (
                 "Next reset · Primary Run (~05:35 IST)"
                 if queue_entry and len(queue_slots) >= MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET
+                else "Current reset · Primary Run (~05:35 IST)"
+                if queue_entry and queue_attempt_reset_date != str(reset_date)
                 else "Next eligible unused slot (dispatch gates apply)"
                 if queue_entry else "No active deferred inspection record"
             ),
@@ -386,6 +395,9 @@ def build_cycle_health_overview(
             str(slot).strip() for slot in slots
             if isinstance(slot, str) and slot.strip()
         )) if isinstance(slots, list) else []
+        # Ignore a prior reset's slot history when reporting this reset's budget.
+        if str(entry.get("attempt_reset_date") or "") != str(reset_date):
+            slots = []
         attempt_counts[len(slots)] += 1
         if len(slots) >= MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET:
             retry_exhausted_count += 1
