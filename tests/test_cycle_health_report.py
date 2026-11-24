@@ -150,7 +150,7 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertIn("1 blocked by overlay", html)
         self.assertIn("0 with claim outcome unconfirmed", html)
         self.assertIn("0 other pending", html)
-        self.assertIn("not proof that no Progression reward exists", html)
+        self.assertIn("not treated as proof that no Progression reward exists", html)
 
     def test_unconfirmed_queue_status_is_separate_and_latest_slot_is_chronological(self):
         queue = {
@@ -219,6 +219,35 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertFalse(snapshot["core_cycle"]["available"])
         self.assertEqual(snapshot["core_cycle"]["complete"], 0)
         self.assertEqual(snapshot["core_cycle"]["pending"], 36)
+
+    def test_raw_cycle_record_rebuilds_counts_from_saved_coverage(self):
+        roster = self.roster[:3]
+        coverage = {
+            roster[0]: {"reset_date": "2026-11-24", "status": "complete", "retry_required": False},
+            roster[1]: {"reset_date": "2026-11-24", "status": "complete", "retry_required": True},
+            roster[2]: {"reset_date": "2026-11-23", "status": "complete", "retry_required": False},
+        }
+        snapshot = build_cycle_health_overview(
+            [],
+            configured_player_ids=roster,
+            reset_date="2026-11-24",
+            grenade_state={"schema_version": 1, "cycles": {}},
+            daily_cycle_summary={
+                "reset_date": "2026-11-24",
+                "configured_player_count": 3,
+                "primary_run_label": "Primary Run",
+                "primary_run_timestamp": "2026-11-24T05:35:00+05:30",
+            },
+            progression_queue={},
+            full_claim_coverage=coverage,
+        )
+        self.assertTrue(snapshot["core_cycle"]["available"])
+        self.assertEqual(snapshot["core_cycle"]["complete"], 1)
+        self.assertEqual(snapshot["core_cycle"]["pending"], 2)
+        self.assertTrue(snapshot["core_cycle"]["coverage_derived"])
+        html = render_cycle_health_overview(snapshot)
+        self.assertIn("1/3 accounts complete", html)
+        self.assertIn("re-derived from saved full-claim coverage records", html)
 
     def test_string_cycle_counts_are_not_accepted_as_verified_evidence(self):
         snapshot = build_cycle_health_overview(
