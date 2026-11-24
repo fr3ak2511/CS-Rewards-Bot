@@ -6506,6 +6506,7 @@ def _cycle_health_snapshot_for_report(results, configured_player_count, meta, da
             grenade_state=grenade_state,
             daily_cycle_summary=cycle if isinstance(cycle, dict) else None,
             progression_queue=reporting_meta.get("progression_deferred_inspections"),
+            full_claim_coverage=reporting_meta.get("full_claim_coverage"),
         )
     except Exception as exc:
         # Reporting must never affect claims, queue state, or email delivery.
