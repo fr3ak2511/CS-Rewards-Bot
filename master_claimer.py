@@ -51,6 +51,7 @@ from report_export import build_copyable_report
 from run_reconciliation import build_run_reconciliation
 from email_cycle_summary import update_daily_cycle_summary
 from cycle_health_report import build_cycle_health_overview, render_cycle_health_overview
+from progression_inspection_diagnostics import sanitize_progression_inspection_snapshot, build_progression_inspection_diagnostic_summary
 from grenade_balance import (
     capture_progression_balance,
     daily_reset_date,
@@ -85,6 +86,7 @@ DAILY_ONLY_RECOVERY = os.getenv("DAILY_ONLY_RECOVERY", "").strip().lower() == "t
 MANUAL_DAILY_RECOVERY = os.getenv("MANUAL_DAILY_RECOVERY", "").strip().lower() == "true"
 MANUAL_DAILY_RECOVERY_PLAYER_ID = os.getenv("MANUAL_DAILY_RECOVERY_PLAYER_ID", "").strip()
 _LOGIN_FAILURE_DIAGNOSTIC_CAPTURED = False
+_PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER = {}
 
 DAILY_RESET_HOUR_IST   = 5
 DAILY_RESET_MINUTE_IST = 30
@@ -3168,6 +3170,59 @@ def claim_store_rewards(driver, pid, *, reward_indices=None, max_attempts=2, sca
     return claimed, skip_flags, promotions, unconfirmed_indices, claimed_indices
 
 
+def _record_progression_inspection_snapshot(driver, snapshot):
+    """Keep a bounded, sanitized read-only snapshot trail for the run artifact."""
+    try:
+        player_id = str(getattr(driver, "_progression_diagnostic_player_id", "") or "").strip()
+        raw = snapshot.get("inspection_diagnostics") if isinstance(snapshot, dict) else None
+        sanitized = sanitize_progression_inspection_snapshot(raw)
+        if not player_id or not sanitized:
+            return
+        entries = _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.setdefault(player_id, [])
+        entries.append({
+            "observed_at_ist": get_ist_time().isoformat(),
+            "snapshot_index": len(entries) + 1,
+            **sanitized,
+        })
+        del entries[:-6]
+    except Exception as exc:
+        log(f"⚠️ Progression read-only diagnostic could not be retained: {type(exc).__name__}")
+
+
+def _record_progression_inspection_defer_without_snapshot(driver, player_id, reason):
+    """Record why an inspection stopped before a page snapshot was available."""
+    try:
+        entries = _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.setdefault(str(player_id), [])
+        if len(entries) >= 6:
+            return
+        text = str(reason or "").casefold()
+        if "popup" in text or "overlay" in text or "dialog" in text:
+            category = "overlay_blocked_before_snapshot"
+        elif "snapshot" in text or "page validation" in text:
+            category = "page_snapshot_unavailable"
+        else:
+            category = "inspection_deferred_before_snapshot"
+        current_url = str(getattr(driver, "current_url", "") or "")
+        try:
+            from urllib.parse import urlsplit
+            page_path = urlsplit(current_url).path[:160]
+        except Exception:
+            page_path = ""
+        entries.append({
+            "observed_at_ist": get_ist_time().isoformat(),
+            "snapshot_index": len(entries) + 1,
+            "diagnostic_stage": category,
+            "page_path": page_path,
+            "valid_page": False,
+            "completeness_verdict": "not_established",
+            "delivery_verdict": "not_established",
+            "note": "No full milestone inventory or delivery status can be inferred from this event.",
+        })
+        del entries[:-6]
+    except Exception as exc:
+        log(f"⚠️ Progression defer diagnostic could not be retained: {type(exc).__name__}")
+
+
 def _progression_claim_snapshot(driver):
     """Return visible Progression claim controls with card-level identity."""
     try:
@@ -3247,6 +3302,67 @@ def _progression_claim_snapshot(driver):
             const deliveredSignatures = deliveredControls.map(button => cardInfo(button).card_signature)
               .concat(terminalTextElements.map(el => cardInfo(el).card_signature))
               .filter(Boolean);
+
+            // Read-only inventory hints: never scroll, click, or infer completeness.
+            const scrollCandidates = Array.from(document.querySelectorAll('div,section,ul'))
+              .filter(el => visible(el) && !el.closest('[role="dialog"],[aria-modal="true"]'))
+              .filter(el => {
+                const style = getComputedStyle(el);
+                return el.clientWidth > 180 && el.clientHeight > 80
+                  && (el.scrollWidth > el.clientWidth + 8 || /auto|scroll/.test(style.overflowX || ''));
+              })
+              .sort((a,b) => (b.clientWidth*b.clientHeight) - (a.clientWidth*a.clientHeight))
+              .slice(0, 3);
+            const milestoneThresholds = [
+              3,6,12,15,18,56,59,62,65,123,126,129,141,147,
+              186,189,192,195,400,600,680,750,880,950,1000
+            ];
+            const statusTerms = new Set([
+              'claim','claim all','delivered','already delivered','claimed',
+              'already claimed','collected','redeemed','locked'
+            ]);
+            const diagnosticContainers = scrollCandidates.map((container, index) => {
+              const r = container.getBoundingClientRect();
+              const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+              const cards = Array.from(container.children).filter(visible).slice(0, 10).map(child => {
+                const cr = child.getBoundingClientRect();
+                const text = norm(child.innerText || child.textContent || '').slice(0, 320);
+                const lines = text.split(/\n+/).map(norm).filter(Boolean);
+                const labels = Array.from(child.querySelectorAll('button,[role="button"]'))
+                  .filter(visible).slice(0, 8)
+                  .map(button => lower(button.innerText || button.textContent || button.getAttribute('aria-label')).slice(0, 48));
+                const statusHints = lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8);
+                const thresholdHints = milestoneThresholds.filter(value =>
+                  new RegExp('(^|\\D)' + value + '(?=\\D|$)').test(text)
+                );
+                return {
+                  tag: String(child.tagName || '').toLowerCase(),
+                  class_name: String(child.className || '').replace(/\\s+/g, ' ').trim().slice(0, 120),
+                  test_id: String(child.getAttribute('data-testid') || '').slice(0, 80),
+                  text_snippet: text,
+                  button_labels: labels,
+                  exact_status_text_hints: statusHints,
+                  milestone_number_hints: thresholdHints,
+                  rect: {x:Math.round(cr.x),y:Math.round(cr.y),width:Math.round(cr.width),height:Math.round(cr.height)}
+                };
+              });
+              return {
+                index,
+                tag: String(container.tagName || '').toLowerCase(),
+                class_name: String(container.className || '').replace(/\\s+/g, ' ').trim().slice(0, 120),
+                test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
+                rect: {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
+                client_width: container.clientWidth,
+                scroll_width: container.scrollWidth,
+                scroll_left: Math.round(container.scrollLeft),
+                max_scroll_left: Math.round(maxScroll),
+                at_start: container.scrollLeft <= 2,
+                at_end: container.scrollLeft >= maxScroll - 2,
+                direct_child_count: container.children.length,
+                visible_child_count: Array.from(container.children).filter(visible).length,
+                captured_cards: cards
+              };
+            });
             const path = (location.pathname || '').toLowerCase();
             const title = lower(document.title || '');
             const leadText = lower((document.body && document.body.innerText || '').slice(0, 900));
@@ -3262,11 +3378,26 @@ def _progression_claim_snapshot(driver):
               card_text:claimableCards.length ? claimableCards[0].card_text : null,
               claimable_cards:claimableCards,
               delivered_signatures:deliveredSignatures,
-              terminal_card_signatures:deliveredSignatures
+              terminal_card_signatures:deliveredSignatures,
+              inspection_diagnostics: {
+                page_path: path,
+                ready_state: String(document.readyState || ''),
+                viewport: {width:window.innerWidth || 0,height:window.innerHeight || 0},
+                body_text_length: (document.body && document.body.innerText || '').length,
+                page_valid: validPage,
+                visible_claimable_count: claimableCards.length,
+                visible_delivered_control_count: deliveredControls.length,
+                candidate_container_count: diagnosticContainers.length,
+                carousel_containers: diagnosticContainers,
+                completeness_verdict: 'not_established',
+                delivery_verdict: 'not_established',
+                diagnostic_version: 1
+              }
             };
         """)
         if not isinstance(snapshot, dict):
             return None
+        _record_progression_inspection_snapshot(driver, snapshot)
         return snapshot
     except Exception as exc:
         log(f"⚠️ Progression state inspection failed: {type(exc).__name__}")
@@ -3320,6 +3451,11 @@ def claim_progression_program_rewards(
 ):
     """Claim card-bound Progression rewards with popup and portal verification."""
     log("🎯 Checking Progression Program...")
+    try:
+        driver._progression_diagnostic_player_id = str(pid)
+    except Exception:
+        pass
+    diagnostics_before = len(_PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(pid), []))
     result = claim_progression_rewards(
         driver,
         pid,
@@ -3339,6 +3475,11 @@ def claim_progression_program_rewards(
         require_unique_claimable_card=require_unique_claimable_card,
         defer_if_more_claimable=defer_if_more_claimable,
     )
+    diagnostics_after = len(_PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(pid), []))
+    if diagnostics_after == diagnostics_before and bool(getattr(driver, "_progression_deferred", False)):
+        _record_progression_inspection_defer_without_snapshot(
+            driver, pid, getattr(driver, "_progression_deferred_reason", "")
+        )
     return result
 
 
@@ -7739,10 +7880,15 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
         "accounts_unresolved": sum(1 for item in recovery_records if item.get("attempted") and item.get("status") != "resolved"),
         "recovered_claims": sum(int(item.get("recovered_claims", 0) or 0) for item in recovery_records),
     }
+    progression_diagnostic_summary = build_progression_inspection_diagnostic_summary(
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER,
+        configured_player_count=(len(results) if configured_player_count is None else int(configured_player_count)),
+    )
     summary = {
         "version": VERSION,
         "run_label": run_label,
         "cycle_health_overview": cycle_health_snapshot,
+        "progression_inspection_diagnostics": progression_diagnostic_summary,
         "started_at_ist": started_at.isoformat(),
         "finished_at_ist": finished_at.isoformat(),
         "configured_player_count": len(results) if configured_player_count is None else int(configured_player_count),
@@ -7807,6 +7953,9 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "progression_deferred_reason": r.get("progression_deferred_reason"),
                 "progression_claim_attempted": bool(r.get("progression_claim_attempted", False)),
                 "progression_checked": bool(r.get("progression_checked", False)),
+                "progression_diagnostic_snapshot_count": len(
+                    _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(r.get("pid") or ""), [])
+                ),
                 "immediate_recovery": r.get("immediate_recovery"),
                 "grenade_balance": r.get("grenade_balance"),
                 "grenade_balance_carry_forward": r.get("grenade_balance_carry_forward"),
@@ -7872,6 +8021,7 @@ def main():
 
     if "--test-claims-one-player" in sys.argv[1:]:
         return run_claim_test_one_player()
+    _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
     job_start = get_ist_time()
     log("=" * 60)
     log(f"CS HUB AUTO-CLAIMER {VERSION}")
