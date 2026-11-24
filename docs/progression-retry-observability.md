@@ -15,3 +15,9 @@ in a reset reports its next scheduled opportunity as the next reset's Primary Ru
 A login failure that occurs after a Progression slot was reserved is recorded as
 the latest PP outcome. It replaces an older saved empty-scan reason, while remaining
 deferred because no Progression inspection or claim click occurred.
+
+The consecutive-outcome counter follows successive actual inspection attempts across
+reset dates. The per-reset slot budget resets on the new 05:30 cycle, but a repeated
+underlying failure continues the same counter; a different outcome resets it. This
+prevents a daily repeating blocker from avoiding manual-attention escalation merely
+because the calendar reset.

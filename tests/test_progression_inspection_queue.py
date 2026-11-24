@@ -200,6 +200,31 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(entry["manual_attention_reason"], "3 consecutive PP attempts produced the same overlay blocked outcome")
         self.assertEqual(entry["status"], "deferred")
 
+    def test_same_blocker_repeat_counter_survives_daily_slot_reset(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894", reset_date="2026-11-21",
+        )
+        before = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(before["same_outcome_count"], 1)
+
+        attempt = mark_progression_inspection_attempt(
+            self.meta, "PLAYER0001", slot_label="Primary Run",
+            reset_date="2026-11-22", now="2026-11-22T05:40:00+05:30",
+        )
+        self.assertEqual(attempt["attempted_slots"], ["Primary Run"])
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            self._deferred(progression_reinspection_attempted=True),
+            run_label="Primary Run", now="2026-11-22T05:52:00+05:30",
+            source_run_id="3900", reset_date="2026-11-22",
+        )
+        after = get_pending_progression_inspection(self.meta, "PLAYER0001")
+        self.assertEqual(after["same_outcome_count"], 2)
+        self.assertFalse(after["manual_attention_required"])
+        self.assertEqual(after["attempted_slots"], ["Primary Run"])
+
     def test_changed_outcome_resets_consecutive_repeat_counter(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),
