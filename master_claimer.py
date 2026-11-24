@@ -5742,8 +5742,9 @@ def build_grenade_balance_carry_forward_section(results):
     passed = sum(1 for status in statuses if status == "pass")
     below_minimum = sum(1 for status in statuses if status in {"below_minimum", "counter_regressed"})
     unavailable = len(statuses) - passed - below_minimum
+    status_not_retained = sum(1 for status in statuses if status == "status_not_retained")
     record_word = "account" if len(records) == 1 else "accounts"
-    if unavailable == len(records):
+    if status_not_retained == len(records):
         previous_word = "previous result" if len(records) == 1 else "previous results"
         return (
             "<section class='v2-section v2-grenade v2-validation-card'>"
