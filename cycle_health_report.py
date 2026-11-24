@@ -48,6 +48,7 @@ def build_cycle_health_overview(
     grenade_state: dict[str, Any],
     daily_cycle_summary: dict[str, Any] | None,
     progression_queue: dict[str, Any] | None,
+    full_claim_coverage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a privacy-minimised overview using the configured roster as denominator."""
     roster = _dedupe_ids(configured_player_ids)
@@ -62,6 +63,22 @@ def build_cycle_health_overview(
     cycle_configured_count = cycle.get("configured_player_count")
     cycle_complete_raw = cycle.get("accounts_complete")
     cycle_pending_raw = cycle.get("accounts_pending")
+    coverage_derived = False
+    if cycle_complete_raw is None and cycle_pending_raw is None and isinstance(full_claim_coverage, dict):
+        # Progression-only recovery intentionally skips the cycle-summary
+        # updater. In that path, rebuild the counts read-only from the same
+        # per-account coverage evidence used by update_daily_cycle_summary().
+        cycle_complete_raw = sum(
+            1 for pid in roster
+            if (
+                isinstance(full_claim_coverage.get(pid), dict)
+                and full_claim_coverage[pid].get("reset_date") == str(reset_date)
+                and full_claim_coverage[pid].get("status") == "complete"
+                and not full_claim_coverage[pid].get("retry_required", False)
+            )
+        )
+        cycle_pending_raw = configured - cycle_complete_raw
+        coverage_derived = True
     cycle_complete_count = _count(cycle_complete_raw)
     cycle_pending_count = _count(cycle_pending_raw)
     cycle_valid = (
@@ -80,6 +97,7 @@ def build_cycle_health_overview(
         "configured": configured,
         "complete": cycle_complete_count if cycle_valid else 0,
         "pending": cycle_pending_count if cycle_valid else configured,
+        "coverage_derived": bool(cycle_valid and coverage_derived),
         "source_run_label": str(cycle.get("primary_run_label") or "") if cycle_valid else "",
         "source_timestamp": str(cycle.get("primary_run_timestamp") or "") if cycle_valid else "",
     }
@@ -213,6 +231,8 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         if timestamp:
             source += f" · {timestamp}"
         core_note = f"Last full-roster cycle: {source}"
+        if cycle.get("coverage_derived"):
+            core_note += " · Account counts re-derived from saved full-claim coverage records"
     else:
         core_text = "No verified full-roster cycle recorded for this reset"
         core_note = "This run's account count is not a substitute for full-roster coverage."
@@ -255,8 +275,8 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
             "from the account count."
         )
     pp_note = (
-        "Pending inspections are not automatically failed claims. An empty scan is not "
-        "proof that no Progression reward exists; an unconfirmed claim outcome is shown "
+        "Pending inspections are not automatically failed claims. An empty scan is not treated "
+        "as proof that no Progression reward exists; an unconfirmed claim outcome is shown "
         "separately from a deferred inspection."
         + slots_note
         + outside_roster_note
