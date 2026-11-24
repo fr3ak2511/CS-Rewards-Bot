@@ -512,8 +512,9 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
             "from the account count."
         )
     pp_note = (
-        "Pending inspections are not automatically failed claims. Empty/incomplete scans, login failures, "
-        "and popup blocks remain unresolved until a reliable inspection completes or a same-card claim is confirmed. "
+        "Pending inspections are not automatically failed claims; an empty scan is not treated as proof "
+        "that no Progression reward exists. Incomplete scans, login failures, and popup blocks remain unresolved "
+        "until a reliable inspection completes or a same-card claim is confirmed. "
         "Repeated identical outcomes are flagged for manual attention without suppressing the next reset's retry."
         + (
             f" {_count(progression.get('manual_attention_required'))} account(s) require manual attention after repeated identical outcomes."
