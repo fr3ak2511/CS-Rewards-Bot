@@ -32,10 +32,56 @@ from master_claimer import (
     build_promotional_section,
     get_ist_time,
     write_run_summary,
+    _record_progression_inspection_snapshot,
+    _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER,
 )
 
 
 class ClaimCountAndEmailReportingTests(unittest.TestCase):
+    def test_read_only_progression_snapshot_is_sanitized_and_capped_in_run_memory(self):
+        class Driver:
+            _progression_diagnostic_player_id = "0123456789ABCDEF"
+
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+        driver = Driver()
+        with patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 24, 6, 0)):
+            _record_progression_inspection_snapshot(driver, {
+                "inspection_diagnostics": {
+                    "page_path": "/progression-program",
+                    "ready_state": "complete",
+                    "viewport": {"width": 1920, "height": 1080},
+                    "body_text_length": 500,
+                    "page_valid": True,
+                    "visible_claimable_count": 1,
+                    "visible_delivered_control_count": 2,
+                    "candidate_container_count": 1,
+                    "carousel_containers": [{
+                        "index": 0,
+                        "tag": "div",
+                        "class_name": "reward-carousel",
+                        "client_width": 900,
+                        "scroll_width": 1800,
+                        "scroll_left": 0,
+                        "max_scroll_left": 900,
+                        "at_start": True,
+                        "at_end": False,
+                        "captured_cards": [{
+                            "text_snippet": "Milestone 62 x20 Claim",
+                            "exact_status_text_hints": ["Claim"],
+                            "milestone_number_hints": [62],
+                        }],
+                    }],
+                }
+            })
+        rows = _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER["0123456789ABCDEF"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["completeness_verdict"], "not_established")
+        self.assertEqual(rows[0]["delivery_verdict"], "not_established")
+        self.assertEqual(rows[0]["carousel_containers"][0]["scroll_left"], 0)
+        self.assertEqual(rows[0]["carousel_containers"][0]["captured_cards"][0]["text_snippet"], "Milestone 62 x20 Claim")
+        self.assertNotIn("0123456789ABCDEF", str(rows))
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+
     def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
         driver = type("ProgressionDriver", (), {})()
 

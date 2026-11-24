@@ -3337,7 +3337,7 @@ def _progression_claim_snapshot(driver):
                 );
                 return {
                   tag: String(child.tagName || '').toLowerCase(),
-                  class_name: String(child.className || '').replace(/\\s+/g, ' ').trim().slice(0, 120),
+                  class_name: String(child.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
                   test_id: String(child.getAttribute('data-testid') || '').slice(0, 80),
                   text_snippet: text,
                   button_labels: labels,
@@ -3349,7 +3349,7 @@ def _progression_claim_snapshot(driver):
               return {
                 index,
                 tag: String(container.tagName || '').toLowerCase(),
-                class_name: String(container.className || '').replace(/\\s+/g, ' ').trim().slice(0, 120),
+                class_name: String(container.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
                 test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
                 rect: {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
                 client_width: container.clientWidth,
