@@ -371,6 +371,8 @@ button:focus{{outline:3px solid #93c5fd;outline-offset:2px}}
 h2{{font-size:15px;margin:0 0 12px}}
 .table-wrap{{overflow-x:auto}}
 table{{width:100%;border-collapse:collapse;font-size:12px;min-width:720px}}
+.cycle-health-table{{min-width:0 !important;width:100%;table-layout:fixed}}
+.cycle-health-table td{{overflow-wrap:anywhere}}
 th,td{{padding:10px 8px;text-align:left;border-bottom:1px solid #e5e7eb;vertical-align:top}}
 th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc}}
 .status{{display:inline-block;padding:4px 7px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap}}
