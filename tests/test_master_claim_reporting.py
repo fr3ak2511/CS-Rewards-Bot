@@ -485,8 +485,11 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Manual Run", 1,
             get_ist_time() - timedelta(seconds=30), {},
         )
-        # Daily 1 + Standard Store 2 + free promo 1 + Progression 1 + Event 2.
-        self.assertIn("<span>🎁 Confirmed claims</span><strong>7</strong>", report)
+        # The core headline is Daily + standard Store only; other claims stay separate.
+        self.assertIn("<span>🎁 Core claims</span><strong>3</strong>", report)
+        self.assertIn("Progression Program", report)
+        self.assertIn("1 reward confirmed", report)
+        self.assertIn("Other Confirmed Rewards", report)
         self.assertNotIn("Paid Pack", report)
 
     def test_free_bundle_is_not_mistaken_for_a_paid_offer(self):
@@ -540,7 +543,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("<h1>Rewards Run Report</h1>", html)
         self.assertIn("Completed", html)
-        self.assertIn("Confirmed claims", html)
+        self.assertIn("Core claims", html)
         self.assertIn("Accounts processed", html)
         self.assertIn("Need attention", html)
         self.assertIn("Daily", html)
@@ -651,11 +654,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Promo Backup", 1,
             get_ist_time() - timedelta(seconds=30), {},
         )
-        for label in ("Daily Rewards", "Store Rewards", "Progression Rewards", "Loyalty Rewards"):
-            self.assertIn(
-                f"<span>{label}</span><strong>—</strong><small>Not checked in this run</small>",
-                report,
-            )
+        self.assertNotIn("Core Daily Claims", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>—</strong>", report)
+        self.assertIn("Not checked in this run", report)
         self.assertNotIn("<span>Daily</span><strong>0</strong>", report)
 
     def test_mixed_run_category_totals_only_include_checked_accounts(self):
@@ -690,11 +691,13 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [full, backup_not_reopened, backup_reopened, promo_only],
             "Mixed Run", 1, get_ist_time() - timedelta(seconds=30), {},
         )
-        self.assertIn("<span>🎁 Confirmed claims</span><strong>45</strong>", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>29</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
-        self.assertIn("<span>Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
-        self.assertIn("<span>Progression Rewards</span><strong>12</strong><small>2 accounts checked</small>", report)
-        self.assertIn("<span>Loyalty Rewards</span><strong>4</strong><small>1 account checked</small>", report)
+        self.assertIn("<span>Standard Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
+        self.assertIn("12 rewards confirmed", report)
+        self.assertIn("Other Confirmed Rewards", report)
+        self.assertIn("Loyalty", report)
+        self.assertNotIn("<span>Progression Rewards</span>", report)
 
 
     def test_deferred_progression_is_not_counted_as_checked_or_attention(self):
@@ -736,8 +739,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             checked + [deferred], "Primary Run", 1,
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=35,
         )
-        self.assertIn("<span>Progression Rewards</span><strong>0</strong><small>34 accounts checked · 1 still pending</small>", report)
+        self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
+        self.assertIn("1 account remains open", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("1 account", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
@@ -747,7 +751,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertNotIn("unconfirmed standard reward", report.lower())
-        self.assertNotIn("<span>Progression Rewards</span><strong>0</strong><small>35 accounts checked</small>", report)
+        self.assertNotIn("<span>Progression Rewards</span>", report)
 
     def test_queue_only_partial_retry_does_not_raise_attention_but_unconfirmed_claim_does(self):
         player = self.sample_player()
@@ -1273,11 +1277,12 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), meta,
             configured_player_count=3,
         )
-        self.assertIn("<span>🎁 Confirmed claims</span><strong>12</strong>", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>12</strong>", report)
         self.assertIn("<span>👥 Accounts complete</span><strong>3 / 3</strong>", report)
         self.assertIn("Today&#x27;s Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
-        self.assertIn("<span>Store Rewards</span><strong>9</strong>", report)
+        self.assertIn("<span>Standard Store Rewards</span><strong>9</strong>", report)
+        self.assertIn("Core Daily Claims", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
 
@@ -1363,10 +1368,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("<span>👥 Accounts processed</span><strong>35 / 35</strong>", report)
-        self.assertIn("<span>🎁 Confirmed claims</span><strong>0</strong>", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>—</strong>", report)
         self.assertIn("<span>🔄 In-run recovery</span><strong>0</strong>", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Full Claim Path", report)
+        self.assertNotIn("Full Claim Path", report)
         self.assertIn("Promotional-only", report)
         self.assertIn("<strong class='v2-mode-count'>35</strong>", report)
         self.assertIn("Not performed for this promotional-only run", report)
@@ -1776,9 +1781,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [result], "Promotional Check #2", 2,
             get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
         )
-        self.assertIn("<span>Progression Rewards</span><strong>1</strong>", report)
-        self.assertIn("1 account checked · 1 still pending", report)
+        self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
+        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
         self.assertIn("1 Progression reward confirmed; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
@@ -2104,6 +2109,71 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(result["progression_deferred"])
         self.assertEqual(result["progression_unconfirmed_card_signature"], target)
         self.assertEqual(result["status"], "Partial")
+
+
+
+    def test_primary_core_claim_headline_is_daily_plus_three_standard_store_claims(self):
+        players = []
+        for index in range(36):
+            player = self.sample_player()
+            player.update({
+                "pid": f"COREPLAYER{index:04d}",
+                "display_name": f"Core Player {index}",
+                "daily": 1,
+                "store": 3,
+                "progression": 1 if index == 0 else 0,
+                "loyalty": 0,
+                "has_loyalty": False,
+                "promotions_observed": [],
+                "event_rewards": [],
+                "progression_deferred": False,
+                "progression_checked": True,
+            })
+            players.append(player)
+        report = build_email(
+            players, "Primary Run", 1,
+            get_ist_time() - timedelta(minutes=2), {},
+            configured_player_count=36,
+        )
+        self.assertIn("<span>🎁 Core claims</span><strong>144/144</strong>", report)
+        self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
+        self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
+        self.assertIn("Progression Program", report)
+        self.assertIn("1 reward confirmed", report)
+        self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
+
+    def test_progression_only_email_has_its_own_scope_and_omits_core_and_grenade_sections(self):
+        player = self.sample_player()
+        player.update({
+            "processing_mode": "progression_queue_only",
+            "status": "Partial",
+            "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+            "standard_rewards_checked": False,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_reinspection_attempted": True,
+            "progression_deferred_reason": (
+                "Queued Progression inspection found no currently visible claimable reward."
+            ),
+            "promotions_observed": [],
+            "event_rewards": [],
+            "grenade_balance": None,
+        })
+        report = build_email(
+            [player], "Immediate Progression Recovery", 1,
+            get_ist_time() - timedelta(minutes=2), {},
+            configured_player_count=36,
+        )
+        self.assertIn("<strong class='v2-mode-title'>Progression-only</strong>", report)
+        self.assertIn("<strong class='v2-mode-count'>1</strong>", report)
+        self.assertIn("<span>🎁 Core claims</span><strong>—</strong>", report)
+        self.assertIn("Not checked in this run", report)
+        self.assertNotIn("Core Daily Claims", report)
+        self.assertNotIn("Full Claim Path", report)
+        self.assertNotIn("Grenade Balance Check", report)
+        self.assertNotIn("Grenade Balance History", report)
+        self.assertIn("1 queued reinspection attempt made.", report)
+        self.assertIn("0 Progression rewards confirmed in this run", report)
 
 if __name__ == "__main__":
     unittest.main()
