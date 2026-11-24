@@ -6507,6 +6507,7 @@ def _cycle_health_snapshot_for_report(results, configured_player_count, meta, da
             daily_cycle_summary=cycle if isinstance(cycle, dict) else None,
             progression_queue=reporting_meta.get("progression_deferred_inspections"),
             full_claim_coverage=reporting_meta.get("full_claim_coverage"),
+            player_display_names=reporting_meta.get("player_display_names"),
         )
     except Exception as exc:
         # Reporting must never affect claims, queue state, or email delivery.

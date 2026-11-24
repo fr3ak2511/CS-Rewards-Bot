@@ -16,6 +16,15 @@ IST = timezone(timedelta(hours=5, minutes=30))
 DAILY_GRENADE_MINIMUM = 3
 DEFAULT_RESET_TIME = time(5, 30)
 
+# Fixed monthly Reward Chain ladder supplied by the project owner.
+# These are balance thresholds, not evidence that a reward card was delivered.
+PROGRESSION_MILESTONE_THRESHOLDS = (
+    3, 6, 12, 15, 18, 56, 59, 62, 65,
+    123, 126, 129, 141, 147,
+    186, 189, 192, 195,
+    400, 600, 680, 750, 880, 950, 1000,
+)
+
 _MONTHS = {
     "january": 1, "february": 2, "march": 3, "april": 4,
     "may": 5, "june": 6, "july": 7, "august": 8,

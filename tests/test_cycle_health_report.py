@@ -71,6 +71,91 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(snapshot["progression"]["outside_current_roster"], 1)
         self.assertEqual(snapshot["progression"]["most_common_slots_used"], 3)
 
+    def test_register_lists_every_id_uses_observation_date_and_keeps_delivery_separate(self):
+        roster = ["PLAYER0001", "PLAYER0002", "PLAYER0003", "PLAYER0004"]
+        results = [{
+            "pid": "PLAYER0001",
+            "grenade_balance": {
+                "status": "pass",
+                "current_count": 72,
+                "expected_minimum": 72,
+                "next_milestone": 123,
+            },
+        }]
+        state = {
+            "schema_version": 1,
+            "cycles": {
+                "2026-11": {
+                    "players": {
+                        "PLAYER0002": {
+                            "baseline_status": "active",
+                            "baseline_count": 0,
+                            "tracking_start_date": "2026-11-01",
+                            "last_observed_count": 63,
+                            "last_observed_date": "2026-11-22",
+                            "last_observed_at_ist": "2026-11-22T06:00:00+05:30",
+                            "last_observed_expected_minimum": 66,
+                            "last_observed_status": "below_minimum",
+                            "last_observed_next_milestone": 65,
+                            "last_observed_remaining_to_next_milestone": 2,
+                        },
+                        "PLAYER0003": {
+                            "baseline_status": "active",
+                            "baseline_count": 0,
+                            "tracking_start_date": "2026-11-01",
+                        },
+                        "PLAYER0004": {
+                            "baseline_status": "pending_baseline",
+                            "baseline_source": "first_observation_after_rollout",
+                        },
+                    }
+                }
+            },
+        }
+        snapshot = build_cycle_health_overview(
+            results,
+            configured_player_ids=roster,
+            reset_date="2026-11-24",
+            grenade_state=state,
+            daily_cycle_summary=None,
+            progression_queue={},
+            player_display_names={
+                "PLAYER0001": "One",
+                "PLAYER0002": "Two",
+                "PLAYER0003": "Three",
+                "PLAYER0004": "Four",
+            },
+        )
+        accounts = snapshot["grenade"]["accounts"]
+        self.assertEqual(len(accounts), 4)
+        by_id = {item["player_id"]: item for item in accounts}
+        self.assertEqual(by_id["PLAYER0001"]["comparison"], "at_expected")
+        self.assertEqual(by_id["PLAYER0001"]["milestone_count_reached_by_balance"], 9)
+        self.assertEqual(by_id["PLAYER0001"]["next_milestone_from_reference"], 123)
+        self.assertEqual(by_id["PLAYER0001"]["delivery_status"], "not_verified_by_balance")
+        self.assertEqual(by_id["PLAYER0002"]["comparison"], "below_expected")
+        self.assertEqual(by_id["PLAYER0002"]["expected_minimum_at_observation"], 66)
+        self.assertEqual(by_id["PLAYER0002"]["expected_minimum_as_of"], 72)
+        self.assertEqual(by_id["PLAYER0002"]["observation_age_days"], 2)
+        self.assertFalse(by_id["PLAYER0002"]["fresh_today"])
+        self.assertEqual(by_id["PLAYER0003"]["comparison"], "not_observed")
+        self.assertEqual(by_id["PLAYER0003"]["expected_minimum_as_of"], 72)
+        self.assertEqual(by_id["PLAYER0004"]["comparison"], "baseline_pending")
+        self.assertEqual(snapshot["milestone_thresholds"], [
+            3, 6, 12, 15, 18, 56, 59, 62, 65, 123, 126, 129, 141, 147,
+            186, 189, 192, 195, 400, 600, 680, 750, 880, 950, 1000,
+        ])
+
+        rendered = render_cycle_health_overview(snapshot)
+        self.assertIn("Permanent PP milestone reference", rendered)
+        self.assertIn("All-account Grenade balance register", rendered)
+        self.assertIn("Player ID: PLAYER0001", rendered)
+        self.assertIn("Player ID: PLAYER0004", rendered)
+        self.assertIn("Expected today: 72", rendered)
+        self.assertIn("2 day(s) old", rendered)
+        self.assertIn("Reward delivery: not established by balance", rendered)
+        self.assertEqual(rendered.count("Player ID: PLAYER000"), 4)
+
     def test_old_historical_pass_is_not_counted_as_pass_today(self):
         state = {
             "schema_version": 1,
