@@ -6435,6 +6435,9 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     duration_seconds = max(0, int((ist_now - job_start).total_seconds()))
     duration_text = f"{duration_seconds // 60}m {duration_seconds % 60}s"
     account_count = len(results)
+    is_progression_only_run = bool(results) and all(
+        result.get("processing_mode") == "progression_queue_only" for result in results
+    )
     try:
         configured_count = max(account_count, int(configured_player_count if configured_player_count is not None else account_count))
     except (TypeError, ValueError, OverflowError):
@@ -6773,9 +6776,6 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             "progression", "progression", "progression",
         )
 
-    is_progression_only_run = bool(results) and all(
-        result.get("processing_mode") == "progression_queue_only" for result in results
-    )
     category_cards = [
         _category_card("Daily Rewards", standard_checked_results, "daily", "daily", "daily", cell_width="50%"),
         _category_card("Standard Store Rewards", standard_checked_results, "store", "store", "store", cell_width="50%"),
