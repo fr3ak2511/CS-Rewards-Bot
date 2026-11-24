@@ -10,7 +10,11 @@ from datetime import date
 from html import escape
 from typing import Any
 
-from grenade_balance import (\n    PROGRESSION_MILESTONE_THRESHOLDS,\n    eligible_cycle_days,\n    summarize_saved_progression_balance,\n)
+from grenade_balance import (
+    PROGRESSION_MILESTONE_THRESHOLDS,
+    eligible_cycle_days,
+    summarize_saved_progression_balance,
+)
 
 MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET = 4
 

@@ -72,7 +72,7 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(snapshot["progression"]["most_common_slots_used"], 3)
 
     def test_register_lists_every_id_uses_observation_date_and_keeps_delivery_separate(self):
-        roster = ["PLAYER0001", "PLAYER0002", "PLAYER0003", "PLAYER0004"]
+        roster = [f"PLAYER{i:04d}" for i in range(1, 6)]
         results = [{
             "pid": "PLAYER0001",
             "grenade_balance": {
@@ -103,8 +103,18 @@ class CycleHealthReportTests(unittest.TestCase):
                             "baseline_status": "active",
                             "baseline_count": 0,
                             "tracking_start_date": "2026-11-01",
+                            "last_observed_count": 88,
+                            "last_observed_date": "2026-11-23",
+                            "last_observed_expected_minimum": 69,
+                            "last_observed_status": "status_not_retained",
+                            "last_observed_next_milestone": 123,
                         },
                         "PLAYER0004": {
+                            "baseline_status": "active",
+                            "baseline_count": 0,
+                            "tracking_start_date": "2026-11-01",
+                        },
+                        "PLAYER0005": {
                             "baseline_status": "pending_baseline",
                             "baseline_source": "first_observation_after_rollout",
                         },
@@ -124,10 +134,11 @@ class CycleHealthReportTests(unittest.TestCase):
                 "PLAYER0002": "Two",
                 "PLAYER0003": "Three",
                 "PLAYER0004": "Four",
+                "PLAYER0005": "Five",
             },
         )
         accounts = snapshot["grenade"]["accounts"]
-        self.assertEqual(len(accounts), 4)
+        self.assertEqual(len(accounts), 5)
         by_id = {item["player_id"]: item for item in accounts}
         self.assertEqual(by_id["PLAYER0001"]["comparison"], "at_expected")
         self.assertEqual(by_id["PLAYER0001"]["milestone_count_reached_by_balance"], 9)
@@ -138,9 +149,17 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(by_id["PLAYER0002"]["expected_minimum_as_of"], 72)
         self.assertEqual(by_id["PLAYER0002"]["observation_age_days"], 2)
         self.assertFalse(by_id["PLAYER0002"]["fresh_today"])
-        self.assertEqual(by_id["PLAYER0003"]["comparison"], "not_observed")
-        self.assertEqual(by_id["PLAYER0003"]["expected_minimum_as_of"], 72)
-        self.assertEqual(by_id["PLAYER0004"]["comparison"], "baseline_pending")
+        self.assertEqual(by_id["PLAYER0003"]["comparison"], "above_expected")
+        self.assertEqual(by_id["PLAYER0003"]["difference_at_observation"], 19)
+        self.assertEqual(by_id["PLAYER0003"]["validation_status"], "status_not_retained")
+        self.assertEqual(by_id["PLAYER0004"]["comparison"], "not_observed")
+        self.assertEqual(by_id["PLAYER0004"]["expected_minimum_as_of"], 72)
+        self.assertEqual(by_id["PLAYER0005"]["comparison"], "baseline_pending")
+        self.assertEqual(snapshot["grenade"]["accounts_at_expected"], 1)
+        self.assertEqual(snapshot["grenade"]["accounts_below_expected"], 1)
+        self.assertEqual(snapshot["grenade"]["accounts_above_expected"], 1)
+        self.assertEqual(snapshot["grenade"]["accounts_without_observation"], 1)
+        self.assertEqual(snapshot["grenade"]["accounts_baseline_pending"], 1)
         self.assertEqual(snapshot["milestone_thresholds"], [
             3, 6, 12, 15, 18, 56, 59, 62, 65, 123, 126, 129, 141, 147,
             186, 189, 192, 195, 400, 600, 680, 750, 880, 950, 1000,
@@ -150,11 +169,11 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertIn("Permanent PP milestone reference", rendered)
         self.assertIn("All-account Grenade balance register", rendered)
         self.assertIn("Player ID: PLAYER0001", rendered)
-        self.assertIn("Player ID: PLAYER0004", rendered)
+        self.assertIn("Player ID: PLAYER0005", rendered)
         self.assertIn("Expected today: 72", rendered)
         self.assertIn("2 day(s) old", rendered)
         self.assertIn("Reward delivery: not established by balance", rendered)
-        self.assertEqual(rendered.count("Player ID: PLAYER000"), 4)
+        self.assertEqual(rendered.count("Player ID: PLAYER000"), 5)
 
     def test_old_historical_pass_is_not_counted_as_pass_today(self):
         state = {
