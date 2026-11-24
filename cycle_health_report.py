@@ -1,0 +1,238 @@
+"""Read-only roll-up of full-cycle, Grenade and Progression inspection status.
+
+This module only formats evidence already present in the run results and runtime
+state. It does not decide which rewards to claim or resolve any queue entries.
+"""
+from __future__ import annotations
+
+from collections import Counter
+from datetime import date
+from html import escape
+from typing import Any
+
+from grenade_balance import summarize_saved_progression_balance
+
+MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET = 4
+
+
+def _count(value: Any) -> int:
+    try:
+        if isinstance(value, bool):
+            return 0
+        return max(0, int(value or 0))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def _dedupe_ids(values: Any) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values or []:
+        pid = str(value or "").strip()
+        if pid and pid not in seen:
+            seen.add(pid)
+            result.append(pid)
+    return result
+
+
+def build_cycle_health_overview(
+    player_results: list[dict[str, Any]],
+    *,
+    configured_player_ids: list[str],
+    reset_date: str,
+    grenade_state: dict[str, Any],
+    daily_cycle_summary: dict[str, Any] | None,
+    progression_queue: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build a privacy-minimised overview using the configured roster as denominator."""
+    roster = _dedupe_ids(configured_player_ids)
+    configured = len(roster)
+    by_pid = {
+        str(row.get("pid") or "").strip(): row
+        for row in (player_results or [])
+        if isinstance(row, dict) and str(row.get("pid") or "").strip()
+    }
+
+    cycle = daily_cycle_summary if isinstance(daily_cycle_summary, dict) else {}
+    cycle_valid = (
+        str(cycle.get("reset_date") or "") == str(reset_date)
+        and _count(cycle.get("configured_player_count")) == configured
+        and configured > 0
+    )
+    core_cycle = {
+        "available": cycle_valid,
+        "reset_date": str(cycle.get("reset_date") or ""),
+        "configured": configured,
+        "complete": _count(cycle.get("accounts_complete")) if cycle_valid else 0,
+        "pending": _count(cycle.get("accounts_pending")) if cycle_valid else configured,
+        "source_run_label": str(cycle.get("primary_run_label") or "") if cycle_valid else "",
+        "source_timestamp": str(cycle.get("primary_run_timestamp") or "") if cycle_valid else "",
+    }
+
+    grenade = Counter()
+    for pid in roster:
+        row = by_pid.get(pid, {})
+        live = row.get("grenade_balance")
+        status = None
+        observed_date = None
+        if isinstance(live, dict) and live.get("current_count") is not None:
+            # A balance captured by this run is a current-reset observation.
+            status = str(live.get("status") or "not_validated")
+            observed_date = str(reset_date)
+        else:
+            saved = summarize_saved_progression_balance(
+                grenade_state, pid, reset_date=date.fromisoformat(reset_date)
+            ) if isinstance(grenade_state, dict) else None
+            if isinstance(saved, dict):
+                observed_date = str(saved.get("last_observed_date") or "")
+                status = str(saved.get("status_at_observation") or "not_validated")
+        if observed_date != str(reset_date):
+            grenade["not_checked_today"] += 1
+            continue
+        grenade["observed_today"] += 1
+        if status == "pass":
+            grenade["passed_today"] += 1
+        elif status == "below_minimum":
+            grenade["below_minimum_today"] += 1
+        elif status == "counter_regressed":
+            grenade["counter_regressed_today"] += 1
+        else:
+            grenade["other_status_today"] += 1
+
+    queue = progression_queue if isinstance(progression_queue, dict) else {}
+    pending_entries = [
+        entry for entry in queue.values()
+        if isinstance(entry, dict) and entry.get("status") in {"deferred", "claim_unconfirmed"}
+    ]
+    reasons = Counter()
+    attempt_counts = Counter()
+    latest_slots = Counter()
+    for entry in pending_entries:
+        reason = str(entry.get("last_reason") or "").lower()
+        if "no currently visible claimable reward" in reason:
+            reasons["no_visible_claimable_card"] += 1
+        elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+            reasons["blocked_by_overlay"] += 1
+        else:
+            reasons["other_pending"] += 1
+        slots = entry.get("attempted_slots")
+        slots = list(dict.fromkeys(
+            str(slot).strip() for slot in slots
+            if isinstance(slot, str) and slot.strip()
+        )) if isinstance(slots, list) else []
+        attempt_counts[len(slots)] += 1
+        if entry.get("last_attempt_slot"):
+            latest_slots[str(entry["last_attempt_slot"])] += 1
+
+    most_common_attempt_count = (
+        attempt_counts.most_common(1)[0][0] if attempt_counts else 0
+    )
+    accounts_at_common_attempt_count = (
+        attempt_counts[most_common_attempt_count] if attempt_counts else 0
+    )
+    progression = {
+        "pending": len(pending_entries),
+        "no_visible_claimable_card": reasons["no_visible_claimable_card"],
+        "blocked_by_overlay": reasons["blocked_by_overlay"],
+        "other_pending": reasons["other_pending"],
+        "most_common_slots_used": most_common_attempt_count,
+        "accounts_at_most_common_slots_used": accounts_at_common_attempt_count,
+        "max_slots_per_reset": MAX_PROGRESS_INSPECTION_SLOTS_PER_RESET,
+        "latest_attempt_slot": (
+            latest_slots.most_common(1)[0][0] if latest_slots else ""
+        ),
+    }
+
+    return {
+        "reset_date": str(reset_date),
+        "configured": configured,
+        "core_cycle": core_cycle,
+        "grenade": {
+            "observed_today": grenade["observed_today"],
+            "passed_today": grenade["passed_today"],
+            "below_minimum_today": grenade["below_minimum_today"],
+            "counter_regressed_today": grenade["counter_regressed_today"],
+            "other_status_today": grenade["other_status_today"],
+            "not_checked_today": grenade["not_checked_today"],
+        },
+        "progression": progression,
+    }
+
+
+def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
+    """Render the same explicit status distinctions for email and Copy Report."""
+    if not isinstance(snapshot, dict) or _count(snapshot.get("configured")) <= 0:
+        return ""
+    configured = _count(snapshot.get("configured"))
+    cycle = snapshot.get("core_cycle") if isinstance(snapshot.get("core_cycle"), dict) else {}
+    grenade = snapshot.get("grenade") if isinstance(snapshot.get("grenade"), dict) else {}
+    progression = snapshot.get("progression") if isinstance(snapshot.get("progression"), dict) else {}
+
+    if cycle.get("available"):
+        core_text = (
+            f'{_count(cycle.get("complete"))}/{configured} accounts complete'
+            f' · {_count(cycle.get("pending"))} pending'
+        )
+        source = str(cycle.get("source_run_label") or "Full-roster run")
+        timestamp = str(cycle.get("source_timestamp") or "")
+        if timestamp:
+            source += f" · {timestamp}"
+        core_note = f"Last full-roster cycle: {source}"
+    else:
+        core_text = "No verified full-roster cycle recorded for this reset"
+        core_note = "This run's account count is not a substitute for full-roster coverage."
+
+    grenade_text = (
+        f'{_count(grenade.get("passed_today"))} PASS today'
+        f' · {_count(grenade.get("below_minimum_today"))} below minimum'
+        f' · {_count(grenade.get("counter_regressed_today"))} counter regressions'
+        f' · {_count(grenade.get("not_checked_today"))} not checked today'
+    )
+    grenade_note = (
+        f'{_count(grenade.get("observed_today"))}/{configured} accounts have a balance '
+        "observation dated today. Older saved readings are not counted as current passes."
+    )
+
+    pending = _count(progression.get("pending"))
+    pp_text = (
+        f'{pending} inspections pending'
+        f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
+        f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
+    )
+    slots_used = _count(progression.get("most_common_slots_used"))
+    slots_note = ""
+    if pending and slots_used:
+        left = max(0, _count(progression.get("max_slots_per_reset")) - slots_used)
+        slots_note = (
+            f' Most commonly used: {slots_used}/'
+            f'{_count(progression.get("max_slots_per_reset"))} inspection slots this reset'
+            f' ({left} remaining for those accounts).'
+        )
+    pp_note = (
+        "Pending inspections are not failed claims. An empty scan is not treated as "
+        "proof that an account has no Progression reward."
+        + slots_note
+    )
+
+    rows = [
+        ("Core Daily + Store coverage", core_text, core_note),
+        ("Grenade balance validation", grenade_text, grenade_note),
+        ("Progression inspection queue", pp_text, pp_note),
+    ]
+    row_html = "".join(
+        "<tr><td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top;width:34%'>"
+        f"<strong>{escape(label)}</strong></td>"
+        "<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'>"
+        f"<strong>{escape(value)}</strong><br>"
+        f"<span style='font-size:11px;color:#64748b;line-height:1.45'>{escape(note)}</span>"
+        "</td></tr>"
+        for label, value, note in rows
+    )
+    return (
+        "<section class='section' style='margin-bottom:14px;padding:15px;border:1px solid #e2e8f0;border-radius:10px;background:#fff'>"
+        "<h2 style='font-size:15px;margin:0 0 8px'>Overall reset-cycle health</h2>"
+        f"<p style='font-size:11px;color:#64748b;margin:0 0 8px'>Reset date: {escape(str(snapshot.get('reset_date') or '—'))} · "
+        "The cycle, balance and inspection figures are separate measures.</p>"
+        "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
+        f"{row_html}</table></section>"
+    )
