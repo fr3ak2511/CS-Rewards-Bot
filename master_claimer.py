@@ -3534,6 +3534,9 @@ def process_player_progression_only(pid, has_loyalty, is_new, queue_entry, run_l
         driver._preexisting_portal_claims = []
 
         _run_queued_progression_inspection(driver, pid, stats, queue_entry)
+        _record_grenade_balance_if_available(
+            driver, pid, is_new_account=is_new, stats=stats
+        )
         if stats.get("progression_deferred") or stats.get("progression_unconfirmed"):
             stats["status"] = "Partial"
             stats["fail_reason"] = stats.get("progression_deferred_reason") or (
@@ -3705,6 +3708,29 @@ def _record_grenade_balance_for_player(driver, pid, *, is_new_account, stats):
     elif status == "pending_baseline":
         log(f"⏳ GRENADE_BALANCE=BASELINE_PENDING for {pid}: three Store rewards are not yet fully verified.")
     return result
+
+
+def _record_grenade_balance_if_available(driver, pid, *, is_new_account, stats):
+    """Capture the Reward Chain counter whenever this authenticated session reached its page.
+
+    Progression card inspection can be deferred by a popup/overlay while the
+    authenticated page and read-only Reward Chain banner remain in the DOM.
+    Balance capture is independent of claimability and inspection completion:
+    it may record a fresh count, but it never changes queue status or dispatches
+    a reward click. A slot-blocked account that never opened the Progression
+    page is deliberately left unobserved.
+    """
+    if not isinstance(stats, dict):
+        return None
+    current_url = str(getattr(driver, "current_url", "") or "").lower()
+    progression_page_loaded = "/progression-program" in current_url.split("?", 1)[0].split("#", 1)[0]
+    if not stats.get("progression_checked") and not progression_page_loaded:
+        return None
+    balance = _record_grenade_balance_for_player(
+        driver, pid, is_new_account=is_new_account, stats=stats
+    )
+    stats["grenade_balance"] = balance
+    return balance
 
 
 def run_event_reward_checks(driver, pid, *, only_program_ids=None, retry_thresholds_by_program=None, max_claims_per_program=None):
@@ -4023,10 +4049,9 @@ def process_player(
             stats["progression_deferred_reason"] = getattr(driver, "_progression_deferred_reason", None)
             stats["progression_claim_attempted"] = bool(getattr(driver, "_progression_claim_attempted", False))
             stats["progression_checked"] = bool(getattr(driver, "_progression_checked", not stats["progression_deferred"]))
-        if stats["progression_checked"]:
-            stats["grenade_balance"] = _record_grenade_balance_for_player(
-                driver, pid, is_new_account=is_new, stats=stats
-            )
+        _record_grenade_balance_if_available(
+            driver, pid, is_new_account=is_new, stats=stats
+        )
 
         # Loyalty
         if has_loyalty:
@@ -5049,10 +5074,9 @@ def process_player_backup_reconciliation(pid, is_new, run_label, *, progression_
         else:
             log("ℹ️ Progression not reopened: no Store Bonus recovery and no deferred inspection is queued")
 
-        if stats["progression_checked"]:
-            stats["grenade_balance"] = _record_grenade_balance_for_player(
-                driver, pid, is_new_account=is_new, stats=stats
-            )
+        _record_grenade_balance_if_available(
+            driver, pid, is_new_account=is_new, stats=stats
+        )
 
         stats["event_rewards"] = run_event_reward_checks(driver, pid)
         stats["event_reward_claims"] = event_claim_count(stats["event_rewards"])
@@ -6739,7 +6763,17 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     promotion_html = build_promotional_section(results)
     followup_html = build_promotional_followup_section(followup_summary or {})
     event_html = build_event_rewards_section(results)
-    grenade_html = "" if is_progression_only_run else build_grenade_balance_email_section(results)
+    has_fresh_grenade_observations = any(
+        isinstance(result.get("grenade_balance"), dict)
+        for result in results
+    )
+    grenade_html = (
+        build_grenade_balance_email_section(results)
+        if not is_progression_only_run or has_fresh_grenade_observations
+        else ""
+    )
+    # Progression-only runs may publish the fresh observations they collected,
+    # but must not imply that untouched accounts have been revalidated today.
     grenade_carry_forward_html = "" if is_progression_only_run else build_grenade_balance_carry_forward_section(results)
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
     validation_html = grenade_html + grenade_carry_forward_html + reconciliation_html

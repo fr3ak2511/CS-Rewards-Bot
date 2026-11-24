@@ -2036,7 +2036,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
 
 
     def test_progression_queue_only_processor_never_touches_other_reward_categories(self):
-        driver = type("ProgressionDriver", (), {"quit": lambda self: None})()
+        driver = type("ProgressionDriver", (), {
+            "quit": lambda self: None,
+            "current_url": "https://hub.vertigogames.co/progression-program",
+        })()
         entry = {
             "status": "deferred",
             "requires_exact_target": False,
@@ -2078,7 +2081,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         daily.assert_not_called()
         store.assert_not_called()
         events.assert_not_called()
-        grenade.assert_not_called()
+        grenade.assert_called_once()
+        self.assertIs(result["grenade_balance"], grenade.return_value)
         self.assertEqual(result["processing_mode"], "progression_queue_only")
         self.assertEqual(result["progression"], 1)
         self.assertEqual(result["status"], "Claims Made")
@@ -2090,6 +2094,65 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertEqual(result["event_rewards"], [])
         self.assertTrue(result["daily_skipped"])
         self.assertEqual(result["store_skipped"], [True, True, True])
+
+    def test_progression_queue_only_captures_balance_when_pp_inspection_is_deferred(self):
+        driver = type("ProgressionDriver", (), {
+            "quit": lambda self: None,
+            "current_url": "https://hub.vertigogames.co/progression-program",
+        })()
+        entry = {
+            "status": "deferred",
+            "requires_exact_target": False,
+            "target_card_signature": None,
+        }
+        observed = {
+            "status": "pass",
+            "cycle_id": "2026-11",
+            "current_count": 72,
+            "expected_minimum": 72,
+            "next_milestone": 123,
+        }
+
+        def inspect(_driver, _player_id, stats, _queue_entry):
+            stats.update({
+                "progression": 0,
+                "progression_checked": False,
+                "progression_deferred": True,
+                "progression_deferred_reason": "popup/overlay safety guard blocked inspection",
+                "progression_unconfirmed": False,
+                "progression_claim_attempted": False,
+            })
+
+        with patch("master_claimer.init_player_history"), \
+             patch("master_claimer.create_driver", return_value=driver), \
+             patch("master_claimer.login_to_hub", return_value=True), \
+             patch("master_claimer.capture_display_name", return_value="Test IGN"), \
+             patch("master_claimer._run_queued_progression_inspection", side_effect=inspect), \
+             patch("master_claimer._record_grenade_balance_for_player", return_value=observed) as grenade:
+            result = process_player_progression_only(
+                "PLAYER0001", False, False, entry, "Immediate Progression Recovery"
+            )
+
+        grenade.assert_called_once()
+        self.assertIs(result["grenade_balance"], observed)
+        self.assertFalse(result["progression_checked"])
+        self.assertTrue(result["progression_deferred"])
+        self.assertEqual(result["status"], "Partial")
+
+    def test_grenade_capture_helper_skips_sessions_that_never_reached_progression(self):
+        from master_claimer import _record_grenade_balance_if_available
+
+        driver = type("StoreDriver", (), {
+            "current_url": "https://hub.vertigogames.co/store",
+        })()
+        stats = {"progression_checked": False}
+        with patch("master_claimer._record_grenade_balance_for_player") as capture:
+            result = _record_grenade_balance_if_available(
+                driver, "PLAYER0001", is_new_account=False, stats=stats
+            )
+        capture.assert_not_called()
+        self.assertIsNone(result)
+        self.assertNotIn("grenade_balance", stats)
 
     def test_progression_queue_only_login_failure_leaves_the_queue_deferred_without_claiming(self):
         driver = type("ProgressionDriver", (), {"quit": lambda self: None})()
@@ -2181,6 +2244,40 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Progression Program", report)
         self.assertIn("1 reward confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
+
+    def test_progression_only_email_shows_fresh_grenade_observations_without_carry_forward(self):
+        player = self.sample_player()
+        player.update({
+            "processing_mode": "progression_queue_only",
+            "status": "Partial",
+            "daily": 0, "store": 0, "progression": 0, "loyalty": 0,
+            "standard_rewards_checked": False,
+            "progression_checked": False,
+            "progression_deferred": True,
+            "progression_reinspection_attempted": True,
+            "progression_deferred_reason": "popup/overlay safety guard blocked inspection",
+            "promotions_observed": [],
+            "event_rewards": [],
+            "grenade_balance": {
+                "status": "pass",
+                "current_count": 72,
+                "expected_minimum": 72,
+                "next_milestone": 123,
+                "remaining_to_next_milestone": 51,
+                "surplus": 0,
+                "deficit": 0,
+            },
+        })
+        report = build_email(
+            [player], "Immediate Progression Recovery", 1,
+            get_ist_time() - timedelta(minutes=2), {},
+            configured_player_count=36,
+        )
+        self.assertIn("Grenade Balance Check", report)
+        self.assertIn("1 account checked · 1 balance captured · 1 passed", report)
+        self.assertNotIn("Grenade Balance History", report)
+        self.assertNotIn("Core Daily Claims", report)
+        self.assertNotIn("Full Claim Path", report)
 
     def test_progression_only_email_has_its_own_scope_and_omits_core_and_grenade_sections(self):
         player = self.sample_player()

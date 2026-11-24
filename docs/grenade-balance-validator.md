@@ -72,3 +72,18 @@ Regression tests cover:
 - Late first observation without backfilling unobserved dates.
 - Counter regression and monthly rollover.
 - Attention propagation into run reconciliation and the mobile-first Copy Report.
+
+
+## Independent balance capture during deferred Progression inspections
+
+An authenticated session that reaches `/progression-program` may still provide a
+fresh, read-only Reward Chain banner observation even when the reward-card scan
+is deferred by a popup/overlay or produces an incomplete snapshot. The claimer
+records that balance independently of `progression_checked`; it does not
+resolve the inspection queue, authorize a claim, or infer milestone delivery.
+
+Progression-only recovery emails may show these fresh balance observations when
+present. They do not show carry-forward observations as though they were read
+again during that recovery run. A session that never reached the Progression
+page (for example, a login failure or a slot blocked before browser navigation)
+does not attempt this capture.
