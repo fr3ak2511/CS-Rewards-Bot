@@ -5586,7 +5586,7 @@ def build_deferred_checks_section(results):
         summary = (
             f"{queue_reinspection_attempts} queued reinspection {attempt_word} made. "
             f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed in this run; {len(pending)} {pending_word} open."
+            f"confirmed; {len(pending)} {pending_word} open."
         )
         if click_attempts == 0:
             summary += " No claim button was clicked for these pending inspections."
@@ -5597,8 +5597,8 @@ def build_deferred_checks_section(results):
         )
     else:
         summary = (
-            f"{len(pending)} {('account has' if len(pending) == 1 else 'accounts have')} an open "
-            "Progression check. No queued reinspection ran in this run. "
+            f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open. "
+            "No queued reinspection ran in this run. "
             "No claim button was clicked in this run."
         )
 
