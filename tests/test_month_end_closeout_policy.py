@@ -96,6 +96,7 @@ class MonthEndCloseoutPolicyTests(unittest.TestCase):
             "status": "Claimable",
             "card_signature": "milestone-65-card",
             "exact_card_verified": True,
+            "observed_at_ist": "2026-11-30T07:30:00+05:30",
         }
         result = evaluate_month_end_closeout(
             report_date="2026-11-30", configured_player_ids=roster,
@@ -111,9 +112,11 @@ class MonthEndCloseoutPolicyTests(unittest.TestCase):
         ledger = self._delivered_ledger("PLAYER0001", 72)
         ledger["PLAYER0001"]["62"] = {
             "status": "Locked", "card_signature": "milestone-62-card", "exact_card_verified": True,
+            "observed_at_ist": "2026-11-30T07:30:00+05:30",
         }
         ledger["PLAYER0001"]["65"] = {
             "status": "Delivered", "card_signature": "milestone-65-card", "same_card_delivered_confirmed": False,
+            "observed_at_ist": "2026-11-30T07:30:00+05:30",
         }
         result = evaluate_month_end_closeout(
             report_date="2026-11-30", configured_player_ids=roster,
