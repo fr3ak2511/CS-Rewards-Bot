@@ -5586,7 +5586,7 @@ def build_deferred_checks_section(results):
         summary = (
             f"{queue_reinspection_attempts} queued reinspection {attempt_word} made. "
             f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed; {len(pending)} {pending_word} open."
+            f"confirmed in this run; {len(pending)} {pending_word} open."
         )
         if click_attempts == 0:
             summary += " No claim button was clicked for these pending inspections."
@@ -5744,12 +5744,13 @@ def build_grenade_balance_carry_forward_section(results):
     unavailable = len(statuses) - passed - below_minimum
     record_word = "account" if len(records) == 1 else "accounts"
     if unavailable == len(records):
+        previous_word = "previous result" if len(records) == 1 else "previous results"
         return (
             "<section class='v2-section v2-grenade v2-validation-card'>"
-            "<div class='v2-section-head'><h2>Grenade Balance History</h2>"
-            f"<span>{len(records)} historical {record_word} · validation details not saved</span></div>"
-            "<p class='v2-muted-note'>Previous portal readings exist, but their original validation status and milestone details were not retained. "
-            "They are not treated as current checks. Full account-level history remains in Copy Report.</p>"
+            "<div class='v2-section-head'><h2>Grenade Balance — last saved readings</h2>"
+            f"<span>{len(records)} historical {record_word} · {len(records)} {previous_word} unavailable</span></div>"
+            "<p class='v2-muted-note'>Previous validation result not saved. Earlier portal readings exist, but their original validation status and milestone details were not retained. "
+            "These are historical readings, not fresh balances from this run. Full account-level history is available in Copy Report.</p>"
             "</section>"
         )
     summary_parts = [f"{len(records)} historical {record_word}"]
