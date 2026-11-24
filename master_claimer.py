@@ -5523,15 +5523,24 @@ def build_deferred_checks_section(results):
         result for result in results
         if result.get("progression_deferred")
     ]
+    confirmed_claims = sum(
+        int(result.get("progression", 0) or 0) for result in results
+    )
     if not pending:
-        return ""
+        if not confirmed_claims:
+            return ""
+        word = "reward" if confirmed_claims == 1 else "rewards"
+        return (
+            "<section class='v2-section v2-progression'>"
+            "<div class='v2-section-head'><h2>Progression Program</h2>"
+            f"<span>{confirmed_claims} {word} confirmed</span></div>"
+            "<p class='v2-muted-note'>Portal-confirmed Progression claims are tracked separately from the core Daily and standard Store rewards.</p>"
+            "</section>"
+        )
 
     queue_reinspection_attempts = sum(
         1 for result in results
         if result.get("progression_reinspection_attempted") is True
-    )
-    confirmed_claims = sum(
-        int(result.get("progression", 0) or 0) for result in results
     )
     click_attempts = sum(
         1 for result in pending if result.get("progression_claim_attempted")
@@ -6804,6 +6813,27 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         "Not checked in this run" if not standard_checked_results and not is_recovery_rollup
         else "Daily + standard Store only"
     )
+    additional_claim_rows = []
+    for label, amount in (
+        ("Loyalty", loyalty_claims),
+        ("Promotions", reportable_promotion_claims),
+        ("Temporary Events", event_claims),
+    ):
+        if amount:
+            word = "claim" if amount == 1 else "claims"
+            additional_claim_rows.append(
+                "<div class='v2-group-row'><strong>"
+                + html.escape(label)
+                + f"</strong><span>{amount} confirmed {word}</span></div>"
+            )
+    additional_claims_html = (
+        "<section class='v2-section v2-additional-claims'>"
+        "<div class='v2-section-head'><h2>Other Confirmed Rewards</h2>"
+        "<span>Separate from core Daily and standard Store claims</span></div>"
+        + "".join(additional_claim_rows)
+        + "</section>"
+        if additional_claim_rows else ""
+    )
     accounts_kpi_label = "Accounts complete" if is_recovery_rollup else "Accounts processed"
     accounts_kpi_value = (
         f"{int(cycle_summary.get('accounts_complete', 0) or 0)} / {configured_count}"
@@ -7033,6 +7063,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         )
         + (daily_cycle_html or "")
         + (deferred_checks_html or "")
+        + additional_claims_html
         + validation_html
         + (immediate_recovery_html or "")
         + attention_html
