@@ -142,15 +142,15 @@ class CycleHealthReportTests(unittest.TestCase):
             },
         })
         self.assertIn("36/36 accounts complete", html)
-        self.assertIn("11 PASS today", html)
-        self.assertIn("0 other / baseline-pending", html)
-        self.assertIn("25 not checked today", html)
-        self.assertIn("25/36 inspections pending", html)
-        self.assertIn("24 with no visible claimable card", html)
-        self.assertIn("1 blocked by overlay", html)
-        self.assertIn("0 with claim outcome unconfirmed", html)
-        self.assertIn("0 other pending", html)
-        self.assertIn("not treated as proof that no Progression reward exists", html)
+        self.assertNotIn("11 PASS today", html)
+        self.assertNotIn("baseline-pending", html)
+        self.assertNotIn("not checked today", html)
+        self.assertNotIn("inspections pending", html)
+        self.assertNotIn("no visible claimable card", html)
+        self.assertNotIn("blocked by overlay", html)
+        self.assertNotIn("claim outcome unconfirmed", html)
+        self.assertNotIn("other pending", html)
+        self.assertNotIn("not treated as proof", html)
 
     def test_unconfirmed_queue_status_is_separate_and_latest_slot_is_chronological(self):
         queue = {
