@@ -5560,6 +5560,18 @@ def build_deferred_checks_section(results):
         unconfirmed = bool(result.get("progression_unconfirmed"))
         checked = result.get("progression_checked") is True
         has_balance = balance.get("current_count") is not None or carry.get("last_observed_count") is not None
+        account_status = str(result.get("status") or "")
+        has_claim_exception = bool(
+            result.get("daily_unconfirmed")
+            or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
+        )
+        has_processing_failure = account_status in {"Login Failed", "Error", "Failed"}
+        if not (
+            claims or deferred or unconfirmed or checked or has_balance
+            or mode == "progression_queue_only" or has_claim_exception or has_processing_failure
+        ):
+            continue
         if balance.get("current_count") is not None:
             actual = balance.get("current_count")
             minimum = balance.get("expected_minimum")
@@ -5660,7 +5672,7 @@ def build_deferred_checks_section(results):
     summary_parts = [f"{len(records)} accounts grouped"]
     if queue_reinspection_attempts:
         attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
-        summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made")
+        summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made.")
     open_word = "account remains open" if pending_total == 1 else "accounts remain open"
     summary_parts.append(
         f"{claim_total} Progression rewards confirmed in this run; {pending_total} {open_word}"
