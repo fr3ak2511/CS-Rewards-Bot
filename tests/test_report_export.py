@@ -414,5 +414,44 @@ class CopyableReportTests(unittest.TestCase):
             build_copyable_report([])
 
 
+
+    def test_copy_report_groups_same_milestone_by_balance_and_claim_status(self):
+        summary = dict(self.summary)
+        summary["player_results"] = [
+            {
+                "player_id_last4": "0001", "display_name": "Claimed Player",
+                "progression_claimed_this_run": 1, "progression_checked": True,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 18, "expected_minimum": 18,
+                    "next_milestone": 56, "remaining_to_next_milestone": 38,
+                },
+            },
+            {
+                "player_id_last4": "0002", "display_name": "Pending Player A",
+                "progression_deferred": True,
+                "progression_deferred_reason": "No currently visible claimable reward card.",
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+            {
+                "player_id_last4": "0003", "display_name": "Checked Player",
+                "progression_checked": True,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+        ]
+        report = build_copyable_report(summary)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
+        self.assertIn("Next milestone 56", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("Pending Player A (…0002)", report)
+        self.assertIn("Checked Player (…0003)", report)
+        self.assertIn("Pending · no claimable card visible · 1", report)
+        self.assertIn("Checked · no reward claimed · 1", report)
+
 if __name__ == "__main__":
     unittest.main()
