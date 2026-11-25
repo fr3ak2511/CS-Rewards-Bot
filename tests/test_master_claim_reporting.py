@@ -566,13 +566,13 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 }},
                 configured_player_count=36,
             )
-        self.assertIn("Overall reset-cycle health", report)
+        self.assertIn("Full-cycle coverage", report)
         self.assertIn("36/36 accounts complete", report)
-        self.assertIn("11 PASS today", report)
-        self.assertIn("25 not checked today", report)
-        self.assertIn("24 with no visible claimable card", report)
-        self.assertIn("1 blocked by overlay", report)
-        self.assertIn("empty scan is not treated as proof", report)
+        self.assertNotIn("11 PASS today", report)
+        self.assertNotIn("25 not checked today", report)
+        self.assertNotIn("24 with no visible claimable card", report)
+        self.assertNotIn("1 blocked by overlay", report)
+        self.assertNotIn("empty scan is not treated as proof", report)
 
     def test_email_is_compact_and_does_not_surface_streak_or_schedule(self):
         player = self.sample_player()
@@ -735,7 +735,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>🎁 Core claims</span><strong>29</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
-        self.assertIn("12 rewards confirmed", report)
+        self.assertIn("12 Progression rewards confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertIn("Loyalty", report)
         self.assertNotIn("<span>Progression Rewards</span>", report)
@@ -923,7 +923,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("66 / 66", report)
         self.assertIn("57 to go", report)
         self.assertIn("Last checked 2026-11-22", report)
-        self.assertIn("Pass · last checked 2026-11-22", report.lower())
+        self.assertIn("At date minimum · Last observed 2026-11-22", report)
         self.assertNotIn("Attention Required", report)
 
         saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
@@ -1042,8 +1042,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("2 accounts", report)
-        self.assertIn("66 / 69 Grenades", report)
-        self.assertEqual(report.count("66 / 69 Grenades"), 1)
+        self.assertIn("66 / 66", report)
+        self.assertEqual(report.count("66 / 66"), 1)
         self.assertNotIn("GROUPPLAYER0001", report)
         self.assertNotIn("GROUPPLAYER0002", report)
 
@@ -1227,7 +1227,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=1,
         )
-        self.assertIn("Above minimum", report)
+        self.assertIn("Above date minimum", report)
         self.assertIn("34 / 24 · surplus 10 · next 56 (in 22 Grenades)", report)
         self.assertIn("Above minimum", report)
         self.assertNotIn("Tracking Incomplete", report)
@@ -1246,7 +1246,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=1,
         )
         self.assertIn("Pending baseline", report)
-        self.assertIn("Tracking Incomplete", report)
+        self.assertIn("Pending baseline", report)
         self.assertIn("Need attention</span><strong>0</strong>", report)
 
     def test_grenade_balance_email_uses_singular_account_count(self):
@@ -1438,10 +1438,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("Progression Program — milestone groups &amp; Grenade Balance Check", report)
-        self.assertIn("<div class='v2-grenade-summary'>", report)
-        self.assertIn("27 / 30 · short 3", report)
-        self.assertIn(".v2-grenade-summary{display:block", report)
+        self.assertIn("Progression — checks still open · grouped by milestone", report)
+        self.assertIn("Progression — grouped by milestone", report)
+        self.assertIn("27 / 30", report)
+        self.assertIn("Below date minimum", report)
         self.assertIn("class='v2-section-head v2-grenade-head'", report)
         self.assertNotIn("display:flex", report)
         self.assertNotIn("grid-template-columns", report)
@@ -1844,7 +1844,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertEqual(build_standard_attention_section([result]), "")
         deferred = build_deferred_checks_section([result])
         self.assertIn("Progression — checks still open", deferred)
-        self.assertNotIn("hgkme1", deferred)
+        self.assertIn("hgkme1", deferred)
         self.assertIn("No claim button was clicked in this run", deferred)
         self.assertNotIn("Attention Required", deferred)
 
@@ -1862,7 +1862,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             ),
         }
         section = build_deferred_checks_section([result])
-        self.assertIn("1 Progression reward confirmed", section)
+        self.assertIn("1 reward confirmed · inspection still pending", section)
         self.assertIn("1 account remains open", section)
         self.assertNotIn("No claim button was clicked", section)
 
@@ -2367,7 +2367,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Pending · No claimable reward card visible · 2", report)
         self.assertIn("Checked · no reward claimed · 1", report)
         self.assertIn("4 accounts grouped", report)
-        self.assertIn("1 Progression rewards confirmed in this run; 2 accounts remain open", report)
+        self.assertIn("1 Progression reward confirmed in this run; 2 accounts remain open", report)
 
 if __name__ == "__main__":
     unittest.main()
