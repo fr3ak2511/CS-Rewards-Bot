@@ -257,50 +257,18 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     )
     grenade_section = grenade_summary + grenade_table
 
-    carry_forward_rows = []
-    for player in players:
-        if not isinstance(player, dict):
-            continue
-        balance = player.get("grenade_balance_carry_forward")
-        if not isinstance(balance, dict):
-            continue
-        observed = "—" if balance.get("last_observed_count") is None else str(_number(balance.get("last_observed_count")))
-        minimum_then = "—" if balance.get("expected_minimum_at_observation") is None else str(_number(balance.get("expected_minimum_at_observation")))
-        minimum_now = "—" if balance.get("expected_minimum_as_of") is None else str(_number(balance.get("expected_minimum_as_of")))
-        observed_date = _safe(balance.get("last_observed_date"))
-        milestone = balance.get("next_milestone_at_observation")
-        remaining = balance.get("remaining_to_milestone_at_observation")
-        milestone_text = (
-            f"{_number(milestone)} (then { _number(remaining) } remaining)"
-            if milestone is not None and remaining is not None
-            else "Not retained in saved baseline"
-        )
-        status = str(balance.get("status_at_observation") or "not_validated")
-        status_class = "good" if status == "pass" else "bad" if status in {"below_minimum", "counter_regressed"} else "warn"
-        carry_forward_rows.append(
-            "<tr><td><strong>" + _safe(_player_label(player)) + "</strong></td>"
-            + "<td>" + observed + "</td><td>" + minimum_then + "</td>"
-            + "<td>" + observed_date + "</td><td>" + minimum_now + "</td>"
-            + "<td>" + _safe(milestone_text) + "</td><td><span class='status " + status_class + "'>"
-            + _safe(status.replace("_", " ")) + "</span></td></tr>"
-        )
-    carry_forward_section = (
-        "<section class='section'><h2>Last Verified Grenade Progress</h2>"
-        "<p>These are saved portal observations, not live balances from this run. "
-        "The date-based minimum is recalculated from the stored baseline at the current 05:30 IST reset date. "
-        "Milestone and remaining values refer only to the last observation. Older records may not retain the milestone "
-        "or original validation status; missing status is shown as not retained, never inferred as a pass.</p>"
-        "<div class='table-wrap'><table><thead><tr><th>Account</th><th>Last actual</th>"
-        "<th>Minimum then</th><th>Observed</th><th>Date floor now</th><th>Last milestone</th><th>Status then</th>"
-        "</tr></thead><tbody>" + "".join(carry_forward_rows) + "</tbody></table></div></section>"
-        if carry_forward_rows else ""
-    )
+    # Saved readings are folded into the milestone groups above; do not repeat them in a second table.
+    carry_forward_section = ""
 
     deferred_count = sum(
         1 for player in players
         if isinstance(player, dict) and player.get("progression_deferred")
     )
-    deferred_section = ""
+    deferred_section = (
+        "<section class='section'><h2>Progression / Grenade balance — grouped by milestone</h2>"
+        + grenade_summary + grenade_table + "</section>"
+        if players else ""
+    )
     attention_note = (
         "Claim / validation exceptions only; pending Progression accounts are grouped by milestone below"
         if deferred_count else "Accounts with claim / validation exceptions"
