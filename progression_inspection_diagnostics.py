@@ -412,16 +412,25 @@ def _aggregate_rail_observations(snapshots: list[dict[str, Any]]) -> dict[str, A
         and at_end
         and inventory_stable
         and identities_valid
+        and card_signatures_stable
         and bool(inventory_sets[0])
     )
 
+    signatures_by_threshold: dict[int, set[str]] = {}
     observations: dict[int, list[dict[str, Any]]] = {}
     for item in normalized:
         for card in item["cards"]:
             threshold = card["threshold"]
             if threshold is None:
                 continue
+            signature = str(card.get("card_signature") or "")
+            signatures_by_threshold.setdefault(threshold, set()).add(signature)
             observations.setdefault(threshold, []).append(card)
+
+    card_signatures_stable = bool(signatures_by_threshold) and all(
+        len(signatures) == 1 and next(iter(signatures))
+        for signatures in signatures_by_threshold.values()
+    )
 
     milestone_cards = []
     totals = {"Delivered": 0, "Claimable": 0, "Locked": 0, "Unknown": 0}
@@ -479,6 +488,7 @@ def _aggregate_rail_observations(snapshots: list[dict[str, Any]]) -> dict[str, A
         "rail_snapshots_expected": len(snapshots),
         "inventory_stable_across_snapshots": inventory_stable,
         "milestone_identity_valid_across_snapshots": identities_valid,
+        "card_signatures_stable_across_snapshots": card_signatures_stable,
         "observed_milestone_thresholds": list(inventory_sets[0]) if inventory_stable else [],
         "milestone_cards": milestone_cards,
         "card_status_totals": totals,
@@ -533,8 +543,11 @@ def build_progression_inspection_diagnostic_summary(
             "normalized_progression_rail": rail_summary,
         })
 
+    expected_accounts = max(0, int(configured_player_count))
     inventories_consistent = (
-        len(inventory_by_account) == len(accounts)
+        expected_accounts > 0
+        and len(accounts) == expected_accounts
+        and len(inventory_by_account) == expected_accounts
         and bool(inventory_by_account)
         and all(value == inventory_by_account[0] for value in inventory_by_account)
     )
