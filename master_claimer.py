@@ -5543,121 +5543,184 @@ def _deferred_progression_reason_summary(raw_reason):
 
 
 def build_deferred_checks_section(results):
-    """Summarise open Progression inspections without repeating one row per account."""
-    pending = [
-        result for result in results
-        if result.get("progression_deferred")
-    ]
-    confirmed_claims = sum(
-        int(result.get("progression", 0) or 0)
-        for result in results
-        if (
-            result.get("progression_checked") is True
-            or (
-                result.get("processing_mode", "full_claim") == "full_claim"
-                and not result.get("progression_deferred")
-                and str(result.get("status") or "") not in {"Login Failed", "Error", "Failed"}
-            )
-            or (
-                result.get("progression_deferred")
-                and int(result.get("progression", 0) or 0) > 0
-            )
-            or (
-                result.get("processing_mode") == "progression_queue_only"
-                and result.get("progression_claim_attempted") is True
-            )
-        )
-    )
-    if not pending:
-        if not confirmed_claims:
-            return ""
-        word = "reward" if confirmed_claims == 1 else "rewards"
-        return (
-            "<section class='v2-section v2-progression'>"
-            "<div class='v2-section-head'><h2>Progression Program</h2>"
-            f"<span>{confirmed_claims} {word} confirmed</span></div>"
-            "<p class='v2-muted-note'>Portal-confirmed Progression claims are tracked separately from the core Daily and standard Store rewards.</p>"
-            "</section>"
-        )
-
-    queue_reinspection_attempts = sum(
-        1 for result in results
-        if result.get("progression_reinspection_attempted") is True
-    )
-    click_attempts = sum(
-        1 for result in pending if result.get("progression_claim_attempted")
-    )
-
-    groups = {
-        "no_reward": 0,
-        "overlay": 0,
-        "unconfirmed": 0,
-        "other": 0,
-    }
-    for result in pending:
-        reason = str(result.get("progression_deferred_reason") or "").lower()
-        if result.get("progression_unconfirmed"):
-            groups["unconfirmed"] += 1
-        elif "no currently visible claimable reward" in reason:
-            groups["no_reward"] += 1
-        elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
-            groups["overlay"] += 1
-        else:
-            groups["other"] += 1
-
-    pending_word = "account remains" if len(pending) == 1 else "accounts remain"
-    if queue_reinspection_attempts:
-        attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
-        summary = (
-            f"{queue_reinspection_attempts} queued reinspection {attempt_word} made. "
-            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed in this run; {len(pending)} {pending_word} open."
-        )
-        if click_attempts == 0:
-            summary += " No claim button was clicked for these pending inspections."
-    elif confirmed_claims:
-        summary = (
-            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed in this run; {len(pending)} {pending_word} open."
-        )
-    else:
-        summary = (
-            f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open. "
-            "No queued reinspection ran in this run. "
-            "No claim button was clicked in this run."
-        )
-
-    group_rows = []
-    group_labels = (
-        ("no_reward", "No claimable reward card visible"),
-        ("overlay", "Blocked by an on-screen popup or overlay"),
-        ("unconfirmed", "A previous claim still needs confirmation"),
-        ("other", "Other inspection issue"),
-    )
-    for key, label in group_labels:
-        count = groups[key]
-        if not count:
+    """Render Progression and Grenade outcomes grouped by milestone, balance and claim status."""
+    records = []
+    for result in results or []:
+        if not isinstance(result, dict):
             continue
-        word = "account" if count == 1 else "accounts"
-        group_rows.append(
-            "<div class='v2-group-row'>"
-            f"<strong>{html.escape(label)}</strong>"
-            f"<span>{count} {word}</span>"
-            "</div>"
+        mode = str(result.get("processing_mode") or "full_claim")
+        if mode == "promotional_only":
+            continue
+        balance = result.get("grenade_balance")
+        carry = result.get("grenade_balance_carry_forward")
+        balance = balance if isinstance(balance, dict) else {}
+        carry = carry if isinstance(carry, dict) else {}
+        claims = max(0, int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0))
+        deferred = bool(result.get("progression_deferred"))
+        unconfirmed = bool(result.get("progression_unconfirmed"))
+        checked = result.get("progression_checked") is True
+        has_balance = balance.get("current_count") is not None or carry.get("last_observed_count") is not None
+        if not (claims or deferred or unconfirmed or checked or has_balance or mode == "progression_queue_only"):
+            continue
+
+        if balance.get("current_count") is not None:
+            actual = balance.get("current_count")
+            minimum = balance.get("expected_minimum")
+            milestone = balance.get("next_milestone")
+            remaining = balance.get("remaining_to_next_milestone")
+            balance_status = str(balance.get("status") or "not_validated")
+            freshness = "current"
+        elif carry.get("last_observed_count") is not None:
+            actual = carry.get("last_observed_count")
+            minimum = carry.get("expected_minimum_as_of")
+            milestone = carry.get("next_milestone_at_observation")
+            remaining = carry.get("remaining_to_milestone_at_observation")
+            balance_status = str(carry.get("status_at_observation") or "not_validated")
+            freshness = "last checked " + str(carry.get("last_observed_date") or "date unavailable")
+        else:
+            actual = minimum = milestone = remaining = None
+            balance_status = "not_validated"
+            freshness = "not captured"
+
+        if unconfirmed:
+            claim_status = "Claim confirmation unresolved"
+        elif claims:
+            claim_status = (
+                f"{claims} claim(s) confirmed · further inspection pending"
+                if deferred else f"{claims} claim(s) confirmed"
+            )
+        elif deferred:
+            reason = str(result.get("progression_deferred_reason") or "").lower()
+            if "no currently visible claimable reward" in reason:
+                claim_status = "Pending · no claimable reward card visible"
+            elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+                claim_status = "Pending · blocked by an on-screen popup or overlay"
+            else:
+                claim_status = "Pending inspection"
+        elif checked:
+            claim_status = "Checked · no reward claimed"
+        elif str(result.get("status") or "") == "Login Failed":
+            claim_status = "Not checked · login failed"
+        elif str(result.get("status") or "") in {"Error", "Failed"}:
+            claim_status = "Not checked · processing failed"
+        else:
+            claim_status = "Not checked in this run"
+
+        group_key = (
+            int(milestone) if milestone is not None else 10**9,
+            int(actual) if actual is not None else 10**9,
+            int(minimum) if minimum is not None else 10**9,
+            int(remaining) if remaining is not None else 10**9,
+            claim_status,
+            balance_status,
+            freshness,
         )
+        pid = str(result.get("pid") or "").strip()
+        suffix = pid[-4:] if pid else ""
+        name = str(result.get("display_name") or "IGN unavailable").strip()
+        label = f"{name} (…{suffix})" if suffix else name
+        records.append((group_key, label))
+
+    if not records:
+        return ""
+
+    grouped = {}
+    for key, label in records:
+        grouped.setdefault(key, []).append(label)
+
+    claim_total = sum(
+        max(0, int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0))
+        for result in results or [] if isinstance(result, dict)
+    )
+    pending_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_deferred")
+    )
+    unconfirmed_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_unconfirmed")
+    )
+    checked_empty_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict)
+        and result.get("progression_checked") is True
+        and not result.get("progression_deferred")
+        and not result.get("progression_unconfirmed")
+        and not int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0)
+    )
+    balance_records = []
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        balance = result.get("grenade_balance")
+        if isinstance(balance, dict) and balance.get("current_count") is not None:
+            balance_records.append(balance)
+    balance_passed = sum(1 for balance in balance_records if str(balance.get("status") or "") == "pass")
+    summary_parts = [
+        f"{len(records)} accounts grouped",
+        f"{claim_total} PP claim(s) confirmed",
+        f"{pending_total} inspections pending",
+        f"{checked_empty_total} checked with no claim",
+    ]
+    if unconfirmed_total:
+        summary_parts.append(f"{unconfirmed_total} claim confirmation(s) unresolved")
+    if balance_records:
+        summary_parts.append(f"Grenade balance {balance_passed}/{len(balance_records)} PASS")
+    else:
+        summary_parts.append("Grenade balance not checked in this run")
+
+    milestone_order = []
+    for key in sorted(grouped):
+        milestone = None if key[0] == 10**9 else key[0]
+        if milestone not in milestone_order:
+            milestone_order.append(milestone)
+
+    rows = []
+    for milestone in milestone_order:
+        milestone_label = str(milestone) if milestone is not None else "Not captured"
+        rows.append(
+            "<tr><td colspan='3' style='padding:8px 10px;background:#f1f5f9;border-top:1px solid #dbe3ec'>"
+            f"<strong>Next milestone {html.escape(milestone_label)}</strong></td></tr>"
+        )
+        for key in sorted(grouped):
+            if (None if key[0] == 10**9 else key[0]) != milestone:
+                continue
+            _, actual, minimum, remaining, claim_status, balance_status, freshness = key
+            actual_text = "—" if actual == 10**9 else str(actual)
+            minimum_text = "—" if minimum == 10**9 else str(minimum)
+            remaining_text = "—" if remaining == 10**9 else str(remaining)
+            balance_text = {
+                "pass": "PASS",
+                "below_minimum": "BELOW DATE MINIMUM",
+                "counter_regressed": "COUNTER REGRESSED",
+                "pending_baseline": "BASELINE PENDING",
+                "not_validated": "NOT VALIDATED",
+            }.get(balance_status, balance_status.replace("_", " ").upper())
+            names = ", ".join(html.escape(label) for label in sorted(grouped[key]))
+            rows.append(
+                "<tr>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'><strong>{actual_text} / {minimum_text}</strong> Grenades"
+                f"<br><small style='color:#64748b'>{html.escape(balance_text)} · {html.escape(freshness)}</small></td>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'>{remaining_text} to go</td>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'><strong>{html.escape(claim_status)} · {len(grouped[key])}</strong>"
+                f"<br><small style='color:#475569;line-height:1.5'>{names}</small></td>"
+                "</tr>"
+            )
 
     return (
-        "<section class='v2-section v2-deferred'>"
-        "<div class='v2-section-head'><h2>Progression — checks still open</h2>"
-        f"<span>{len(pending)} {('account needs' if len(pending) == 1 else 'accounts need')} another check</span></div>"
-        f"<p class='v2-muted-note'>{html.escape(summary)}</p>"
-        "<p class='v2-muted-note' style='margin-top:6px'>An empty scan does not prove that no reward is available. "
-        "The queue stays open until a later safe check confirms the result.</p>"
-        + "".join(group_rows)
-        + "<p class='v2-muted-note' style='margin-top:8px'>Account-by-account details are available in Copy Report.</p>"
-        + "</section>"
+        "<section class='v2-section v2-progression'>"
+        "<div class='v2-section-head'><h2>Progression — grouped by milestone</h2>"
+        f"<span>{len(records)} accounts</span></div>"
+        f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
+        "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
+        "<tr style='background:#f8fafc'><th align='left' style='padding:7px 10px'>Grenade balance / date minimum</th>"
+        "<th align='left' style='padding:7px 10px'>To milestone</th>"
+        "<th align='left' style='padding:7px 10px'>PP status and accounts</th></tr>"
+        + "".join(rows) +
+        "</table>"
+        "<p class='v2-muted-note' style='margin-top:8px'>Pending means the account needs another safe inspection. An empty scan is not proof that the full reward inventory has no claimable reward.</p>"
+        "</section>"
     )
-
 
 def _deferred_progression_only(result):
     """True only when deferral is the sole reason a result is partial/retryable."""
@@ -6769,12 +6832,15 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     )
     grenade_html = (
         build_grenade_balance_email_section(results)
-        if not is_progression_only_run or has_fresh_grenade_observations
+        if not deferred_checks_html and (not is_progression_only_run or has_fresh_grenade_observations)
         else ""
     )
-    # Progression-only runs may publish the fresh observations they collected,
-    # but must not imply that untouched accounts have been revalidated today.
-    grenade_carry_forward_html = "" if is_progression_only_run else build_grenade_balance_carry_forward_section(results)
+    # The milestone report already groups live and saved readings; avoid repeating
+    # the same accounts in a second Grenade list.
+    grenade_carry_forward_html = (
+        "" if is_progression_only_run or deferred_checks_html
+        else build_grenade_balance_carry_forward_section(results)
+    )
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
     validation_html = grenade_html + grenade_carry_forward_html + reconciliation_html
     # A run-level reconciliation mismatch is an execution attention state even
