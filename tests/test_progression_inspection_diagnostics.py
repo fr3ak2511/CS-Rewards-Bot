@@ -14,6 +14,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
             "viewport": {"width": 1920, "height": 1080},
             "body_text_length": 900,
             "page_valid": True,
+            "diagnostic_version": 2,
             "visible_claimable_count": 2,
             "visible_delivered_control_count": 1,
             "candidate_container_count": 14,
@@ -98,6 +99,13 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertEqual(len(safe["carousel_containers"]), 12)
         self.assertEqual(len(safe["carousel_containers"][0]["captured_cards"]), 40)
         self.assertLessEqual(len(safe["carousel_containers"][0]["captured_cards"][0]["text_snippet"]), 480)
+
+    def test_compact_production_snapshot_keeps_diagnostic_schema_version_one(self):
+        safe = sanitize_progression_inspection_snapshot({
+            "page_path": "/progression-program",
+            "carousel_containers": [],
+        })
+        self.assertEqual(safe["diagnostic_version"], 1)
 
     def test_run_summary_is_read_only_and_privacy_minimized(self):
         summary = build_progression_inspection_diagnostic_summary({
