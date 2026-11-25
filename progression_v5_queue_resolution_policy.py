@@ -44,22 +44,22 @@ def _parse_timestamp(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def _container_rank(container: Mapping[str, Any]) -> tuple[int, int, int, int, int, int]:
-    """Mirror the production diagnostic's authoritative-rail ranking."""
+def _container_rank(container: Mapping[str, Any]) -> int:
+    """Reproduce the production diagnostic's exact rail-selection score."""
     max_scroll = _integer(container.get("max_scroll_left")) or 0
-    scroll_width = _integer(container.get("scroll_width")) or 0
-    semantic = bool(container.get("is_semantic_carousel_root"))
-    overflow = str(container.get("overflow_x") or "").strip().casefold()
-    snap = str(container.get("scroll_snap_type") or "").strip().casefold()
+    depth = _integer(container.get("depth")) or 0
+    explicit_slides = _integer(container.get("explicit_slide_count")) or 0
     cards = container.get("captured_cards")
     card_count = len(cards) if isinstance(cards, list) else 0
+    source = str(container.get("card_capture_source") or "").strip()
+    fallback_cards = card_count if source == "repeated_reward_siblings" else 0
+    semantic_root = bool(container.get("is_semantic_carousel_root"))
     return (
-        max_scroll,
-        int(semantic),
-        int(overflow in {"auto", "scroll"}),
-        int(bool(snap and snap != "none")),
-        scroll_width,
-        card_count,
+        (10000 if explicit_slides else 0)
+        + (fallback_cards * 100)
+        + (5000 if semantic_root else 0)
+        + (100 if max_scroll > 40 else 0)
+        + depth
     )
 
 
@@ -170,7 +170,7 @@ def _validate_account_capture(
             errors.append(f"snapshot_carousel_candidates_missing:{snapshot_index}")
             continue
 
-        candidate_records: list[tuple[tuple[int, int, int, int, int, int], Mapping[str, Any]]] = []
+        candidate_records: list[tuple[int, Mapping[str, Any]]] = []
         candidate_indices: list[int] = []
         for container in containers:
             if not isinstance(container, dict):
