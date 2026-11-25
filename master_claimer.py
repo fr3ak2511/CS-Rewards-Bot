@@ -5555,7 +5555,11 @@ def build_deferred_checks_section(results):
         carry = result.get("grenade_balance_carry_forward")
         balance = balance if isinstance(balance, dict) else {}
         carry = carry if isinstance(carry, dict) else {}
-        claims = max(0, int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0))
+        claims = max(
+            0,
+            int(result.get("progression", 0) or 0),
+            int(result.get("progression_claimed_this_run", 0) or 0),
+        )
         deferred = bool(result.get("progression_deferred"))
         unconfirmed = bool(result.get("progression_unconfirmed"))
         checked = result.get("progression_checked") is True
@@ -5578,14 +5582,28 @@ def build_deferred_checks_section(results):
             milestone = balance.get("next_milestone")
             remaining = balance.get("remaining_to_next_milestone")
             balance_status = str(balance.get("status") or "not_validated")
-            freshness = "current"
+            freshness = "Current run"
+            if carry.get("last_observed_count") is not None:
+                prior_date = str(carry.get("last_observed_date") or "date unavailable")
+                prior_status = str(carry.get("status_at_observation") or "status_not_retained")
+                if prior_status == "below_minimum":
+                    freshness += f" · prior reading below minimum on {prior_date}"
+                elif prior_status == "counter_regressed":
+                    freshness += f" · prior counter regression on {prior_date}"
+                elif prior_status == "status_not_retained":
+                    freshness += f" · prior status not retained on {prior_date}"
         elif carry.get("last_observed_count") is not None:
             actual = carry.get("last_observed_count")
-            minimum = carry.get("expected_minimum_as_of")
+            minimum = carry.get("expected_minimum_at_observation")
+            if minimum is None:
+                minimum = carry.get("expected_minimum_as_of")
             milestone = carry.get("next_milestone_at_observation")
             remaining = carry.get("remaining_to_milestone_at_observation")
             balance_status = str(carry.get("status_at_observation") or "not_validated")
-            freshness = "last checked " + str(carry.get("last_observed_date") or "date unavailable")
+            freshness = "Last observed " + str(carry.get("last_observed_date") or "date unavailable")
+            current_minimum = carry.get("expected_minimum_as_of")
+            if current_minimum is not None and minimum is not None and int(current_minimum) > int(minimum):
+                freshness += f" · current date minimum {current_minimum}"
         else:
             actual = minimum = milestone = remaining = None
             balance_status = "not_validated"
@@ -5673,16 +5691,30 @@ def build_deferred_checks_section(results):
     if queue_reinspection_attempts:
         attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
         summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made.")
+    reward_word = "reward" if claim_total == 1 else "rewards"
     open_word = "account remains open" if pending_total == 1 else "accounts remain open"
     summary_parts.append(
-        f"{claim_total} Progression rewards confirmed in this run; {pending_total} {open_word}"
+        f"{claim_total} {reward_word} confirmed in this run; {pending_total} {open_word}"
     )
+    pending_without_click = sum(
+        1 for result in results or []
+        if isinstance(result, dict)
+        and result.get("progression_deferred")
+        and not result.get("progression_claim_attempted")
+    )
+    if pending_total and pending_without_click == pending_total:
+        summary_parts.append("No claim button was clicked in this run for the pending inspections")
     if checked_empty_total:
         summary_parts.append(f"{checked_empty_total} checked with no claim")
     if unconfirmed_total:
         summary_parts.append(f"{unconfirmed_total} claim confirmation(s) unresolved")
     if balance_records:
-        summary_parts.append(f"Grenade Balance Check: {balance_passed}/{len(balance_records)} PASS")
+        account_word = "account" if len(balance_records) == 1 else "accounts"
+        balance_word = "balance" if len(balance_records) == 1 else "balances"
+        passed_word = "passed" if balance_passed == len(balance_records) else "PASS"
+        summary_parts.append(
+            f"{len(balance_records)} {account_word} checked · {len(balance_records)} {balance_word} captured · {balance_passed} {passed_word}"
+        )
     else:
         summary_parts.append("Grenade balance not checked in this run")
 
@@ -5706,14 +5738,19 @@ def build_deferred_checks_section(results):
             actual_text = "—" if actual == 10**9 else str(actual)
             minimum_text = "—" if minimum == 10**9 else str(minimum)
             remaining_text = "—" if remaining == 10**9 else str(remaining)
-            balance_text = {
-                "pass": "Pass",
-                "below_minimum": "Below date minimum",
-                "counter_regressed": "Counter regressed",
-                "pending_baseline": "Baseline pending",
-                "not_validated": "Not validated",
-                "status_not_retained": "Status not retained",
-            }.get(balance_status, balance_status.replace("_", " ").title())
+            if balance_status == "pass":
+                if actual != 10**9 and minimum != 10**9 and actual > minimum:
+                    balance_text = "Above date minimum"
+                else:
+                    balance_text = "At date minimum"
+            else:
+                balance_text = {
+                    "below_minimum": "Below date minimum",
+                    "counter_regressed": "Counter regressed",
+                    "pending_baseline": "Pending baseline",
+                    "not_validated": "Not validated",
+                    "status_not_retained": "Status not retained",
+                }.get(balance_status, balance_status.replace("_", " ").title())
             names = ", ".join(html.escape(label) for label in sorted(grouped[key]))
             rows.append(
                 "<tr>"
@@ -5731,7 +5768,7 @@ def build_deferred_checks_section(results):
     )
     return (
         "<section class='v2-section v2-progression'>"
-        f"<div class='v2-section-head'><h2>{html.escape(heading)}</h2>"
+        f"<div class='v2-section-head v2-grenade-head'><h2>Progression Program — milestone groups &amp; Grenade Balance Check</h2>"
         f"<span>{len(records)} accounts</span></div>"
         f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
         "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
@@ -5767,9 +5804,13 @@ def _deferred_progression_only(result):
     }:
         return False
     carry = result.get("grenade_balance_carry_forward")
-    if isinstance(carry, dict) and str(carry.get("status_at_observation") or "") in {
-        "below_minimum", "counter_regressed"
-    }:
+    live = result.get("grenade_balance")
+    has_fresh_live_balance = isinstance(live, dict) and live.get("current_count") is not None
+    if (
+        not has_fresh_live_balance
+        and isinstance(carry, dict)
+        and str(carry.get("status_at_observation") or "") in {"below_minimum", "counter_regressed"}
+    ):
         return False
     fail_reason = str(result.get("fail_reason") or "").strip()
     deferred_reason = str(result.get("progression_deferred_reason") or "").strip()
@@ -6772,8 +6813,13 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 == "At least one observed promotional claim was not confirmed by the portal"
         )
         carry = result.get("grenade_balance_carry_forward")
+        has_fresh_live_balance = (
+            isinstance(grenade_balance, dict)
+            and grenade_balance.get("current_count") is not None
+        )
         carry_grenade_attention = bool(
-            isinstance(carry, dict)
+            not has_fresh_live_balance
+            and isinstance(carry, dict)
             and str(carry.get("status_at_observation") or "")
                 in ("below_minimum", "counter_regressed")
         )
