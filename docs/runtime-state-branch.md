@@ -98,9 +98,11 @@ must all be idle during the snapshot/merge boundary.
 
 ## Protection model
 
-The production ruleset should target only `prod`, require a PR and the
-`Reward regression tests` status check, block force pushes and deletion, and
-remain free of a broad human bypass. It is currently saved but Disabled.
+The live `Protect production` ruleset was verified active on 25-Nov-2026.
+It targets only `refs/heads/prod`, requires a pull request and the
+`Reward regression tests` status check, blocks force pushes and deletion, and
+has no bypass actors configured. Re-check the live ruleset before changing this
+description or making any protection decision.
 
 Because the Actions app is not offered in the repository's bypass-actor picker,
 this design avoids needing an Actions bypass on `prod`. After migration, consider
