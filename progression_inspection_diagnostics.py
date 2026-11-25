@@ -190,7 +190,7 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
         "completeness_verdict": "not_established",
         "delivery_verdict": "not_established",
         "diagnostic_version": _safe_number(raw.get("diagnostic_version"), maximum=2) or 1,
-        "note": "Visible rail and card hints only; not proof of complete inventory coverage, Locked state, or milestone delivery.",
+        "note": "Visible rail and card hints only; observed CTA markers do not establish complete inventory coverage or delivery history.",
     }
 
 
@@ -638,7 +638,7 @@ def build_progression_inspection_diagnostic_summary(
     )
     common_inventory = list(inventory_by_account[0]) if inventories_consistent else []
     return {
-        "diagnostic_version": 4,
+        "diagnostic_version": 5,
         "read_only": True,
         "configured_accounts": max(0, int(configured_player_count)),
         "accounts_with_diagnostics": len(accounts),
@@ -652,9 +652,10 @@ def build_progression_inspection_diagnostic_summary(
         "accounts": accounts,
         "note": (
             "Per-card classifications are derived only from explicit card-bound text or control "
-            "signals. Claimable requires an explicitly enabled Claim control. Blank or disabled "
-            "controls remain Unknown, not Locked. A full observed rail scan and cross-account "
-            "inventory consistency do not prove an independently complete portal inventory."
+            "signals. Claimable requires an explicitly enabled Claim control. Disabled/unavailable "
+            "controls remain Unknown unless the reward CTA contains the observed inline lock SVG "
+            "signature. A full observed rail scan and cross-account inventory consistency do not "
+            "prove an independently complete portal inventory."
         ),
     }
 
