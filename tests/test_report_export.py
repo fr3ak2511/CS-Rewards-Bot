@@ -470,5 +470,35 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("Pending · no claimable card visible · empty scan · same outcome 4x · manual attention · 3/4 slots used", report)
 
+    def test_progression_table_includes_promotional_only_accounts_with_carried_balance(self):
+        promo_only = {
+            "player_id_last4": "P999",
+            "display_name": "Promo-only PP Account",
+            "status": "Success",
+            "processing_mode": "promotional_only",
+            "progression_deferred": True,
+            "progression_deferred_reason": "No currently visible claimable reward card.",
+            "grenade_balance": None,
+            "grenade_balance_carry_forward": {
+                "status_at_observation": "pass",
+                "last_observed_count": 92,
+                "last_observed_date": "2026-11-25",
+                "expected_minimum_at_observation": 75,
+                "expected_minimum_as_of": 75,
+                "next_milestone_at_observation": 123,
+                "remaining_to_milestone_at_observation": 31,
+                "as_of_reset_date": "2026-11-25",
+            },
+        }
+        summary = dict(self.summary)
+        summary["player_results"] = [promo_only]
+        report = build_copyable_report(summary)
+
+        self.assertIn("Promo-only PP Account (…P999)", report)
+        self.assertIn("<td>92</td><td>75</td><td>123</td><td>31 to go</td>", report)
+        self.assertIn("Pending · no claimable card visible", report)
+        self.assertIn("Last observed 2026-11-25", report)
+
+
 if __name__ == "__main__":
     unittest.main()

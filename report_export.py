@@ -94,8 +94,6 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
     for player in players:
         if not isinstance(player, dict):
             continue
-        if str(player.get("processing_mode") or "full_claim") == "promotional_only":
-            continue
         balance = player.get("grenade_balance")
         carry = player.get("grenade_balance_carry_forward")
         balance = balance if isinstance(balance, dict) else {}
