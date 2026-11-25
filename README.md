@@ -2,7 +2,7 @@
 
 Automated CS Hub rewards claimer using Python, Selenium, and GitHub Actions.
 
-**Release:** v3.3.3 · **Configured roster:** loaded dynamically from `players.csv` (current repository snapshot contains 35 IDs).
+**Release:** v3.3.3 · **Configured roster:** loaded dynamically from `players.csv` (36 unique IDs in the current production roster).
 
 ## Reward model
 
