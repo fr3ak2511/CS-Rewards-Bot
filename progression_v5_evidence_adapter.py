@@ -202,7 +202,7 @@ def build_progression_v5_evidence_reconciliation_report(
         roster = []
         global_errors.append("roster_not_a_list_or_tuple")
     else:
-        roster = list(roster)
+        roster = list(roster_player_ids)
 
     roster_by_suffix: dict[str, str] = {}
     roster_ids: set[str] = set()
