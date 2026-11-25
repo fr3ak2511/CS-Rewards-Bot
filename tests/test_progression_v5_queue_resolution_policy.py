@@ -262,6 +262,17 @@ class ProgressionV5QueueResolutionPolicyTests(unittest.TestCase):
             row["validation_errors"],
         )
 
+    def test_equal_horizontal_overflow_candidates_block_resolution(self):
+        diagnostic = _diagnostic()
+        wrapper = diagnostic["accounts"][0]["snapshots"][0]["carousel_containers"][1]
+        wrapper["max_scroll_left"] = 400
+        row = self.build(diagnostic=diagnostic)["entries"][0]
+        self.assertFalse(row["resolution_eligible"])
+        self.assertIn(
+            "account_capture_invalid:0001:snapshot_authoritative_rail_ambiguous:0",
+            row["validation_errors"],
+        )
+
     def test_queue_change_after_diagnostic_blocks_resolution(self):
         queue = {PLAYER_ID: _queue_entry()}
         queue[PLAYER_ID]["last_deferred_at"] = "2026-11-26T00:14:00.000000"
