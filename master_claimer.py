@@ -5358,12 +5358,11 @@ def _issue_identity_label(result, known_display_names=None):
 
 
 def build_preexisting_portal_claim_section(results):
-    """List newly observed pre-existing claims with full ID, IGN and repeat-reset evidence."""
+    """Report pre-existing portal claims and explicitly show conclusive Daily-check coverage."""
+    results = [result for result in (results or []) if isinstance(result, dict)]
     incidents = []
     seen = set()
-    for result in results or []:
-        if not isinstance(result, dict):
-            continue
+    for result in results:
         for event in (result.get("preexisting_portal_claims") or []):
             if not isinstance(event, dict):
                 continue
@@ -5378,68 +5377,158 @@ def build_preexisting_portal_claim_section(results):
             seen.add(key)
             incidents.append((result, event))
 
-    if not incidents:
+    # Only full-claim results are in scope for a complete Daily audit. A checked
+    # Store page alone is not enough: the Daily result must also be conclusive.
+    daily_scope = [
+        result for result in results
+        if str(result.get("processing_mode") or "full_claim") == "full_claim"
+    ]
+    daily_incidents = [
+        (result, event) for result, event in incidents
+        if (
+            str(event.get("reward_category") or "").strip().lower() == "daily"
+            or str(event.get("reward_key") or "").strip().lower() == "daily"
+        )
+    ]
+    daily_incident_keys = {
+        str(event.get("player_id") or result.get("pid") or "").strip()
+        for result, event in daily_incidents
+        if str(event.get("player_id") or result.get("pid") or "").strip()
+    }
+    daily_scope_keys = set()
+    daily_checked_keys = set()
+    for index, result in enumerate(daily_scope):
+        player_id = str(result.get("pid") or "").strip()
+        key = player_id or f"__daily_scope_{index}"
+        daily_scope_keys.add(key)
+        if (
+            (bool(result.get("standard_rewards_checked")) and not bool(result.get("daily_unconfirmed")))
+            or (player_id and player_id in daily_incident_keys)
+        ):
+            daily_checked_keys.add(key)
+
+    daily_scope_count = len(daily_scope_keys)
+    daily_checked_count = len(daily_checked_keys)
+    daily_unchecked_count = max(0, daily_scope_count - daily_checked_count)
+
+    if not incidents and not daily_scope_count:
         return ""
 
-    audit = load_portal_claim_audit()
-    account_ids = {str(event.get("player_id") or result.get("pid") or "") for result, event in incidents}
-    repeated_accounts = {
-        pid for pid in account_ids if _portal_claim_reset_day_count(pid, audit) > 1
-    }
-    rows = []
-    for result, event in incidents:
-        player_id = str(event.get("player_id") or result.get("pid") or "")
-        first_name = str(
-            event.get("display_name_at_first_observation")
-            or event.get("display_name")
-            or result.get("display_name")
-            or "IGN unavailable"
-        ).strip()
-        current_name = str(
-            event.get("last_observed_display_name")
-            or result.get("display_name")
-            or first_name
-        ).strip()
-        identity = html.escape(_issue_identity_label({"pid": player_id, "display_name": current_name}))
-        previous_note = (
-            f" · Name at first observation: {html.escape(first_name)}"
-            if first_name and current_name and first_name != current_name else ""
-        )
-        reward = html.escape(str(event.get("reward_name") or "Reward"))
-        category = html.escape(str(event.get("reward_category") or "Reward").title())
-        observed = str(event.get("first_observed_at_ist") or "")
-        try:
-            observed_text = datetime.fromisoformat(observed).strftime("%d %b %Y · %I:%M %p IST")
-        except (TypeError, ValueError):
-            observed_text = observed or "Time unavailable"
-        reset_days = _portal_claim_reset_day_count(player_id, audit)
-        recurrence = (
-            f"Observed on {reset_days} separate reset days"
-            if reset_days > 1 else "First recorded reset-day observation"
-        )
-        run_id = str(event.get("run_ids", [""])[0] if event.get("run_ids") else "")
-        run_note = f" · Run #{html.escape(run_id)}" if run_id else ""
-        rows.append(
-            "<div class='v2-item v2-attention'>"
-            f"<div><strong>{identity}</strong>"
-            f"<small>{category} · {reward} · First observed {html.escape(observed_text)}{run_note}{previous_note}</small></div>"
-            f"<span class='v2-result'>{html.escape(recurrence)}</span></div>"
+    audit_note = ""
+    if daily_scope_count:
+        if daily_incidents:
+            audit_note = (
+                f"{len(daily_incidents)} pre-existing Daily claim(s) were observed before bot interaction "
+                f"among {daily_checked_count}/{daily_scope_count} accounts with a conclusive Daily check."
+            )
+        elif daily_checked_count:
+            audit_note = (
+                "No pre-existing Daily claims were observed before bot interaction among "
+                f"{daily_checked_count}/{daily_scope_count} accounts with a conclusive Daily check."
+            )
+        else:
+            audit_note = (
+                "The Daily pre-existing-claim audit was inconclusive: no account completed a conclusive "
+                "Daily check, so this run cannot establish whether pre-existing Daily claims existed."
+            )
+        if daily_unchecked_count:
+            audit_note += (
+                f" {daily_unchecked_count} account(s) did not complete a conclusive Daily check; "
+                "their Daily state is unknown."
+            )
+    elif daily_incidents:
+        audit_note = (
+            f"{len(daily_incidents)} pre-existing Daily claim(s) were observed, but full Daily-check "
+            "coverage could not be established from this run's account results."
         )
 
-    repeated_count = len(repeated_accounts)
-    account_word = "account" if len(account_ids) == 1 else "accounts"
-    reward_word = "reward" if len(incidents) == 1 else "rewards"
-    subtitle = f"{len(account_ids)} {account_word} · {len(incidents)} {reward_word} observed before bot interaction"
-    repeated_note = f" · {repeated_count} repeat account(s)" if repeated_count else ""
+    if incidents:
+        audit = load_portal_claim_audit()
+        account_ids = {str(event.get("player_id") or result.get("pid") or "") for result, event in incidents}
+        repeated_accounts = {
+            pid for pid in account_ids if _portal_claim_reset_day_count(pid, audit) > 1
+        }
+        rows = []
+        for result, event in incidents:
+            player_id = str(event.get("player_id") or result.get("pid") or "")
+            first_name = str(
+                event.get("display_name_at_first_observation")
+                or event.get("display_name")
+                or result.get("display_name")
+                or "IGN unavailable"
+            ).strip()
+            current_name = str(
+                event.get("last_observed_display_name")
+                or result.get("display_name")
+                or first_name
+            ).strip()
+            identity = html.escape(_issue_identity_label({"pid": player_id, "display_name": current_name}))
+            previous_note = (
+                f" · Name at first observation: {html.escape(first_name)}"
+                if first_name and current_name and first_name != current_name else ""
+            )
+            reward = html.escape(str(event.get("reward_name") or "Reward"))
+            category = html.escape(str(event.get("reward_category") or "Reward").title())
+            observed = str(event.get("first_observed_at_ist") or "")
+            try:
+                observed_text = datetime.fromisoformat(observed).strftime("%d %b %Y · %I:%M %p IST")
+            except (TypeError, ValueError):
+                observed_text = observed or "Time unavailable"
+            reset_days = _portal_claim_reset_day_count(player_id, audit)
+            recurrence = (
+                f"Observed on {reset_days} separate reset days"
+                if reset_days > 1 else "First recorded reset-day observation"
+            )
+            run_id = str(event.get("run_ids", [""])[0] if event.get("run_ids") else "")
+            run_note = f" · Run #{html.escape(run_id)}" if run_id else ""
+            rows.append(
+                "<div class='v2-item v2-attention'>"
+                f"<div><strong>{identity}</strong>"
+                f"<small>{category} · {reward} · First observed {html.escape(observed_text)}{run_note}{previous_note}</small></div>"
+                f"<span class='v2-result'>{html.escape(recurrence)}</span></div>"
+            )
+
+        repeated_count = len(repeated_accounts)
+        account_word = "account" if len(account_ids) == 1 else "accounts"
+        reward_word = "reward" if len(incidents) == 1 else "rewards"
+        subtitle = f"{len(account_ids)} {account_word} · {len(incidents)} {reward_word} observed before bot interaction"
+        repeated_note = f" · {repeated_count} repeat account(s)" if repeated_count else ""
+        header = _email_section_header(
+            "Pre-existing Portal Claims — Review", subtitle + repeated_note,
+            "Review Required", "v2-state-warning"
+        )
+        evidence_note = (
+            "<p class='v2-muted-note'>The portal already showed these rewards as claimed before this bot attempt. "
+            "The portal does not identify who made the claim; treat this as supporting evidence, not proof of the actor.</p>"
+        )
+        rows_html = "".join(rows)
+    else:
+        if daily_checked_count == daily_scope_count:
+            badge_text, badge_class = "No prior Daily claims observed", "v2-state-success"
+        elif daily_checked_count:
+            badge_text, badge_class = "Partial coverage", "v2-state-warning"
+        else:
+            badge_text, badge_class = "Not verified", "v2-state-neutral"
+        header = _email_section_header(
+            "Daily Pre-existing Claim Audit",
+            f"{daily_checked_count}/{daily_scope_count} accounts with a conclusive Daily check",
+            badge_text,
+            badge_class,
+        )
+        evidence_note = ""
+        rows_html = ""
+
+    audit_note_html = (
+        f"<p class='v2-muted-note'>{html.escape(audit_note)}</p>" if audit_note else ""
+    )
     return (
         "<section class='v2-section v2-portal-claims'>"
-        + _email_section_header("Pre-existing Portal Claims — Review", subtitle + repeated_note,
-                                "Review Required", "v2-state-warning")
-        + "<p class='v2-muted-note'>The portal already showed these rewards as claimed before this bot attempt. The portal does not identify who made the claim; treat this as supporting evidence, not proof of the actor.</p>"
-        + "".join(rows)
+        + header
+        + audit_note_html
+        + evidence_note
+        + rows_html
         + "</section>"
     )
-
 
 def _row_cls(status):
     return {"Success":"rs", "Claims Made":"rs", "Promotional Claims Made":"rs",
@@ -5543,121 +5632,264 @@ def _deferred_progression_reason_summary(raw_reason):
 
 
 def build_deferred_checks_section(results):
-    """Summarise open Progression inspections without repeating one row per account."""
-    pending = [
-        result for result in results
-        if result.get("progression_deferred")
-    ]
-    confirmed_claims = sum(
-        int(result.get("progression", 0) or 0)
-        for result in results
-        if (
-            result.get("progression_checked") is True
-            or (
-                result.get("processing_mode", "full_claim") == "full_claim"
-                and not result.get("progression_deferred")
-                and str(result.get("status") or "") not in {"Login Failed", "Error", "Failed"}
-            )
-            or (
-                result.get("progression_deferred")
-                and int(result.get("progression", 0) or 0) > 0
-            )
-            or (
-                result.get("processing_mode") == "progression_queue_only"
-                and result.get("progression_claim_attempted") is True
-            )
+    """Render Progression and Grenade outcomes grouped by milestone, balance and claim status."""
+    records = []
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        mode = str(result.get("processing_mode") or "full_claim")
+        if mode == "promotional_only":
+            continue
+        balance = result.get("grenade_balance")
+        carry = result.get("grenade_balance_carry_forward")
+        balance = balance if isinstance(balance, dict) else {}
+        carry = carry if isinstance(carry, dict) else {}
+        claims = max(
+            0,
+            int(result.get("progression", 0) or 0),
+            int(result.get("progression_claimed_this_run", 0) or 0),
         )
-    )
-    if not pending:
-        if not confirmed_claims:
-            return ""
-        word = "reward" if confirmed_claims == 1 else "rewards"
-        return (
-            "<section class='v2-section v2-progression'>"
-            "<div class='v2-section-head'><h2>Progression Program</h2>"
-            f"<span>{confirmed_claims} {word} confirmed</span></div>"
-            "<p class='v2-muted-note'>Portal-confirmed Progression claims are tracked separately from the core Daily and standard Store rewards.</p>"
-            "</section>"
+        deferred = bool(result.get("progression_deferred"))
+        unconfirmed = bool(result.get("progression_unconfirmed"))
+        checked = result.get("progression_checked") is True
+        has_balance = balance.get("current_count") is not None or carry.get("last_observed_count") is not None
+        account_status = str(result.get("status") or "")
+        has_claim_exception = bool(
+            result.get("daily_unconfirmed")
+            or result.get("store_unconfirmed_indices")
+            or result.get("progression_unconfirmed")
         )
-
-    queue_reinspection_attempts = sum(
-        1 for result in results
-        if result.get("progression_reinspection_attempted") is True
-    )
-    click_attempts = sum(
-        1 for result in pending if result.get("progression_claim_attempted")
-    )
-
-    groups = {
-        "no_reward": 0,
-        "overlay": 0,
-        "unconfirmed": 0,
-        "other": 0,
-    }
-    for result in pending:
-        reason = str(result.get("progression_deferred_reason") or "").lower()
-        if result.get("progression_unconfirmed"):
-            groups["unconfirmed"] += 1
-        elif "no currently visible claimable reward" in reason:
-            groups["no_reward"] += 1
-        elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
-            groups["overlay"] += 1
+        has_processing_failure = account_status in {"Login Failed", "Error", "Failed"}
+        if not (
+            claims or deferred or unconfirmed or checked or has_balance
+            or mode == "progression_queue_only" or has_claim_exception or has_processing_failure
+        ):
+            continue
+        if balance.get("current_count") is not None:
+            actual = balance.get("current_count")
+            minimum = balance.get("expected_minimum")
+            milestone = balance.get("next_milestone")
+            remaining = balance.get("remaining_to_next_milestone")
+            balance_status = str(balance.get("status") or "not_validated")
+            freshness = "Current run"
+            if carry.get("last_observed_count") is not None:
+                prior_date = str(carry.get("last_observed_date") or "date unavailable")
+                prior_status = str(carry.get("status_at_observation") or "status_not_retained")
+                if prior_status == "below_minimum":
+                    freshness += f" · prior reading below minimum on {prior_date}"
+                elif prior_status == "counter_regressed":
+                    freshness += f" · prior counter regression on {prior_date}"
+                elif prior_status == "status_not_retained":
+                    freshness += f" · prior status not retained on {prior_date}"
+        elif carry.get("last_observed_count") is not None:
+            actual = carry.get("last_observed_count")
+            minimum = carry.get("expected_minimum_at_observation")
+            if minimum is None:
+                minimum = carry.get("expected_minimum_as_of")
+            milestone = carry.get("next_milestone_at_observation")
+            remaining = carry.get("remaining_to_milestone_at_observation")
+            balance_status = str(carry.get("status_at_observation") or "not_validated")
+            freshness = "Last observed " + str(carry.get("last_observed_date") or "date unavailable")
+            current_minimum = carry.get("expected_minimum_as_of")
+            if current_minimum is not None and minimum is not None and int(current_minimum) > int(minimum):
+                freshness += f" · current date minimum {current_minimum}"
         else:
-            groups["other"] += 1
+            actual = minimum = milestone = remaining = None
+            balance_status = "not_validated"
+            freshness = "not captured"
 
-    pending_word = "account remains" if len(pending) == 1 else "accounts remain"
+        if unconfirmed:
+            claim_status = "Claim confirmation unresolved"
+        elif claims:
+            reward_word = "reward" if claims == 1 else "rewards"
+            claim_status = (
+                f"{claims} {reward_word} confirmed · inspection still pending"
+                if deferred else f"{claims} {reward_word} confirmed"
+            )
+        elif deferred:
+            reason = str(result.get("progression_deferred_reason") or "").lower()
+            if "no currently visible claimable reward" in reason:
+                claim_status = "Pending · No claimable reward card visible"
+            elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+                claim_status = "Pending · Blocked by an on-screen popup or overlay"
+            else:
+                claim_status = "Pending inspection"
+        elif checked:
+            claim_status = "Checked · no reward claimed"
+        elif str(result.get("status") or "") == "Login Failed":
+            claim_status = "Not checked · login failed"
+        elif str(result.get("status") or "") in {"Error", "Failed"}:
+            claim_status = "Not checked · processing failed"
+        else:
+            claim_status = "Not checked in this run"
+
+        group_key = (
+            int(milestone) if milestone is not None else 10**9,
+            int(actual) if actual is not None else 10**9,
+            int(minimum) if minimum is not None else 10**9,
+            int(remaining) if remaining is not None else 10**9,
+            claim_status,
+            balance_status,
+            freshness,
+        )
+        pid = str(result.get("pid") or "").strip()
+        suffix = pid[-4:] if pid else ""
+        name = str(result.get("display_name") or "IGN unavailable").strip()
+        label = f"{name} (…{suffix})" if suffix else name
+        records.append((group_key, label))
+
+    if not records:
+        return ""
+
+    grouped = {}
+    for key, label in records:
+        grouped.setdefault(key, []).append(label)
+
+    claim_total = sum(
+        max(
+            0,
+            int(result.get("progression", 0) or 0),
+            int(result.get("progression_claimed_this_run", 0) or 0),
+        )
+        for result in results or []
+        if isinstance(result, dict)
+        and str(result.get("processing_mode") or "full_claim") != "promotional_only"
+        and (
+            result.get("progression_checked")
+            or result.get("progression_deferred")
+            or result.get("progression_unconfirmed")
+            or result.get("progression_claim_attempted")
+            or result.get("progression_reinspection_attempted")
+        )
+    )
+    pending_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_deferred")
+    )
+    unconfirmed_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_unconfirmed")
+    )
+    checked_empty_total = sum(
+        1 for result in results or []
+        if isinstance(result, dict)
+        and result.get("progression_checked") is True
+        and not result.get("progression_deferred")
+        and not result.get("progression_unconfirmed")
+        and not int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0)
+    )
+    balance_records = []
+    balance_saved_records = 0
+    for result in results or []:
+        if not isinstance(result, dict) or str(result.get("processing_mode") or "full_claim") == "promotional_only":
+            continue
+        balance = result.get("grenade_balance")
+        carry = result.get("grenade_balance_carry_forward")
+        if isinstance(balance, dict) and balance.get("current_count") is not None:
+            balance_records.append((balance, "current"))
+        elif isinstance(carry, dict) and carry.get("last_observed_count") is not None:
+            balance_records.append((carry, "saved"))
+            balance_saved_records += 1
+    balance_passed = sum(
+        1 for balance, _source in balance_records
+        if str(balance.get("status") or balance.get("status_at_observation") or "") == "pass"
+    )
+    queue_reinspection_attempts = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_reinspection_attempted") is True
+    )
+    account_word = "account" if len(records) == 1 else "accounts"
+    summary_parts = [f"{len(records)} {account_word} grouped"]
     if queue_reinspection_attempts:
         attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
-        summary = (
-            f"{queue_reinspection_attempts} queued reinspection {attempt_word} made. "
-            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed in this run; {len(pending)} {pending_word} open."
-        )
-        if click_attempts == 0:
-            summary += " No claim button was clicked for these pending inspections."
-    elif confirmed_claims:
-        summary = (
-            f"{confirmed_claims} Progression {'reward' if confirmed_claims == 1 else 'rewards'} "
-            f"confirmed in this run; {len(pending)} {pending_word} open."
+        summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made.")
+    reward_word = "Progression reward" if claim_total == 1 else "Progression rewards"
+    open_word = "account remains open" if pending_total == 1 else "accounts remain open"
+    summary_parts.append(
+        f"{claim_total} {reward_word} confirmed in this run; {pending_total} {open_word}"
+    )
+    pending_without_click = sum(
+        1 for result in results or []
+        if isinstance(result, dict)
+        and result.get("progression_deferred")
+        and not result.get("progression_claim_attempted")
+    )
+    if pending_total and pending_without_click == pending_total:
+        summary_parts.append("No claim button was clicked in this run for the pending inspections")
+    if checked_empty_total:
+        summary_parts.append(f"{checked_empty_total} checked with no claim")
+    if unconfirmed_total:
+        summary_parts.append(f"{unconfirmed_total} claim confirmation(s) unresolved")
+    if balance_records:
+        account_word = "account" if len(balance_records) == 1 else "accounts"
+        balance_word = "balance" if len(balance_records) == 1 else "balances"
+        passed_word = "passed" if balance_passed == len(balance_records) else "PASS"
+        summary_parts.append(
+            f"{len(balance_records)} {account_word} checked · {len(balance_records)} {balance_word} captured · {balance_passed} {passed_word}"
+            + (f" · {balance_saved_records} saved readings (not fresh)" if balance_saved_records else "")
         )
     else:
-        summary = (
-            f"{len(pending)} {('account remains' if len(pending) == 1 else 'accounts remain')} open. "
-            "No queued reinspection ran in this run. "
-            "No claim button was clicked in this run."
-        )
+        summary_parts.append("Grenade balance not checked in this run")
 
-    group_rows = []
-    group_labels = (
-        ("no_reward", "No claimable reward card visible"),
-        ("overlay", "Blocked by an on-screen popup or overlay"),
-        ("unconfirmed", "A previous claim still needs confirmation"),
-        ("other", "Other inspection issue"),
-    )
-    for key, label in group_labels:
-        count = groups[key]
-        if not count:
-            continue
-        word = "account" if count == 1 else "accounts"
-        group_rows.append(
-            "<div class='v2-group-row'>"
-            f"<strong>{html.escape(label)}</strong>"
-            f"<span>{count} {word}</span>"
-            "</div>"
-        )
+    milestone_order = []
+    for key in sorted(grouped):
+        milestone = None if key[0] == 10**9 else key[0]
+        if milestone not in milestone_order:
+            milestone_order.append(milestone)
 
+    rows = []
+    for milestone in milestone_order:
+        milestone_label = str(milestone) if milestone is not None else "Not captured"
+        rows.append(
+            "<tr><td colspan='3' style='padding:8px 10px;background:#f1f5f9;border-top:1px solid #dbe3ec'>"
+            f"<strong>Next milestone {html.escape(milestone_label)}</strong></td></tr>"
+        )
+        for key in sorted(grouped):
+            if (None if key[0] == 10**9 else key[0]) != milestone:
+                continue
+            _, actual, minimum, remaining, claim_status, balance_status, freshness = key
+            actual_text = "—" if actual == 10**9 else str(actual)
+            minimum_text = "—" if minimum == 10**9 else str(minimum)
+            remaining_text = "—" if remaining == 10**9 else str(remaining)
+            if balance_status == "pass":
+                if actual != 10**9 and minimum != 10**9 and actual > minimum:
+                    balance_text = "Above date minimum"
+                else:
+                    balance_text = "At date minimum"
+            else:
+                balance_text = {
+                    "below_minimum": "Below date minimum",
+                    "counter_regressed": "Counter regressed",
+                    "pending_baseline": "Pending baseline",
+                    "not_validated": "Not validated",
+                    "status_not_retained": "Status not retained",
+                }.get(balance_status, balance_status.replace("_", " ").title())
+            names = ", ".join(html.escape(label) for label in sorted(grouped[key]))
+            rows.append(
+                "<tr>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'><strong>{actual_text} / {minimum_text}</strong> Grenades"
+                f"<br><small style='color:#64748b'>{html.escape(balance_text)} · {html.escape(freshness)}</small></td>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'>{remaining_text} to go</td>"
+                f"<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'><strong>{html.escape(claim_status)} · {len(grouped[key])}</strong>"
+                f"<br><small style='color:#475569;line-height:1.5'>{names}</small></td>"
+                "</tr>"
+            )
+
+    heading = "Progression Program — Grenade Balance Check"
     return (
-        "<section class='v2-section v2-deferred'>"
-        "<div class='v2-section-head'><h2>Progression — checks still open</h2>"
-        f"<span>{len(pending)} {('account needs' if len(pending) == 1 else 'accounts need')} another check</span></div>"
-        f"<p class='v2-muted-note'>{html.escape(summary)}</p>"
-        "<p class='v2-muted-note' style='margin-top:6px'>An empty scan does not prove that no reward is available. "
-        "The queue stays open until a later safe check confirms the result.</p>"
-        + "".join(group_rows)
-        + "<p class='v2-muted-note' style='margin-top:8px'>Account-by-account details are available in Copy Report.</p>"
-        + "</section>"
+        "<section class='v2-section v2-progression'>"
+        f"<div class='v2-section-head v2-grenade-head'><h2>{html.escape(heading)}</h2>"
+        f"<span>{len(records)} accounts</span></div>"
+        f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
+        "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
+        "<tr style='background:#f8fafc'><th align='left' style='padding:7px 10px'>Grenade balance / date minimum</th>"
+        "<th align='left' style='padding:7px 10px'>To milestone</th>"
+        "<th align='left' style='padding:7px 10px'>PP status and accounts</th></tr>"
+        + "".join(rows) +
+        "</table>"
+        "<p class='v2-muted-note' style='margin-top:8px'>Pending means the account needs another safe inspection. An empty scan is not proof that the full reward inventory has no claimable reward.</p>"
+        "</section>"
     )
-
 
 def _deferred_progression_only(result):
     """True only when deferral is the sole reason a result is partial/retryable."""
@@ -5682,9 +5914,13 @@ def _deferred_progression_only(result):
     }:
         return False
     carry = result.get("grenade_balance_carry_forward")
-    if isinstance(carry, dict) and str(carry.get("status_at_observation") or "") in {
-        "below_minimum", "counter_regressed"
-    }:
+    live = result.get("grenade_balance")
+    has_fresh_live_balance = isinstance(live, dict) and live.get("current_count") is not None
+    if (
+        not has_fresh_live_balance
+        and isinstance(carry, dict)
+        and str(carry.get("status_at_observation") or "") in {"below_minimum", "counter_regressed"}
+    ):
         return False
     fail_reason = str(result.get("fail_reason") or "").strip()
     deferred_reason = str(result.get("progression_deferred_reason") or "").strip()
@@ -6687,8 +6923,13 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
                 == "At least one observed promotional claim was not confirmed by the portal"
         )
         carry = result.get("grenade_balance_carry_forward")
+        has_fresh_live_balance = (
+            isinstance(grenade_balance, dict)
+            and grenade_balance.get("current_count") is not None
+        )
         carry_grenade_attention = bool(
-            isinstance(carry, dict)
+            not has_fresh_live_balance
+            and isinstance(carry, dict)
             and str(carry.get("status_at_observation") or "")
                 in ("below_minimum", "counter_regressed")
         )
@@ -6769,12 +7010,15 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     )
     grenade_html = (
         build_grenade_balance_email_section(results)
-        if not is_progression_only_run or has_fresh_grenade_observations
+        if not deferred_checks_html and (not is_progression_only_run or has_fresh_grenade_observations)
         else ""
     )
-    # Progression-only runs may publish the fresh observations they collected,
-    # but must not imply that untouched accounts have been revalidated today.
-    grenade_carry_forward_html = "" if is_progression_only_run else build_grenade_balance_carry_forward_section(results)
+    # The milestone report already groups live and saved readings; avoid repeating
+    # the same accounts in a second Grenade list.
+    grenade_carry_forward_html = (
+        "" if is_progression_only_run or deferred_checks_html
+        else build_grenade_balance_carry_forward_section(results)
+    )
     reconciliation_html = build_run_reconciliation_email_section(results, run_label, configured_count)
     validation_html = grenade_html + grenade_carry_forward_html + reconciliation_html
     # A run-level reconciliation mismatch is an execution attention state even
@@ -6789,7 +7033,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     exception_details = standard_attention_html + "".join(exception_cards)
     if deferred_check_count:
         attention_fallback_note = (
-            "Progression Inspections Pending are shown separately; review the attention items above."
+            "Progression accounts are grouped by milestone below; review any claim or validation exceptions above."
         )
     else:
         attention_fallback_note = (

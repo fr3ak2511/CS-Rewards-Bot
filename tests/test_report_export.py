@@ -154,7 +154,7 @@ class CopyableReportTests(unittest.TestCase):
         ]
         report = build_copyable_report(pending)
         self.assertIn("ATTENTION REQUIRED", report)
-        self.assertIn("pending baseline", report)
+        self.assertIn("Pending baseline", report)
 
     def test_report_shows_full_cycle_health_separately_from_run_attention(self):
         summary = dict(self.summary)
@@ -181,12 +181,12 @@ class CopyableReportTests(unittest.TestCase):
             },
         }
         report = build_copyable_report(summary)
-        self.assertIn("Overall reset-cycle health", report)
+        self.assertIn("Full-cycle coverage", report)
         self.assertIn("36/36 accounts complete", report)
-        self.assertIn("11 PASS today", report)
-        self.assertIn("25 not checked today", report)
-        self.assertIn("24 with no visible claimable card", report)
-        self.assertIn("1 blocked by overlay", report)
+        self.assertNotIn("11 PASS today", report)
+        self.assertNotIn("not checked today", report)
+        self.assertNotIn("no visible claimable card", report)
+        self.assertNotIn("blocked by overlay", report)
         self.assertIn("Need attention", report)
         self.assertIn("class='cycle-health-table'", report)
         self.assertIn(".cycle-health-table{min-width:0 !important", report)
@@ -230,12 +230,12 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("Inspection blocked by overlay", report)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
+        self.assertIn("Pending · blocked by overlay", report)
         self.assertIn("&lt;Player One&gt;", report)
         self.assertIn(">Deferred check</span>", report)
-        self.assertIn("no claim click was attempted", report)
-        self.assertIn("unknown_fullscreen_overlay_blocks_page", report)
+        self.assertIn("need another safe inspection", report)
+        self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertIn("Actual failures: <strong>0</strong>", report)
@@ -262,7 +262,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("No claimable reward visible", report)
+        self.assertIn("Pending · no claimable card visible", report)
         self.assertIn(">Deferred check</span>", report)
 
     def test_promotion_detection_failure_is_not_hidden_by_deferred_progression(self):
@@ -302,6 +302,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_unconfirmed": False,
             "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "source": "saved_portal_observation",
                 "status_at_observation": "pass",
@@ -317,12 +318,12 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("Last Verified Grenade Progress", report)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Last milestone", report)
-        self.assertIn("123 (then 57 remaining)", report)
-        self.assertIn("These are saved portal observations, not live balances", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("57 to go", report)
+        self.assertIn("At date minimum · Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -333,6 +334,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_deferred_reason": "No currently visible claimable reward.",
             "progression_unconfirmed": False,
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "status_at_observation": "status_not_retained",
                 "last_observed_count": 66,
@@ -347,8 +349,8 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("status not retained", report)
-        self.assertIn("missing status is shown as not retained", report)
+        self.assertIn("Status not retained · Last observed 2026-11-22", report)
+        self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -366,9 +368,8 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
-        self.assertIn("remaining-card inspection is incomplete and stays queued", report)
-        self.assertIn("No further claim click was attempted", report)
+        self.assertIn("1 reward confirmed · inspection still pending", report)
+        self.assertIn("Pending accounts need another safe inspection", report)
 
     def test_unexpected_progression_inspection_exception_remains_attention(self):
         deferred = dict(self.summary["player_results"][0])
@@ -393,6 +394,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_unconfirmed": False,
             "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "status_at_observation": "below_minimum",
                 "last_observed_count": 60,
@@ -407,12 +409,51 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("below minimum", report)
+        self.assertIn("Below date minimum · Last observed 2026-11-22", report)
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
             build_copyable_report([])
 
+
+
+    def test_copy_report_groups_same_milestone_by_balance_and_claim_status(self):
+        summary = dict(self.summary)
+        summary["player_results"] = [
+            {
+                "player_id_last4": "0001", "display_name": "Claimed Player",
+                "progression_claimed_this_run": 1, "progression_checked": True,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 18, "expected_minimum": 18,
+                    "next_milestone": 56, "remaining_to_next_milestone": 38,
+                },
+            },
+            {
+                "player_id_last4": "0002", "display_name": "Pending Player A",
+                "progression_deferred": True,
+                "progression_deferred_reason": "No currently visible claimable reward card.",
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+            {
+                "player_id_last4": "0003", "display_name": "Checked Player",
+                "progression_checked": True,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+        ]
+        report = build_copyable_report(summary)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("Pending Player A (…0002)", report)
+        self.assertIn("Checked Player (…0003)", report)
+        self.assertIn("Pending · no claimable card visible · 1", report)
+        self.assertIn("Checked · no reward claimed · 1", report)
 
 if __name__ == "__main__":
     unittest.main()

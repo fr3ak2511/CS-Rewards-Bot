@@ -213,13 +213,11 @@ def build_cycle_health_overview(
 
 
 def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
-    """Render the same explicit status distinctions for email and Copy Report."""
+    """Render full-cycle coverage only; balance and PP status live in the milestone table."""
     if not isinstance(snapshot, dict) or _count(snapshot.get("configured")) <= 0:
         return ""
     configured = _count(snapshot.get("configured"))
     cycle = snapshot.get("core_cycle") if isinstance(snapshot.get("core_cycle"), dict) else {}
-    grenade = snapshot.get("grenade") if isinstance(snapshot.get("grenade"), dict) else {}
-    progression = snapshot.get("progression") if isinstance(snapshot.get("progression"), dict) else {}
 
     if cycle.get("available"):
         core_text = (
@@ -237,70 +235,15 @@ def render_cycle_health_overview(snapshot: dict[str, Any] | None) -> str:
         core_text = "No verified full-roster cycle recorded for this reset"
         core_note = "This run's account count is not a substitute for full-roster coverage."
 
-    grenade_text = (
-        f'{_count(grenade.get("passed_today"))} PASS today'
-        f' · {_count(grenade.get("below_minimum_today"))} below minimum'
-        f' · {_count(grenade.get("counter_regressed_today"))} counter regressions'
-        f' · {_count(grenade.get("other_status_today"))} other / baseline-pending'
-        f' · {_count(grenade.get("not_checked_today"))} not checked today'
-    )
-    grenade_note = (
-        f'{_count(grenade.get("observed_today"))}/{configured} accounts have a balance '
-        "observation dated today. Older saved readings are not counted as current passes."
-    )
-
-    pending = _count(progression.get("pending"))
-    pp_text = (
-        f'{pending}/{configured} inspections pending'
-        f' · {_count(progression.get("no_visible_claimable_card"))} with no visible claimable card'
-        f' · {_count(progression.get("blocked_by_overlay"))} blocked by overlay'
-        f' · {_count(progression.get("claim_unconfirmed"))} with claim outcome unconfirmed'
-        f' · {_count(progression.get("other_pending"))} other pending'
-    )
-    slots_used = _count(progression.get("most_common_slots_used"))
-    slots_note = ""
-    if pending and slots_used:
-        left = max(0, _count(progression.get("max_slots_per_reset")) - slots_used)
-        slots_note = (
-            f' For {_count(progression.get("accounts_at_most_common_slots_used"))} pending accounts, '
-            f'the most common usage is {slots_used}/'
-            f'{_count(progression.get("max_slots_per_reset"))} inspection slots this reset'
-            f' ({left} remaining for those accounts).'
-        )
-    outside_roster_note = ""
-    outside_roster = _count(progression.get("outside_current_roster"))
-    if outside_roster:
-        outside_roster_note = (
-            f" {outside_roster} queued record(s) outside the current roster are excluded "
-            "from the account count."
-        )
-    pp_note = (
-        "Pending inspections are not automatically failed claims. An empty scan is not treated "
-        "as proof that no Progression reward exists; an unconfirmed claim outcome is shown "
-        "separately from a deferred inspection."
-        + slots_note
-        + outside_roster_note
-    )
-
-    rows = [
-        ("Core Daily + Store coverage", core_text, core_note),
-        ("Grenade balance validation", grenade_text, grenade_note),
-        ("Progression inspection queue", pp_text, pp_note),
-    ]
-    row_html = "".join(
-        "<tr><td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top;width:34%'>"
-        f"<strong>{escape(label)}</strong></td>"
-        "<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'>"
-        f"<strong>{escape(value)}</strong><br>"
-        f"<span style='font-size:11px;color:#64748b;line-height:1.45'>{escape(note)}</span>"
-        "</td></tr>"
-        for label, value, note in rows
-    )
     return (
         "<section class='section' style='margin-bottom:14px;padding:15px;border:1px solid #e2e8f0;border-radius:10px;background:#fff'>"
-        "<h2 style='font-size:15px;margin:0 0 8px'>Overall reset-cycle health</h2>"
-        f"<p style='font-size:11px;color:#64748b;margin:0 0 8px'>Reset date: {escape(str(snapshot.get('reset_date') or '—'))} · "
-        "The cycle, balance and inspection figures are separate measures.</p>"
+        "<h2 style='font-size:15px;margin:0 0 8px'>Full-cycle coverage</h2>"
+        f"<p style='font-size:11px;color:#64748b;margin:0 0 8px'>Reset date: {escape(str(snapshot.get('reset_date') or '—'))}</p>"
         "<table class='cycle-health-table' role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
-        f"{row_html}</table></section>"
+        "<tr><td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top;width:34%'>"
+        "<strong>Daily + Store</strong></td>"
+        "<td style='padding:8px 10px;border-top:1px solid #e2e8f0;vertical-align:top'>"
+        f"<strong>{escape(core_text)}</strong><br>"
+        f"<span style='font-size:11px;color:#64748b;line-height:1.45'>{escape(core_note)}</span>"
+        "</td></tr></table></section>"
     )
