@@ -823,7 +823,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Progression — checks still open", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertNotIn("Attention Required", report)
 
@@ -1206,7 +1206,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("Grenade Balance Check", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("27 / 30", report)
         self.assertIn("Next milestone 56", report)
         self.assertIn("Below date minimum", report)
@@ -1231,7 +1231,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("34 / 24", report)
         self.assertIn("22 to go", report)
         self.assertIn("Next milestone 56", report)
-        self.assertIn("Above minimum", report)
+        self.assertIn("Above date minimum", report)
         self.assertNotIn("Tracking Incomplete", report)
 
     def test_pending_baseline_is_informational_not_attention(self):
@@ -1440,8 +1440,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("Progression — checks still open · grouped by milestone", report)
-        self.assertIn("Progression — grouped by milestone", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("27 / 30", report)
         self.assertIn("Below date minimum", report)
         self.assertIn("class='v2-section-head v2-grenade-head'", report)
@@ -2244,7 +2244,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>🎁 Core claims</span><strong>144/144</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
-        self.assertIn("Progression Program", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 reward confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
 
