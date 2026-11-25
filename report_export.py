@@ -88,6 +88,119 @@ def _deferred_progression_is_only_issue(player: dict[str, Any]) -> bool:
     return known_nonclaim_inspection and (not fail_reason or fail_reason == deferred_reason)
 
 
+def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
+    """Group accounts by the portal's next milestone, Grenade balance and PP outcome."""
+    grouped: dict[tuple[Any, ...], list[str]] = {}
+    for player in players:
+        if not isinstance(player, dict):
+            continue
+        balance = player.get("grenade_balance")
+        carry = player.get("grenade_balance_carry_forward")
+        balance = balance if isinstance(balance, dict) else {}
+        carry = carry if isinstance(carry, dict) else {}
+        claims = _number(player.get("progression_claimed_this_run", player.get("progression")))
+        deferred = bool(player.get("progression_deferred"))
+        unconfirmed = bool(player.get("progression_unconfirmed"))
+        checked = player.get("progression_checked") is True
+
+        if balance.get("current_count") is not None:
+            actual = _number(balance.get("current_count"))
+            minimum = _number(balance.get("expected_minimum")) if balance.get("expected_minimum") is not None else None
+            milestone = _number(balance.get("next_milestone")) if balance.get("next_milestone") is not None else None
+            remaining = _number(balance.get("remaining_to_next_milestone")) if balance.get("remaining_to_next_milestone") is not None else (
+                max(0, milestone - actual) if milestone is not None else None
+            )
+            balance_status = str(balance.get("status") or "not_validated")
+            freshness = "Current run"
+        elif carry.get("last_observed_count") is not None:
+            actual = _number(carry.get("last_observed_count"))
+            minimum = _number(carry.get("expected_minimum_as_of")) if carry.get("expected_minimum_as_of") is not None else None
+            milestone = _number(carry.get("next_milestone_at_observation")) if carry.get("next_milestone_at_observation") is not None else None
+            remaining = _number(carry.get("remaining_to_milestone_at_observation")) if carry.get("remaining_to_milestone_at_observation") is not None else (
+                max(0, milestone - actual) if milestone is not None else None
+            )
+            balance_status = str(carry.get("status_at_observation") or "not_validated")
+            freshness = "Last observed " + str(carry.get("last_observed_date") or "date unavailable")
+        else:
+            actual = minimum = milestone = remaining = None
+            balance_status = "not_validated"
+            freshness = "Not captured"
+
+        if unconfirmed:
+            pp_status = "Claim confirmation unresolved"
+        elif claims:
+            pp_status = f"{claims} claim(s) confirmed" + (" · inspection still pending" if deferred else "")
+        elif deferred:
+            reason = str(player.get("progression_deferred_reason") or "").lower()
+            if "no currently visible claimable reward" in reason:
+                pp_status = "Pending · no claimable card visible"
+            elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
+                pp_status = "Pending · blocked by overlay"
+            else:
+                pp_status = "Pending inspection"
+        elif checked:
+            pp_status = "Checked · no reward claimed"
+        elif str(player.get("status") or "") == "Login Failed":
+            pp_status = "Not checked · login failed"
+        else:
+            pp_status = "Not checked in this run"
+
+        key = (
+            milestone if milestone is not None else 10**9,
+            actual if actual is not None else 10**9,
+            minimum if minimum is not None else 10**9,
+            remaining if remaining is not None else 10**9,
+            pp_status,
+            balance_status,
+            freshness,
+        )
+        suffix = str(player.get("player_id_last4") or "").strip()
+        label = _player_label(player)
+        if suffix:
+            label += f" (…{suffix})"
+        grouped.setdefault(key, []).append(label)
+
+    if not grouped:
+        return "<p>No Progression account or balance data was available in this run.</p>"
+
+    rows: list[str] = []
+    milestone_values = sorted({key[0] for key in grouped})
+    for milestone_value in milestone_values:
+        milestone_label = "Not captured" if milestone_value == 10**9 else str(milestone_value)
+        rows.append(
+            "<tr><td colspan='5' style='padding:8px;background:#f1f5f9;border-top:1px solid #dbe3ec'>"
+            f"<strong>Next milestone {html.escape(milestone_label)}</strong></td></tr>"
+        )
+        for key in sorted(k for k in grouped if k[0] == milestone_value):
+            _, actual, minimum, remaining, pp_status, balance_status, freshness = key
+            actual_text = "—" if actual == 10**9 else str(actual)
+            minimum_text = "—" if minimum == 10**9 else str(minimum)
+            milestone_text = "—" if milestone_value == 10**9 else str(milestone_value)
+            remaining_text = "—" if remaining == 10**9 else str(remaining)
+            balance_text = {
+                "pass": "PASS",
+                "below_minimum": "BELOW DATE MINIMUM",
+                "counter_regressed": "COUNTER REGRESSED",
+                "pending_baseline": "BASELINE PENDING",
+                "not_validated": "NOT VALIDATED",
+            }.get(balance_status, balance_status.replace("_", " ").upper())
+            account_names = ", ".join(html.escape(name) for name in sorted(grouped[key]))
+            rows.append(
+                "<tr>"
+                f"<td>{actual_text}</td><td>{minimum_text}</td><td>{milestone_text}</td>"
+                f"<td>{remaining_text}</td><td><strong>{html.escape(pp_status)} · {len(grouped[key])}</strong>"
+                f"<br><small>{html.escape(balance_text)} · {html.escape(freshness)}</small>"
+                f"<br><small>{account_names}</small></td></tr>"
+            )
+    return (
+        "<div class='table-wrap'><table class='milestone-table' style='width:100%;min-width:0;border-collapse:collapse;table-layout:fixed'>"
+        "<thead><tr><th>Grenades</th><th>Date minimum</th><th>Next milestone</th>"
+        "<th>To go</th><th>PP status and accounts</th></tr></thead><tbody>"
+        + "".join(rows) + "</tbody></table></div>"
+        "<p class='reason'>Pending accounts need another safe inspection. An empty scan is not proof that the full reward inventory has no claimable reward.</p>"
+    )
+
+
 def build_copyable_report(summary: dict[str, Any]) -> str:
     """Render a standalone report; only masked account suffixes are accepted."""
     if not isinstance(summary, dict):
@@ -134,38 +247,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if isinstance(reconciliation.get("grenade_balance_validation"), dict) else {}
     )
     grenade_status = str(grenade_validation.get("status") or "not_available")
-    grenade_rows = []
-    for player in players:
-        if not isinstance(player, dict):
-            continue
-        balance = player.get("grenade_balance")
-        if not isinstance(balance, dict):
-            continue
-        balance_status = str(balance.get("status") or "not_validated")
-        balance_class = (
-            "bad" if balance_status in {"below_minimum", "counter_regressed"}
-            else "warn" if balance_status in {"pending_baseline", "not_validated"}
-            else "good"
-        )
-        observed = "—" if balance.get("current_count") is None else str(_number(balance.get("current_count")))
-        minimum = "Pending" if balance.get("expected_minimum") is None else str(_number(balance.get("expected_minimum")))
-        milestone = "—" if balance.get("next_milestone") is None else str(_number(balance.get("next_milestone")))
-        suffix = (
-            "<small class='reason'>Baseline captured; prior joining days are not backfilled.</small>"
-            if balance.get("historical_gap") else ""
-        )
-        grenade_rows.append(
-            "<tr><td><strong>" + _safe(_player_label(player)) + "</strong>" + suffix
-            + "</td><td>" + observed + "</td><td>" + minimum
-            + "</td><td>" + milestone + "</td><td><span class='status " + balance_class + "'>"
-            + _safe(balance_status.replace("_", " ")) + "</span></td></tr>"
-        )
-    grenade_table = (
-        "<div class='table-wrap'><table><thead><tr><th>Account</th><th>Observed</th>"
-        "<th>Minimum</th><th>Next milestone</th><th>Status</th></tr></thead><tbody>"
-        + "".join(grenade_rows) + "</tbody></table></div>"
-        if grenade_rows else "<p>No Progression balance was captured in this run.</p>"
-    )
+    grenade_table = _progression_milestone_table(players)
     grenade_summary = (
         "<p>Status: <strong>" + _safe(grenade_status.replace("_", " "))
         + "</strong> · Accounts observed: <strong>" + str(_number(grenade_validation.get("accounts_observed")))
@@ -214,62 +296,15 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if carry_forward_rows else ""
     )
 
-    deferred_rows = []
-    deferred_empty_count = 0
-    deferred_blocked_count = 0
-    for player in players:
-        if not isinstance(player, dict) or not player.get("progression_deferred"):
-            continue
-        label = _safe(_player_label(player))
-        raw_reason = str(player.get("progression_deferred_reason") or "")
-        reason_lower = raw_reason.lower()
-        if "no currently visible claimable reward" in reason_lower:
-            deferred_empty_count += 1
-            category = "No claimable reward visible"
-        elif "popup/overlay" in reason_lower or "fullscreen_overlay" in reason_lower:
-            deferred_blocked_count += 1
-            category = "Inspection blocked by overlay"
-        else:
-            category = "Inspection deferred"
-        reason = _safe(_deferred_reason_summary(raw_reason))
-        if player.get("progression_unconfirmed"):
-            detail = (
-                "A previously attempted Progression claim remains unconfirmed; "
-                "this recheck was deferred and no additional claim click was attempted."
-            )
-        elif player.get("progression_claim_attempted") or int(player.get("progression", 0) or 0) > 0:
-            detail = (
-                f"{int(player.get('progression', 0) or 0)} Progression reward(s) were portal-confirmed, "
-                "but the remaining-card inspection is incomplete and stays queued. "
-                "No further claim click was attempted."
-            )
-        else:
-            detail = "Progression inspection remains queued; no claim click was attempted."
-        deferred_rows.append(
-            "<div class='deferred-item'><strong>" + label
-            + "</strong><span>" + _safe(category) + "</span><p>" + _safe(detail)
-            + "</p><small class='reason'>" + reason + "</small></div>"
-        )
-    deferred_count = len(deferred_rows)
-    if deferred_rows:
-        deferred_word = "inspection" if deferred_count == 1 else "inspections"
-        causes = []
-        if deferred_empty_count:
-            causes.append(f"{deferred_empty_count} no claimable reward visible")
-        if deferred_blocked_count:
-            causes.append(f"{deferred_blocked_count} blocked by overlay")
-        deferred_note = " · ".join(causes) if causes else "No claim click was attempted"
-        deferred_section = (
-            "<section class='section deferred'><h2>Progression Inspections Pending</h2>"
-            + f"<p>{deferred_count} {deferred_word} remain queued · {_safe(deferred_note)}. "
-            "These are not counted as failed claims or Grenade deficits.</p>"
-            + "".join(deferred_rows)
-            + "</section>"
-        )
-        attention_note = "Claim / validation exceptions only; pending inspections are shown separately"
-    else:
-        deferred_section = ""
-        attention_note = "Accounts with claim / validation exceptions"
+    deferred_count = sum(
+        1 for player in players
+        if isinstance(player, dict) and player.get("progression_deferred")
+    )
+    deferred_section = ""
+    attention_note = (
+        "Claim / validation exceptions only; pending Progression accounts are grouped by milestone below"
+        if deferred_count else "Accounts with claim / validation exceptions"
+    )
 
     if attention:
         health = "ATTENTION REQUIRED"
@@ -450,10 +485,6 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div>Category total: <strong>{_number((reconciliation.get("claim_counts") or {}).get("category_sum"))}</strong></div>
 <div>Recorded claim counter: <strong>{_number((reconciliation.get("claim_counts") or {}).get("recorded_claim_counter"))}</strong></div>
 {"<ul>" + "".join("<li>" + _safe(item) + "</li>" for item in reconciliation_warnings) + "</ul>" if reconciliation_warnings else "<p>All available arithmetic and roster-scope checks matched.</p>"}
-</section>
-<section class="section">
-<h2>Progression / Grenade balance</h2>
-{grenade_section}
 </section>
 </div>
 <footer class="footer">CS Rewards Bot · Automated report · Player IDs are masked to their last four characters.</footer>
