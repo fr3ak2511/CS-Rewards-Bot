@@ -315,6 +315,9 @@ class ProgressionV5QueueResolutionPolicyTests(unittest.TestCase):
         row = self.build(queue=queue)["entries"][0]
         self.assertTrue(row["resolution_eligible"])
         self.assertEqual(row["proposed_resolution"], "no_claimable_in_captured_rail")
+        self.assertTrue(row["prior_resolution_reopened"])
+        self.assertEqual(row["prior_resolution_type"], "inspection_completed")
+        self.assertEqual(row["prior_resolution_run_id"], "44973856377")
 
 
 if __name__ == "__main__":
