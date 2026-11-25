@@ -87,6 +87,9 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
                     "class_name": _safe_text(button.get("class_name"), 120),
                     "data_slot": _safe_text(button.get("data_slot"), 80),
                     "data_state": _safe_text(button.get("data_state"), 48),
+                    "data_variant": _safe_text(button.get("data_variant"), 80),
+                    "data_claimed": _safe_text(button.get("data_claimed"), 16),
+                    "data_unavailable": _safe_text(button.get("data_unavailable"), 16),
                     "disabled": _safe_optional_bool(button.get("disabled")),
                     "aria_disabled": _safe_text(button.get("aria_disabled"), 16),
                 })
@@ -117,6 +120,12 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
                     "role": _safe_text(hint.get("role"), 32),
                     "class_name": _safe_text(hint.get("class_name"), 160),
                     "text": _safe_text(hint.get("text"), 80),
+                    "inside_action": bool(hint.get("inside_action")),
+                    "action_data_variant": _safe_text(hint.get("action_data_variant"), 80),
+                    "action_data_unavailable": _safe_text(hint.get("action_data_unavailable"), 16),
+                    "view_box": _safe_text(hint.get("view_box"), 48),
+                    "path_count": _safe_number(hint.get("path_count"), maximum=16),
+                    "path_d_prefix": _safe_text(hint.get("path_d_prefix"), 80),
                 })
             safe_cards.append({
                 "tag": _safe_text(card.get("tag"), 24),
@@ -230,6 +239,24 @@ def _icon_semantic_status(hint: dict[str, Any]) -> str | None:
     classes = str(hint.get("class_name") or "").casefold().split()
     if any(token in lock_icon_names for token in classes):
         return "Locked"
+
+    # The November 2026 portal renders its reward-card padlock as an unlabelled
+    # inline SVG inside the disabled component-daily-reward CTA. Its distinctive
+    # path has no CSS/accessibility name, so preserve only a bounded path prefix
+    # and require the observed CTA context and SVG geometry before classifying.
+    observed_reward_lock = (
+        str(hint.get("tag") or "").casefold() == "svg"
+        and hint.get("inside_action") is True
+        and str(hint.get("action_data_variant") or "").casefold() == "component-daily-reward"
+        and str(hint.get("action_data_unavailable") or "").casefold() == "true"
+        and str(hint.get("view_box") or "").strip() == "0 0 17 17"
+        and _safe_number(hint.get("path_count"), maximum=16) == 1
+        and str(hint.get("path_d_prefix") or "").startswith(
+            "M6.25214 5.94201H4.92987L4.93021 5.94234C"
+        )
+    )
+    if observed_reward_lock:
+        return "Locked"
     return None
 
 
@@ -277,6 +304,8 @@ def _progression_card_status(card: dict[str, Any]) -> dict[str, Any]:
         )
         for value in values:
             add(value, "button_detail")
+        if str(button.get("data_claimed") or "").strip().casefold() == "true":
+            evidence.append(("Delivered", "button_data_claimed"))
         if any(_status_classification(value) == "Claimable" for value in values):
             claim_controls.append(button)
 
