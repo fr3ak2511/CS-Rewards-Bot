@@ -487,7 +487,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         # The core headline is Daily + standard Store only; other claims stay separate.
         self.assertIn("<span>🎁 Core claims</span><strong>3/4</strong>", report)
-        self.assertIn("Progression Program", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 reward confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertNotIn("Paid Pack", report)
@@ -781,7 +781,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=35,
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
-        self.assertIn("Progression — checks still open", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 account remains open", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("1 account remains open", report)
@@ -919,10 +919,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Progression — checks still open · grouped by milestone", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("66 / 66", report)
         self.assertIn("57 to go", report)
-        self.assertIn("Last checked 2026-11-22", report)
+        self.assertIn("Last observed 2026-11-22", report)
         self.assertIn("At date minimum · Last observed 2026-11-22", report)
         self.assertNotIn("Attention Required", report)
 
@@ -1228,7 +1228,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=1,
         )
         self.assertIn("Above date minimum", report)
-        self.assertIn("34 / 24 · surplus 10 · next 56 (in 22 Grenades)", report)
+        self.assertIn("34 / 24", report)
+        self.assertIn("22 to go", report)
+        self.assertIn("Next milestone 56", report)
         self.assertIn("Above minimum", report)
         self.assertNotIn("Tracking Incomplete", report)
 
@@ -1825,7 +1827,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
-        self.assertIn("1 reward confirmed in this run; 1 account remains open", report)
+        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
