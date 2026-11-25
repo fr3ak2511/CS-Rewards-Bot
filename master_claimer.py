@@ -5778,10 +5778,7 @@ def build_deferred_checks_section(results):
                 "</tr>"
             )
 
-    heading = (
-        "Progression — checks still open · grouped by milestone"
-        if pending_total else "Progression — grouped by milestone"
-    )
+    heading = "Progression Program — Grenade Balance Check"
     return (
         "<section class='v2-section v2-progression'>"
         f"<div class='v2-section-head v2-grenade-head'><h2>{html.escape(heading)}</h2>"
