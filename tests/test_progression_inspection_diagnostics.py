@@ -426,6 +426,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertIn("data_claimed: String(button.getAttribute('data-claimed') || '')", source)
         self.assertIn("data_unavailable: String(button.getAttribute('data-unavailable') || '')", source)
         self.assertIn("path_d_prefix: String(firstPath?.getAttribute('d') || '')", source)
+        self.assertIn(r"replace(/\s+/g, ' ')", source)
         self.assertIn("action_data_variant: String(actionAncestor?.getAttribute('data-variant') || '')", source)
 
         node = shutil.which("node")
