@@ -3443,6 +3443,9 @@ def _progression_claim_snapshot(driver):
                   class_name: String(button.className || '').trim().slice(0, 120),
                   data_slot: String(button.getAttribute('data-slot') || ''),
                   data_state: String(button.getAttribute('data-state') || ''),
+                  data_variant: String(button.getAttribute('data-variant') || '').slice(0, 80),
+                  data_claimed: String(button.getAttribute('data-claimed') || '').slice(0, 16),
+                  data_unavailable: String(button.getAttribute('data-unavailable') || '').slice(0, 16),
                   disabled: !!button.disabled,
                   aria_disabled: String(button.getAttribute('aria-disabled') || '')
                 }));
@@ -3470,18 +3473,29 @@ def _progression_claim_snapshot(driver):
                     node.getAttribute('data-lucide'), node.getAttribute('data-state'),
                     classNameText(node)].join(' ').toLowerCase();
                   return !!actionAncestor || /lock|locked|claim|deliver|redeem|collect|check|status|icon/.test(signals);
-                }).slice(0, 16).map(node => ({
-                  tag: String(node.tagName || '').toLowerCase(),
-                  aria_label: String(node.getAttribute('aria-label') || '').slice(0, 100),
-                  title: String(node.getAttribute('title') || '').slice(0, 100),
-                  alt: String(node.getAttribute('alt') || '').slice(0, 100),
-                  data_icon: String(node.getAttribute('data-icon') || '').slice(0, 48),
-                  data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
-                  data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
-                  role: String(node.getAttribute('role') || '').slice(0, 32),
-                  class_name: classNameText(node).replace(/\s+/g, ' ').trim().slice(0, 160),
-                  text: textOf(node).slice(0, 80)
-                }));
+                }).slice(0, 16).map(node => {
+                  const actionAncestor = node.closest('button,[role="button"]');
+                  const isSvg = String(node.tagName || '').toLowerCase() === 'svg';
+                  const firstPath = isSvg ? node.querySelector('path') : null;
+                  return {
+                    tag: String(node.tagName || '').toLowerCase(),
+                    aria_label: String(node.getAttribute('aria-label') || '').slice(0, 100),
+                    title: String(node.getAttribute('title') || '').slice(0, 100),
+                    alt: String(node.getAttribute('alt') || '').slice(0, 100),
+                    data_icon: String(node.getAttribute('data-icon') || '').slice(0, 48),
+                    data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
+                    data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
+                    role: String(node.getAttribute('role') || '').slice(0, 32),
+                    class_name: classNameText(node).replace(/\\s+/g, ' ').trim().slice(0, 160),
+                    text: textOf(node).slice(0, 80),
+                    inside_action: !!actionAncestor,
+                    action_data_variant: String(actionAncestor?.getAttribute('data-variant') || '').slice(0, 80),
+                    action_data_unavailable: String(actionAncestor?.getAttribute('data-unavailable') || '').slice(0, 16),
+                    view_box: isSvg ? String(node.getAttribute('viewBox') || '').slice(0, 48) : '',
+                    path_count: isSvg ? node.querySelectorAll('path').length : 0,
+                    path_d_prefix: String(firstPath?.getAttribute('d') || '').trim().slice(0, 64)
+                  };
+                });
                 const statusElements = Array.from(card.querySelectorAll(
                   'button,[role="button"],span,p,div,[data-state],[aria-label]'
                 )).filter(visible).filter(node => {
