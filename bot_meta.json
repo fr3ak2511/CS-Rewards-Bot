@@ -54,8 +54,8 @@
     "9C41181861FE2438"
   ],
   "last_run": {
-    "timestamp": "2026-11-25T05:56:01.693042",
-    "run_label": "Primary Run",
+    "timestamp": "2026-11-25T12:13:32.786419",
+    "run_label": "Promotional Check #1",
     "daily_only_recovery": false,
     "daily_recovery_mode": null,
     "daily_recovery_slot": null,
@@ -66,26 +66,26 @@
     "retry_player_ids": [],
     "retry_player_count": 0,
     "retry_targets_by_player": {},
-    "total_claimed": 145,
-    "efficiency": 100.0,
-    "efficiency_scope": "full_claim_accounts_only",
-    "duration_seconds": 1222,
+    "total_claimed": 0,
+    "efficiency": null,
+    "efficiency_scope": "not_applicable_promotional_only",
+    "duration_seconds": 471,
     "per_type": {
-      "daily": 35,
-      "store": 108,
-      "store_daily": 108,
+      "daily": 0,
+      "store": 0,
+      "store_daily": 0,
       "store_temp": 0,
       "promotions": 0,
-      "progression": 2,
+      "progression": 0,
       "loyalty": 0,
       "event_rewards": 0
     },
-    "slowest_player": "8EE5A8F3D8CAD1F3",
-    "avg_time_per_player": 32.9,
+    "slowest_player": "E1E9729A4885E6D9",
+    "avg_time_per_player": 12.1,
     "accounts_processed": 36,
-    "claims_made": 145,
-    "unavailable_rewards": 44,
-    "standard_rewards_on_cooldown": 37,
+    "claims_made": 0,
+    "unavailable_rewards": 7,
+    "standard_rewards_on_cooldown": 0,
     "promotional_unavailable_observations": 7,
     "distinct_promotional_offer_types": 1,
     "promotional_claims_made": 0,
@@ -101,9 +101,9 @@
     "promotion_followups_still_blocked": 0,
     "promotion_followups_pending_recheck": 0,
     "promotion_followups_legacy_seeded": 0,
-    "promotional_only_accounts": 0,
+    "promotional_only_accounts": 36,
     "backup_reconciliation_accounts": 0,
-    "full_claim_accounts": 36,
+    "full_claim_accounts": 0,
     "configured_player_count": 36,
     "progression_queue_only": false,
     "email_sent": true,
@@ -725,13 +725,13 @@
         {
           "name": "Freaksson",
           "first_seen_at_ist": "2026-11-13T17:34:55.308379",
-          "last_seen_at_ist": "2026-11-25T05:57:32.196730",
-          "observation_count": 36,
+          "last_seen_at_ist": "2026-11-25T12:05:58.727260",
+          "observation_count": 37,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:57:32.196730"
+      "last_observed_at_ist": "2026-11-25T12:05:58.727260"
     },
     "4DC0E2AA7130D7E6": {
       "current_name": "FREAKv20",
@@ -739,13 +739,13 @@
         {
           "name": "FREAKv20",
           "first_seen_at_ist": "2026-11-13T17:35:37.717194",
-          "last_seen_at_ist": "2026-11-25T05:57:43.096999",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:06:11.826597",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:57:43.096999"
+      "last_observed_at_ist": "2026-11-25T12:06:11.826597"
     },
     "46C57810F646B91F": {
       "current_name": "Umang1984",
@@ -753,13 +753,13 @@
         {
           "name": "Umang1984",
           "first_seen_at_ist": "2026-11-13T17:36:20.127939",
-          "last_seen_at_ist": "2026-11-25T05:57:54.897121",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:06:26.291611",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:57:54.897121"
+      "last_observed_at_ist": "2026-11-25T12:06:26.291611"
     },
     "8EE5A8F3D8CAD1F3": {
       "current_name": "SAGI2511",
@@ -767,13 +767,13 @@
         {
           "name": "SAGI2511",
           "first_seen_at_ist": "2026-11-13T17:37:02.785413",
-          "last_seen_at_ist": "2026-11-25T05:58:07.185122",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:06:39.809537",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:58:07.185122"
+      "last_observed_at_ist": "2026-11-25T12:06:39.809537"
     },
     "5899855DAA167B36": {
       "current_name": "FREAK2511",
@@ -781,13 +781,13 @@
         {
           "name": "FREAK2511",
           "first_seen_at_ist": "2026-11-13T17:37:45.697944",
-          "last_seen_at_ist": "2026-11-25T05:58:19.552993",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:06:55.014264",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:58:19.552993"
+      "last_observed_at_ist": "2026-11-25T12:06:55.014264"
     },
     "5D14D66D5B6C7B8F": {
       "current_name": "hgkme",
@@ -795,13 +795,13 @@
         {
           "name": "hgkme",
           "first_seen_at_ist": "2026-11-13T17:38:27.987664",
-          "last_seen_at_ist": "2026-11-25T05:58:30.024277",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:07:09.059275",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:58:30.024277"
+      "last_observed_at_ist": "2026-11-25T12:07:09.059275"
     },
     "5429611A24A8F01A": {
       "current_name": "hgkme1",
@@ -809,13 +809,13 @@
         {
           "name": "hgkme1",
           "first_seen_at_ist": "2026-11-13T17:39:10.112534",
-          "last_seen_at_ist": "2026-11-25T05:58:40.859906",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:07:20.738839",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:58:40.859906"
+      "last_observed_at_ist": "2026-11-25T12:07:20.738839"
     },
     "856EB1365FA9D02E": {
       "current_name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
@@ -823,13 +823,13 @@
         {
           "name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
           "first_seen_at_ist": "2026-11-13T17:39:53.493458",
-          "last_seen_at_ist": "2026-11-25T05:58:53.041472",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:07:34.256754",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:58:53.041472"
+      "last_observed_at_ist": "2026-11-25T12:07:34.256754"
     },
     "F251D3D226496061": {
       "current_name": "Gvk9916",
@@ -837,13 +837,13 @@
         {
           "name": "Gvk9916",
           "first_seen_at_ist": "2026-11-13T17:40:36.320433",
-          "last_seen_at_ist": "2026-11-25T05:59:05.454172",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:07:48.540909",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:59:05.454172"
+      "last_observed_at_ist": "2026-11-25T12:07:48.540909"
     },
     "3D9A901755C3B2D8": {
       "current_name": "T\u00f5p\u011c\u00fc\u00f1",
@@ -851,13 +851,13 @@
         {
           "name": "T\u00f5p\u011c\u00fc\u00f1",
           "first_seen_at_ist": "2026-11-13T17:41:18.857939",
-          "last_seen_at_ist": "2026-11-25T05:59:17.059289",
-          "observation_count": 36,
+          "last_seen_at_ist": "2026-11-25T12:08:04.129589",
+          "observation_count": 37,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:59:17.059289"
+      "last_observed_at_ist": "2026-11-25T12:08:04.129589"
     },
     "86CD85689FAE9549": {
       "current_name": "Nick 11 11",
@@ -865,13 +865,13 @@
         {
           "name": "Nick 11 11",
           "first_seen_at_ist": "2026-11-13T17:42:01.204845",
-          "last_seen_at_ist": "2026-11-25T05:59:28.907963",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-25T12:08:16.273941",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:59:28.907963"
+      "last_observed_at_ist": "2026-11-25T12:08:16.273941"
     },
     "A32124B011061E03": {
       "current_name": "VEN\u00d8M\u00d8\u00f9S",
@@ -879,13 +879,13 @@
         {
           "name": "VEN\u00d8M\u00d8\u00f9S",
           "first_seen_at_ist": "2026-11-13T17:42:43.026468",
-          "last_seen_at_ist": "2026-11-25T05:59:39.398092",
-          "observation_count": 35,
+          "last_seen_at_ist": "2026-11-25T12:08:27.811976",
+          "observation_count": 36,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:59:39.398092"
+      "last_observed_at_ist": "2026-11-25T12:08:27.811976"
     },
     "63989CEF5D15F053": {
       "current_name": "R\u00e5s\u00dclGh\u00fcL",
@@ -893,13 +893,13 @@
         {
           "name": "R\u00e5s\u00dclGh\u00fcL",
           "first_seen_at_ist": "2026-11-13T17:43:24.612315",
-          "last_seen_at_ist": "2026-11-25T05:59:50.135997",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:08:39.640658",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:59:50.135997"
+      "last_observed_at_ist": "2026-11-25T12:08:39.640658"
     },
     "B0036841F0183A12": {
       "current_name": "\u011e\u00f6Ku",
@@ -907,13 +907,13 @@
         {
           "name": "\u011e\u00f6Ku",
           "first_seen_at_ist": "2026-11-13T17:44:07.123635",
-          "last_seen_at_ist": "2026-11-25T06:00:01.423698",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:08:53.887842",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:01.423698"
+      "last_observed_at_ist": "2026-11-25T12:08:53.887842"
     },
     "A6DA56D3C46DF31B": {
       "current_name": "HareeshK",
@@ -921,13 +921,13 @@
         {
           "name": "HareeshK",
           "first_seen_at_ist": "2026-11-13T17:44:50.688748",
-          "last_seen_at_ist": "2026-11-25T06:00:12.098541",
-          "observation_count": 35,
+          "last_seen_at_ist": "2026-11-25T12:09:07.940377",
+          "observation_count": 36,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:12.098541"
+      "last_observed_at_ist": "2026-11-25T12:09:07.940377"
     },
     "7E53CF9C948CED45": {
       "current_name": "retH\u00e8llG\u00d8D",
@@ -935,13 +935,13 @@
         {
           "name": "retH\u00e8llG\u00d8D",
           "first_seen_at_ist": "2026-11-13T17:45:32.901979",
-          "last_seen_at_ist": "2026-11-25T06:00:24.116733",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:09:20.922173",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:24.116733"
+      "last_observed_at_ist": "2026-11-25T12:09:20.922173"
     },
     "E796C81690AB75C0": {
       "current_name": "DRSxSUJAN",
@@ -949,13 +949,13 @@
         {
           "name": "DRSxSUJAN",
           "first_seen_at_ist": "2026-11-13T17:46:14.323601",
-          "last_seen_at_ist": "2026-11-25T06:00:35.032720",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:09:34.457206",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:35.032720"
+      "last_observed_at_ist": "2026-11-25T12:09:34.457206"
     },
     "F820398935D2C403": {
       "current_name": "R\u00e8t\u0111 K\u00e8\u00f1",
@@ -963,13 +963,13 @@
         {
           "name": "R\u00e8t\u0111 K\u00e8\u00f1",
           "first_seen_at_ist": "2026-11-13T17:46:57.023708",
-          "last_seen_at_ist": "2026-11-25T06:00:46.314010",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:09:48.232221",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:46.314010"
+      "last_observed_at_ist": "2026-11-25T12:09:48.232221"
     },
     "C3960960443AF932": {
       "current_name": "LittleKane",
@@ -977,13 +977,13 @@
         {
           "name": "LittleKane",
           "first_seen_at_ist": "2026-11-13T17:47:37.950601",
-          "last_seen_at_ist": "2026-11-25T06:00:57.655649",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:10:01.735240",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:00:57.655649"
+      "last_observed_at_ist": "2026-11-25T12:10:01.735240"
     },
     "2B50290C73E02027": {
       "current_name": "top silly",
@@ -991,13 +991,13 @@
         {
           "name": "top silly",
           "first_seen_at_ist": "2026-11-13T17:48:19.544032",
-          "last_seen_at_ist": "2026-11-25T06:01:08.519011",
-          "observation_count": 35,
+          "last_seen_at_ist": "2026-11-25T12:10:13.377280",
+          "observation_count": 36,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:01:08.519011"
+      "last_observed_at_ist": "2026-11-25T12:10:13.377280"
     },
     "188A50EA1ABE0765": {
       "current_name": "LULL\u00ef",
@@ -1005,13 +1005,13 @@
         {
           "name": "LULL\u00ef",
           "first_seen_at_ist": "2026-11-13T17:49:02.179514",
-          "last_seen_at_ist": "2026-11-25T06:01:20.218868",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:10:27.036758",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:01:20.218868"
+      "last_observed_at_ist": "2026-11-25T12:10:27.036758"
     },
     "4D1AA8C2C628E73F": {
       "current_name": "SujanBckup",
@@ -1019,13 +1019,13 @@
         {
           "name": "SujanBckup",
           "first_seen_at_ist": "2026-11-13T17:49:44.197025",
-          "last_seen_at_ist": "2026-11-25T05:47:34.867229",
-          "observation_count": 34,
+          "last_seen_at_ist": "2026-11-25T12:10:38.421996",
+          "observation_count": 35,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:47:34.867229"
+      "last_observed_at_ist": "2026-11-25T12:10:38.421996"
     },
     "B4BAE5FC4CACA8F7": {
       "current_name": "B4BAE5FC4CACA8F7",
@@ -1033,13 +1033,13 @@
         {
           "name": "B4BAE5FC4CACA8F7",
           "first_seen_at_ist": "2026-11-13T17:50:26.368388",
-          "last_seen_at_ist": "2026-11-25T06:01:30.737408",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:10:47.558068",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:01:30.737408"
+      "last_observed_at_ist": "2026-11-25T12:10:47.558068"
     },
     "8FC80EF0CC5B9D39": {
       "current_name": "RITZEE17",
@@ -1047,13 +1047,13 @@
         {
           "name": "RITZEE17",
           "first_seen_at_ist": "2026-11-13T17:51:08.791378",
-          "last_seen_at_ist": "2026-11-25T06:01:41.990067",
-          "observation_count": 37,
+          "last_seen_at_ist": "2026-11-25T12:11:01.556799",
+          "observation_count": 38,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:01:41.990067"
+      "last_observed_at_ist": "2026-11-25T12:11:01.556799"
     },
     "1956988E56026BA7": {
       "current_name": "Hunter7575",
@@ -1061,13 +1061,13 @@
         {
           "name": "Hunter7575",
           "first_seen_at_ist": "2026-11-13T17:51:51.663053",
-          "last_seen_at_ist": "2026-11-25T05:49:14.056006",
-          "observation_count": 34,
+          "last_seen_at_ist": "2026-11-25T12:11:15.489353",
+          "observation_count": 35,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:49:14.056006"
+      "last_observed_at_ist": "2026-11-25T12:11:15.489353"
     },
     "631FEB500E5C1EB7": {
       "current_name": "Mickypt",
@@ -1075,13 +1075,13 @@
         {
           "name": "Mickypt",
           "first_seen_at_ist": "2026-11-13T17:52:34.267983",
-          "last_seen_at_ist": "2026-11-25T06:01:53.122088",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:11:25.009366",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:01:53.122088"
+      "last_observed_at_ist": "2026-11-25T12:11:25.009366"
     },
     "6163D9F946C4BD48": {
       "current_name": "Mickypt 1",
@@ -1089,13 +1089,13 @@
         {
           "name": "Mickypt 1",
           "first_seen_at_ist": "2026-11-13T17:53:16.583746",
-          "last_seen_at_ist": "2026-11-25T05:50:23.145415",
-          "observation_count": 35,
+          "last_seen_at_ist": "2026-11-25T12:11:38.339481",
+          "observation_count": 36,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:50:23.145415"
+      "last_observed_at_ist": "2026-11-25T12:11:38.339481"
     },
     "B3ED965EAECB6F7C": {
       "current_name": "AnwrHatela",
@@ -1103,13 +1103,13 @@
         {
           "name": "AnwrHatela",
           "first_seen_at_ist": "2026-11-13T17:54:00.115358",
-          "last_seen_at_ist": "2026-11-25T06:02:03.506210",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:11:47.291815",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:02:03.506210"
+      "last_observed_at_ist": "2026-11-25T12:11:47.291815"
     },
     "BB382E889AA37C4F": {
       "current_name": "SAVAggEEEE",
@@ -1117,13 +1117,13 @@
         {
           "name": "SAVAggEEEE",
           "first_seen_at_ist": "2026-11-13T17:54:42.480986",
-          "last_seen_at_ist": "2026-11-25T06:02:14.120718",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-25T12:12:02.926798",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:02:14.120718"
+      "last_observed_at_ist": "2026-11-25T12:12:02.926798"
     },
     "DA4C269DB53172C5": {
       "current_name": "\u0120od\u0141\u00eekeP\u015aR",
@@ -1131,13 +1131,13 @@
         {
           "name": "\u0120od\u0141\u00eekeP\u015aR",
           "first_seen_at_ist": "2026-11-13T17:55:24.146300",
-          "last_seen_at_ist": "2026-11-25T06:02:31.499259",
-          "observation_count": 35,
+          "last_seen_at_ist": "2026-11-25T12:12:16.883710",
+          "observation_count": 36,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:02:31.499259"
+      "last_observed_at_ist": "2026-11-25T12:12:16.883710"
     },
     "51001A5D6014F2DD": {
       "current_name": "Gupta00001",
@@ -1145,13 +1145,13 @@
         {
           "name": "Gupta00001",
           "first_seen_at_ist": "2026-11-13T17:56:08.145826",
-          "last_seen_at_ist": "2026-11-25T06:02:44.792615",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-25T12:12:27.944793",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:02:44.792615"
+      "last_observed_at_ist": "2026-11-25T12:12:27.944793"
     },
     "4443B75C454AEFF8": {
       "current_name": "4443B75C454AEFF8",
@@ -1159,13 +1159,13 @@
         {
           "name": "4443B75C454AEFF8",
           "first_seen_at_ist": "2026-11-13T17:56:52.175108",
-          "last_seen_at_ist": "2026-11-25T05:53:12.088572",
-          "observation_count": 36,
+          "last_seen_at_ist": "2026-11-25T12:12:41.876852",
+          "observation_count": 37,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:53:12.088572"
+      "last_observed_at_ist": "2026-11-25T12:12:41.876852"
     },
     "809109186A2962E4": {
       "current_name": "annu411",
@@ -1173,13 +1173,13 @@
         {
           "name": "annu411",
           "first_seen_at_ist": "2026-11-13T17:57:34.731507",
-          "last_seen_at_ist": "2026-11-25T05:53:45.075508",
-          "observation_count": 36,
+          "last_seen_at_ist": "2026-11-25T12:12:51.209626",
+          "observation_count": 37,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:53:45.075508"
+      "last_observed_at_ist": "2026-11-25T12:12:51.209626"
     },
     "90A110C58E410DDF": {
       "current_name": "ReddyRulz",
@@ -1187,13 +1187,13 @@
         {
           "name": "ReddyRulz",
           "first_seen_at_ist": "2026-11-13T17:58:17.191976",
-          "last_seen_at_ist": "2026-11-25T06:02:56.280628",
-          "observation_count": 36,
+          "last_seen_at_ist": "2026-11-25T12:13:00.426646",
+          "observation_count": 37,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:02:56.280628"
+      "last_observed_at_ist": "2026-11-25T12:13:00.426646"
     },
     "3F493D8C327FAF81": {
       "current_name": "VaR88",
@@ -1201,13 +1201,13 @@
         {
           "name": "VaR88",
           "first_seen_at_ist": "2026-11-13T17:58:59.657665",
-          "last_seen_at_ist": "2026-11-25T06:03:07.570981",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-25T12:13:15.117790",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T06:03:07.570981"
+      "last_observed_at_ist": "2026-11-25T12:13:15.117790"
     },
     "9C41181861FE2438": {
       "current_name": "1HULLK",
@@ -1215,13 +1215,13 @@
         {
           "name": "1HULLK",
           "first_seen_at_ist": "2026-11-22T05:58:05.026406",
-          "last_seen_at_ist": "2026-11-25T05:55:33.524826",
-          "observation_count": 10,
+          "last_seen_at_ist": "2026-11-25T12:13:29.478231",
+          "observation_count": 11,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-25T05:55:33.524826"
+      "last_observed_at_ist": "2026-11-25T12:13:29.478231"
     }
   },
   "runtime_reconciliations": [
@@ -1265,20 +1265,26 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 14,
-      "last_attempt_at": "2026-11-25T06:01:46.498796",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:56.999092",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
+      "total_attempts": 15,
+      "last_attempt_at": "2026-11-25T12:11:18.801336",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:11:32.181867",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
       "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
       "target_card_signature": null,
       "requires_exact_target": false,
       "reopened_from_resolution": "inspection_completed",
       "reopened_from_resolution_run_id": "44973856377",
-      "reopened_player_name": "Mickypt"
+      "reopened_player_name": "Mickypt",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:11:32.181867",
+      "manual_attention_required": false
     },
     "BB382E889AA37C4F": {
       "status": "deferred",
@@ -1288,20 +1294,26 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 14,
-      "last_attempt_at": "2026-11-25T06:02:08.059479",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:02:19.002252",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
+      "total_attempts": 15,
+      "last_attempt_at": "2026-11-25T12:11:55.091613",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:12:09.983953",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
       "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
       "target_card_signature": null,
       "requires_exact_target": false,
       "reopened_from_resolution": "inspection_completed",
       "reopened_from_resolution_run_id": "44973856377",
-      "reopened_player_name": "SAVAggEEEE"
+      "reopened_player_name": "SAVAggEEEE",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:12:09.983953",
+      "manual_attention_required": false
     },
     "E1E9729A4885E6D9": {
       "status": "deferred",
@@ -1311,17 +1323,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:57:14.893165",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:57:36.222276",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:05:41.761641",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:06:05.725134",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:06:05.725134",
+      "manual_attention_required": false
     },
     "4DC0E2AA7130D7E6": {
       "status": "deferred",
@@ -1331,17 +1349,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:57:36.725115",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:57:47.836127",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:06:06.227507",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:06:19.053300",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:06:19.053300",
+      "manual_attention_required": false
     },
     "46C57810F646B91F": {
       "status": "deferred",
@@ -1351,17 +1375,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:57:48.346656",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:00.125488",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:06:19.555888",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:06:33.331381",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:06:33.331381",
+      "manual_attention_required": false
     },
     "8EE5A8F3D8CAD1F3": {
       "status": "deferred",
@@ -1371,17 +1401,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:00.628394",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:11.815049",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:06:33.834521",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:06:47.244653",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:06:47.244653",
+      "manual_attention_required": false
     },
     "5D14D66D5B6C7B8F": {
       "status": "deferred",
@@ -1391,17 +1427,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:23.978898",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:34.343218",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:07:02.539282",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:07:14.046778",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:07:14.046778",
+      "manual_attention_required": false
     },
     "5429611A24A8F01A": {
       "status": "deferred",
@@ -1411,17 +1453,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:34.849269",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:45.728623",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:07:14.549144",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:07:27.529489",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:07:27.529489",
+      "manual_attention_required": false
     },
     "856EB1365FA9D02E": {
       "status": "deferred",
@@ -1431,17 +1479,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:46.231604",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:58.675869",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:07:28.032028",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:07:41.327910",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:07:41.327910",
+      "manual_attention_required": false
     },
     "F251D3D226496061": {
       "status": "deferred",
@@ -1451,17 +1505,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:59.178795",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:59:09.508823",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:07:41.836532",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:07:57.014098",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:07:57.014098",
+      "manual_attention_required": false
     },
     "86CD85689FAE9549": {
       "status": "deferred",
@@ -1471,17 +1531,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:59:22.367659",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:59:32.869627",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:08:10.376819",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:08:20.923973",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked inspection (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center bg-no-",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:08:20.923973",
+      "manual_attention_required": false
     },
     "63989CEF5D15F053": {
       "status": "deferred",
@@ -1491,17 +1557,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:59:43.941494",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:59:54.366856",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:08:33.586999",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:08:47.101482",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:08:47.101482",
+      "manual_attention_required": false
     },
     "7E53CF9C948CED45": {
       "status": "deferred",
@@ -1511,17 +1583,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:00:17.498774",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:00:28.354795",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:09:14.869507",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:09:28.188204",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:09:28.188204",
+      "manual_attention_required": false
     },
     "E796C81690AB75C0": {
       "status": "deferred",
@@ -1531,17 +1609,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:00:28.857745",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:00:38.917753",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:09:28.690774",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:09:41.654004",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:09:41.654004",
+      "manual_attention_required": false
     },
     "F820398935D2C403": {
       "status": "deferred",
@@ -1551,17 +1635,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:00:39.422870",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:00:50.371654",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:09:42.156485",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:09:55.420071",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:09:55.420071",
+      "manual_attention_required": false
     },
     "C3960960443AF932": {
       "status": "deferred",
@@ -1571,17 +1661,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:00:50.874696",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:01.596779",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:09:55.922566",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:10:06.786407",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:10:06.786407",
+      "manual_attention_required": false
     },
     "188A50EA1ABE0765": {
       "status": "deferred",
@@ -1591,17 +1687,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:01:12.937058",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:24.165587",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:10:20.962776",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:10:31.722987",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked inspection (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center bg-no-",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:10:31.722987",
+      "manual_attention_required": false
     },
     "B4BAE5FC4CACA8F7": {
       "status": "deferred",
@@ -1611,17 +1713,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:01:24.668499",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:34.764770",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:10:41.866094",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:10:54.944782",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:10:54.944782",
+      "manual_attention_required": false
     },
     "8FC80EF0CC5B9D39": {
       "status": "deferred",
@@ -1631,17 +1739,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:01:35.267661",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:45.994223",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:10:55.447262",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:11:08.754261",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:11:08.754261",
+      "manual_attention_required": false
     },
     "B3ED965EAECB6F7C": {
       "status": "deferred",
@@ -1651,17 +1765,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:01:57.503399",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:02:07.556569",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:11:41.567895",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:11:54.588467",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:11:54.588467",
+      "manual_attention_required": false
     },
     "51001A5D6014F2DD": {
       "status": "deferred",
@@ -1671,17 +1791,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:02:37.543093",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:02:49.622162",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:12:20.583986",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:12:35.154398",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:12:35.154398",
+      "manual_attention_required": false
     },
     "3F493D8C327FAF81": {
       "status": "deferred",
@@ -1691,17 +1817,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 10,
+      "total_attempts": 11,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:03:01.004475",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:03:11.503093",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:13:08.395069",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:13:23.182216",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:13:23.182216",
+      "manual_attention_required": false
     },
     "5899855DAA167B36": {
       "status": "deferred",
@@ -1711,17 +1843,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 6,
+      "total_attempts": 7,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:58:12.319646",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:58:23.476213",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:06:47.748749",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:07:02.036959",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:07:02.036959",
+      "manual_attention_required": false
     },
     "B0036841F0183A12": {
       "status": "deferred",
@@ -1731,17 +1869,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 6,
+      "total_attempts": 7,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:59:54.869804",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:00:05.389843",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:08:47.603887",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:09:01.413558",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:09:01.413558",
+      "manual_attention_required": false
     },
     "3D9A901755C3B2D8": {
       "status": "deferred",
@@ -1751,17 +1895,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 2,
+      "total_attempts": 3,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:59:10.016847",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:59:21.863830",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:07:57.516441",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:08:09.874484",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:08:09.874484",
+      "manual_attention_required": false
     },
     "A32124B011061E03": {
       "status": "deferred",
@@ -1771,17 +1921,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 2,
+      "total_attempts": 3,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T05:59:33.372585",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T05:59:43.438460",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:08:21.426352",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:08:33.084634",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:08:33.084634",
+      "manual_attention_required": false
     },
     "A6DA56D3C46DF31B": {
       "status": "deferred",
@@ -1791,17 +1947,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 2,
+      "total_attempts": 3,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:00:05.892830",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:00:16.995730",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:09:01.916127",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:09:14.365710",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:09:14.365710",
+      "manual_attention_required": false
     },
     "2B50290C73E02027": {
       "status": "deferred",
@@ -1811,17 +1973,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 2,
+      "total_attempts": 3,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:01:02.103078",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:01:12.434159",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:10:07.289773",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:10:20.459488",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:10:20.459488",
+      "manual_attention_required": false
     },
     "90A110C58E410DDF": {
       "status": "deferred",
@@ -1831,17 +1999,23 @@
       "attempt_reset_date": "2026-11-25",
       "attempted_slots": [
         "Primary Run",
-        "Immediate Progression Recovery"
+        "Immediate Progression Recovery",
+        "Promotional Check #1"
       ],
-      "total_attempts": 2,
+      "total_attempts": 3,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-25T06:02:50.125088",
-      "last_attempt_slot": "Immediate Progression Recovery",
-      "last_deferred_at": "2026-11-25T06:03:00.501466",
-      "last_source_run_label": "Immediate Progression Recovery",
-      "last_source_run_id": "45518143648",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available."
+      "last_attempt_at": "2026-11-25T12:12:54.398792",
+      "last_attempt_slot": "Promotional Check #1",
+      "last_deferred_at": "2026-11-25T12:13:07.892429",
+      "last_source_run_label": "Promotional Check #1",
+      "last_source_run_id": "45561700879",
+      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
+      "last_outcome_category": "empty_scan",
+      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-25T12:13:07.892429",
+      "manual_attention_required": false
     }
   },
   "progression_deferred_inspection_history": [
