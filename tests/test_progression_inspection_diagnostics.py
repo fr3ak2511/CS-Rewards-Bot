@@ -59,11 +59,10 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
                         "data_state": "delivered"
                     }],
                     "icon_hints": [{
-                        "tag": "svg", "inside_action": True,
-                        "action_data_variant": "component-daily-reward",
-                        "action_data_unavailable": "true", "view_box": "0 0 17 17",
-                        "path_count": 1,
-                        "path_d_prefix": "M6.25214 5.94201H4.92987L4.93021 5.94234C"
+                        "tag": "svg", "inside_action": False,
+                        "action_data_variant": "", "action_data_unavailable": "",
+                        "view_box": "0 0 94 94", "path_count": 1,
+                        "path_d_prefix": "M37.8286 76.263C37.0809"
                     }],
                     "milestone_number_hints": [3],
                     "rect": {"x": 10, "y": 20, "width": 200, "height": 220},
@@ -81,10 +80,10 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertTrue(card["button_details"][0]["disabled"])
         self.assertEqual(card["button_details"][0]["data_claimed"], "true")
         self.assertEqual(card["button_details"][0]["data_unavailable"], "true")
-        self.assertEqual(card["icon_hints"][0]["action_data_variant"], "component-daily-reward")
-        self.assertEqual(card["icon_hints"][0]["view_box"], "0 0 17 17")
+        self.assertFalse(card["icon_hints"][0]["inside_action"])
+        self.assertEqual(card["icon_hints"][0]["view_box"], "0 0 94 94")
         self.assertEqual(card["icon_hints"][0]["path_count"], 1)
-        self.assertEqual(card["icon_hints"][0]["path_d_prefix"], "M6.25214 5.94201H4.92987L4.93021 5.94234C")
+        self.assertEqual(card["icon_hints"][0]["path_d_prefix"], "M37.8286 76.263C37.0809")
         self.assertEqual(card["status_elements"][0]["text"], "Delivered")
         self.assertNotIn("raw_html", safe)
         self.assertNotIn("SECRET", str(safe))
@@ -424,6 +423,10 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         helper_source = source[helper_start:helper_end + len(chr(10) + "                };")]
         self.assertEqual(source.count("classNameText(node)"), 3)
         self.assertNotIn("String(node.getAttribute('class') || node.className || '')", source)
+        self.assertIn("data_claimed: String(button.getAttribute('data-claimed') || '')", source)
+        self.assertIn("data_unavailable: String(button.getAttribute('data-unavailable') || '')", source)
+        self.assertIn("path_d_prefix: String(firstPath?.getAttribute('d') || '')", source)
+        self.assertIn("action_data_variant: String(actionAncestor?.getAttribute('data-variant') || '')", source)
 
         node = shutil.which("node")
         if not node:
