@@ -181,12 +181,12 @@ class CopyableReportTests(unittest.TestCase):
             },
         }
         report = build_copyable_report(summary)
-        self.assertIn("Overall reset-cycle health", report)
+        self.assertIn("Full-cycle coverage", report)
         self.assertIn("36/36 accounts complete", report)
-        self.assertIn("11 PASS today", report)
-        self.assertIn("25 not checked today", report)
-        self.assertIn("24 with no visible claimable card", report)
-        self.assertIn("1 blocked by overlay", report)
+        self.assertNotIn("11 PASS today", report)
+        self.assertNotIn("not checked today", report)
+        self.assertNotIn("no visible claimable card", report)
+        self.assertNotIn("blocked by overlay", report)
         self.assertIn("Need attention", report)
         self.assertIn("class='cycle-health-table'", report)
         self.assertIn(".cycle-health-table{min-width:0 !important", report)
@@ -334,6 +334,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_deferred_reason": "No currently visible claimable reward.",
             "progression_unconfirmed": False,
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "status_at_observation": "status_not_retained",
                 "last_observed_count": 66,
@@ -393,6 +394,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_unconfirmed": False,
             "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "status_at_observation": "below_minimum",
                 "last_observed_count": 60,
@@ -446,7 +448,7 @@ class CopyableReportTests(unittest.TestCase):
         ]
         report = build_copyable_report(summary)
         self.assertIn("Progression / Grenade balance — grouped by milestone", report)
-        self.assertIn("Next milestone 56", report)
+        self.assertIn("Next milestone 123", report)
         self.assertIn("Next milestone 123", report)
         self.assertIn("Pending Player A (…0002)", report)
         self.assertIn("Checked Player (…0003)", report)
