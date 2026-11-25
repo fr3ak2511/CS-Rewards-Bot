@@ -331,6 +331,75 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertEqual(unknown["reason"], "no_explicit_card_status")
 
 
+    def test_observed_inline_reward_lock_svg_is_locked_but_generic_unavailable_is_unknown(self):
+        lock_path_prefix = "M6.25214 5.94201H4.92987L4.93021 5.94234C"
+
+        def summarize(icon_hints, *, button=None):
+            card = {
+                "text_snippet": "123 x100",
+                "milestone_number_hints": [123],
+                "button_labels": [],
+                "button_details": [button or {
+                    "tag": "button", "label": "", "disabled": True,
+                    "aria_disabled": "true", "data_variant": "component-daily-reward",
+                    "data_claimed": "", "data_unavailable": "true",
+                }],
+                "exact_status_text_hints": [],
+                "status_elements": [],
+                "icon_hints": icon_hints,
+            }
+            snapshot = {
+                "page_path": "/progression-program",
+                "page_valid": True,
+                "carousel_containers": [{
+                    "index": 0, "class_name": "reward-rail", "overflow_x": "auto",
+                    "client_width": 1000, "scroll_width": 2000, "max_scroll_left": 1000,
+                    "scroll_left": 1000, "at_end": True,
+                    "captured_cards": [card],
+                }],
+            }
+            summary = build_progression_inspection_diagnostic_summary(
+                {"PLAYER0001": [snapshot]}, configured_player_count=1,
+            )
+            return summary["accounts"][0]["normalized_progression_rail"]["milestone_cards"][0]
+
+        observed_lock = summarize([{
+            "tag": "svg",
+            "inside_action": True,
+            "action_data_variant": "component-daily-reward",
+            "action_data_unavailable": "true",
+            "view_box": "0 0 17 17",
+            "path_count": 1,
+            "path_d_prefix": lock_path_prefix,
+        }])
+        self.assertEqual(observed_lock["classification"], "Locked")
+        self.assertIn("icon_semantic_name", observed_lock["evidence_sources"])
+
+        wrong_path = summarize([{
+            "tag": "svg",
+            "inside_action": True,
+            "action_data_variant": "component-daily-reward",
+            "action_data_unavailable": "true",
+            "view_box": "0 0 17 17",
+            "path_count": 1,
+            "path_d_prefix": "M1 1L16 16",
+        }])
+        self.assertEqual(wrong_path["classification"], "Unknown")
+        self.assertEqual(wrong_path["reason"], "no_explicit_card_status")
+
+        generic_disabled = summarize([])
+        self.assertEqual(generic_disabled["classification"], "Unknown")
+        self.assertEqual(generic_disabled["reason"], "no_explicit_card_status")
+
+        delivered = summarize([], button={
+            "tag": "button", "label": "", "disabled": True,
+            "aria_disabled": "true", "data_variant": "component-daily-reward",
+            "data_claimed": "true", "data_unavailable": "true",
+        })
+        self.assertEqual(delivered["classification"], "Delivered")
+        self.assertIn("button_data_claimed", delivered["evidence_sources"])
+
+
     def test_svg_class_name_capture_handles_animated_svg_and_html_classes(self):
         source_path = Path(__file__).resolve().parents[1] / "master_claimer.py"
         source = source_path.read_text(encoding="utf-8")
