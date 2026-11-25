@@ -5663,7 +5663,15 @@ def build_deferred_checks_section(results):
             int(result.get("progression_claimed_this_run", 0) or 0),
         )
         for result in results or []
-        if isinstance(result, dict) and str(result.get("processing_mode") or "full_claim") != "promotional_only"
+        if isinstance(result, dict)
+        and str(result.get("processing_mode") or "full_claim") != "promotional_only"
+        and (
+            result.get("progression_checked")
+            or result.get("progression_deferred")
+            or result.get("progression_unconfirmed")
+            or result.get("progression_claim_attempted")
+            or result.get("progression_reinspection_attempted")
+        )
     )
     pending_total = sum(
         1 for result in results or []
