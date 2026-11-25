@@ -5728,7 +5728,7 @@ def build_deferred_checks_section(results):
         balance_word = "balance" if len(balance_records) == 1 else "balances"
         passed_word = "passed" if balance_passed == len(balance_records) else "PASS"
         summary_parts.append(
-            f"{len(balance_records)} {account_word} with {balance_word} · {balance_passed} {passed_word}"
+            f"{len(balance_records)} {account_word} checked · {len(balance_records)} {balance_word} captured · {balance_passed} {passed_word}"
             + (f" · {balance_saved_records} saved readings (not fresh)" if balance_saved_records else "")
         )
     else:
