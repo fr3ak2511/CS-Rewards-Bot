@@ -212,7 +212,7 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
             rows.append(
                 "<tr>"
                 f"<td>{actual_text}</td><td>{minimum_text}</td><td>{milestone_text}</td>"
-                f"<td>{remaining_text}</td><td><strong>{html.escape(pp_status)} · {len(grouped[key])}</strong>"
+                f"<td>{remaining_text} to go</td><td><strong>{html.escape(pp_status)} · {len(grouped[key])}</strong>"
                 f"<br><small>{html.escape(balance_text)} · {html.escape(freshness)}</small>"
                 f"<br><small>{account_names}</small></td></tr>"
             )
