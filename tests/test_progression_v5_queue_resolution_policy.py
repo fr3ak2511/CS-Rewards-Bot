@@ -252,7 +252,9 @@ class ProgressionV5QueueResolutionPolicyTests(unittest.TestCase):
 
     def test_invalid_card_capture_source_blocks_resolution(self):
         diagnostic = _diagnostic()
-        diagnostic["accounts"][0]["snapshots"][1]["carousel_containers"][0]["card_capture_source"] = "no_card_group_found"
+        selected = diagnostic["accounts"][0]["snapshots"][1]["carousel_containers"][0]
+        selected["card_capture_source"] = "no_card_group_found"
+        selected["is_semantic_carousel_root"] = True
         row = self.build(diagnostic=diagnostic)["entries"][0]
         self.assertFalse(row["resolution_eligible"])
         self.assertIn(
