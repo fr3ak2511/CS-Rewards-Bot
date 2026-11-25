@@ -323,7 +323,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("69", report)
         self.assertIn("Next milestone 123", report)
         self.assertIn("57 to go", report)
-        self.assertIn("previous reading below date minimum on 2026-11-22", report)
+        self.assertIn("At date minimum · Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
