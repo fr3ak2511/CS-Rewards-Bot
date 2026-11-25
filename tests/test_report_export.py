@@ -231,7 +231,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
         self.assertIn("Progression / Grenade balance — grouped by milestone", report)
-        self.assertIn("Pending · Blocked by an on-screen popup or overlay", report)
+        self.assertIn("Pending · blocked by overlay", report)
         self.assertIn("&lt;Player One&gt;", report)
         self.assertIn(">Deferred check</span>", report)
         self.assertIn("needs another safe inspection", report)
@@ -320,9 +320,9 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Progression / Grenade balance — grouped by milestone", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Next milestone 123", report)
+        self.assertIn("Next milestone 56", report)
         self.assertIn("57", report)
-        self.assertIn("Last observed 2026-11-22", report)
+        self.assertIn("previous reading below date minimum on 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -347,7 +347,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("Status not retained", report)
+        self.assertIn("previous status not retained on 2026-11-22", report)
         self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
@@ -406,7 +406,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("Below date minimum", report)
+        self.assertIn("previous reading below date minimum", report)
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
