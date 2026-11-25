@@ -3318,6 +3318,9 @@ def _progression_claim_snapshot(driver):
               'already claimed','collected','redeemed','locked'
             ]);
             const textOf = node => norm(node && (node.innerText || node.textContent) || '');
+            const numberTokens = value => (String(value || '').match(/[0-9,]+/g) || [])
+              .map(token => Number(token.replaceAll(',', '')))
+              .filter(Number.isFinite);
             const depthOf = node => {
               let depth = 0;
               for (let parent = node && node.parentElement; parent && depth < 100;
@@ -3327,10 +3330,8 @@ def _progression_claim_snapshot(driver):
             const visibleOutsideDialog = node => visible(node)
               && !node.closest('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]');
             const hasMilestoneHint = node => {
-              const text = textOf(node).slice(0, 1800);
-              return milestoneThresholds.some(value =>
-                new RegExp('(^|\\\\D)' + value + '(?=\\\\D|$)').test(text)
-              );
+              const tokens = numberTokens(textOf(node).slice(0, 1800));
+              return milestoneThresholds.some(value => tokens.includes(value));
             };
             const hasRewardCardShape = node => {
               const text = textOf(node).slice(0, 1800);
@@ -3339,7 +3340,7 @@ def _progression_claim_snapshot(driver):
                 .filter(visible)
                 .map(item => lower(item.innerText || item.textContent
                   || item.getAttribute('aria-label') || item.getAttribute('title')));
-              return /\\\\bx\\\\s*[\\\\d,]+/i.test(text)
+              return (text.toLowerCase().includes('x') && numberTokens(text).length >= 2)
                 || actionText.some(label => statusTerms.has(label));
             };
             const semanticRoots = Array.from(document.querySelectorAll(
@@ -3383,10 +3384,6 @@ def _progression_claim_snapshot(driver):
               return {
                 container,
                 cardNodes,
-                cardCaptureSource,
-                explicitSlideCount: explicitSlides.length,
-                depth: depthOf(container),
-                semanticRoot,
                 score: (explicitSlides.length ? 10000 : 0)
                   + (fallbackCards.length * 100)
                   + (semanticRoot ? 5000 : 0)
@@ -3394,7 +3391,7 @@ def _progression_claim_snapshot(driver):
                   + depthOf(container),
                 metadata: {
                   tag: String(container.tagName || '').toLowerCase(),
-                  class_name: String(container.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 160),
+                  class_name: String(container.className || '').trim().slice(0, 160),
                   test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
                   role: String(container.getAttribute('role') || ''),
                   aria_label: String(container.getAttribute('aria-label') || ''),
@@ -3424,7 +3421,7 @@ def _progression_claim_snapshot(driver):
             const diagnosticContainers = candidateRecords.map((candidate, index) => {
               const capturedCards = candidate.cardNodes.slice(0, 40).map(card => {
                 const cardText = textOf(card).slice(0, 480);
-                const lines = cardText.split(/\\\\n+/).map(norm).filter(Boolean);
+                const lines = cardText.split(String.fromCharCode(10)).map(norm).filter(Boolean);
                 const actionNodes = Array.from(card.querySelectorAll('button,[role="button"]'))
                   .filter(visible).slice(0, 8);
                 const buttonDetails = actionNodes.map(button => ({
@@ -3434,7 +3431,7 @@ def _progression_claim_snapshot(driver):
                     || button.getAttribute('data-state')).slice(0, 80),
                   role: String(button.getAttribute('role') || ''),
                   aria_label: String(button.getAttribute('aria-label') || ''),
-                  class_name: String(button.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  class_name: String(button.className || '').trim().slice(0, 120),
                   data_slot: String(button.getAttribute('data-slot') || ''),
                   data_state: String(button.getAttribute('data-state') || ''),
                   disabled: !!button.disabled,
@@ -3451,16 +3448,15 @@ def _progression_claim_snapshot(driver):
                   text: textOf(node).slice(0, 80),
                   role: String(node.getAttribute('role') || ''),
                   aria_label: String(node.getAttribute('aria-label') || ''),
-                  class_name: String(node.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  class_name: String(node.className || '').trim().slice(0, 120),
                   data_state: String(node.getAttribute('data-state') || '')
                 }));
                 const cr = card.getBoundingClientRect();
-                const thresholds = milestoneThresholds.filter(value =>
-                  new RegExp('(^|\\\\D)' + value + '(?=\\\\D|$)').test(cardText)
-                );
+                const cardNumberTokens = numberTokens(cardText);
+                const thresholds = milestoneThresholds.filter(value => cardNumberTokens.includes(value));
                 return {
                   tag: String(card.tagName || '').toLowerCase(),
-                  class_name: String(card.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  class_name: String(card.className || '').trim().slice(0, 120),
                   test_id: String(card.getAttribute('data-testid') || '').slice(0, 80),
                   role: String(card.getAttribute('role') || ''),
                   aria_label: String(card.getAttribute('aria-label') || ''),
