@@ -162,35 +162,402 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
     }
 
 
+
+_DELIVERED_STATUS_LABELS = {
+    "delivered", "already delivered", "claimed", "already claimed",
+    "collected", "redeemed",
+}
+_CLAIM_STATUS_LABELS = {"claim", "claim all"}
+_LOCKED_STATUS_LABELS = {"locked"}
+_STATUS_LABELS = sorted(
+    _DELIVERED_STATUS_LABELS | _CLAIM_STATUS_LABELS | _LOCKED_STATUS_LABELS,
+    key=len,
+    reverse=True,
+)
+
+
+def _status_classification(value: Any) -> str | None:
+    label = re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+    if label in _DELIVERED_STATUS_LABELS:
+        return "Delivered"
+    if label in _CLAIM_STATUS_LABELS:
+        return "Claimable"
+    if label in _LOCKED_STATUS_LABELS:
+        return "Locked"
+    return None
+
+
+def _progression_card_status(card: dict[str, Any]) -> dict[str, Any]:
+    """Classify only explicit, card-bound portal signals; disabled is never Locked."""
+    evidence: list[tuple[str, str]] = []
+    claim_controls: list[dict[str, Any]] = []
+
+    def add(value: Any, source: str) -> None:
+        classification = _status_classification(value)
+        if classification:
+            evidence.append((classification, source))
+
+    for value in card.get("exact_status_text_hints", []) if isinstance(card.get("exact_status_text_hints"), list) else []:
+        add(value, "exact_status_text")
+    for value in card.get("button_labels", []) if isinstance(card.get("button_labels"), list) else []:
+        add(value, "button_label")
+
+    status_elements = card.get("status_elements")
+    for element in status_elements if isinstance(status_elements, list) else []:
+        if not isinstance(element, dict):
+            continue
+        add(element.get("text"), "status_element_text")
+        add(element.get("aria_label"), "status_element_aria_label")
+        add(element.get("data_state"), "status_element_data_state")
+
+    button_details = card.get("button_details")
+    for button in button_details if isinstance(button_details, list) else []:
+        if not isinstance(button, dict):
+            continue
+        values = (
+            button.get("label"),
+            button.get("aria_label"),
+            button.get("data_state"),
+        )
+        for value in values:
+            add(value, "button_detail")
+        if any(_status_classification(value) == "Claimable" for value in values):
+            claim_controls.append(button)
+
+    # The portal sometimes renders the status as a text suffix in the card's
+    # own text node (for example, "3x20,000Delivered") rather than a child node.
+    card_text = re.sub(r"\s+", " ", str(card.get("text_snippet") or "")).strip()
+    folded_text = card_text.casefold()
+    for label in _STATUS_LABELS:
+        if folded_text.endswith(label):
+            classification = _status_classification(label)
+            if classification:
+                evidence.append((classification, "card_text_suffix"))
+            break
+
+    classifications = {classification for classification, _ in evidence}
+    sources = sorted({source for _, source in evidence})
+    if len(classifications) > 1:
+        return {
+            "classification": "Unknown",
+            "reason": "conflicting_card_status_signals",
+            "evidence_sources": sources,
+        }
+    if not classifications:
+        return {
+            "classification": "Unknown",
+            "reason": "no_explicit_card_status",
+            "evidence_sources": [],
+        }
+
+    classification = next(iter(classifications))
+    if classification == "Claimable":
+        enabled = any(
+            button.get("disabled") is False
+            and str(button.get("aria_disabled") or "").strip().casefold() not in {"true", "1"}
+            for button in claim_controls
+        )
+        if not enabled:
+            return {
+                "classification": "Unknown",
+                "reason": "claim_control_not_proven_enabled",
+                "evidence_sources": sources,
+            }
+    return {
+        "classification": classification,
+        "reason": None,
+        "evidence_sources": sources,
+    }
+
+
+def _card_milestone_identity(card: dict[str, Any]) -> tuple[int | None, str | None]:
+    hints = card.get("milestone_number_hints")
+    hints = hints if isinstance(hints, list) else []
+    values = sorted({
+        number for item in hints
+        if (number := _safe_number(item, maximum=1000)) is not None and number > 0
+    })
+    if len(values) != 1:
+        return None, None
+
+    threshold = values[0]
+    text = re.sub(r"\s+", " ", str(card.get("text_snippet") or "")).strip()
+    folded = text.casefold()
+    for label in _STATUS_LABELS:
+        if folded.endswith(label):
+            text = text[:-len(label)].rstrip()
+            break
+    # Whitespace and visual line wrapping vary between snapshots. A compact,
+    # redacted text signature is stable enough for within-run card correlation.
+    compact_text = re.sub(r"\s+", "", _safe_text(text, 240)).casefold()
+    test_id = _safe_text(card.get("test_id"), 80)
+    class_name = _safe_text(card.get("class_name"), 100)
+    signature = f"{threshold}|{test_id or class_name}|{compact_text}"[:300]
+    return threshold, signature
+
+
+def _select_authoritative_rail(snapshot: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
+    containers = snapshot.get("carousel_containers")
+    if not isinstance(containers, list):
+        return None, "no_container_candidates"
+    candidates = []
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        cards = container.get("captured_cards")
+        if not isinstance(cards, list) or not cards:
+            continue
+        max_scroll = _safe_number(container.get("max_scroll_left"), maximum=1000000) or 0
+        scroll_width = _safe_number(container.get("scroll_width"), maximum=1000000) or 0
+        semantic = bool(container.get("is_semantic_carousel_root"))
+        overflow = str(container.get("overflow_x") or "").strip().casefold()
+        snap = str(container.get("scroll_snap_type") or "").strip().casefold()
+        candidates.append((
+            (
+                max_scroll,
+                int(semantic),
+                int(overflow in {"auto", "scroll"}),
+                int(bool(snap and snap != "none")),
+                scroll_width,
+                len(cards),
+            ),
+            container,
+        ))
+    if not candidates:
+        return None, "no_card_bearing_container"
+
+    best_rank = max(rank for rank, _ in candidates)
+    best = [container for rank, container in candidates if rank == best_rank]
+    if len(best) != 1:
+        return None, "ambiguous_authoritative_rail"
+    return best[0], "largest_observed_horizontal_rail"
+
+
+def _normalize_rail_snapshot(snapshot: dict[str, Any]) -> dict[str, Any] | None:
+    rail, selection_reason = _select_authoritative_rail(snapshot)
+    if rail is None:
+        return None
+    raw_cards = rail.get("captured_cards")
+    raw_cards = raw_cards if isinstance(raw_cards, list) else []
+    cards = []
+    counts: dict[int, int] = {}
+    for raw_card in raw_cards:
+        if not isinstance(raw_card, dict):
+            continue
+        threshold, signature = _card_milestone_identity(raw_card)
+        status = _progression_card_status(raw_card)
+        if threshold is not None:
+            counts[threshold] = counts.get(threshold, 0) + 1
+        cards.append({
+            "threshold": threshold,
+            "card_signature": signature,
+            **status,
+        })
+
+    duplicate_thresholds = sorted(threshold for threshold, count in counts.items() if count > 1)
+    if duplicate_thresholds:
+        for card in cards:
+            if card["threshold"] in duplicate_thresholds:
+                card["classification"] = "Unknown"
+                card["reason"] = "duplicate_milestone_identity_in_authoritative_rail"
+
+    return {
+        "container_index": rail.get("index"),
+        "container_class": _safe_text(rail.get("class_name"), 160),
+        "client_width": _safe_number(rail.get("client_width"), maximum=100000),
+        "scroll_width": _safe_number(rail.get("scroll_width"), maximum=1000000),
+        "max_scroll_left": _safe_number(rail.get("max_scroll_left"), maximum=1000000),
+        "scroll_left": _safe_number(rail.get("scroll_left"), maximum=1000000),
+        "at_end": bool(rail.get("at_end")),
+        "captured_card_count": len(cards),
+        "captured_milestone_count": len({card["threshold"] for card in cards if card["threshold"] is not None}),
+        "invalid_milestone_identity_count": sum(card["threshold"] is None for card in cards),
+        "duplicate_milestone_thresholds": duplicate_thresholds,
+        "selection_reason": selection_reason,
+        "cards": cards,
+    }
+
+
+def _aggregate_rail_observations(snapshots: list[dict[str, Any]]) -> dict[str, Any]:
+    normalized = [
+        item for snapshot in snapshots
+        if isinstance(snapshot, dict)
+        if (item := _normalize_rail_snapshot(snapshot)) is not None
+    ]
+    if not normalized:
+        return {
+            "captured_rail_scan_completed": False,
+            "rail_scan_reason": "no_authoritative_rail_observed",
+            "selected_rail": None,
+            "observed_milestone_thresholds": [],
+            "milestone_cards": [],
+            "card_status_totals": {"Delivered": 0, "Claimable": 0, "Locked": 0, "Unknown": 0},
+        }
+
+    inventory_sets = [
+        tuple(sorted({card["threshold"] for card in item["cards"] if card["threshold"] is not None}))
+        for item in normalized
+    ]
+    inventory_stable = bool(inventory_sets) and all(values == inventory_sets[0] for values in inventory_sets)
+    identities_valid = all(
+        item["invalid_milestone_identity_count"] == 0
+        and not item["duplicate_milestone_thresholds"]
+        and item["captured_card_count"] == item["captured_milestone_count"]
+        for item in normalized
+    )
+    at_end = any(item["at_end"] for item in normalized)
+    selected_count = len(normalized)
+    captured_scan_complete = (
+        selected_count == len(snapshots)
+        and at_end
+        and inventory_stable
+        and identities_valid
+        and bool(inventory_sets[0])
+    )
+
+    observations: dict[int, list[dict[str, Any]]] = {}
+    for item in normalized:
+        for card in item["cards"]:
+            threshold = card["threshold"]
+            if threshold is None:
+                continue
+            observations.setdefault(threshold, []).append(card)
+
+    milestone_cards = []
+    totals = {"Delivered": 0, "Claimable": 0, "Locked": 0, "Unknown": 0}
+    for threshold in sorted(observations):
+        records = observations[threshold]
+        signatures = {record["card_signature"] for record in records if record.get("card_signature")}
+        known_statuses = {
+            record["classification"] for record in records
+            if record.get("classification") in {"Delivered", "Claimable", "Locked"}
+        }
+        sources = sorted({
+            source
+            for record in records
+            for source in (record.get("evidence_sources") or [])
+        })
+        if len(signatures) > 1:
+            classification, reason = "Unknown", "card_identity_changed_across_snapshots"
+        elif len(known_statuses) > 1:
+            classification, reason = "Unknown", "conflicting_status_across_snapshots"
+        elif len(known_statuses) == 1:
+            classification, reason = next(iter(known_statuses)), None
+        else:
+            classification = "Unknown"
+            reasons = sorted({record.get("reason") for record in records if record.get("reason")})
+            reason = reasons[0] if len(reasons) == 1 else "no_consistent_explicit_status"
+
+        totals[classification] += 1
+        milestone_cards.append({
+            "threshold": threshold,
+            "classification": classification,
+            "reason": reason,
+            "card_signature": next(iter(signatures)) if len(signatures) == 1 else None,
+            "evidence_sources": sources,
+            "observations": len(records),
+        })
+
+    latest = normalized[-1]
+    return {
+        "captured_rail_scan_completed": captured_scan_complete,
+        "rail_scan_reason": (
+            "authoritative_rail_reached_end_with_stable_unique_milestone_identities"
+            if captured_scan_complete
+            else "rail_end_or_stable_unique_inventory_not_established"
+        ),
+        "selected_rail": {
+            "container_index": latest["container_index"],
+            "container_class": latest["container_class"],
+            "client_width": latest["client_width"],
+            "scroll_width": latest["scroll_width"],
+            "max_scroll_left": latest["max_scroll_left"],
+            "captured_card_count": latest["captured_card_count"],
+            "at_end_observed": at_end,
+        },
+        "rail_snapshots_normalized": selected_count,
+        "rail_snapshots_expected": len(snapshots),
+        "inventory_stable_across_snapshots": inventory_stable,
+        "milestone_identity_valid_across_snapshots": identities_valid,
+        "observed_milestone_thresholds": list(inventory_sets[0]) if inventory_stable else [],
+        "milestone_cards": milestone_cards,
+        "card_status_totals": totals,
+        "inventory_completeness_established": False,
+        "note": (
+            "A completed DOM rail scan means the selected rail reached its end and the captured "
+            "milestone identities stayed stable. It does not prove the portal has no additional "
+            "unrendered milestones. Blank or disabled controls are Unknown, never Locked."
+        ),
+    }
+
+
 def build_progression_inspection_diagnostic_summary(
     diagnostics_by_player: Any, *, configured_player_count: int
 ) -> dict[str, Any]:
-    """Build a privacy-minimized per-run diagnostic summary."""
+    """Build a privacy-minimized summary with deduplicated per-card observations."""
     source = diagnostics_by_player if isinstance(diagnostics_by_player, dict) else {}
     accounts = []
     snapshot_total = 0
+    inventory_by_account: list[tuple[str, ...]] = []
+    status_totals = {"Delivered": 0, "Claimable": 0, "Locked": 0, "Unknown": 0}
+    accounts_with_completed_rail_scan = 0
+
     for player_id, snapshots in source.items():
         if not isinstance(snapshots, list):
             continue
-        safe = [item for item in snapshots[-_MAX_SNAPSHOTS_PER_PLAYER:] if isinstance(item, dict)]
+        safe = []
+        for item in snapshots[-_MAX_SNAPSHOTS_PER_PLAYER:]:
+            if not isinstance(item, dict):
+                continue
+            sanitized = sanitize_progression_inspection_snapshot(item)
+            if sanitized is None:
+                continue
+            safe.append({
+                "observed_at_ist": _safe_text(item.get("observed_at_ist"), 40),
+                **sanitized,
+            })
         if not safe:
             continue
+
         snapshot_total += len(safe)
+        rail_summary = _aggregate_rail_observations(safe)
+        if rail_summary["captured_rail_scan_completed"]:
+            accounts_with_completed_rail_scan += 1
+            inventory_by_account.append(tuple(rail_summary["observed_milestone_thresholds"]))
+        for status, count in rail_summary["card_status_totals"].items():
+            status_totals[status] += count
         accounts.append({
             "player_id_last4": str(player_id or "")[-4:],
             "snapshot_count": len(safe),
             "snapshots": safe,
+            "normalized_progression_rail": rail_summary,
         })
+
+    inventories_consistent = (
+        len(inventory_by_account) == len(accounts)
+        and bool(inventory_by_account)
+        and all(value == inventory_by_account[0] for value in inventory_by_account)
+    )
+    common_inventory = list(inventory_by_account[0]) if inventories_consistent else []
     return {
-        "diagnostic_version": 2,
+        "diagnostic_version": 3,
         "read_only": True,
         "configured_accounts": max(0, int(configured_player_count)),
         "accounts_with_diagnostics": len(accounts),
         "snapshot_count": snapshot_total,
+        "accounts_with_completed_rail_scan": accounts_with_completed_rail_scan,
+        "inventory_consistency_across_accounts": inventories_consistent,
+        "common_observed_milestone_thresholds": common_inventory,
+        "card_status_totals": status_totals,
         "completeness_established": False,
         "delivery_status_established": False,
         "accounts": accounts,
-        "note": "Visible rail and card hints are diagnostic evidence only. They do not establish complete inventory coverage, Delivered/Locked milestone state, or a resolved inspection.",
+        "note": (
+            "Per-card classifications are derived only from explicit card-bound text or control "
+            "signals. Claimable requires an explicitly enabled Claim control. Blank or disabled "
+            "controls remain Unknown, not Locked. A full observed rail scan and cross-account "
+            "inventory consistency do not prove an independently complete portal inventory."
+        ),
     }
 
 
