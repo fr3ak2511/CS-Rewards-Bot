@@ -185,7 +185,7 @@ class ProgressionDiagnosticOnlyModeTests(unittest.TestCase):
         )
         workflow = workflow_path.read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", workflow)
-        self.assertNotIn("on:\\n  schedule:", workflow)
+        self.assertNotIn("schedule:", workflow)
         self.assertIn("confirm_read_only", workflow)
         self.assertIn("github.ref == 'refs/heads/prod'", workflow)
         self.assertIn("group: rewards-claimer", workflow)
