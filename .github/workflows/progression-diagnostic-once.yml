@@ -1,0 +1,73 @@
+name: One-time Progression Diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_read_only:
+        description: "Confirm the full-roster Progression DOM survey is read-only (no claims or state writes)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  progression-diagnostic:
+    name: Read-only Progression DOM survey
+    if: github.ref == 'refs/heads/prod' && inputs.confirm_read_only == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: read
+    concurrency:
+      group: rewards-claimer
+      cancel-in-progress: false
+      queue: max
+
+    steps:
+      - name: Check out production source
+        uses: actions/checkout@v7
+        with:
+          ref: prod
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Assert production and read-only scope
+        env:
+          SELECTED_BRANCH: ${{ github.ref_name }}
+          CONFIRM_READ_ONLY: ${{ inputs.confirm_read_only }}
+        run: |
+          if [[ "$SELECTED_BRANCH" != "prod" ]]; then
+            echo "This diagnostic can only run against prod."
+            exit 2
+          fi
+          if [[ "$CONFIRM_READ_ONLY" != "true" ]]; then
+            echo "Explicit read-only confirmation is required."
+            exit 2
+          fi
+          echo "Scope: all configured Player IDs; Progression page only."
+          echo "Reward clicks: disabled. Claim history: untouched."
+          echo "Progression queue: untouched. Runtime-state: not loaded or saved."
+
+      - name: Run read-only Progression diagnostic
+        run: python master_claimer.py --progression-diagnostic-only
+
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cs-hub-progression-diagnostic-${{ github.run_id }}
+          path: run_artifacts/progression_diagnostic_summary.json
+          if-no-files-found: error
+          retention-days: 14
