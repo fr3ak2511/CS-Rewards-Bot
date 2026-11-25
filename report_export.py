@@ -100,7 +100,7 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
         carry = player.get("grenade_balance_carry_forward")
         balance = balance if isinstance(balance, dict) else {}
         carry = carry if isinstance(carry, dict) else {}
-        claims = _number(player.get("progression_claimed_this_run", player.get("progression")))
+        claims = max(_number(player.get("progression_claimed_this_run")), _number(player.get("progression")))
         deferred = bool(player.get("progression_deferred"))
         unconfirmed = bool(player.get("progression_unconfirmed"))
         checked = player.get("progression_checked") is True
@@ -115,21 +115,29 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
             balance_status = str(balance.get("status") or "not_validated")
             prior_status = str(carry.get("status_at_observation") or "")
             prior_date = str(carry.get("last_observed_date") or "")
-            if prior_status in {"below_minimum", "counter_regressed"}:
-                freshness = "Current run; previous " + (
-                    "reading below date minimum" if prior_status == "below_minimum" else "counter regression"
-                ) + (f" on {prior_date}" if prior_date else "")
+            if prior_status in {"below_minimum", "counter_regressed", "status_not_retained"}:
+                prior_label = {
+                    "below_minimum": "previous reading below date minimum",
+                    "counter_regressed": "previous counter regression",
+                    "status_not_retained": "previous status not retained",
+                }[prior_status]
+                freshness = "Current run; " + prior_label + (f" on {prior_date}" if prior_date else "")
             else:
                 freshness = "Current run"
         elif carry.get("last_observed_count") is not None:
             actual = _number(carry.get("last_observed_count"))
-            minimum = _number(carry.get("expected_minimum_as_of")) if carry.get("expected_minimum_as_of") is not None else None
+            minimum = _number(carry.get("expected_minimum_at_observation")) if carry.get("expected_minimum_at_observation") is not None else (
+                _number(carry.get("expected_minimum_as_of")) if carry.get("expected_minimum_as_of") is not None else None
+            )
             milestone = _number(carry.get("next_milestone_at_observation")) if carry.get("next_milestone_at_observation") is not None else None
             remaining = _number(carry.get("remaining_to_milestone_at_observation")) if carry.get("remaining_to_milestone_at_observation") is not None else (
                 max(0, milestone - actual) if milestone is not None else None
             )
             balance_status = str(carry.get("status_at_observation") or "not_validated")
             freshness = "Last observed " + str(carry.get("last_observed_date") or "date unavailable")
+            current_minimum = carry.get("expected_minimum_as_of")
+            if current_minimum is not None and minimum is not None and int(current_minimum) > int(minimum):
+                freshness += f" · current date minimum {current_minimum}"
         else:
             actual = minimum = milestone = remaining = None
             balance_status = "not_validated"
@@ -186,14 +194,19 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
             minimum_text = "—" if minimum == 10**9 else str(minimum)
             milestone_text = "—" if milestone_value == 10**9 else str(milestone_value)
             remaining_text = "—" if remaining == 10**9 else str(remaining)
-            balance_text = {
-                "pass": "Pass",
-                "below_minimum": "Below date minimum",
-                "counter_regressed": "Counter regressed",
-                "pending_baseline": "Pending baseline",
-                "not_validated": "Not validated",
-                "status_not_retained": "Status not retained",
-            }.get(balance_status, balance_status.replace("_", " ").title())
+            if balance_status == "pass":
+                if actual != 10**9 and minimum != 10**9 and actual > minimum:
+                    balance_text = "Above date minimum"
+                else:
+                    balance_text = "At date minimum"
+            else:
+                balance_text = {
+                    "below_minimum": "Below date minimum",
+                    "counter_regressed": "Counter regressed",
+                    "pending_baseline": "Pending baseline",
+                    "not_validated": "Not validated",
+                    "status_not_retained": "Status not retained",
+                }.get(balance_status, balance_status.replace("_", " ").title())
             account_names = ", ".join(html.escape(name) for name in sorted(grouped[key]))
             rows.append(
                 "<tr>"
