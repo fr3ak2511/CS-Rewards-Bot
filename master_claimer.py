@@ -5656,16 +5656,24 @@ def build_deferred_checks_section(results):
         if isinstance(balance, dict) and balance.get("current_count") is not None:
             balance_records.append(balance)
     balance_passed = sum(1 for balance in balance_records if str(balance.get("status") or "") == "pass")
-    summary_parts = [
-        f"{len(records)} accounts grouped",
-        f"{claim_total} PP claim(s) confirmed",
-        f"{pending_total} inspections pending",
-        f"{checked_empty_total} checked with no claim",
-    ]
+    queue_reinspection_attempts = sum(
+        1 for result in results or []
+        if isinstance(result, dict) and result.get("progression_reinspection_attempted") is True
+    )
+    summary_parts = [f"{len(records)} accounts grouped"]
+    if queue_reinspection_attempts:
+        attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
+        summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made")
+    open_word = "account remains open" if pending_total == 1 else "accounts remain open"
+    summary_parts.append(
+        f"{claim_total} Progression rewards confirmed in this run; {pending_total} {open_word}"
+    )
+    if checked_empty_total:
+        summary_parts.append(f"{checked_empty_total} checked with no claim")
     if unconfirmed_total:
         summary_parts.append(f"{unconfirmed_total} claim confirmation(s) unresolved")
     if balance_records:
-        summary_parts.append(f"Grenade balance {balance_passed}/{len(balance_records)} PASS")
+        summary_parts.append(f"Grenade Balance Check: {balance_passed}/{len(balance_records)} PASS")
     else:
         summary_parts.append("Grenade balance not checked in this run")
 
@@ -5709,7 +5717,7 @@ def build_deferred_checks_section(results):
 
     return (
         "<section class='v2-section v2-progression'>"
-        "<div class='v2-section-head'><h2>Progression — grouped by milestone</h2>"
+        "<div class='v2-section-head'><h2>" + (pending_total ? "Progression — checks still open · grouped by milestone" : "Progression — grouped by milestone") + "</h2>"
         f"<span>{len(records)} accounts</span></div>"
         f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
         "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
