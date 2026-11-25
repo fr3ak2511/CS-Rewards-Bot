@@ -5592,9 +5592,9 @@ def build_deferred_checks_section(results):
         elif deferred:
             reason = str(result.get("progression_deferred_reason") or "").lower()
             if "no currently visible claimable reward" in reason:
-                claim_status = "Pending · no claimable reward card visible"
+                claim_status = "Pending · No claimable reward card visible"
             elif "popup/overlay" in reason or "fullscreen_overlay" in reason:
-                claim_status = "Pending · blocked by an on-screen popup or overlay"
+                claim_status = "Pending · Blocked by an on-screen popup or overlay"
             else:
                 claim_status = "Pending inspection"
         elif checked:
@@ -6855,7 +6855,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     exception_details = standard_attention_html + "".join(exception_cards)
     if deferred_check_count:
         attention_fallback_note = (
-            "Progression Inspections Pending are shown separately; review the attention items above."
+            "Progression accounts are grouped by milestone below; review any claim or validation exceptions above."
         )
     else:
         attention_fallback_note = (
