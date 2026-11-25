@@ -455,5 +455,20 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Pending · no claimable card visible · 1", report)
         self.assertIn("Checked · no reward claimed · 1", report)
 
+    def test_copy_report_surfaces_latest_progression_outcome_repeat_count_and_manual_attention(self):
+        pending = dict(self.summary["player_results"][0])
+        pending.update({
+            "progression_deferred": True,
+            "progression_deferred_reason": "No currently visible claimable reward card.",
+            "progression_last_outcome_category": "empty_scan",
+            "progression_same_outcome_count": 4,
+            "progression_manual_attention_required": True,
+            "progression_inspection_slots_used": 3,
+        })
+        summary = dict(self.summary)
+        summary["player_results"] = [pending]
+        report = build_copyable_report(summary)
+        self.assertIn("Pending · no claimable card visible · empty scan · same outcome 4x · manual attention · 3/4 slots used", report)
+
 if __name__ == "__main__":
     unittest.main()

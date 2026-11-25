@@ -7,6 +7,7 @@ normal full-claim recovery scope.
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
 from typing import Any
 
 QUEUE_KEY = "progression_deferred_inspections"
@@ -16,6 +17,7 @@ _ALLOWED_SLOTS = {
 } | {"Primary Run", "Manual Run", "Immediate Progression Recovery"}
 _MAX_ATTEMPTS_PER_RESET = 4
 _MAX_HISTORY = 50
+_MANUAL_ATTENTION_REPEAT_THRESHOLD = 3
 
 
 def _queue(meta: dict[str, Any]) -> dict[str, Any]:
@@ -42,6 +44,73 @@ def _safe_reason(value: Any) -> str | None:
     # not raw page diagnostics, in long-lived runtime metadata.
     raw = raw.split("popup_context=", 1)[0].strip().rstrip(" ,;")
     return raw[:240].rstrip() or None
+
+
+def _outcome_category(result: dict[str, Any], reason: str | None) -> str:
+    """Classify a bounded PP outcome without persisting raw DOM diagnostics."""
+    status = str(result.get("status") or "").strip().casefold()
+    if result.get("progression_unconfirmed"):
+        return "claim_unconfirmed"
+    if status == "login failed":
+        return "login_failed"
+    if status in {"error", "failed"}:
+        return "processing_failed"
+
+    text = str(reason or "").casefold()
+    if "popup/overlay" in text or "fullscreen_overlay" in text or "blocking_dialog" in text:
+        return "overlay_blocked"
+    if "no currently visible claimable reward" in text or "empty snapshot" in text:
+        return "empty_scan"
+    if any(token in text for token in (
+        "snapshot was unavailable", "page validation failed",
+        "could not establish", "carousel scan", "inspection was incomplete",
+        "page snapshot", "inspection could not be completed",
+    )):
+        return "incomplete_scan"
+    return "other_pending"
+
+
+def _record_latest_outcome(
+    entry: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    reason: str | None,
+    now: str,
+) -> None:
+    """Persist a stable outcome fingerprint and flag three identical repeats."""
+    category = _outcome_category(result, reason)
+    # Category-only fingerprints deliberately ignore changing popup titles,
+    # countdowns and raw DOM diagnostics.
+    fingerprint = hashlib.sha256(category.encode("utf-8")).hexdigest()[:20]
+    previous = str(entry.get("last_outcome_fingerprint") or "")
+    try:
+        previous_count = max(0, int(entry.get("same_outcome_count", 0) or 0))
+    except (TypeError, ValueError, OverflowError):
+        previous_count = 0
+    same_count = previous_count + 1 if previous == fingerprint else 1
+
+    entry["last_outcome_category"] = category
+    entry["last_outcome_fingerprint"] = fingerprint
+    entry["same_outcome_count"] = same_count
+    entry["last_outcome_at"] = now
+    manual_attention = category == "claim_unconfirmed" or (
+        category in {
+            "login_failed", "processing_failed", "overlay_blocked",
+            "empty_scan", "incomplete_scan", "other_pending",
+        }
+        and same_count >= _MANUAL_ATTENTION_REPEAT_THRESHOLD
+    )
+    entry["manual_attention_required"] = bool(manual_attention)
+    if manual_attention:
+        entry["manual_attention_since"] = entry.get("manual_attention_since") or now
+        entry["manual_attention_reason"] = (
+            "Claim outcome requires exact-target verification"
+            if category == "claim_unconfirmed"
+            else f"{same_count} consecutive PP attempts produced the same {category.replace('_', ' ')} outcome"
+        )
+    else:
+        entry.pop("manual_attention_since", None)
+        entry.pop("manual_attention_reason", None)
 
 
 def get_pending_progression_inspection(
@@ -83,6 +152,7 @@ def record_progression_inspection_result(
     if not pid:
         return None
 
+    result = dict(result)
     deferred = bool(result.get("progression_deferred"))
     queue = meta.get(QUEUE_KEY)
     if not isinstance(queue, dict):
@@ -97,6 +167,27 @@ def record_progression_inspection_result(
     signature = str(
         result.get("progression_unconfirmed_card_signature") or ""
     ).strip()
+
+    # A queue slot is reserved before account login. Record the authentication
+    # or processing failure as the latest PP outcome instead of retaining an
+    # older empty-snapshot reason. This does not start a PP page or claim click.
+    result_status = str(result.get("status") or "").strip()
+    reserved_attempt = bool(result.get("progression_reinspection_attempted"))
+    if (
+        entry is not None
+        and reserved_attempt
+        and result_status in {"Login Failed", "Error", "Failed"}
+        and not deferred
+        and not unconfirmed
+    ):
+        result["progression_deferred"] = True
+        result["progression_checked"] = False
+        result["progression_deferred_reason"] = (
+            "Login failed before the reserved Progression inspection; no PP page was inspected and no claim click was attempted."
+            if result_status == "Login Failed"
+            else "Account processing failed before the reserved Progression inspection; no claim click was attempted."
+        )
+        deferred = True
 
     if deferred:
         if entry is not None and not result.get("progression_reinspection_attempted"):
@@ -134,6 +225,7 @@ def record_progression_inspection_result(
         reason = _safe_reason(result.get("progression_deferred_reason"))
         if reason:
             entry["last_reason"] = reason
+        _record_latest_outcome(entry, result, reason=reason, now=now)
         if signature:
             entry["target_card_signature"] = signature[:512]
             entry["requires_exact_target"] = True
@@ -152,6 +244,12 @@ def record_progression_inspection_result(
     if unconfirmed:
         entry["status"] = "claim_unconfirmed"
         entry["last_unconfirmed_at"] = now
+        reason = _safe_reason(result.get("progression_deferred_reason"))
+        if reason:
+            entry["last_reason"] = reason
+        entry["last_source_run_label"] = str(run_label or "")
+        entry["last_source_run_id"] = str(source_run_id or "") or None
+        _record_latest_outcome(entry, result, reason=reason, now=now)
         if signature:
             entry["target_card_signature"] = signature[:512]
             entry["requires_exact_target"] = True
