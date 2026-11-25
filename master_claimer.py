@@ -3437,11 +3437,35 @@ def _progression_claim_snapshot(driver):
                     || button.getAttribute('data-state')).slice(0, 80),
                   role: String(button.getAttribute('role') || ''),
                   aria_label: String(button.getAttribute('aria-label') || ''),
+                  title: String(button.getAttribute('title') || '').slice(0, 100),
+                  data_icon: String(button.getAttribute('data-icon') || '').slice(0, 48),
+                  data_lucide: String(button.getAttribute('data-lucide') || '').slice(0, 48),
                   class_name: String(button.className || '').trim().slice(0, 120),
                   data_slot: String(button.getAttribute('data-slot') || ''),
                   data_state: String(button.getAttribute('data-state') || ''),
                   disabled: !!button.disabled,
                   aria_disabled: String(button.getAttribute('aria-disabled') || '')
+                }));
+                const iconHints = Array.from(card.querySelectorAll(
+                  'svg,img,[role="img"],[data-icon],[data-lucide],[aria-label],[title]'
+                )).filter(visible).filter(node => {
+                  const actionAncestor = node.closest('button,[role="button"]');
+                  const signals = [node.getAttribute('aria-label'), node.getAttribute('title'),
+                    node.getAttribute('alt'), node.getAttribute('data-icon'),
+                    node.getAttribute('data-lucide'), node.getAttribute('data-state'),
+                    String(node.getAttribute('class') || node.className || '')].join(' ').toLowerCase();
+                  return !!actionAncestor || /lock|locked|claim|deliver|redeem|collect|check|status|icon/.test(signals);
+                }).slice(0, 16).map(node => ({
+                  tag: String(node.tagName || '').toLowerCase(),
+                  aria_label: String(node.getAttribute('aria-label') || '').slice(0, 100),
+                  title: String(node.getAttribute('title') || '').slice(0, 100),
+                  alt: String(node.getAttribute('alt') || '').slice(0, 100),
+                  data_icon: String(node.getAttribute('data-icon') || '').slice(0, 48),
+                  data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
+                  data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
+                  role: String(node.getAttribute('role') || '').slice(0, 32),
+                  class_name: String(node.getAttribute('class') || node.className || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+                  text: textOf(node).slice(0, 80)
                 }));
                 const statusElements = Array.from(card.querySelectorAll(
                   'button,[role="button"],span,p,div,[data-state],[aria-label]'
@@ -3454,7 +3478,7 @@ def _progression_claim_snapshot(driver):
                   text: textOf(node).slice(0, 80),
                   role: String(node.getAttribute('role') || ''),
                   aria_label: String(node.getAttribute('aria-label') || ''),
-                  class_name: String(node.className || '').trim().slice(0, 120),
+                  class_name: String(node.getAttribute('class') || node.className || '').trim().slice(0, 120),
                   data_state: String(node.getAttribute('data-state') || '')
                 }));
                 const cr = card.getBoundingClientRect();
@@ -3473,6 +3497,7 @@ def _progression_claim_snapshot(driver):
                   button_details: buttonDetails,
                   exact_status_text_hints: lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8),
                   status_elements: statusElements,
+                  icon_hints: iconHints,
                   milestone_number_hints: thresholds,
                   rect: {x:Math.round(cr.x),y:Math.round(cr.y),
                     width:Math.round(cr.width),height:Math.round(cr.height)}

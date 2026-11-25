@@ -82,6 +82,11 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
                         "label": "https://x.invalid/?session=secret",
                         "aria_label": "test@example.com",
                         "data_state": "token=abc"
+                    }],
+                    "icon_hints": [{
+                        "tag": "svg", "aria_label": "test@example.com",
+                        "title": "https://x.invalid/?token=abc",
+                        "class_name": "lucide lucide-lock"
                     }]
                 }],
             }],
@@ -112,7 +117,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
             "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 30,
             "000000000000ABCD": [],
         }, configured_player_count=36)
-        self.assertEqual(summary["diagnostic_version"], 3)
+        self.assertEqual(summary["diagnostic_version"], 4)
         self.assertTrue(summary["read_only"])
         self.assertFalse(summary["completeness_established"])
         self.assertFalse(summary["delivery_status_established"])
@@ -277,6 +282,49 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertEqual(conflict_card["classification"], "Unknown")
         self.assertEqual(conflict_card["reason"], "conflicting_card_status_signals")
 
+
+
+    def test_explicit_lock_icon_is_locked_but_blank_disabled_button_stays_unknown(self):
+        def summarize(icon_hints):
+            card = {
+                "text_snippet": "123 x100",
+                "milestone_number_hints": [123],
+                "button_labels": [],
+                "button_details": [{
+                    "tag": "button", "label": "", "disabled": True,
+                    "aria_disabled": "true",
+                }],
+                "exact_status_text_hints": [],
+                "status_elements": [],
+                "icon_hints": icon_hints,
+            }
+            snapshot = {
+                "page_path": "/progression-program",
+                "page_valid": True,
+                "carousel_containers": [{
+                    "index": 0, "class_name": "reward-rail", "overflow_x": "auto",
+                    "client_width": 1000, "scroll_width": 2000, "max_scroll_left": 1000,
+                    "scroll_left": 1000, "at_end": True,
+                    "captured_cards": [card],
+                }],
+            }
+            summary = build_progression_inspection_diagnostic_summary(
+                {"PLAYER0001": [snapshot]}, configured_player_count=1,
+            )
+            return summary["accounts"][0]["normalized_progression_rail"]["milestone_cards"][0]
+
+        locked = summarize([{
+            "tag": "svg", "class_name": "lucide lucide-lock",
+            "data_lucide": "lock",
+        }])
+        self.assertEqual(locked["classification"], "Locked")
+        self.assertIn("icon_semantic_name", locked["evidence_sources"])
+
+        unknown = summarize([{
+            "tag": "svg", "class_name": "size-4 text-muted-foreground",
+        }])
+        self.assertEqual(unknown["classification"], "Unknown")
+        self.assertEqual(unknown["reason"], "no_explicit_card_status")
 
 if __name__ == "__main__":
     unittest.main()

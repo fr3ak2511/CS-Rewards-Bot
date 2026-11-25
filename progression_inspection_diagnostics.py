@@ -9,6 +9,7 @@ _MAX_CONTAINERS = 12
 _MAX_CARDS_PER_CONTAINER = 40
 _MAX_ACTION_DETAILS = 8
 _MAX_STATUS_ELEMENTS = 8
+_MAX_ICON_HINTS = 16
 _MAX_TEXT = 480
 _MAX_SNAPSHOTS_PER_PLAYER = 24
 _HEX_ID_RE = re.compile(r"(?i)\b[0-9a-f]{16,}\b")
@@ -68,6 +69,8 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
             button_details = button_details if isinstance(button_details, list) else []
             status_elements = card.get("status_elements")
             status_elements = status_elements if isinstance(status_elements, list) else []
+            icon_hints = card.get("icon_hints")
+            icon_hints = icon_hints if isinstance(icon_hints, list) else []
             rect = card.get("rect") if isinstance(card.get("rect"), dict) else {}
             safe_buttons = []
             for button in button_details[:_MAX_ACTION_DETAILS]:
@@ -78,6 +81,9 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
                     "label": _safe_text(button.get("label"), 80),
                     "role": _safe_text(button.get("role"), 32),
                     "aria_label": _safe_text(button.get("aria_label"), 100),
+                    "title": _safe_text(button.get("title"), 100),
+                    "data_icon": _safe_text(button.get("data_icon"), 48),
+                    "data_lucide": _safe_text(button.get("data_lucide"), 48),
                     "class_name": _safe_text(button.get("class_name"), 120),
                     "data_slot": _safe_text(button.get("data_slot"), 80),
                     "data_state": _safe_text(button.get("data_state"), 48),
@@ -96,6 +102,22 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
                     "class_name": _safe_text(element.get("class_name"), 120),
                     "data_state": _safe_text(element.get("data_state"), 48),
                 })
+            safe_icon_hints = []
+            for hint in icon_hints[:_MAX_ICON_HINTS]:
+                if not isinstance(hint, dict):
+                    continue
+                safe_icon_hints.append({
+                    "tag": _safe_text(hint.get("tag"), 24),
+                    "aria_label": _safe_text(hint.get("aria_label"), 100),
+                    "title": _safe_text(hint.get("title"), 100),
+                    "alt": _safe_text(hint.get("alt"), 100),
+                    "data_icon": _safe_text(hint.get("data_icon"), 48),
+                    "data_lucide": _safe_text(hint.get("data_lucide"), 48),
+                    "data_state": _safe_text(hint.get("data_state"), 48),
+                    "role": _safe_text(hint.get("role"), 32),
+                    "class_name": _safe_text(hint.get("class_name"), 160),
+                    "text": _safe_text(hint.get("text"), 80),
+                })
             safe_cards.append({
                 "tag": _safe_text(card.get("tag"), 24),
                 "class_name": _safe_text(card.get("class_name"), 120),
@@ -109,6 +131,7 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
                 "button_details": safe_buttons,
                 "exact_status_text_hints": [_safe_text(item, 48) for item in statuses[:_MAX_STATUS_ELEMENTS]],
                 "status_elements": safe_status_elements,
+                "icon_hints": safe_icon_hints,
                 "milestone_number_hints": [
                     number for item in milestones[:25]
                     if (number := _safe_number(item, maximum=1000)) is not None
@@ -168,7 +191,7 @@ _DELIVERED_STATUS_LABELS = {
     "collected", "redeemed",
 }
 _CLAIM_STATUS_LABELS = {"claim", "claim all"}
-_LOCKED_STATUS_LABELS = {"locked"}
+_LOCKED_STATUS_LABELS = {"locked", "lock", "lock icon", "locked icon"}
 _STATUS_LABELS = sorted(
     _DELIVERED_STATUS_LABELS | _CLAIM_STATUS_LABELS | _LOCKED_STATUS_LABELS,
     key=len,
@@ -183,6 +206,29 @@ def _status_classification(value: Any) -> str | None:
     if label in _CLAIM_STATUS_LABELS:
         return "Claimable"
     if label in _LOCKED_STATUS_LABELS:
+        return "Locked"
+    return None
+
+
+def _icon_semantic_status(hint: dict[str, Any]) -> str | None:
+    """Recognize only explicit, named lock semantics; a disabled button is not enough."""
+    for field in ("aria_label", "title", "alt", "text", "data_state"):
+        classification = _status_classification(hint.get(field))
+        if classification:
+            return classification
+
+    lock_icon_names = {
+        "lock", "locked", "lock-closed", "lock-keyhole", "lock-keyhole-closed",
+        "lucide-lock", "i-lucide-lock", "tabler-icon-lock", "icon-lock",
+        "icon-lock-closed", "fa-lock", "fa-lock-alt", "material-symbols-lock",
+    }
+    for field in ("data_icon", "data_lucide"):
+        value = str(hint.get(field) or "").strip().casefold()
+        if value in lock_icon_names:
+            return "Locked"
+
+    classes = str(hint.get("class_name") or "").casefold().split()
+    if any(token in lock_icon_names for token in classes):
         return "Locked"
     return None
 
@@ -209,6 +255,16 @@ def _progression_card_status(card: dict[str, Any]) -> dict[str, Any]:
         add(element.get("text"), "status_element_text")
         add(element.get("aria_label"), "status_element_aria_label")
         add(element.get("data_state"), "status_element_data_state")
+
+    icon_hints = card.get("icon_hints")
+    for hint in icon_hints if isinstance(icon_hints, list) else []:
+        if not isinstance(hint, dict):
+            continue
+        for field in ("aria_label", "title", "alt", "text", "data_state"):
+            add(hint.get(field), "icon_accessible_status")
+        icon_status = _icon_semantic_status(hint)
+        if icon_status:
+            evidence.append((icon_status, "icon_semantic_name"))
 
     button_details = card.get("button_details")
     for button in button_details if isinstance(button_details, list) else []:
@@ -553,7 +609,7 @@ def build_progression_inspection_diagnostic_summary(
     )
     common_inventory = list(inventory_by_account[0]) if inventories_consistent else []
     return {
-        "diagnostic_version": 3,
+        "diagnostic_version": 4,
         "read_only": True,
         "configured_accounts": max(0, int(configured_player_count)),
         "accounts_with_diagnostics": len(accounts),
