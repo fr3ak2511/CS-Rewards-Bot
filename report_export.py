@@ -100,7 +100,17 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
         carry = player.get("grenade_balance_carry_forward")
         balance = balance if isinstance(balance, dict) else {}
         carry = carry if isinstance(carry, dict) else {}
-        claims = max(_number(player.get("progression_claimed_this_run")), _number(player.get("progression")))
+        pp_scope_observed = bool(
+            player.get("progression_checked")
+            or player.get("progression_deferred")
+            or player.get("progression_unconfirmed")
+            or player.get("progression_claim_attempted")
+            or player.get("progression_reinspection_attempted")
+        )
+        claims = (
+            max(_number(player.get("progression_claimed_this_run")), _number(player.get("progression")))
+            if pp_scope_observed else 0
+        )
         deferred = bool(player.get("progression_deferred"))
         unconfirmed = bool(player.get("progression_unconfirmed"))
         checked = player.get("progression_checked") is True
