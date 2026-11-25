@@ -176,5 +176,28 @@ class ProgressionDiagnosticOnlyModeTests(unittest.TestCase):
             create_driver.assert_not_called()
 
 
+    def test_one_time_workflow_is_manual_read_only_and_uses_shared_claim_owner(self):
+        workflow_path = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "progression-diagnostic-once.yml"
+        )
+        workflow = workflow_path.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertNotIn("on:\\n  schedule:", workflow)
+        self.assertIn("confirm_read_only", workflow)
+        self.assertIn("github.ref == 'refs/heads/prod'", workflow)
+        self.assertIn("group: rewards-claimer", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("queue: max", workflow)
+        self.assertIn("python master_claimer.py --progression-diagnostic-only", workflow)
+        self.assertIn("actions/upload-artifact@v6", workflow)
+        self.assertNotIn("runtime_state_branch.sh", workflow)
+        self.assertNotIn("save_state", workflow)
+        self.assertNotIn("CLAIM_TEST_ONLY", workflow)
+        self.assertNotIn("manual_progression_recovery", workflow)
+
+
 if __name__ == "__main__":
     unittest.main()
