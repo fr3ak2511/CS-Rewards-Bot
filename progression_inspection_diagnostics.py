@@ -6,9 +6,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 _MAX_CONTAINERS = 3
-_MAX_CARDS_PER_CONTAINER = 10
+_MAX_CARDS_PER_CONTAINER = 40
 _MAX_TEXT = 320
-_MAX_SNAPSHOTS_PER_PLAYER = 6
+_MAX_SNAPSHOTS_PER_PLAYER = 24
 _HEX_ID_RE = re.compile(r"(?i)\b[0-9a-f]{16,}\b")
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 _URL_RE = re.compile(r"https?://\S+", re.I)
