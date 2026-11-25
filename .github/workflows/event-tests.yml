@@ -30,6 +30,7 @@ on:
       - '.github/workflows/event-tests.yml'
       - '.github/workflows/schedule.yml'
       - '.github/workflows/recovery.yml'
+      - '.github/workflows/progression-diagnostic-once.yml'
 
   pull_request:
     branches:
