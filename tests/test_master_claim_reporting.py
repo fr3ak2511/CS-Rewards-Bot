@@ -919,12 +919,11 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
-        self.assertIn("Grenade Balance — last saved readings", report)
-        self.assertIn("66 Grenades recorded", report)
-        self.assertIn("66 expected at last check", report)
-        self.assertIn("69 expected by 2026-11-23", report)
-        self.assertIn("Next milestone 123 · 57 to go at last check", report)
-        self.assertIn("not fresh balances from this run", report.lower())
+        self.assertIn("Progression — checks still open · grouped by milestone", report)
+        self.assertIn("66 / 69 Grenades", report)
+        self.assertIn("57 to go", report)
+        self.assertIn("Last checked 2026-11-22", report)
+        self.assertIn("Pass · last checked 2026-11-22", report.lower())
         self.assertNotIn("Attention Required", report)
 
         saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
@@ -952,8 +951,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 [player], "Promotional Check #1", 1,
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
-        self.assertIn("Previous validation result not saved", legacy_report)
-        self.assertIn("1 previous result unavailable", legacy_report)
+        self.assertIn("Status not retained", legacy_report)
+        self.assertIn("last checked 2026-11-22", legacy_report.lower())
 
     def test_queue_reinspection_is_counted_and_grouped_in_compact_email(self):
         reason = (
@@ -1042,9 +1041,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 [player1, player2], "Promotional Check #1", 1,
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
-        self.assertIn("2 accounts · Last checked 2026-11-22", report)
-        self.assertIn("66 Grenades recorded", report)
-        self.assertEqual(report.count("66 Grenades recorded"), 1)
+        self.assertIn("2 accounts", report)
+        self.assertIn("66 / 69 Grenades", report)
+        self.assertEqual(report.count("66 / 69 Grenades"), 1)
         self.assertNotIn("GROUPPLAYER0001", report)
         self.assertNotIn("GROUPPLAYER0002", report)
 
