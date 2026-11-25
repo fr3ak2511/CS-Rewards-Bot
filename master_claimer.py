@@ -3309,15 +3309,6 @@ def _progression_claim_snapshot(driver):
               .filter(Boolean);
 
             // Read-only inventory hints: never scroll, click, or infer completeness.
-            const scrollCandidates = Array.from(document.querySelectorAll('div,section,ul'))
-              .filter(el => visible(el) && !el.closest('[role="dialog"],[aria-modal="true"]'))
-              .filter(el => {
-                const style = getComputedStyle(el);
-                return el.clientWidth > 180 && el.clientHeight > 80
-                  && (el.scrollWidth > el.clientWidth + 8 || /auto|scroll/.test(style.overflowX || ''));
-              })
-              .sort((a,b) => (b.clientWidth*b.clientHeight) - (a.clientWidth*a.clientHeight))
-              .slice(0, 3);
             const milestoneThresholds = [
               3,6,12,15,18,56,59,62,65,123,126,129,141,147,
               186,189,192,195,400,600,680,750,880,950,1000
@@ -3326,46 +3317,170 @@ def _progression_claim_snapshot(driver):
               'claim','claim all','delivered','already delivered','claimed',
               'already claimed','collected','redeemed','locked'
             ]);
-            const diagnosticContainers = scrollCandidates.map((container, index) => {
-              const r = container.getBoundingClientRect();
+            const textOf = node => norm(node && (node.innerText || node.textContent) || '');
+            const depthOf = node => {
+              let depth = 0;
+              for (let parent = node && node.parentElement; parent && depth < 100;
+                   parent = parent.parentElement) depth++;
+              return depth;
+            };
+            const visibleOutsideDialog = node => visible(node)
+              && !node.closest('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]');
+            const hasMilestoneHint = node => {
+              const text = textOf(node).slice(0, 1800);
+              return milestoneThresholds.some(value =>
+                new RegExp('(^|\\\\D)' + value + '(?=\\\\D|$)').test(text)
+              );
+            };
+            const hasRewardCardShape = node => {
+              const text = textOf(node).slice(0, 1800);
+              if (!hasMilestoneHint(node)) return false;
+              const actionText = Array.from(node.querySelectorAll('button,[role="button"]'))
+                .filter(visible)
+                .map(item => lower(item.innerText || item.textContent
+                  || item.getAttribute('aria-label') || item.getAttribute('title')));
+              return /\\\\bx\\\\s*[\\\\d,]+/i.test(text)
+                || actionText.some(label => statusTerms.has(label));
+            };
+            const semanticRoots = Array.from(document.querySelectorAll(
+              '[role="region"][aria-roledescription="carousel"],[data-slot="carousel-content"],' +
+              '[data-slot="carousel"],[aria-roledescription="carousel"]'
+            )).filter(visibleOutsideDialog);
+            const overflowCandidates = Array.from(document.querySelectorAll('div,section,ul,ol,[role="region"]'))
+              .filter(visibleOutsideDialog)
+              .filter(el => el.clientWidth > 180 && el.clientHeight > 80
+                && el.scrollWidth > el.clientWidth + 8);
+            const allCandidates = Array.from(new Set([...semanticRoots, ...overflowCandidates]));
+            const candidateRecords = allCandidates.map(container => {
+              const explicitSlides = Array.from(container.querySelectorAll(
+                '[role="group"][aria-roledescription="slide"],[data-slot="carousel-item"],[data-embla-slide]'
+              )).filter(visible);
+              const possibleParents = [container, ...Array.from(
+                container.querySelectorAll('div,ul,ol,li,article')
+              )];
+              const repeatedGroups = possibleParents.map(parent => {
+                const children = Array.from(parent.children).filter(visible);
+                const rewardCards = children.filter(hasRewardCardShape);
+                return {
+                  parent, children, rewardCards, depth: depthOf(parent),
+                  ratio: children.length ? rewardCards.length / children.length : 0
+                };
+              }).filter(group => group.children.length >= 2
+                && group.children.length <= 80 && group.rewardCards.length >= 2
+                && group.ratio >= 0.5)
+                .sort((a,b) => b.rewardCards.length - a.rewardCards.length
+                  || b.ratio - a.ratio || b.depth - a.depth);
+              const fallbackCards = repeatedGroups.length
+                ? repeatedGroups[0].rewardCards : [];
+              const cardNodes = explicitSlides.length ? explicitSlides : fallbackCards;
+              const cardCaptureSource = explicitSlides.length ? 'semantic_slide_nodes'
+                : fallbackCards.length ? 'repeated_reward_siblings' : 'no_card_group_found';
+              const style = getComputedStyle(container);
+              const rect = container.getBoundingClientRect();
               const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
-              const cards = Array.from(container.children).filter(visible).slice(0, 40).map(child => {
-                const cr = child.getBoundingClientRect();
-                const text = norm(child.innerText || child.textContent || '').slice(0, 320);
-                const lines = text.split(/\n+/).map(norm).filter(Boolean);
-                const labels = Array.from(child.querySelectorAll('button,[role="button"]'))
-                  .filter(visible).slice(0, 8)
-                  .map(button => lower(button.innerText || button.textContent || button.getAttribute('aria-label')).slice(0, 48));
-                const statusHints = lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8);
-                const thresholdHints = milestoneThresholds.filter(value =>
-                  new RegExp('(^|\\D)' + value + '(?=\\D|$)').test(text)
+              const semanticRoot = semanticRoots.includes(container);
+              const directChildren = Array.from(container.children);
+              return {
+                container,
+                cardNodes,
+                cardCaptureSource,
+                explicitSlideCount: explicitSlides.length,
+                depth: depthOf(container),
+                semanticRoot,
+                score: (explicitSlides.length ? 10000 : 0)
+                  + (fallbackCards.length * 100)
+                  + (semanticRoot ? 5000 : 0)
+                  + (maxScroll > 40 ? 100 : 0)
+                  + depthOf(container),
+                metadata: {
+                  tag: String(container.tagName || '').toLowerCase(),
+                  class_name: String(container.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 160),
+                  test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
+                  role: String(container.getAttribute('role') || ''),
+                  aria_label: String(container.getAttribute('aria-label') || ''),
+                  aria_roledescription: String(container.getAttribute('aria-roledescription') || ''),
+                  data_slot: String(container.getAttribute('data-slot') || ''),
+                  overflow_x: String(style.overflowX || ''),
+                  scroll_snap_type: String(style.scrollSnapType || ''),
+                  display: String(style.display || ''),
+                  flex_direction: String(style.flexDirection || ''),
+                  rect: {x:Math.round(rect.x),y:Math.round(rect.y),
+                    width:Math.round(rect.width),height:Math.round(rect.height)},
+                  client_width: container.clientWidth,
+                  scroll_width: container.scrollWidth,
+                  scroll_left: Math.round(container.scrollLeft),
+                  max_scroll_left: Math.round(maxScroll),
+                  at_start: container.scrollLeft <= 2,
+                  at_end: container.scrollLeft >= maxScroll - 2,
+                  direct_child_count: container.children.length,
+                  visible_child_count: directChildren.filter(visible).length,
+                  depth: depthOf(container),
+                  is_semantic_carousel_root: semanticRoot,
+                  card_capture_source: cardCaptureSource,
+                  explicit_slide_count: explicitSlides.length
+                }
+              };
+            }).sort((a,b) => b.score - a.score).slice(0, 12);
+            const diagnosticContainers = candidateRecords.map((candidate, index) => {
+              const capturedCards = candidate.cardNodes.slice(0, 40).map(card => {
+                const cardText = textOf(card).slice(0, 480);
+                const lines = cardText.split(/\\\\n+/).map(norm).filter(Boolean);
+                const actionNodes = Array.from(card.querySelectorAll('button,[role="button"]'))
+                  .filter(visible).slice(0, 8);
+                const buttonDetails = actionNodes.map(button => ({
+                  tag: String(button.tagName || '').toLowerCase(),
+                  label: norm(button.innerText || button.textContent
+                    || button.getAttribute('aria-label') || button.getAttribute('title')
+                    || button.getAttribute('data-state')).slice(0, 80),
+                  role: String(button.getAttribute('role') || ''),
+                  aria_label: String(button.getAttribute('aria-label') || ''),
+                  class_name: String(button.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  data_slot: String(button.getAttribute('data-slot') || ''),
+                  data_state: String(button.getAttribute('data-state') || ''),
+                  disabled: !!button.disabled,
+                  aria_disabled: String(button.getAttribute('aria-disabled') || '')
+                }));
+                const statusElements = Array.from(card.querySelectorAll(
+                  'button,[role="button"],span,p,div,[data-state],[aria-label]'
+                )).filter(visible).filter(node => {
+                  const label = lower(textOf(node) || node.getAttribute('aria-label')
+                    || node.getAttribute('data-state'));
+                  return statusTerms.has(label);
+                }).slice(0, 8).map(node => ({
+                  tag: String(node.tagName || '').toLowerCase(),
+                  text: textOf(node).slice(0, 80),
+                  role: String(node.getAttribute('role') || ''),
+                  aria_label: String(node.getAttribute('aria-label') || ''),
+                  class_name: String(node.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  data_state: String(node.getAttribute('data-state') || '')
+                }));
+                const cr = card.getBoundingClientRect();
+                const thresholds = milestoneThresholds.filter(value =>
+                  new RegExp('(^|\\\\D)' + value + '(?=\\\\D|$)').test(cardText)
                 );
                 return {
-                  tag: String(child.tagName || '').toLowerCase(),
-                  class_name: String(child.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
-                  test_id: String(child.getAttribute('data-testid') || '').slice(0, 80),
-                  text_snippet: text,
-                  button_labels: labels,
-                  exact_status_text_hints: statusHints,
-                  milestone_number_hints: thresholdHints,
-                  rect: {x:Math.round(cr.x),y:Math.round(cr.y),width:Math.round(cr.width),height:Math.round(cr.height)}
+                  tag: String(card.tagName || '').toLowerCase(),
+                  class_name: String(card.className || '').replace(/\\\\s+/g, ' ').trim().slice(0, 120),
+                  test_id: String(card.getAttribute('data-testid') || '').slice(0, 80),
+                  role: String(card.getAttribute('role') || ''),
+                  aria_label: String(card.getAttribute('aria-label') || ''),
+                  data_slot: String(card.getAttribute('data-slot') || ''),
+                  data_state: String(card.getAttribute('data-state') || ''),
+                  text_snippet: cardText,
+                  button_labels: buttonDetails.map(item => item.label).filter(Boolean),
+                  button_details: buttonDetails,
+                  exact_status_text_hints: lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8),
+                  status_elements: statusElements,
+                  milestone_number_hints: thresholds,
+                  rect: {x:Math.round(cr.x),y:Math.round(cr.y),
+                    width:Math.round(cr.width),height:Math.round(cr.height)}
                 };
               });
               return {
                 index,
-                tag: String(container.tagName || '').toLowerCase(),
-                class_name: String(container.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
-                test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
-                rect: {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
-                client_width: container.clientWidth,
-                scroll_width: container.scrollWidth,
-                scroll_left: Math.round(container.scrollLeft),
-                max_scroll_left: Math.round(maxScroll),
-                at_start: container.scrollLeft <= 2,
-                at_end: container.scrollLeft >= maxScroll - 2,
-                direct_child_count: container.children.length,
-                visible_child_count: Array.from(container.children).filter(visible).length,
-                captured_cards: cards
+                ...candidate.metadata,
+                captured_card_count: capturedCards.length,
+                captured_cards: capturedCards
               };
             });
             const path = (location.pathname || '').toLowerCase();
