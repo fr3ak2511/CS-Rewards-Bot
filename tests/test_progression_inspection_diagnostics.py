@@ -196,6 +196,48 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertFalse(summary["completeness_established"])
         self.assertFalse(summary["delivery_status_established"])
 
+    def test_completed_scan_requires_stable_card_signature_and_full_roster(self):
+        def make_snapshot(card_text, *, observed_at_end=True):
+            card = {
+                "text_snippet": card_text,
+                "test_id": "reward-123",
+                "class_name": "reward-card",
+                "milestone_number_hints": [123],
+                "button_labels": ["Delivered"],
+                "button_details": [{"label": "Delivered", "disabled": True}],
+            }
+            return {
+                "page_path": "/progression-program",
+                "page_valid": True,
+                "carousel_containers": [{
+                    "index": 0, "class_name": "reward-rail", "overflow_x": "auto",
+                    "client_width": 1000, "scroll_width": 2000, "max_scroll_left": 1000,
+                    "scroll_left": 1000 if observed_at_end else 0, "at_end": observed_at_end,
+                    "captured_cards": [card],
+                }],
+            }
+
+        changed_identity = build_progression_inspection_diagnostic_summary(
+            {"PLAYER0001": [
+                make_snapshot("123 x100 Delivered"),
+                make_snapshot("123 x100 SPECIAL Delivered"),
+            ]},
+            configured_player_count=1,
+        )
+        rail = changed_identity["accounts"][0]["normalized_progression_rail"]
+        self.assertFalse(rail["captured_rail_scan_completed"])
+        self.assertFalse(rail["card_signatures_stable_across_snapshots"])
+        self.assertEqual(rail["milestone_cards"][0]["classification"], "Unknown")
+        self.assertEqual(rail["milestone_cards"][0]["reason"], "card_identity_changed_across_snapshots")
+
+        missing_account = build_progression_inspection_diagnostic_summary(
+            {"PLAYER0001": [make_snapshot("123 x100 Delivered")]},
+            configured_player_count=2,
+        )
+        self.assertEqual(missing_account["accounts_with_diagnostics"], 1)
+        self.assertFalse(missing_account["inventory_consistency_across_accounts"])
+        self.assertEqual(missing_account["common_observed_milestone_thresholds"], [])
+
     def test_disabled_claim_and_conflicting_card_statuses_remain_unknown(self):
         def snapshot(statuses, button_disabled):
             card = {
