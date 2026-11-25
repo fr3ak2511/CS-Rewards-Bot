@@ -157,7 +157,7 @@ def sanitize_progression_inspection_snapshot(raw: Any) -> dict[str, Any] | None:
         "carousel_containers": safe_containers,
         "completeness_verdict": "not_established",
         "delivery_verdict": "not_established",
-        "diagnostic_version": 2,
+        "diagnostic_version": _safe_number(raw.get("diagnostic_version"), maximum=2) or 1,
         "note": "Visible rail and card hints only; not proof of complete inventory coverage, Locked state, or milestone delivery.",
     }
 
