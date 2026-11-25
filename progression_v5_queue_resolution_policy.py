@@ -90,7 +90,6 @@ def _validate_account_capture(
 ) -> list[str]:
     """Validate live run metadata and each selected raw rail snapshot."""
     errors: list[str] = []
-    suffix = str(account.get("player_id_last4") or "").strip().upper()
     snapshots = account.get("snapshots")
     snapshot_count = _integer(account.get("snapshot_count"))
     if (
@@ -257,10 +256,6 @@ def _validate_account_capture(
             derived_at_end = scroll_left >= max_scroll - 2
             if selected.get("at_end") is not derived_at_end:
                 errors.append(f"snapshot_selected_rail_end_flag_mismatch:{snapshot_index}")
-            if derived_at_end and snapshot_index != snapshot_count - 1:
-                # Reaching the end early is acceptable only if later snapshots
-                # still show the same terminal position.
-                pass
 
     if len(capture_sources) != 1:
         errors.append("card_capture_source_changed_or_missing_across_snapshots")
@@ -277,6 +272,8 @@ def _validate_account_capture(
     elif selected_max_scroll is not None and scroll_positions[-1] < selected_max_scroll - 2:
         errors.append("selected_rail_final_position_not_at_end")
 
+    if not observed_times:
+        errors.append("snapshot_observation_timestamps_missing")
     return sorted(set(errors))
 
 
@@ -329,25 +326,31 @@ def build_progression_v5_queue_resolution_proposal(
         global_errors.append("diagnostic_generated_timestamp_invalid")
 
     total_snapshots = 0
+    account_capture_errors: dict[str, list[str]] = {}
+    account_snapshot_times: dict[str, list[datetime]] = {}
     for suffix, account in accounts.items():
         result = results.get(suffix)
         if not isinstance(result, dict):
             global_errors.append(f"account_result_missing:{suffix}")
+            account_capture_errors[suffix] = ["account_result_missing"]
             continue
         total_snapshots += _integer(account.get("snapshot_count")) or 0
-        account_errors = _validate_account_capture(account, result, expected_thresholds)
-        if account_errors:
+        capture_errors = _validate_account_capture(account, result, expected_thresholds)
+        account_capture_errors[suffix] = capture_errors
+        if capture_errors:
             global_errors.extend(
-                f"account_capture_invalid:{suffix}:{error}" for error in account_errors
+                f"account_capture_invalid:{suffix}:{error}" for error in capture_errors
             )
-        if generated_at is not None:
-            snapshots = account.get("snapshots")
-            times = [
-                _parse_timestamp(snapshot.get("observed_at_ist"))
-                for snapshot in snapshots if isinstance(snapshot, dict)
-            ] if isinstance(snapshots, list) else []
-            if not times or any(value is None or value > generated_at for value in times):
-                global_errors.append(f"account_snapshot_time_out_of_diagnostic_window:{suffix}")
+        snapshots = account.get("snapshots")
+        times = [
+            _parse_timestamp(snapshot.get("observed_at_ist"))
+            for snapshot in snapshots if isinstance(snapshot, dict)
+        ] if isinstance(snapshots, list) else []
+        account_snapshot_times[suffix] = [value for value in times if value is not None]
+        if generated_at is not None and (
+            not times or any(value is None or value > generated_at for value in times)
+        ):
+            global_errors.append(f"account_snapshot_time_out_of_diagnostic_window:{suffix}")
 
     if _integer(diagnostic.get("snapshot_count")) != total_snapshots:
         global_errors.append("diagnostic_snapshot_total_mismatch")
@@ -359,9 +362,15 @@ def build_progression_v5_queue_resolution_proposal(
         player_id = str(row.get("player_id") or "").strip().upper()
         record = queue.get(player_id)
         suffix = str(row.get("player_id_last4") or "").strip().upper()
+        if suffix in account_capture_errors:
+            row_errors.extend(
+                f"account_capture_invalid:{suffix}:{error}"
+                for error in account_capture_errors[suffix]
+            )
 
         if not isinstance(record, dict):
             row_errors.append("current_queue_record_missing")
+            record = {}
         elif generated_at is not None:
             latest_activity: list[datetime] = []
             for field in ("last_attempt_at", "last_deferred_at"):
@@ -372,15 +381,17 @@ def build_progression_v5_queue_resolution_proposal(
                     latest_activity.append(parsed)
             if latest_activity and any(value > generated_at for value in latest_activity):
                 row_errors.append("queue_changed_after_diagnostic")
-            if latest_activity and suffix in accounts:
-                snapshots = accounts[suffix].get("snapshots")
-                first_snapshot = (
-                    _parse_timestamp(snapshots[0].get("observed_at_ist"))
-                    if isinstance(snapshots, list) and snapshots and isinstance(snapshots[0], dict)
-                    else None
+            snapshot_times = account_snapshot_times.get(suffix, [])
+            if latest_activity and (
+                not snapshot_times or max(latest_activity) >= min(snapshot_times)
+            ):
+                row_errors.append("diagnostic_does_not_postdate_last_queue_attempt")
+
+        for card in row.get("card_ledger") or []:
+            if not card.get("evidence_sources"):
+                row_errors.append(
+                    f"card_status_has_no_explicit_evidence:{card.get('milestone_threshold')}"
                 )
-                if first_snapshot is None or max(latest_activity) >= first_snapshot:
-                    row_errors.append("diagnostic_does_not_postdate_last_queue_attempt")
 
         if global_errors:
             row_errors.append("global_diagnostic_or_capture_validation_failed")
@@ -392,6 +403,9 @@ def build_progression_v5_queue_resolution_proposal(
         row["resolution_eligible"] = bool(eligible)
         row["proposed_resolution"] = _RESOLUTION if eligible else None
         row["resolution_scope"] = "selected_horizontal_progression_reward_rail_at_diagnostic_time"
+        row["prior_resolution_reopened"] = bool(record.get("reopened_from_resolution"))
+        row["prior_resolution_type"] = record.get("reopened_from_resolution")
+        row["prior_resolution_run_id"] = record.get("reopened_from_resolution_run_id")
         row["validation_errors"] = sorted(set(row_errors))
         row["resolution_blockers"] = [] if eligible else sorted(set(row_errors))
         entries.append(row)
