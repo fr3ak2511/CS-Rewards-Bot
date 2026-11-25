@@ -173,6 +173,25 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
         else:
             pp_status = "Not checked in this run"
 
+        outcome = str(player.get("progression_last_outcome_category") or "").strip()
+        if deferred or unconfirmed:
+            if outcome and outcome != "unknown":
+                pp_status += " · " + outcome.replace("_", " ")
+            try:
+                repeat_count = max(0, int(player.get("progression_same_outcome_count", 0) or 0))
+            except (TypeError, ValueError, OverflowError):
+                repeat_count = 0
+            if repeat_count > 1:
+                pp_status += f" · same outcome {repeat_count}x"
+            if player.get("progression_manual_attention_required"):
+                pp_status += " · manual attention"
+            try:
+                slots_used = max(0, int(player.get("progression_inspection_slots_used", 0) or 0))
+            except (TypeError, ValueError, OverflowError):
+                slots_used = 0
+            if slots_used:
+                pp_status += f" · {slots_used}/4 slots used"
+
         key = (
             milestone if milestone is not None else 10**9,
             actual if actual is not None else 10**9,

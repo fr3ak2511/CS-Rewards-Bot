@@ -26,16 +26,63 @@ from master_claimer import (
     _preserve_queued_progression_state,
     _run_queued_progression_inspection,
     process_player_progression_only,
+    _attach_progression_queue_observability,
     _summary_counts,
     build_email,
     build_event_rewards_section,
     build_promotional_section,
     get_ist_time,
     write_run_summary,
+    _record_progression_inspection_snapshot,
+    _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER,
 )
 
 
 class ClaimCountAndEmailReportingTests(unittest.TestCase):
+    def test_read_only_progression_snapshot_is_sanitized_and_capped_in_run_memory(self):
+        class Driver:
+            _progression_diagnostic_player_id = "0123456789ABCDEF"
+
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+        driver = Driver()
+        with patch("master_claimer.get_ist_time", return_value=datetime(2026, 11, 24, 6, 0)):
+            _record_progression_inspection_snapshot(driver, {
+                "inspection_diagnostics": {
+                    "page_path": "/progression-program",
+                    "ready_state": "complete",
+                    "viewport": {"width": 1920, "height": 1080},
+                    "body_text_length": 500,
+                    "page_valid": True,
+                    "visible_claimable_count": 1,
+                    "visible_delivered_control_count": 2,
+                    "candidate_container_count": 1,
+                    "carousel_containers": [{
+                        "index": 0,
+                        "tag": "div",
+                        "class_name": "reward-carousel",
+                        "client_width": 900,
+                        "scroll_width": 1800,
+                        "scroll_left": 0,
+                        "max_scroll_left": 900,
+                        "at_start": True,
+                        "at_end": False,
+                        "captured_cards": [{
+                            "text_snippet": "Milestone 62 x20 Claim",
+                            "exact_status_text_hints": ["Claim"],
+                            "milestone_number_hints": [62],
+                        }],
+                    }],
+                }
+            })
+        rows = _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER["0123456789ABCDEF"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["completeness_verdict"], "not_established")
+        self.assertEqual(rows[0]["delivery_verdict"], "not_established")
+        self.assertEqual(rows[0]["carousel_containers"][0]["scroll_left"], 0)
+        self.assertEqual(rows[0]["carousel_containers"][0]["captured_cards"][0]["text_snippet"], "Milestone 62 x20 Claim")
+        self.assertNotIn("0123456789ABCDEF", str(rows))
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+
     def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
         driver = type("ProgressionDriver", (), {})()
 
@@ -2435,6 +2482,29 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Checked · no reward claimed · 1", report)
         self.assertIn("4 accounts grouped", report)
         self.assertIn("1 Progression reward confirmed in this run; 2 accounts remain open", report)
+
+    def test_progression_queue_observability_attaches_latest_reason_and_escalation(self):
+        results = [{"pid": "PLAYER0001", "progression_deferred": True}]
+        meta = {"progression_deferred_inspections": {"PLAYER0001": {
+            "status": "deferred", "last_outcome_category": "empty_scan",
+            "same_outcome_count": 4, "manual_attention_required": True,
+            "attempted_slots": ["Primary Run", "Immediate Progression Recovery", "Promotional Check #1"],
+        }}}
+        _attach_progression_queue_observability(results, meta)
+        self.assertEqual(results[0]["progression_last_outcome_category"], "empty_scan")
+        self.assertEqual(results[0]["progression_same_outcome_count"], 4)
+        self.assertTrue(results[0]["progression_manual_attention_required"])
+        self.assertEqual(results[0]["progression_inspection_slots_used"], 3)
+        section = build_deferred_checks_section([{
+            **results[0], "display_name": "Player One", "status": "Partial",
+            "progression_deferred_reason": "No currently visible claimable reward card.",
+            "progression": 0,
+            "grenade_balance": {"current_count": 75, "expected_minimum": 75, "next_milestone": 123, "status": "pass"},
+        }])
+        self.assertIn("empty scan", section)
+        self.assertIn("same outcome 4x", section)
+        self.assertIn("manual attention", section)
+        self.assertIn("3/4 slots used", section)
 
 if __name__ == "__main__":
     unittest.main()
