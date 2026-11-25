@@ -154,7 +154,7 @@ class CopyableReportTests(unittest.TestCase):
         ]
         report = build_copyable_report(pending)
         self.assertIn("ATTENTION REQUIRED", report)
-        self.assertIn("pending baseline", report)
+        self.assertIn("Pending baseline", report)
 
     def test_report_shows_full_cycle_health_separately_from_run_attention(self):
         summary = dict(self.summary)
@@ -230,12 +230,12 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("Progression Inspections Pending", report)
-        self.assertIn("Inspection blocked by overlay", report)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
+        self.assertIn("Pending · Blocked by an on-screen popup or overlay", report)
         self.assertIn("&lt;Player One&gt;", report)
         self.assertIn(">Deferred check</span>", report)
-        self.assertIn("no claim click was attempted", report)
-        self.assertIn("unknown_fullscreen_overlay_blocks_page", report)
+        self.assertIn("needs another safe inspection", report)
+        self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertIn("Actual failures: <strong>0</strong>", report)
@@ -262,7 +262,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertIn("<strong>0</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("No claimable reward visible", report)
+        self.assertIn("Pending · no claimable card visible", report)
         self.assertIn(">Deferred check</span>", report)
 
     def test_promotion_detection_failure_is_not_hidden_by_deferred_progression(self):
@@ -317,12 +317,12 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("Last Verified Grenade Progress", report)
+        self.assertIn("Progression / Grenade balance — grouped by milestone", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Last milestone", report)
-        self.assertIn("123 (then 57 remaining)", report)
-        self.assertIn("These are saved portal observations, not live balances", report)
+        self.assertIn("Next milestone", report)
+        self.assertIn("57", report)
+        self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -347,8 +347,8 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("status not retained", report)
-        self.assertIn("missing status is shown as not retained", report)
+        self.assertIn("Status not retained", report)
+        self.assertIn("Status not retained", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -366,9 +366,9 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("1 Progression reward(s) were portal-confirmed", report)
-        self.assertIn("remaining-card inspection is incomplete and stays queued", report)
-        self.assertIn("No further claim click was attempted", report)
+        self.assertIn("1 claim(s) confirmed · further inspection pending", report)
+        self.assertIn("Pending accounts need another safe inspection", report)
+        self.assertIn("1 claim(s) confirmed · further inspection pending", report)
 
     def test_unexpected_progression_inspection_exception_remains_attention(self):
         deferred = dict(self.summary["player_results"][0])
@@ -407,7 +407,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("below minimum", report)
+        self.assertIn("Below date minimum", report)
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
