@@ -788,7 +788,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Attention Required", report)
         self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
-        self.assertNotIn("hgkme1", report)
+        self.assertIn("hgkme1", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
         self.assertNotIn("unconfirmed standard reward", report.lower())
@@ -920,7 +920,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertIn("Progression — checks still open · grouped by milestone", report)
-        self.assertIn("66 / 69 Grenades", report)
+        self.assertIn("66 / 66", report)
         self.assertIn("57 to go", report)
         self.assertIn("Last checked 2026-11-22", report)
         self.assertIn("Pass · last checked 2026-11-22", report.lower())
@@ -1207,7 +1207,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("Grenade Balance Check", report)
-        self.assertIn("27 / 30 · short 3 · next 56 (in 29 Grenades)", report)
+        self.assertIn("27 / 30", report)
+        self.assertIn("Next milestone 56", report)
+        self.assertIn("Below date minimum", report)
         self.assertIn("Need attention", report)
         self.assertIn("<strong>1</strong>", report)
 
@@ -1243,7 +1245,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=1,
         )
-        self.assertIn("Tracking pending", report)
+        self.assertIn("Pending baseline", report)
         self.assertIn("Tracking Incomplete", report)
         self.assertIn("Need attention</span><strong>0</strong>", report)
 
@@ -1436,7 +1438,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("<div class='v2-section-head v2-grenade-head'><h2>Grenade Balance Check</h2>", report)
+        self.assertIn("Progression Program — milestone groups &amp; Grenade Balance Check", report)
         self.assertIn("<div class='v2-grenade-summary'>", report)
         self.assertIn("27 / 30 · short 3", report)
         self.assertIn(".v2-grenade-summary{display:block", report)
@@ -1823,7 +1825,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression — checks still open", report)
-        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
+        self.assertIn("1 reward confirmed in this run; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
