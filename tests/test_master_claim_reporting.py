@@ -938,7 +938,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", deficit_report)
-        self.assertIn("Below minimum at last check", deficit_report)
+        self.assertIn("Below date minimum", deficit_report)
         self.assertIn("Attention Required", deficit_report)
 
         # Legacy observations without a saved status must not be presented as a pass.
@@ -1826,7 +1826,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=1), {}, configured_player_count=35,
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
-        self.assertIn("Progression — checks still open", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
@@ -1845,7 +1845,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertFalse(_full_claim_recovery_candidate(result))
         self.assertEqual(build_standard_attention_section([result]), "")
         deferred = build_deferred_checks_section([result])
-        self.assertIn("Progression — checks still open", deferred)
+        self.assertIn("Progression Program — Grenade Balance Check", deferred)
         self.assertIn("hgkme1", deferred)
         self.assertIn("No claim button was clicked in this run", deferred)
         self.assertNotIn("Attention Required", deferred)
@@ -2310,7 +2310,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Not checked in this run", report)
         self.assertNotIn("Core Daily Claims", report)
         self.assertNotIn("Full Claim Path", report)
-        self.assertNotIn("Grenade Balance Check", report)
+        self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertNotIn("Grenade Balance History", report)
         self.assertIn("1 queued reinspection attempt made.", report)
         self.assertIn("0 Progression rewards confirmed in this run", report)
