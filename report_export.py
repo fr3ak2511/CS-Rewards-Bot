@@ -146,7 +146,8 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
         if unconfirmed:
             pp_status = "Claim confirmation unresolved"
         elif claims:
-            pp_status = f"{claims} claim(s) confirmed" + (" · inspection still pending" if deferred else "")
+            reward_word = "reward" if claims == 1 else "rewards"
+            pp_status = f"{claims} {reward_word} confirmed" + (" · inspection still pending" if deferred else "")
         elif deferred:
             reason = str(player.get("progression_deferred_reason") or "").lower()
             if "no currently visible claimable reward" in reason:
