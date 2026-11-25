@@ -112,7 +112,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
             "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 30,
             "000000000000ABCD": [],
         }, configured_player_count=36)
-        self.assertEqual(summary["diagnostic_version"], 2)
+        self.assertEqual(summary["diagnostic_version"], 3)
         self.assertTrue(summary["read_only"])
         self.assertFalse(summary["completeness_established"])
         self.assertFalse(summary["delivery_status_established"])
