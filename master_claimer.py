@@ -3361,7 +3361,7 @@ def _progression_claim_snapshot(driver):
             const candidateRecords = allCandidates.map(container => {
               const explicitSlides = Array.from(container.querySelectorAll(
                 '[role="group"][aria-roledescription="slide"],[data-slot="carousel-item"],[data-embla-slide]'
-              )).filter(visible);
+              )).filter(visible).filter(hasRewardCardShape);
               const possibleParents = [container, ...Array.from(
                 container.querySelectorAll('div,ul,ol,li,article')
               )];
