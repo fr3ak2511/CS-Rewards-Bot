@@ -117,7 +117,7 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(snapshot["grenade"]["counter_regressed_today"], 1)
         self.assertEqual(snapshot["grenade"]["not_checked_today"], 0)
 
-    def test_rendered_overview_explains_empty_scan_is_not_completion(self):
+    def test_rendered_overview_keeps_cycle_coverage_separate_from_milestone_table(self):
         html = render_cycle_health_overview({
             "reset_date": "2026-11-24",
             "configured": 36,
@@ -268,7 +268,7 @@ class CycleHealthReportTests(unittest.TestCase):
         self.assertEqual(snapshot["core_cycle"]["complete"], 0)
         self.assertEqual(snapshot["core_cycle"]["pending"], 36)
 
-    def test_rendered_overview_explains_unconfirmed_and_stale_queue_entries(self):
+    def test_rendered_overview_does_not_duplicate_unconfirmed_or_stale_queue_entries(self):
         html = render_cycle_health_overview({
             "reset_date": "2026-11-24",
             "configured": 36,
@@ -284,9 +284,9 @@ class CycleHealthReportTests(unittest.TestCase):
                 "other_pending": 0, "outside_current_roster": 2,
             },
         })
-        self.assertIn("1/36 inspections pending", html)
-        self.assertIn("1 with claim outcome unconfirmed", html)
-        self.assertIn("2 queued record(s) outside the current roster are excluded", html)
+        self.assertIn("No verified full-roster cycle recorded for this reset", html)
+        self.assertNotIn("claim outcome unconfirmed", html)
+        self.assertNotIn("outside the current roster", html)
 
 if __name__ == "__main__":
     unittest.main()
