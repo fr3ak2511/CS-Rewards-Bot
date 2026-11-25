@@ -3453,7 +3453,7 @@ def _progression_claim_snapshot(driver):
                   const signals = [node.getAttribute('aria-label'), node.getAttribute('title'),
                     node.getAttribute('alt'), node.getAttribute('data-icon'),
                     node.getAttribute('data-lucide'), node.getAttribute('data-state'),
-                    String(node.className || '')].join(' ').toLowerCase();
+                    String(node.getAttribute('class') || node.className || '')].join(' ').toLowerCase();
                   return !!actionAncestor || /lock|locked|claim|deliver|redeem|collect|check|status|icon/.test(signals);
                 }).slice(0, 16).map(node => ({
                   tag: String(node.tagName || '').toLowerCase(),
@@ -3464,7 +3464,7 @@ def _progression_claim_snapshot(driver):
                   data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
                   data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
                   role: String(node.getAttribute('role') || '').slice(0, 32),
-                  class_name: String(node.className || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+                  class_name: String(node.getAttribute('class') || node.className || '').replace(/\s+/g, ' ').trim().slice(0, 160),
                   text: textOf(node).slice(0, 80)
                 }));
                 const statusElements = Array.from(card.querySelectorAll(
@@ -3478,7 +3478,7 @@ def _progression_claim_snapshot(driver):
                   text: textOf(node).slice(0, 80),
                   role: String(node.getAttribute('role') || ''),
                   aria_label: String(node.getAttribute('aria-label') || ''),
-                  class_name: String(node.className || '').trim().slice(0, 120),
+                  class_name: String(node.getAttribute('class') || node.className || '').trim().slice(0, 120),
                   data_state: String(node.getAttribute('data-state') || '')
                 }));
                 const cr = card.getBoundingClientRect();
