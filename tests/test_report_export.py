@@ -320,7 +320,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Progression / Grenade balance — grouped by milestone", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Next milestone", report)
+        self.assertIn("Next milestone 123", report)
         self.assertIn("57", report)
         self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
@@ -348,7 +348,7 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn("Status not retained", report)
-        self.assertIn("Status not retained", report)
+        self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
 
@@ -368,7 +368,6 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("1 claim(s) confirmed · further inspection pending", report)
         self.assertIn("Pending accounts need another safe inspection", report)
-        self.assertIn("1 claim(s) confirmed · further inspection pending", report)
 
     def test_unexpected_progression_inspection_exception_remains_attention(self):
         deferred = dict(self.summary["player_results"][0])
