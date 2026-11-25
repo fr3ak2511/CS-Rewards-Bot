@@ -1789,6 +1789,71 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             self.assertIn("Observed on 2 separate reset days", section)
             self.assertIn("portal does not identify who made the claim", section)
 
+    def test_preexisting_daily_audit_reports_zero_findings_with_complete_coverage(self):
+        results = [
+            {
+                "pid": "DAILYPLAYER0001",
+                "processing_mode": "full_claim",
+                "standard_rewards_checked": True,
+                "daily_unconfirmed": False,
+                "preexisting_portal_claims": [],
+            },
+            {
+                "pid": "DAILYPLAYER0002",
+                "processing_mode": "full_claim",
+                "standard_rewards_checked": True,
+                "daily_unconfirmed": False,
+                "preexisting_portal_claims": [],
+            },
+        ]
+        section = build_preexisting_portal_claim_section(results)
+        self.assertIn("Daily Pre-existing Claim Audit", section)
+        self.assertIn("No prior Daily claims observed", section)
+        self.assertIn("No pre-existing Daily claims were observed before bot interaction", section)
+        self.assertIn("2/2 accounts with a conclusive Daily check", section)
+        self.assertIn("v2-state-success", section)
+
+    def test_preexisting_daily_audit_marks_unchecked_and_unconfirmed_accounts_unknown(self):
+        results = [
+            {
+                "pid": "DAILYPLAYER0001",
+                "processing_mode": "full_claim",
+                "standard_rewards_checked": True,
+                "daily_unconfirmed": False,
+                "preexisting_portal_claims": [],
+            },
+            {
+                "pid": "DAILYPLAYER0002",
+                "processing_mode": "full_claim",
+                "standard_rewards_checked": True,
+                "daily_unconfirmed": True,
+                "preexisting_portal_claims": [],
+            },
+            {
+                "pid": "DAILYPLAYER0003",
+                "processing_mode": "full_claim",
+                "standard_rewards_checked": False,
+                "daily_unconfirmed": False,
+                "status": "Login Failed",
+                "preexisting_portal_claims": [],
+            },
+        ]
+        section = build_preexisting_portal_claim_section(results)
+        self.assertIn("Partial coverage", section)
+        self.assertIn("1/3 accounts with a conclusive Daily check", section)
+        self.assertIn("2 account(s) did not complete a conclusive Daily check", section)
+        self.assertIn("their Daily state is unknown", section)
+
+    def test_preexisting_daily_audit_is_omitted_for_progression_only_runs(self):
+        result = {
+            "pid": "DAILYPLAYER0001",
+            "processing_mode": "progression_queue_only",
+            "standard_rewards_checked": False,
+            "daily_unconfirmed": False,
+            "preexisting_portal_claims": [],
+        }
+        self.assertEqual(build_preexisting_portal_claim_section([result]), "")
+
     def test_issue_rows_include_full_player_id_and_captured_ign(self):
         result = {
             "pid": "1234567890123456",
