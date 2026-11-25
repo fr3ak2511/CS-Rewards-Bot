@@ -952,7 +952,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
         self.assertIn("Status not retained", legacy_report)
-        self.assertIn("last checked 2026-11-22", legacy_report.lower())
+        self.assertIn("last observed 2026-11-22", legacy_report.lower())
 
     def test_queue_reinspection_is_counted_and_grouped_in_compact_email(self):
         reason = (
