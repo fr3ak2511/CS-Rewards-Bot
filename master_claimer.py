@@ -3231,6 +3231,7 @@ def _record_progression_inspection_defer_without_snapshot(driver, player_id, rea
 def _progression_claim_snapshot(driver):
     """Return visible Progression claim controls with card-level identity."""
     try:
+        diagnostic_rail_capture = bool(getattr(driver, "_progression_diagnostic_rail_capture", False))
         snapshot = driver.execute_script(r"""
             /* PROGRESSION_CARD_SNAPSHOT_V1 */
             const norm = value => (value || '').replace(/\s+/g, ' ').trim();
@@ -3309,6 +3310,10 @@ def _progression_claim_snapshot(driver):
               .filter(Boolean);
 
             // Read-only inventory hints: never scroll, click, or infer completeness.
+            let diagnosticContainers = [];
+            let candidateContainerCount = 0;
+            const diagnosticRailCapture = arguments.length > 0 && arguments[0] === true;
+            if (diagnosticRailCapture) {
             const milestoneThresholds = [
               3,6,12,15,18,56,59,62,65,123,126,129,141,147,
               186,189,192,195,400,600,680,750,880,950,1000
@@ -3352,6 +3357,7 @@ def _progression_claim_snapshot(driver):
               .filter(el => el.clientWidth > 180 && el.clientHeight > 80
                 && el.scrollWidth > el.clientWidth + 8);
             const allCandidates = Array.from(new Set([...semanticRoots, ...overflowCandidates]));
+            candidateContainerCount = allCandidates.length;
             const candidateRecords = allCandidates.map(container => {
               const explicitSlides = Array.from(container.querySelectorAll(
                 '[role="group"][aria-roledescription="slide"],[data-slot="carousel-item"],[data-embla-slide]'
@@ -3418,7 +3424,7 @@ def _progression_claim_snapshot(driver):
                 }
               };
             }).sort((a,b) => b.score - a.score).slice(0, 12);
-            const diagnosticContainers = candidateRecords.map((candidate, index) => {
+            diagnosticContainers = candidateRecords.map((candidate, index) => {
               const capturedCards = candidate.cardNodes.slice(0, 40).map(card => {
                 const cardText = textOf(card).slice(0, 480);
                 const lines = cardText.split(String.fromCharCode(10)).map(norm).filter(Boolean);
@@ -3479,6 +3485,68 @@ def _progression_claim_snapshot(driver):
                 captured_cards: capturedCards
               };
             });
+            } else {
+            const scrollCandidates = Array.from(document.querySelectorAll('div,section,ul'))
+              .filter(el => visible(el) && !el.closest('[role="dialog"],[aria-modal="true"]'))
+              .filter(el => {
+                const style = getComputedStyle(el);
+                return el.clientWidth > 180 && el.clientHeight > 80
+                  && (el.scrollWidth > el.clientWidth + 8 || /auto|scroll/.test(style.overflowX || ''));
+              })
+              .sort((a,b) => (b.clientWidth*b.clientHeight) - (a.clientWidth*a.clientHeight))
+              .slice(0, 3);
+            const milestoneThresholds = [
+              3,6,12,15,18,56,59,62,65,123,126,129,141,147,
+              186,189,192,195,400,600,680,750,880,950,1000
+            ];
+            const statusTerms = new Set([
+              'claim','claim all','delivered','already delivered','claimed',
+              'already claimed','collected','redeemed','locked'
+            ]);
+              diagnosticContainers = scrollCandidates.map((container, index) => {
+              const r = container.getBoundingClientRect();
+              const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+              const cards = Array.from(container.children).filter(visible).slice(0, 40).map(child => {
+                const cr = child.getBoundingClientRect();
+                const text = norm(child.innerText || child.textContent || '').slice(0, 320);
+                const lines = text.split(/\n+/).map(norm).filter(Boolean);
+                const labels = Array.from(child.querySelectorAll('button,[role="button"]'))
+                  .filter(visible).slice(0, 8)
+                  .map(button => lower(button.innerText || button.textContent || button.getAttribute('aria-label')).slice(0, 48));
+                const statusHints = lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8);
+                const thresholdHints = milestoneThresholds.filter(value =>
+                  new RegExp('(^|\\D)' + value + '(?=\\D|$)').test(text)
+                );
+                return {
+                  tag: String(child.tagName || '').toLowerCase(),
+                  class_name: String(child.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+                  test_id: String(child.getAttribute('data-testid') || '').slice(0, 80),
+                  text_snippet: text,
+                  button_labels: labels,
+                  exact_status_text_hints: statusHints,
+                  milestone_number_hints: thresholdHints,
+                  rect: {x:Math.round(cr.x),y:Math.round(cr.y),width:Math.round(cr.width),height:Math.round(cr.height)}
+                };
+              });
+              return {
+                index,
+                tag: String(container.tagName || '').toLowerCase(),
+                class_name: String(container.className || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+                test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
+                rect: {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)},
+                client_width: container.clientWidth,
+                scroll_width: container.scrollWidth,
+                scroll_left: Math.round(container.scrollLeft),
+                max_scroll_left: Math.round(maxScroll),
+                at_start: container.scrollLeft <= 2,
+                at_end: container.scrollLeft >= maxScroll - 2,
+                direct_child_count: container.children.length,
+                visible_child_count: Array.from(container.children).filter(visible).length,
+                captured_cards: cards
+              };
+            });
+              candidateContainerCount = diagnosticContainers.length;
+            }
             const path = (location.pathname || '').toLowerCase();
             const title = lower(document.title || '');
             const leadText = lower((document.body && document.body.innerText || '').slice(0, 900));
@@ -3503,14 +3571,14 @@ def _progression_claim_snapshot(driver):
                 page_valid: validPage,
                 visible_claimable_count: claimableCards.length,
                 visible_delivered_control_count: deliveredControls.length,
-                candidate_container_count: diagnosticContainers.length,
+                candidate_container_count: candidateContainerCount,
                 carousel_containers: diagnosticContainers,
                 completeness_verdict: 'not_established',
                 delivery_verdict: 'not_established',
-                diagnostic_version: 1
+                diagnostic_version: diagnosticRailCapture ? 2 : 1
               }
             };
-        """)
+        """, diagnostic_rail_capture)
         if not isinstance(snapshot, dict):
             return None
         _record_progression_inspection_snapshot(driver, snapshot)
@@ -8518,6 +8586,7 @@ def run_progression_diagnostic_only():
             account["login_status"] = "authenticated"
             driver._progression_diagnostic_player_id = player_id
             driver._progression_diagnostic_snapshot_limit = snapshot_limit
+            driver._progression_diagnostic_rail_capture = True
             driver.get("https://hub.vertigogames.co/progression-program")
             bypass_cloudflare(driver)
             time.sleep(1.5)
