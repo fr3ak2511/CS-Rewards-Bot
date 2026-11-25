@@ -45,22 +45,14 @@ def _parse_timestamp(value: Any) -> datetime | None:
 
 
 def _container_rank(container: Mapping[str, Any]) -> int:
-    """Reproduce the production diagnostic's exact rail-selection score."""
-    max_scroll = _integer(container.get("max_scroll_left")) or 0
-    depth = _integer(container.get("depth")) or 0
-    explicit_slides = _integer(container.get("explicit_slide_count")) or 0
-    cards = container.get("captured_cards")
-    card_count = len(cards) if isinstance(cards, list) else 0
-    source = str(container.get("card_capture_source") or "").strip()
-    fallback_cards = card_count if source == "repeated_reward_siblings" else 0
-    semantic_root = bool(container.get("is_semantic_carousel_root"))
-    return (
-        (10000 if explicit_slides else 0)
-        + (fallback_cards * 100)
-        + (5000 if semantic_root else 0)
-        + (100 if max_scroll > 40 else 0)
-        + depth
-    )
+    """Use a conservative, auditable horizontal-overflow ranking.
+
+    Diagnostic #6 exposes the selected candidate index and raw scroll geometry,
+    but not every component of the browser-side DOM ranking score. For queue
+    reconciliation, require the selected candidate to have the unique greatest
+    horizontal scroll range instead of attempting to reconstruct hidden inputs.
+    """
+    return _integer(container.get("max_scroll_left")) or 0
 
 
 def _index_by_suffix(items: Any, *, label: str, errors: list[str]) -> dict[str, dict[str, Any]]:
