@@ -113,7 +113,14 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
                 max(0, milestone - actual) if milestone is not None else None
             )
             balance_status = str(balance.get("status") or "not_validated")
-            freshness = "Current run"
+            prior_status = str(carry.get("status_at_observation") or "")
+            prior_date = str(carry.get("last_observed_date") or "")
+            if prior_status in {"below_minimum", "counter_regressed"}:
+                freshness = "Current run; previous " + (
+                    "reading below date minimum" if prior_status == "below_minimum" else "counter regression"
+                ) + (f" on {prior_date}" if prior_date else "")
+            else:
+                freshness = "Current run"
         elif carry.get("last_observed_count") is not None:
             actual = _number(carry.get("last_observed_count"))
             minimum = _number(carry.get("expected_minimum_as_of")) if carry.get("expected_minimum_as_of") is not None else None
