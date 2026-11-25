@@ -1,4 +1,8 @@
+import json
+import shutil
+import subprocess
 import unittest
+from pathlib import Path
 
 from progression_inspection_diagnostics import (
     build_progression_inspection_diagnostic_summary,
@@ -325,6 +329,60 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         }])
         self.assertEqual(unknown["classification"], "Unknown")
         self.assertEqual(unknown["reason"], "no_explicit_card_status")
+
+
+    def test_svg_class_name_capture_handles_animated_svg_and_html_classes(self):
+        source_path = Path(__file__).resolve().parents[1] / "master_claimer.py"
+        source = source_path.read_text(encoding="utf-8")
+        helper_start = source.find("const classNameText = node => {")
+        self.assertNotEqual(helper_start, -1, "SVG-safe class helper must exist in the capture script")
+        helper_end = source.find(chr(10) + "                };", helper_start)
+        self.assertNotEqual(helper_end, -1, "SVG-safe class helper must be complete")
+        helper_source = source[helper_start:helper_end + len(chr(10) + "                };")]
+        self.assertEqual(source.count("classNameText(node)"), 3)
+        self.assertNotIn("String(node.getAttribute('class') || node.className || '')", source)
+
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required to execute the browser-side SVG class helper")
+
+        script = helper_source + """
+const lockSvg = {
+  getAttribute: name => name === 'class' ? '' : null,
+  className: {baseVal: 'lucide lucide-lock', animVal: 'lucide lucide-lock'}
+};
+const attributeSvg = {
+  getAttribute: name => name === 'class' ? 'lucide lucide-check' : null,
+  className: {baseVal: 'ignored', animVal: 'ignored'}
+};
+const animatedFallbackSvg = {
+  getAttribute: name => name === 'class' ? null : null,
+  className: {baseVal: '', animVal: 'lucide lucide-lock'}
+};
+const htmlNode = {getAttribute: () => null, className: 'legacy-icon icon-lock'};
+const emptyNode = {getAttribute: () => null, className: ''};
+process.stdout.write(JSON.stringify([
+  classNameText(lockSvg),
+  classNameText(attributeSvg),
+  classNameText(animatedFallbackSvg),
+  classNameText(htmlNode),
+  classNameText(emptyNode)
+]));
+"""
+        completed = subprocess.run(
+            [node, "-e", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(json.loads(completed.stdout), [
+            "lucide lucide-lock",
+            "lucide lucide-check",
+            "lucide lucide-lock",
+            "legacy-icon icon-lock",
+            "",
+        ])
+
 
 if __name__ == "__main__":
     unittest.main()

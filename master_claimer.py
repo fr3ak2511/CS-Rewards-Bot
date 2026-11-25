@@ -3446,6 +3446,21 @@ def _progression_claim_snapshot(driver):
                   disabled: !!button.disabled,
                   aria_disabled: String(button.getAttribute('aria-disabled') || '')
                 }));
+                const classNameText = node => {
+                  if (!node) return '';
+                  const classAttribute = typeof node.getAttribute === 'function'
+                    ? node.getAttribute('class') : null;
+                  if (typeof classAttribute === 'string' && classAttribute.trim()) {
+                    return classAttribute;
+                  }
+                  const className = node.className;
+                  if (typeof className === 'string') return className;
+                  if (className && typeof className.baseVal === 'string'
+                      && className.baseVal.trim()) return className.baseVal;
+                  if (className && typeof className.animVal === 'string'
+                      && className.animVal.trim()) return className.animVal;
+                  return '';
+                };
                 const iconHints = Array.from(card.querySelectorAll(
                   'svg,img,[role="img"],[data-icon],[data-lucide],[aria-label],[title]'
                 )).filter(visible).filter(node => {
@@ -3453,7 +3468,7 @@ def _progression_claim_snapshot(driver):
                   const signals = [node.getAttribute('aria-label'), node.getAttribute('title'),
                     node.getAttribute('alt'), node.getAttribute('data-icon'),
                     node.getAttribute('data-lucide'), node.getAttribute('data-state'),
-                    String(node.getAttribute('class') || node.className || '')].join(' ').toLowerCase();
+                    classNameText(node)].join(' ').toLowerCase();
                   return !!actionAncestor || /lock|locked|claim|deliver|redeem|collect|check|status|icon/.test(signals);
                 }).slice(0, 16).map(node => ({
                   tag: String(node.tagName || '').toLowerCase(),
@@ -3464,7 +3479,7 @@ def _progression_claim_snapshot(driver):
                   data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
                   data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
                   role: String(node.getAttribute('role') || '').slice(0, 32),
-                  class_name: String(node.getAttribute('class') || node.className || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+                  class_name: classNameText(node).replace(/\s+/g, ' ').trim().slice(0, 160),
                   text: textOf(node).slice(0, 80)
                 }));
                 const statusElements = Array.from(card.querySelectorAll(
@@ -3478,7 +3493,7 @@ def _progression_claim_snapshot(driver):
                   text: textOf(node).slice(0, 80),
                   role: String(node.getAttribute('role') || ''),
                   aria_label: String(node.getAttribute('aria-label') || ''),
-                  class_name: String(node.getAttribute('class') || node.className || '').trim().slice(0, 120),
+                  class_name: classNameText(node).trim().slice(0, 120),
                   data_state: String(node.getAttribute('data-state') || '')
                 }));
                 const cr = card.getBoundingClientRect();
