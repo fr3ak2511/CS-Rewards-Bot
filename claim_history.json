@@ -14678,10 +14678,10 @@
       }
     },
     "progression": {
-      "last_claim": "2026-11-06T07:07:48.202485",
+      "last_claim": "2026-11-25T06:02:36.967124",
       "last_count": 1,
-      "last_visit": "2026-11-24T05:52:02.413446",
-      "status": "checked_no_claimable_reward"
+      "last_visit": "2026-11-25T06:02:36.967124",
+      "status": "claimed"
     },
     "loyalty": {
       "last_claim": null,
