@@ -5784,7 +5784,7 @@ def build_deferred_checks_section(results):
     )
     return (
         "<section class='v2-section v2-progression'>"
-        f"<div class='v2-section-head v2-grenade-head'><h2>Progression Program — milestone groups &amp; Grenade Balance Check</h2>"
+        f"<div class='v2-section-head v2-grenade-head'><h2>{html.escape(heading)}</h2>"
         f"<span>{len(records)} accounts</span></div>"
         f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
         "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
