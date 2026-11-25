@@ -5560,9 +5560,6 @@ def build_deferred_checks_section(results):
         unconfirmed = bool(result.get("progression_unconfirmed"))
         checked = result.get("progression_checked") is True
         has_balance = balance.get("current_count") is not None or carry.get("last_observed_count") is not None
-        if not (claims or deferred or unconfirmed or checked or has_balance or mode == "progression_queue_only"):
-            continue
-
         if balance.get("current_count") is not None:
             actual = balance.get("current_count")
             minimum = balance.get("expected_minimum")
@@ -5698,12 +5695,13 @@ def build_deferred_checks_section(results):
             minimum_text = "—" if minimum == 10**9 else str(minimum)
             remaining_text = "—" if remaining == 10**9 else str(remaining)
             balance_text = {
-                "pass": "PASS",
-                "below_minimum": "BELOW DATE MINIMUM",
-                "counter_regressed": "COUNTER REGRESSED",
-                "pending_baseline": "BASELINE PENDING",
-                "not_validated": "NOT VALIDATED",
-            }.get(balance_status, balance_status.replace("_", " ").upper())
+                "pass": "Pass",
+                "below_minimum": "Below date minimum",
+                "counter_regressed": "Counter regressed",
+                "pending_baseline": "Baseline pending",
+                "not_validated": "Not validated",
+                "status_not_retained": "Status not retained",
+            }.get(balance_status, balance_status.replace("_", " ").title())
             names = ", ".join(html.escape(label) for label in sorted(grouped[key]))
             rows.append(
                 "<tr>"
@@ -5715,9 +5713,13 @@ def build_deferred_checks_section(results):
                 "</tr>"
             )
 
+    heading = (
+        "Progression — checks still open · grouped by milestone"
+        if pending_total else "Progression — grouped by milestone"
+    )
     return (
         "<section class='v2-section v2-progression'>"
-        "<div class='v2-section-head'><h2>" + (pending_total ? "Progression — checks still open · grouped by milestone" : "Progression — grouped by milestone") + "</h2>"
+        f"<div class='v2-section-head'><h2>{html.escape(heading)}</h2>"
         f"<span>{len(records)} accounts</span></div>"
         f"<p class='v2-muted-note'>{html.escape(' · '.join(summary_parts))}</p>"
         "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%;border-collapse:collapse;font-size:12px'>"
