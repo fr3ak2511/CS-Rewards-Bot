@@ -1,5 +1,4 @@
 import json
-import re
 import shutil
 import subprocess
 import unittest
@@ -335,12 +334,11 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
     def test_svg_class_name_capture_handles_animated_svg_and_html_classes(self):
         source_path = Path(__file__).resolve().parents[1] / "master_claimer.py"
         source = source_path.read_text(encoding="utf-8")
-        helper_match = re.search(
-            r"const classNameText = node => \\{.*?\\n                \\};",
-            source,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(helper_match, "SVG-safe class helper must exist in the capture script")
+        helper_start = source.find("const classNameText = node => {")
+        self.assertNotEqual(helper_start, -1, "SVG-safe class helper must exist in the capture script")
+        helper_end = source.find(chr(10) + "                };", helper_start)
+        self.assertNotEqual(helper_end, -1, "SVG-safe class helper must be complete")
+        helper_source = source[helper_start:helper_end + len(chr(10) + "                };")]
         self.assertEqual(source.count("classNameText(node)"), 3)
         self.assertNotIn("String(node.getAttribute('class') || node.className || '')", source)
 
@@ -348,7 +346,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         if not node:
             self.skipTest("Node.js is required to execute the browser-side SVG class helper")
 
-        script = helper_match.group(0) + """
+        script = helper_source + """
 const lockSvg = {
   getAttribute: name => name === 'class' ? '' : null,
   className: {baseVal: 'lucide lucide-lock', animVal: 'lucide lucide-lock'}
