@@ -139,6 +139,12 @@ class ProgressionDiagnosticOnlyModeTests(unittest.TestCase):
         self.assertTrue(snapshot["valid_page"])
         self.assertFalse(driver.diagnostic_rail_capture)
 
+        driver._progression_diagnostic_rail_capture = True
+        with patch.object(master_claimer, "_record_progression_inspection_snapshot"):
+            snapshot = master_claimer._progression_claim_snapshot(driver)
+        self.assertTrue(snapshot["valid_page"])
+        self.assertTrue(driver.diagnostic_rail_capture)
+
     def test_login_failure_is_reported_without_opening_progression_page(self):
         with tempfile.TemporaryDirectory() as root:
             root_path = Path(root)
