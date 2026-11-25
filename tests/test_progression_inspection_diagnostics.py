@@ -49,13 +49,21 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
                         "tag": "button", "label": "Delivered", "role": "",
                         "aria_label": "Delivered", "class_name": "status",
                         "data_slot": "button", "data_state": "delivered",
-                        "disabled": True, "aria_disabled": "true"
+                        "data_variant": "component-daily-reward", "data_claimed": "true",
+                        "data_unavailable": "true", "disabled": True, "aria_disabled": "true"
                     }],
                     "exact_status_text_hints": ["Delivered"],
                     "status_elements": [{
                         "tag": "button", "text": "Delivered", "role": "",
                         "aria_label": "Delivered", "class_name": "status",
                         "data_state": "delivered"
+                    }],
+                    "icon_hints": [{
+                        "tag": "svg", "inside_action": True,
+                        "action_data_variant": "component-daily-reward",
+                        "action_data_unavailable": "true", "view_box": "0 0 17 17",
+                        "path_count": 1,
+                        "path_d_prefix": "M6.25214 5.94201H4.92987L4.93021 5.94234C"
                     }],
                     "milestone_number_hints": [3],
                     "rect": {"x": 10, "y": 20, "width": 200, "height": 220},
@@ -71,6 +79,12 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         card = safe["carousel_containers"][0]["captured_cards"][0]
         self.assertEqual(card["text_snippet"], "Milestone 3 x20 Delivered")
         self.assertTrue(card["button_details"][0]["disabled"])
+        self.assertEqual(card["button_details"][0]["data_claimed"], "true")
+        self.assertEqual(card["button_details"][0]["data_unavailable"], "true")
+        self.assertEqual(card["icon_hints"][0]["action_data_variant"], "component-daily-reward")
+        self.assertEqual(card["icon_hints"][0]["view_box"], "0 0 17 17")
+        self.assertEqual(card["icon_hints"][0]["path_count"], 1)
+        self.assertEqual(card["icon_hints"][0]["path_d_prefix"], "M6.25214 5.94201H4.92987L4.93021 5.94234C")
         self.assertEqual(card["status_elements"][0]["text"], "Delivered")
         self.assertNotIn("raw_html", safe)
         self.assertNotIn("SECRET", str(safe))
@@ -121,7 +135,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
             "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 30,
             "000000000000ABCD": [],
         }, configured_player_count=36)
-        self.assertEqual(summary["diagnostic_version"], 4)
+        self.assertEqual(summary["diagnostic_version"], 5)
         self.assertTrue(summary["read_only"])
         self.assertFalse(summary["completeness_established"])
         self.assertFalse(summary["delivery_status_established"])
