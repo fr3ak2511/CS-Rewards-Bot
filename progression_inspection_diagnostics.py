@@ -11,14 +11,14 @@ _MAX_ACTION_DETAILS = 8
 _MAX_STATUS_ELEMENTS = 8
 _MAX_TEXT = 480
 _MAX_SNAPSHOTS_PER_PLAYER = 24
-_HEX_ID_RE = re.compile(r"(?i)\\b[0-9a-f]{16,}\\b")
-_EMAIL_RE = re.compile(r"\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", re.I)
-_URL_RE = re.compile(r"https?://\\S+", re.I)
-_TOKEN_RE = re.compile(r"(?i)\\b(?:token|session|authorization|password|secret)=?\\s*[^\\s,;]+")
+_HEX_ID_RE = re.compile(r"(?i)\b[0-9a-f]{16,}\b")
+_EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
+_URL_RE = re.compile(r"https?://\S+", re.I)
+_TOKEN_RE = re.compile(r"(?i)\b(?:token|session|authorization|password|secret)=?\s*[^\s,;]+")
 
 
 def _safe_text(value: Any, limit: int = _MAX_TEXT) -> str:
-    text = re.sub(r"\\s+", " ", str(value or "")).strip()
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
     text = _URL_RE.sub("[url-redacted]", text)
     text = _EMAIL_RE.sub("[email-redacted]", text)
     text = _HEX_ID_RE.sub("[id-redacted]", text)
