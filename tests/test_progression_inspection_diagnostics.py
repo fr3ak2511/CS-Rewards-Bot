@@ -49,13 +49,20 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
                         "tag": "button", "label": "Delivered", "role": "",
                         "aria_label": "Delivered", "class_name": "status",
                         "data_slot": "button", "data_state": "delivered",
-                        "disabled": True, "aria_disabled": "true"
+                        "data_variant": "component-daily-reward", "data_claimed": "true",
+                        "data_unavailable": "true", "disabled": True, "aria_disabled": "true"
                     }],
                     "exact_status_text_hints": ["Delivered"],
                     "status_elements": [{
                         "tag": "button", "text": "Delivered", "role": "",
                         "aria_label": "Delivered", "class_name": "status",
                         "data_state": "delivered"
+                    }],
+                    "icon_hints": [{
+                        "tag": "svg", "inside_action": False,
+                        "action_data_variant": "", "action_data_unavailable": "",
+                        "view_box": "0 0 94 94", "path_count": 1,
+                        "path_d_prefix": "M37.8286 76.263C37.0809"
                     }],
                     "milestone_number_hints": [3],
                     "rect": {"x": 10, "y": 20, "width": 200, "height": 220},
@@ -71,6 +78,12 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         card = safe["carousel_containers"][0]["captured_cards"][0]
         self.assertEqual(card["text_snippet"], "Milestone 3 x20 Delivered")
         self.assertTrue(card["button_details"][0]["disabled"])
+        self.assertEqual(card["button_details"][0]["data_claimed"], "true")
+        self.assertEqual(card["button_details"][0]["data_unavailable"], "true")
+        self.assertFalse(card["icon_hints"][0]["inside_action"])
+        self.assertEqual(card["icon_hints"][0]["view_box"], "0 0 94 94")
+        self.assertEqual(card["icon_hints"][0]["path_count"], 1)
+        self.assertEqual(card["icon_hints"][0]["path_d_prefix"], "M37.8286 76.263C37.0809")
         self.assertEqual(card["status_elements"][0]["text"], "Delivered")
         self.assertNotIn("raw_html", safe)
         self.assertNotIn("SECRET", str(safe))
@@ -121,7 +134,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
             "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 30,
             "000000000000ABCD": [],
         }, configured_player_count=36)
-        self.assertEqual(summary["diagnostic_version"], 4)
+        self.assertEqual(summary["diagnostic_version"], 5)
         self.assertTrue(summary["read_only"])
         self.assertFalse(summary["completeness_established"])
         self.assertFalse(summary["delivery_status_established"])
@@ -331,6 +344,75 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertEqual(unknown["reason"], "no_explicit_card_status")
 
 
+    def test_observed_inline_reward_lock_svg_is_locked_but_generic_unavailable_is_unknown(self):
+        lock_path_prefix = "M6.25214 5.94201H4.92987L4.93021 5.94234C"
+
+        def summarize(icon_hints, *, button=None):
+            card = {
+                "text_snippet": "123 x100",
+                "milestone_number_hints": [123],
+                "button_labels": [],
+                "button_details": [button or {
+                    "tag": "button", "label": "", "disabled": True,
+                    "aria_disabled": "true", "data_variant": "component-daily-reward",
+                    "data_claimed": "", "data_unavailable": "true",
+                }],
+                "exact_status_text_hints": [],
+                "status_elements": [],
+                "icon_hints": icon_hints,
+            }
+            snapshot = {
+                "page_path": "/progression-program",
+                "page_valid": True,
+                "carousel_containers": [{
+                    "index": 0, "class_name": "reward-rail", "overflow_x": "auto",
+                    "client_width": 1000, "scroll_width": 2000, "max_scroll_left": 1000,
+                    "scroll_left": 1000, "at_end": True,
+                    "captured_cards": [card],
+                }],
+            }
+            summary = build_progression_inspection_diagnostic_summary(
+                {"PLAYER0001": [snapshot]}, configured_player_count=1,
+            )
+            return summary["accounts"][0]["normalized_progression_rail"]["milestone_cards"][0]
+
+        observed_lock = summarize([{
+            "tag": "svg",
+            "inside_action": True,
+            "action_data_variant": "component-daily-reward",
+            "action_data_unavailable": "true",
+            "view_box": "0 0 17 17",
+            "path_count": 1,
+            "path_d_prefix": lock_path_prefix,
+        }])
+        self.assertEqual(observed_lock["classification"], "Locked")
+        self.assertIn("icon_semantic_name", observed_lock["evidence_sources"])
+
+        wrong_path = summarize([{
+            "tag": "svg",
+            "inside_action": True,
+            "action_data_variant": "component-daily-reward",
+            "action_data_unavailable": "true",
+            "view_box": "0 0 17 17",
+            "path_count": 1,
+            "path_d_prefix": "M1 1L16 16",
+        }])
+        self.assertEqual(wrong_path["classification"], "Unknown")
+        self.assertEqual(wrong_path["reason"], "no_explicit_card_status")
+
+        generic_disabled = summarize([])
+        self.assertEqual(generic_disabled["classification"], "Unknown")
+        self.assertEqual(generic_disabled["reason"], "no_explicit_card_status")
+
+        delivered = summarize([], button={
+            "tag": "button", "label": "", "disabled": True,
+            "aria_disabled": "true", "data_variant": "component-daily-reward",
+            "data_claimed": "true", "data_unavailable": "true",
+        })
+        self.assertEqual(delivered["classification"], "Delivered")
+        self.assertIn("button_data_claimed", delivered["evidence_sources"])
+
+
     def test_svg_class_name_capture_handles_animated_svg_and_html_classes(self):
         source_path = Path(__file__).resolve().parents[1] / "master_claimer.py"
         source = source_path.read_text(encoding="utf-8")
@@ -341,6 +423,10 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         helper_source = source[helper_start:helper_end + len(chr(10) + "                };")]
         self.assertEqual(source.count("classNameText(node)"), 3)
         self.assertNotIn("String(node.getAttribute('class') || node.className || '')", source)
+        self.assertIn("data_claimed: String(button.getAttribute('data-claimed') || '')", source)
+        self.assertIn("data_unavailable: String(button.getAttribute('data-unavailable') || '')", source)
+        self.assertIn("path_d_prefix: String(firstPath?.getAttribute('d') || '')", source)
+        self.assertIn("action_data_variant: String(actionAncestor?.getAttribute('data-variant') || '')", source)
 
         node = shutil.which("node")
         if not node:
