@@ -68,6 +68,7 @@ class ProgressionDiagnosticOnlyModeTests(unittest.TestCase):
             drivers = [MagicMock(), MagicMock()]
 
             def snapshot(driver):
+                self.assertTrue(getattr(driver, "_progression_diagnostic_rail_capture", False))
                 value = {
                     "valid_page": True,
                     "claimable_count": 1,
@@ -114,6 +115,35 @@ class ProgressionDiagnosticOnlyModeTests(unittest.TestCase):
             self.assertEqual(artifact["snapshot_count"], 2)
             self.assertNotIn("PLAYER0001", str(artifact))
             self.assertNotIn("PLAYER0002", str(artifact))
+
+    def test_standard_claim_snapshot_keeps_detailed_rail_capture_disabled(self):
+        class Driver:
+            _progression_diagnostic_player_id = "PLAYER0001"
+
+            def execute_script(self, _script, diagnostic_rail_capture):
+                self.diagnostic_rail_capture = diagnostic_rail_capture
+                return {
+                    "valid_page": True,
+                    "claimable_count": 0,
+                    "delivered_count": 0,
+                    "inspection_diagnostics": {
+                        "page_path": "/progression-program",
+                        "carousel_containers": [],
+                    },
+                }
+
+        driver = Driver()
+        with patch.object(master_claimer, "_record_progression_inspection_snapshot"):
+            snapshot = master_claimer._progression_claim_snapshot(driver)
+
+        self.assertTrue(snapshot["valid_page"])
+        self.assertFalse(driver.diagnostic_rail_capture)
+
+        driver._progression_diagnostic_rail_capture = True
+        with patch.object(master_claimer, "_record_progression_inspection_snapshot"):
+            snapshot = master_claimer._progression_claim_snapshot(driver)
+        self.assertTrue(snapshot["valid_page"])
+        self.assertTrue(driver.diagnostic_rail_capture)
 
     def test_login_failure_is_reported_without_opening_progression_page(self):
         with tempfile.TemporaryDirectory() as root:

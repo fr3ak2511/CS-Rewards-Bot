@@ -3231,6 +3231,7 @@ def _record_progression_inspection_defer_without_snapshot(driver, player_id, rea
 def _progression_claim_snapshot(driver):
     """Return visible Progression claim controls with card-level identity."""
     try:
+        diagnostic_rail_capture = bool(getattr(driver, "_progression_diagnostic_rail_capture", False))
         snapshot = driver.execute_script(r"""
             /* PROGRESSION_CARD_SNAPSHOT_V1 */
             const norm = value => (value || '').replace(/\s+/g, ' ').trim();
@@ -3309,6 +3310,182 @@ def _progression_claim_snapshot(driver):
               .filter(Boolean);
 
             // Read-only inventory hints: never scroll, click, or infer completeness.
+            let diagnosticContainers = [];
+            let candidateContainerCount = 0;
+            const diagnosticRailCapture = arguments.length > 0 && arguments[0] === true;
+            if (diagnosticRailCapture) {
+            const milestoneThresholds = [
+              3,6,12,15,18,56,59,62,65,123,126,129,141,147,
+              186,189,192,195,400,600,680,750,880,950,1000
+            ];
+            const statusTerms = new Set([
+              'claim','claim all','delivered','already delivered','claimed',
+              'already claimed','collected','redeemed','locked'
+            ]);
+            const textOf = node => norm(node && (node.innerText || node.textContent) || '');
+            const numberTokens = value => (String(value || '').match(/[0-9,]+/g) || [])
+              .map(token => Number(token.replaceAll(',', '')))
+              .filter(Number.isFinite);
+            const depthOf = node => {
+              let depth = 0;
+              for (let parent = node && node.parentElement; parent && depth < 100;
+                   parent = parent.parentElement) depth++;
+              return depth;
+            };
+            const visibleOutsideDialog = node => visible(node)
+              && !node.closest('[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]');
+            const hasMilestoneHint = node => {
+              const tokens = numberTokens(textOf(node).slice(0, 1800));
+              return milestoneThresholds.some(value => tokens.includes(value));
+            };
+            const hasRewardCardShape = node => {
+              const text = textOf(node).slice(0, 1800);
+              if (!hasMilestoneHint(node)) return false;
+              const actionText = Array.from(node.querySelectorAll('button,[role="button"]'))
+                .filter(visible)
+                .map(item => lower(item.innerText || item.textContent
+                  || item.getAttribute('aria-label') || item.getAttribute('title')));
+              return (text.toLowerCase().includes('x') && numberTokens(text).length >= 2)
+                || actionText.some(label => statusTerms.has(label));
+            };
+            const semanticRoots = Array.from(document.querySelectorAll(
+              '[role="region"][aria-roledescription="carousel"],[data-slot="carousel-content"],' +
+              '[data-slot="carousel"],[aria-roledescription="carousel"]'
+            )).filter(visibleOutsideDialog);
+            const overflowCandidates = Array.from(document.querySelectorAll('div,section,ul,ol,[role="region"]'))
+              .filter(visibleOutsideDialog)
+              .filter(el => el.clientWidth > 180 && el.clientHeight > 80
+                && el.scrollWidth > el.clientWidth + 8);
+            const allCandidates = Array.from(new Set([...semanticRoots, ...overflowCandidates]));
+            candidateContainerCount = allCandidates.length;
+            const candidateRecords = allCandidates.map(container => {
+              const explicitSlides = Array.from(container.querySelectorAll(
+                '[role="group"][aria-roledescription="slide"],[data-slot="carousel-item"],[data-embla-slide]'
+              )).filter(visible).filter(hasRewardCardShape);
+              const possibleParents = [container, ...Array.from(
+                container.querySelectorAll('div,ul,ol,li,article')
+              )];
+              const repeatedGroups = possibleParents.map(parent => {
+                const children = Array.from(parent.children).filter(visible);
+                const rewardCards = children.filter(hasRewardCardShape);
+                return {
+                  parent, children, rewardCards, depth: depthOf(parent),
+                  ratio: children.length ? rewardCards.length / children.length : 0
+                };
+              }).filter(group => group.children.length >= 2
+                && group.children.length <= 80 && group.rewardCards.length >= 2
+                && group.ratio >= 0.5)
+                .sort((a,b) => b.rewardCards.length - a.rewardCards.length
+                  || b.ratio - a.ratio || b.depth - a.depth);
+              const fallbackCards = repeatedGroups.length
+                ? repeatedGroups[0].rewardCards : [];
+              const cardNodes = explicitSlides.length ? explicitSlides : fallbackCards;
+              const cardCaptureSource = explicitSlides.length ? 'semantic_slide_nodes'
+                : fallbackCards.length ? 'repeated_reward_siblings' : 'no_card_group_found';
+              const style = getComputedStyle(container);
+              const rect = container.getBoundingClientRect();
+              const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+              const semanticRoot = semanticRoots.includes(container);
+              const directChildren = Array.from(container.children);
+              return {
+                container,
+                cardNodes,
+                score: (explicitSlides.length ? 10000 : 0)
+                  + (fallbackCards.length * 100)
+                  + (semanticRoot ? 5000 : 0)
+                  + (maxScroll > 40 ? 100 : 0)
+                  + depthOf(container),
+                metadata: {
+                  tag: String(container.tagName || '').toLowerCase(),
+                  class_name: String(container.className || '').trim().slice(0, 160),
+                  test_id: String(container.getAttribute('data-testid') || '').slice(0, 80),
+                  role: String(container.getAttribute('role') || ''),
+                  aria_label: String(container.getAttribute('aria-label') || ''),
+                  aria_roledescription: String(container.getAttribute('aria-roledescription') || ''),
+                  data_slot: String(container.getAttribute('data-slot') || ''),
+                  overflow_x: String(style.overflowX || ''),
+                  scroll_snap_type: String(style.scrollSnapType || ''),
+                  display: String(style.display || ''),
+                  flex_direction: String(style.flexDirection || ''),
+                  rect: {x:Math.round(rect.x),y:Math.round(rect.y),
+                    width:Math.round(rect.width),height:Math.round(rect.height)},
+                  client_width: container.clientWidth,
+                  scroll_width: container.scrollWidth,
+                  scroll_left: Math.round(container.scrollLeft),
+                  max_scroll_left: Math.round(maxScroll),
+                  at_start: container.scrollLeft <= 2,
+                  at_end: container.scrollLeft >= maxScroll - 2,
+                  direct_child_count: container.children.length,
+                  visible_child_count: directChildren.filter(visible).length,
+                  depth: depthOf(container),
+                  is_semantic_carousel_root: semanticRoot,
+                  card_capture_source: cardCaptureSource,
+                  explicit_slide_count: explicitSlides.length
+                }
+              };
+            }).sort((a,b) => b.score - a.score).slice(0, 12);
+            diagnosticContainers = candidateRecords.map((candidate, index) => {
+              const capturedCards = candidate.cardNodes.slice(0, 40).map(card => {
+                const cardText = textOf(card).slice(0, 480);
+                const lines = cardText.split(String.fromCharCode(10)).map(norm).filter(Boolean);
+                const actionNodes = Array.from(card.querySelectorAll('button,[role="button"]'))
+                  .filter(visible).slice(0, 8);
+                const buttonDetails = actionNodes.map(button => ({
+                  tag: String(button.tagName || '').toLowerCase(),
+                  label: norm(button.innerText || button.textContent
+                    || button.getAttribute('aria-label') || button.getAttribute('title')
+                    || button.getAttribute('data-state')).slice(0, 80),
+                  role: String(button.getAttribute('role') || ''),
+                  aria_label: String(button.getAttribute('aria-label') || ''),
+                  class_name: String(button.className || '').trim().slice(0, 120),
+                  data_slot: String(button.getAttribute('data-slot') || ''),
+                  data_state: String(button.getAttribute('data-state') || ''),
+                  disabled: !!button.disabled,
+                  aria_disabled: String(button.getAttribute('aria-disabled') || '')
+                }));
+                const statusElements = Array.from(card.querySelectorAll(
+                  'button,[role="button"],span,p,div,[data-state],[aria-label]'
+                )).filter(visible).filter(node => {
+                  const label = lower(textOf(node) || node.getAttribute('aria-label')
+                    || node.getAttribute('data-state'));
+                  return statusTerms.has(label);
+                }).slice(0, 8).map(node => ({
+                  tag: String(node.tagName || '').toLowerCase(),
+                  text: textOf(node).slice(0, 80),
+                  role: String(node.getAttribute('role') || ''),
+                  aria_label: String(node.getAttribute('aria-label') || ''),
+                  class_name: String(node.className || '').trim().slice(0, 120),
+                  data_state: String(node.getAttribute('data-state') || '')
+                }));
+                const cr = card.getBoundingClientRect();
+                const cardNumberTokens = numberTokens(cardText);
+                const thresholds = milestoneThresholds.filter(value => cardNumberTokens.includes(value));
+                return {
+                  tag: String(card.tagName || '').toLowerCase(),
+                  class_name: String(card.className || '').trim().slice(0, 120),
+                  test_id: String(card.getAttribute('data-testid') || '').slice(0, 80),
+                  role: String(card.getAttribute('role') || ''),
+                  aria_label: String(card.getAttribute('aria-label') || ''),
+                  data_slot: String(card.getAttribute('data-slot') || ''),
+                  data_state: String(card.getAttribute('data-state') || ''),
+                  text_snippet: cardText,
+                  button_labels: buttonDetails.map(item => item.label).filter(Boolean),
+                  button_details: buttonDetails,
+                  exact_status_text_hints: lines.filter(line => statusTerms.has(line.toLowerCase())).slice(0, 8),
+                  status_elements: statusElements,
+                  milestone_number_hints: thresholds,
+                  rect: {x:Math.round(cr.x),y:Math.round(cr.y),
+                    width:Math.round(cr.width),height:Math.round(cr.height)}
+                };
+              });
+              return {
+                index,
+                ...candidate.metadata,
+                captured_card_count: capturedCards.length,
+                captured_cards: capturedCards
+              };
+            });
+            } else {
             const scrollCandidates = Array.from(document.querySelectorAll('div,section,ul'))
               .filter(el => visible(el) && !el.closest('[role="dialog"],[aria-modal="true"]'))
               .filter(el => {
@@ -3326,7 +3503,7 @@ def _progression_claim_snapshot(driver):
               'claim','claim all','delivered','already delivered','claimed',
               'already claimed','collected','redeemed','locked'
             ]);
-            const diagnosticContainers = scrollCandidates.map((container, index) => {
+              diagnosticContainers = scrollCandidates.map((container, index) => {
               const r = container.getBoundingClientRect();
               const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
               const cards = Array.from(container.children).filter(visible).slice(0, 40).map(child => {
@@ -3368,6 +3545,8 @@ def _progression_claim_snapshot(driver):
                 captured_cards: cards
               };
             });
+              candidateContainerCount = diagnosticContainers.length;
+            }
             const path = (location.pathname || '').toLowerCase();
             const title = lower(document.title || '');
             const leadText = lower((document.body && document.body.innerText || '').slice(0, 900));
@@ -3392,14 +3571,14 @@ def _progression_claim_snapshot(driver):
                 page_valid: validPage,
                 visible_claimable_count: claimableCards.length,
                 visible_delivered_control_count: deliveredControls.length,
-                candidate_container_count: diagnosticContainers.length,
+                candidate_container_count: candidateContainerCount,
                 carousel_containers: diagnosticContainers,
                 completeness_verdict: 'not_established',
                 delivery_verdict: 'not_established',
-                diagnostic_version: 1
+                diagnostic_version: diagnosticRailCapture ? 2 : 1
               }
             };
-        """)
+        """, diagnostic_rail_capture)
         if not isinstance(snapshot, dict):
             return None
         _record_progression_inspection_snapshot(driver, snapshot)
@@ -8407,6 +8586,7 @@ def run_progression_diagnostic_only():
             account["login_status"] = "authenticated"
             driver._progression_diagnostic_player_id = player_id
             driver._progression_diagnostic_snapshot_limit = snapshot_limit
+            driver._progression_diagnostic_rail_capture = True
             driver.get("https://hub.vertigogames.co/progression-program")
             bypass_cloudflare(driver)
             time.sleep(1.5)
