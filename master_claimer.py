@@ -3486,7 +3486,7 @@ def _progression_claim_snapshot(driver):
                     data_lucide: String(node.getAttribute('data-lucide') || '').slice(0, 48),
                     data_state: String(node.getAttribute('data-state') || '').slice(0, 48),
                     role: String(node.getAttribute('role') || '').slice(0, 32),
-                    class_name: classNameText(node).replace(/\\s+/g, ' ').trim().slice(0, 160),
+                    class_name: classNameText(node).replace(/\s+/g, ' ').trim().slice(0, 160),
                     text: textOf(node).slice(0, 80),
                     inside_action: !!actionAncestor,
                     action_data_variant: String(actionAncestor?.getAttribute('data-variant') || '').slice(0, 80),
