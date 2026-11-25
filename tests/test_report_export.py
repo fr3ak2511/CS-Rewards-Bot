@@ -349,7 +349,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("previous status not retained on 2026-11-22", report)
+        self.assertIn("Status not retained · Last observed 2026-11-22", report)
         self.assertIn("Last observed 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
@@ -409,7 +409,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("<strong>1</strong><small>Claim / validation exceptions only", report)
-        self.assertIn("previous reading below date minimum", report)
+        self.assertIn("Below date minimum · Last observed 2026-11-22", report)
 
     def test_invalid_summary_type_is_rejected(self):
         with self.assertRaises(TypeError):
