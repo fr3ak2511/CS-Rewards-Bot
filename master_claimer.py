@@ -5612,9 +5612,10 @@ def build_deferred_checks_section(results):
         if unconfirmed:
             claim_status = "Claim confirmation unresolved"
         elif claims:
+            reward_word = "reward" if claims == 1 else "rewards"
             claim_status = (
-                f"{claims} claim(s) confirmed · further inspection pending"
-                if deferred else f"{claims} claim(s) confirmed"
+                f"{claims} {reward_word} confirmed · inspection still pending"
+                if deferred else f"{claims} {reward_word} confirmed"
             )
         elif deferred:
             reason = str(result.get("progression_deferred_reason") or "").lower()
@@ -5656,8 +5657,13 @@ def build_deferred_checks_section(results):
         grouped.setdefault(key, []).append(label)
 
     claim_total = sum(
-        max(0, int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0))
-        for result in results or [] if isinstance(result, dict)
+        max(
+            0,
+            int(result.get("progression", 0) or 0),
+            int(result.get("progression_claimed_this_run", 0) or 0),
+        )
+        for result in results or []
+        if isinstance(result, dict) and str(result.get("processing_mode") or "full_claim") != "promotional_only"
     )
     pending_total = sum(
         1 for result in results or []
@@ -5676,22 +5682,31 @@ def build_deferred_checks_section(results):
         and not int(result.get("progression", result.get("progression_claimed_this_run", 0)) or 0)
     )
     balance_records = []
+    balance_saved_records = 0
     for result in results or []:
-        if not isinstance(result, dict):
+        if not isinstance(result, dict) or str(result.get("processing_mode") or "full_claim") == "promotional_only":
             continue
         balance = result.get("grenade_balance")
+        carry = result.get("grenade_balance_carry_forward")
         if isinstance(balance, dict) and balance.get("current_count") is not None:
-            balance_records.append(balance)
-    balance_passed = sum(1 for balance in balance_records if str(balance.get("status") or "") == "pass")
+            balance_records.append((balance, "current"))
+        elif isinstance(carry, dict) and carry.get("last_observed_count") is not None:
+            balance_records.append((carry, "saved"))
+            balance_saved_records += 1
+    balance_passed = sum(
+        1 for balance, _source in balance_records
+        if str(balance.get("status") or balance.get("status_at_observation") or "") == "pass"
+    )
     queue_reinspection_attempts = sum(
         1 for result in results or []
         if isinstance(result, dict) and result.get("progression_reinspection_attempted") is True
     )
-    summary_parts = [f"{len(records)} accounts grouped"]
+    account_word = "account" if len(records) == 1 else "accounts"
+    summary_parts = [f"{len(records)} {account_word} grouped"]
     if queue_reinspection_attempts:
         attempt_word = "attempt" if queue_reinspection_attempts == 1 else "attempts"
         summary_parts.append(f"{queue_reinspection_attempts} queued reinspection {attempt_word} made.")
-    reward_word = "reward" if claim_total == 1 else "rewards"
+    reward_word = "Progression reward" if claim_total == 1 else "Progression rewards"
     open_word = "account remains open" if pending_total == 1 else "accounts remain open"
     summary_parts.append(
         f"{claim_total} {reward_word} confirmed in this run; {pending_total} {open_word}"
@@ -5713,7 +5728,8 @@ def build_deferred_checks_section(results):
         balance_word = "balance" if len(balance_records) == 1 else "balances"
         passed_word = "passed" if balance_passed == len(balance_records) else "PASS"
         summary_parts.append(
-            f"{len(balance_records)} {account_word} checked · {len(balance_records)} {balance_word} captured · {balance_passed} {passed_word}"
+            f"{len(balance_records)} {account_word} with {balance_word} · {balance_passed} {passed_word}"
+            + (f" · {balance_saved_records} saved readings (not fresh)" if balance_saved_records else "")
         )
     else:
         summary_parts.append("Grenade balance not checked in this run")
