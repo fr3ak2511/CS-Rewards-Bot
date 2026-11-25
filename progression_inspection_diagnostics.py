@@ -220,7 +220,7 @@ def _status_classification(value: Any) -> str | None:
 
 
 def _icon_semantic_status(hint: dict[str, Any]) -> str | None:
-    """Recognize only explicit, named lock semantics; a disabled button is not enough."""
+    """Recognize named lock semantics or the observed reward-CTA lock SVG fingerprint."""
     for field in ("aria_label", "title", "alt", "text", "data_state"):
         classification = _status_classification(hint.get(field))
         if classification:
@@ -261,7 +261,7 @@ def _icon_semantic_status(hint: dict[str, Any]) -> str | None:
 
 
 def _progression_card_status(card: dict[str, Any]) -> dict[str, Any]:
-    """Classify only explicit, card-bound portal signals; disabled is never Locked."""
+    """Classify explicit card-bound portal signals; disabled alone is never Locked."""
     evidence: list[tuple[str, str]] = []
     claim_controls: list[dict[str, Any]] = []
 
