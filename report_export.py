@@ -94,6 +94,8 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
     for player in players:
         if not isinstance(player, dict):
             continue
+        if str(player.get("processing_mode") or "full_claim") == "promotional_only":
+            continue
         balance = player.get("grenade_balance")
         carry = player.get("grenade_balance_carry_forward")
         balance = balance if isinstance(balance, dict) else {}
@@ -178,12 +180,13 @@ def _progression_milestone_table(players: list[dict[str, Any]]) -> str:
             milestone_text = "—" if milestone_value == 10**9 else str(milestone_value)
             remaining_text = "—" if remaining == 10**9 else str(remaining)
             balance_text = {
-                "pass": "PASS",
-                "below_minimum": "BELOW DATE MINIMUM",
-                "counter_regressed": "COUNTER REGRESSED",
-                "pending_baseline": "BASELINE PENDING",
-                "not_validated": "NOT VALIDATED",
-            }.get(balance_status, balance_status.replace("_", " ").upper())
+                "pass": "Pass",
+                "below_minimum": "Below date minimum",
+                "counter_regressed": "Counter regressed",
+                "pending_baseline": "Pending baseline",
+                "not_validated": "Not validated",
+                "status_not_retained": "Status not retained",
+            }.get(balance_status, balance_status.replace("_", " ").title())
             account_names = ", ".join(html.escape(name) for name in sorted(grouped[key]))
             rows.append(
                 "<tr>"
@@ -313,7 +316,7 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         reason = str(player.get("fail_reason") or "").strip()
         details = (
             "<small class='reason'>" + _safe(reason) + "</small>"
-            if reason else ""
+            if reason and not _deferred_progression_is_only_issue(player) else ""
         )
         player_rows.append(
             "<tr><td><strong>" + _safe(_player_label(player)) + "</strong>"
