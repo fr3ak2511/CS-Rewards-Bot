@@ -234,7 +234,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Pending · blocked by overlay", report)
         self.assertIn("&lt;Player One&gt;", report)
         self.assertIn(">Deferred check</span>", report)
-        self.assertIn("needs another safe inspection", report)
+        self.assertIn("need another safe inspection", report)
         self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
         self.assertNotIn("PRIVATE-POPUP-CONTEXT", report)
         self.assertNotIn("popup_context", report)
@@ -302,6 +302,7 @@ class CopyableReportTests(unittest.TestCase):
             "progression_deferred": True,
             "progression_unconfirmed": False,
             "progression_deferred_reason": "No currently visible claimable reward.",
+            "grenade_balance": None,
             "grenade_balance_carry_forward": {
                 "source": "saved_portal_observation",
                 "status_at_observation": "pass",
@@ -320,8 +321,8 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Progression / Grenade balance — grouped by milestone", report)
         self.assertIn("66", report)
         self.assertIn("69", report)
-        self.assertIn("Next milestone 56", report)
-        self.assertIn("57", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("57 to go", report)
         self.assertIn("previous reading below date minimum on 2026-11-22", report)
         self.assertIn(">COMPLETED — INSPECTIONS PENDING</span>", report)
         self.assertNotIn(">ATTENTION REQUIRED</span>", report)
@@ -366,7 +367,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("1 claim(s) confirmed · further inspection pending", report)
+        self.assertIn("1 reward confirmed · inspection still pending", report)
         self.assertIn("Pending accounts need another safe inspection", report)
 
     def test_unexpected_progression_inspection_exception_remains_attention(self):
