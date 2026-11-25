@@ -405,17 +405,6 @@ def _aggregate_rail_observations(snapshots: list[dict[str, Any]]) -> dict[str, A
         and item["captured_card_count"] == item["captured_milestone_count"]
         for item in normalized
     )
-    at_end = any(item["at_end"] for item in normalized)
-    selected_count = len(normalized)
-    captured_scan_complete = (
-        selected_count == len(snapshots)
-        and at_end
-        and inventory_stable
-        and identities_valid
-        and card_signatures_stable
-        and bool(inventory_sets[0])
-    )
-
     signatures_by_threshold: dict[int, set[str]] = {}
     observations: dict[int, list[dict[str, Any]]] = {}
     for item in normalized:
@@ -430,6 +419,17 @@ def _aggregate_rail_observations(snapshots: list[dict[str, Any]]) -> dict[str, A
     card_signatures_stable = bool(signatures_by_threshold) and all(
         len(signatures) == 1 and next(iter(signatures))
         for signatures in signatures_by_threshold.values()
+    )
+
+    at_end = any(item["at_end"] for item in normalized)
+    selected_count = len(normalized)
+    captured_scan_complete = (
+        selected_count == len(snapshots)
+        and at_end
+        and inventory_stable
+        and identities_valid
+        and card_signatures_stable
+        and bool(inventory_sets[0])
     )
 
     milestone_cards = []
