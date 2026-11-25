@@ -2312,5 +2312,61 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("1 queued reinspection attempt made.", report)
         self.assertIn("0 Progression rewards confirmed in this run", report)
 
+
+    def test_progression_email_groups_accounts_by_milestone_balance_and_claim_status(self):
+        players = [
+            {
+                "pid": "PLAYER0001", "display_name": "Claimed Player",
+                "processing_mode": "full_claim", "progression": 1,
+                "progression_checked": True, "progression_deferred": False,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 18, "expected_minimum": 18,
+                    "next_milestone": 56, "remaining_to_next_milestone": 38,
+                },
+            },
+            {
+                "pid": "PLAYER0002", "display_name": "Pending Player A",
+                "processing_mode": "full_claim", "progression": 0,
+                "progression_checked": False, "progression_deferred": True,
+                "progression_deferred_reason": "No currently visible claimable reward card.",
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+            {
+                "pid": "PLAYER0003", "display_name": "Pending Player B",
+                "processing_mode": "full_claim", "progression": 0,
+                "progression_checked": False, "progression_deferred": True,
+                "progression_deferred_reason": "No currently visible claimable reward card.",
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+            {
+                "pid": "PLAYER0004", "display_name": "Checked Player",
+                "processing_mode": "full_claim", "progression": 0,
+                "progression_checked": True, "progression_deferred": False,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 75, "expected_minimum": 75,
+                    "next_milestone": 123, "remaining_to_next_milestone": 48,
+                },
+            },
+        ]
+        report = build_deferred_checks_section(players)
+        self.assertIn("Next milestone 56", report)
+        self.assertIn("Next milestone 123", report)
+        self.assertIn("18 / 18", report)
+        self.assertIn("75 / 75", report)
+        self.assertIn("Claimed Player (…0001)", report)
+        self.assertIn("Pending Player A (…0002)", report)
+        self.assertIn("Pending Player B (…0003)", report)
+        self.assertIn("Checked Player (…0004)", report)
+        self.assertIn("Pending · No claimable reward card visible · 2", report)
+        self.assertIn("Checked · no reward claimed · 1", report)
+        self.assertIn("4 accounts grouped", report)
+        self.assertIn("1 Progression rewards confirmed in this run; 2 accounts remain open", report)
+
 if __name__ == "__main__":
     unittest.main()
