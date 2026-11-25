@@ -58,17 +58,17 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
 
     def test_sanitizer_caps_carousel_containers_cards_and_text(self):
         raw = {"carousel_containers": [
-            {"captured_cards":[{"text_snippet":"X"*1000} for _ in range(20)]}
+            {"captured_cards":[{"text_snippet":"X"*1000} for _ in range(60)]}
             for _ in range(8)
         ]}
         safe = sanitize_progression_inspection_snapshot(raw)
         self.assertEqual(len(safe["carousel_containers"]), 3)
-        self.assertEqual(len(safe["carousel_containers"][0]["captured_cards"]), 10)
+        self.assertEqual(len(safe["carousel_containers"][0]["captured_cards"]), 40)
         self.assertLessEqual(len(safe["carousel_containers"][0]["captured_cards"][0]["text_snippet"]), 320)
 
     def test_run_summary_is_explicitly_read_only_and_privacy_minimized(self):
         summary = build_progression_inspection_diagnostic_summary({
-            "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 10,
+            "0123456789ABCDEF": [{"page_path":"/progression-program"}] * 30,
             "000000000000ABCD": [],
         }, configured_player_count=36)
         self.assertTrue(summary["read_only"])
@@ -76,7 +76,7 @@ class ProgressionInspectionDiagnosticsTests(unittest.TestCase):
         self.assertFalse(summary["delivery_status_established"])
         self.assertEqual(summary["configured_accounts"], 36)
         self.assertEqual(summary["accounts_with_diagnostics"], 1)
-        self.assertEqual(summary["snapshot_count"], 6)
+        self.assertEqual(summary["snapshot_count"], 24)
         self.assertEqual(summary["accounts"][0]["player_id_last4"], "CDEF")
         self.assertNotIn("0123456789ABCDEF", str(summary))
 

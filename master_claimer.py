@@ -3184,7 +3184,12 @@ def _record_progression_inspection_snapshot(driver, snapshot):
             "snapshot_index": len(entries) + 1,
             **sanitized,
         })
-        del entries[:-6]
+        try:
+            snapshot_limit = int(getattr(driver, "_progression_diagnostic_snapshot_limit", 6) or 6)
+        except (TypeError, ValueError):
+            snapshot_limit = 6
+        snapshot_limit = max(1, min(24, snapshot_limit))
+        del entries[:-snapshot_limit]
     except Exception as exc:
         log(f"⚠️ Progression read-only diagnostic could not be retained: {type(exc).__name__}")
 
@@ -3324,7 +3329,7 @@ def _progression_claim_snapshot(driver):
             const diagnosticContainers = scrollCandidates.map((container, index) => {
               const r = container.getBoundingClientRect();
               const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
-              const cards = Array.from(container.children).filter(visible).slice(0, 10).map(child => {
+              const cards = Array.from(container.children).filter(visible).slice(0, 40).map(child => {
                 const cr = child.getBoundingClientRect();
                 const text = norm(child.innerText || child.textContent || '').slice(0, 320);
                 const lines = text.split(/\n+/).map(norm).filter(Boolean);
@@ -8329,12 +8334,196 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
 # SECTION 12 — MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+def run_progression_diagnostic_only():
+    """Run a no-claim, no-runtime-write Progression DOM survey for the full roster."""
+    forbidden_flags = (
+        "RECOVERY_ONLY_FAILED",
+        "PROGRESSION_QUEUE_ONLY",
+        "MANUAL_PROGRESSION_RECOVERY",
+        "MANUAL_DAILY_RECOVERY",
+        "DAILY_ONLY_RECOVERY",
+        "CLAIM_TEST_ONLY",
+        "EXTERNAL_PRIMARY",
+        "EXTERNAL_PROMOTIONAL_BACKUP",
+    )
+    if any(os.getenv(name, "").strip().lower() == "true" for name in forbidden_flags):
+        log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: a claim/recovery execution flag is also enabled.")
+        return 2
+
+    unexpected_args = [arg for arg in sys.argv[1:] if arg != "--progression-diagnostic-only"]
+    if unexpected_args:
+        log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: diagnostic mode cannot be combined with other command-line modes.")
+        return 2
+
+    players = []
+    try:
+        with open(PLAYER_ID_FILE, "r", newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                player_id = str(row.get("player_id") or "").strip()
+                if player_id:
+                    players.append(player_id)
+    except Exception as exc:
+        log(f"⛔ PROGRESSION_DIAGNOSTIC_REJECTED: could not read configured roster ({type(exc).__name__}).")
+        return 2
+
+    if not players or len(players) != len(set(players)):
+        log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: configured roster is empty or contains duplicate Player IDs.")
+        return 2
+
+    max_scroll_steps = 8
+    snapshot_limit = max_scroll_steps + 1
+    _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+    os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
+    account_results = []
+
+    log("=" * 60)
+    log("PROGRESSION DIAGNOSTIC ONLY — READ-ONLY MODE")
+    log(f"Configured accounts: {len(players)} | Reward claims: DISABLED | Runtime-state writes: DISABLED")
+    log("=" * 60)
+
+    for index, player_id in enumerate(players, start=1):
+        driver = None
+        account = {
+            "player_id_last4": player_id[-4:],
+            "account_index": index,
+            "login_status": "not_attempted",
+            "page_status": "not_attempted",
+            "snapshot_count": 0,
+            "scroll_steps": 0,
+            "scroll_stop_reason": None,
+            "claimable_control_counts_by_snapshot": [],
+            "delivered_control_counts_by_snapshot": [],
+        }
+        try:
+            log(f"🔎 Progression diagnostic {index}/{len(players)} — account ending {player_id[-4:]}")
+            driver = create_driver()
+            if not login_to_hub(driver, player_id):
+                account["login_status"] = "login_failed"
+                account["page_status"] = "not_reached"
+                account["scroll_stop_reason"] = "authentication_failed"
+                continue
+
+            account["login_status"] = "authenticated"
+            driver._progression_diagnostic_player_id = player_id
+            driver._progression_diagnostic_snapshot_limit = snapshot_limit
+            driver.get("https://hub.vertigogames.co/progression-program")
+            bypass_cloudflare(driver)
+            time.sleep(1.5)
+
+            page_valid = False
+            for scan_index in range(snapshot_limit):
+                snapshot = _progression_claim_snapshot(driver)
+                if not isinstance(snapshot, dict):
+                    account["page_status"] = "snapshot_unavailable"
+                    account["scroll_stop_reason"] = "snapshot_unavailable"
+                    break
+
+                account["snapshot_count"] += 1
+                try:
+                    account["claimable_control_counts_by_snapshot"].append(
+                        max(0, int(snapshot.get("claimable_count", 0) or 0))
+                    )
+                except (TypeError, ValueError):
+                    account["claimable_control_counts_by_snapshot"].append(None)
+                try:
+                    account["delivered_control_counts_by_snapshot"].append(
+                        max(0, int(snapshot.get("delivered_count", 0) or 0))
+                    )
+                except (TypeError, ValueError):
+                    account["delivered_control_counts_by_snapshot"].append(None)
+
+                if not snapshot.get("valid_page"):
+                    account["page_status"] = "page_invalid_or_challenged"
+                    account["scroll_stop_reason"] = "expected_authenticated_progression_page_not_verified"
+                    break
+
+                page_valid = True
+                account["page_status"] = "authenticated_progression_page_observed"
+                moved = _scroll_progression_carousel(driver)
+                if not moved:
+                    account["scroll_stop_reason"] = "no_further_horizontal_movement_observed"
+                    break
+                account["scroll_steps"] += 1
+                if scan_index == snapshot_limit - 1:
+                    account["scroll_stop_reason"] = "diagnostic_scroll_safety_cap_reached"
+                    break
+                time.sleep(0.35)
+
+            if page_valid and not account["scroll_stop_reason"]:
+                account["scroll_stop_reason"] = "diagnostic_scan_stopped"
+        except Exception as exc:
+            account["page_status"] = "diagnostic_error"
+            account["scroll_stop_reason"] = type(exc).__name__
+            log(f"⚠️ Diagnostic failed for account ending {player_id[-4:]}: {type(exc).__name__}")
+        finally:
+            account["snapshot_count"] = len(
+                _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(player_id, [])
+            )
+            try:
+                if driver is not None:
+                    driver.quit()
+            except Exception:
+                pass
+            account_results.append(account)
+
+    diagnostic_summary = build_progression_inspection_diagnostic_summary(
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER,
+        configured_player_count=len(players),
+    )
+    successful_pages = sum(
+        1 for item in account_results
+        if item.get("page_status") == "authenticated_progression_page_observed"
+    )
+    diagnostic_summary.update({
+        "run_mode": "PROGRESSION_DIAGNOSTIC_ONLY",
+        "generated_at_ist": get_ist_time().isoformat(),
+        "run_scope": "all_configured_accounts",
+        "configured_player_count": len(players),
+        "authenticated_progression_pages_observed": successful_pages,
+        "accounts_with_login_failure": sum(
+            1 for item in account_results if item.get("login_status") == "login_failed"
+        ),
+        "accounts_with_diagnostic_error": sum(
+            1 for item in account_results if item.get("page_status") == "diagnostic_error"
+        ),
+        "claim_actions_permitted": False,
+        "claim_clicks_dispatched": 0,
+        "claim_history_modified": False,
+        "progression_queue_modified": False,
+        "runtime_state_loaded": False,
+        "runtime_state_persisted": False,
+        "completeness_established": False,
+        "delivery_status_established": False,
+        "account_results": account_results,
+        "interpretation": (
+            "This is a read-only DOM survey. Visible card/status hints and scroll observations "
+            "are diagnostic evidence only; they do not prove complete inventory coverage, "
+            "milestone delivery, Locked state, or a resolved Progression inspection."
+        ),
+    })
+    output_path = os.path.join(RUN_ARTIFACTS_DIR, "progression_diagnostic_summary.json")
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(diagnostic_summary, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+    log(f"📦 Read-only Progression diagnostic artifact saved: {output_path}")
+    log(
+        "PROGRESSION_DIAGNOSTIC_RESULT="
+        + ("COMPLETED" if successful_pages == len(players) else "COMPLETED_WITH_ATTENTION")
+    )
+    log("No reward claim function, claim-history update, queue update, or runtime-state save was executed.")
+    return 0
+
+
 def main():
     # These paths are read-only with respect to rewards and are deliberately exempt.
     if "--diagnose-login" in sys.argv[1:]:
         return run_login_diagnostic()
     if "--test-login-only" in sys.argv[1:]:
         return run_login_only_test()
+    if "--progression-diagnostic-only" in sys.argv[1:]:
+        return run_progression_diagnostic_only()
 
     # Central fail-closed guard protects every claim-capable invocation, including
     # workflow_dispatch full runs, one-player real-claim tests, scheduled jobs, and recovery.
