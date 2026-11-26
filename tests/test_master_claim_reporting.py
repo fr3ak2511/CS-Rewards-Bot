@@ -1191,7 +1191,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("66 / 66", report)
         self.assertIn("57 to go", report)
         self.assertIn("last observed 2026-11-22", report)
-        self.assertIn("date minimum 66", report)
+        self.assertIn("current date minimum 69", report)
         self.assertIn("Attention Required", report)
 
         saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
