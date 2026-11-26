@@ -54,8 +54,8 @@
     "9C41181861FE2438"
   ],
   "last_run": {
-    "timestamp": "2026-11-26T12:12:32.304797",
-    "run_label": "Promotional Check #1",
+    "timestamp": "2026-11-26T18:12:57.122256",
+    "run_label": "Promotional Check #2",
     "daily_only_recovery": false,
     "daily_recovery_mode": null,
     "daily_recovery_slot": null,
@@ -69,7 +69,7 @@
     "total_claimed": 0,
     "efficiency": null,
     "efficiency_scope": "not_applicable_promotional_only",
-    "duration_seconds": 408,
+    "duration_seconds": 431,
     "per_type": {
       "daily": 0,
       "store": 0,
@@ -81,12 +81,12 @@
       "event_rewards": 0
     },
     "slowest_player": "E1E9729A4885E6D9",
-    "avg_time_per_player": 10.4,
+    "avg_time_per_player": 10.9,
     "accounts_processed": 36,
     "claims_made": 0,
-    "unavailable_rewards": 7,
+    "unavailable_rewards": 6,
     "standard_rewards_on_cooldown": 0,
-    "promotional_unavailable_observations": 7,
+    "promotional_unavailable_observations": 6,
     "distinct_promotional_offer_types": 1,
     "promotional_claims_made": 0,
     "actionable_promotion_results": 0,
@@ -740,13 +740,13 @@
         {
           "name": "Freaksson",
           "first_seen_at_ist": "2026-11-13T17:34:55.308379",
-          "last_seen_at_ist": "2026-11-26T12:06:09.166996",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:06:06.605884",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:06:09.166996"
+      "last_observed_at_ist": "2026-11-26T18:06:06.605884"
     },
     "4DC0E2AA7130D7E6": {
       "current_name": "FREAKv20",
@@ -754,13 +754,13 @@
         {
           "name": "FREAKv20",
           "first_seen_at_ist": "2026-11-13T17:35:37.717194",
-          "last_seen_at_ist": "2026-11-26T12:06:23.283117",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:06:22.262854",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:06:23.283117"
+      "last_observed_at_ist": "2026-11-26T18:06:22.262854"
     },
     "46C57810F646B91F": {
       "current_name": "Umang1984",
@@ -768,13 +768,13 @@
         {
           "name": "Umang1984",
           "first_seen_at_ist": "2026-11-13T17:36:20.127939",
-          "last_seen_at_ist": "2026-11-26T12:06:33.690342",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:06:32.037625",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:06:33.690342"
+      "last_observed_at_ist": "2026-11-26T18:06:32.037625"
     },
     "8EE5A8F3D8CAD1F3": {
       "current_name": "SAGI2511",
@@ -782,13 +782,13 @@
         {
           "name": "SAGI2511",
           "first_seen_at_ist": "2026-11-13T17:37:02.785413",
-          "last_seen_at_ist": "2026-11-26T12:06:43.949149",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:06:42.309105",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:06:43.949149"
+      "last_observed_at_ist": "2026-11-26T18:06:42.309105"
     },
     "5899855DAA167B36": {
       "current_name": "FREAK2511",
@@ -796,13 +796,13 @@
         {
           "name": "FREAK2511",
           "first_seen_at_ist": "2026-11-13T17:37:45.697944",
-          "last_seen_at_ist": "2026-11-26T12:06:53.777188",
-          "observation_count": 43,
+          "last_seen_at_ist": "2026-11-26T18:06:52.929742",
+          "observation_count": 44,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:06:53.777188"
+      "last_observed_at_ist": "2026-11-26T18:06:52.929742"
     },
     "5D14D66D5B6C7B8F": {
       "current_name": "hgkme",
@@ -810,13 +810,13 @@
         {
           "name": "hgkme",
           "first_seen_at_ist": "2026-11-13T17:38:27.987664",
-          "last_seen_at_ist": "2026-11-26T12:07:07.199470",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:07:07.987150",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:07.199470"
+      "last_observed_at_ist": "2026-11-26T18:07:07.987150"
     },
     "5429611A24A8F01A": {
       "current_name": "hgkme1",
@@ -824,13 +824,13 @@
         {
           "name": "hgkme1",
           "first_seen_at_ist": "2026-11-13T17:39:10.112534",
-          "last_seen_at_ist": "2026-11-26T12:07:18.281696",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:07:18.387696",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:18.281696"
+      "last_observed_at_ist": "2026-11-26T18:07:18.387696"
     },
     "856EB1365FA9D02E": {
       "current_name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
@@ -838,13 +838,13 @@
         {
           "name": "\u0126\u00e0m\u00e0\u015b\u011e\u00fc\u0159\u013c",
           "first_seen_at_ist": "2026-11-13T17:39:53.493458",
-          "last_seen_at_ist": "2026-11-26T12:07:28.255000",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:07:29.226123",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:28.255000"
+      "last_observed_at_ist": "2026-11-26T18:07:29.226123"
     },
     "F251D3D226496061": {
       "current_name": "Gvk9916",
@@ -852,13 +852,13 @@
         {
           "name": "Gvk9916",
           "first_seen_at_ist": "2026-11-13T17:40:36.320433",
-          "last_seen_at_ist": "2026-11-26T12:07:38.012719",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:07:39.465822",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:38.012719"
+      "last_observed_at_ist": "2026-11-26T18:07:39.465822"
     },
     "3D9A901755C3B2D8": {
       "current_name": "T\u00f5p\u011c\u00fc\u00f1",
@@ -866,13 +866,13 @@
         {
           "name": "T\u00f5p\u011c\u00fc\u00f1",
           "first_seen_at_ist": "2026-11-13T17:41:18.857939",
-          "last_seen_at_ist": "2026-11-26T12:07:47.954925",
-          "observation_count": 40,
+          "last_seen_at_ist": "2026-11-26T18:07:49.943585",
+          "observation_count": 41,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:47.954925"
+      "last_observed_at_ist": "2026-11-26T18:07:49.943585"
     },
     "86CD85689FAE9549": {
       "current_name": "Nick 11 11",
@@ -880,13 +880,13 @@
         {
           "name": "Nick 11 11",
           "first_seen_at_ist": "2026-11-13T17:42:01.204845",
-          "last_seen_at_ist": "2026-11-26T12:07:57.858005",
-          "observation_count": 44,
+          "last_seen_at_ist": "2026-11-26T18:08:00.490240",
+          "observation_count": 45,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:07:57.858005"
+      "last_observed_at_ist": "2026-11-26T18:08:00.490240"
     },
     "A32124B011061E03": {
       "current_name": "VEN\u00d8M\u00d8\u00f9S",
@@ -894,13 +894,13 @@
         {
           "name": "VEN\u00d8M\u00d8\u00f9S",
           "first_seen_at_ist": "2026-11-13T17:42:43.026468",
-          "last_seen_at_ist": "2026-11-26T12:08:11.204538",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-26T18:08:15.643537",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:08:11.204538"
+      "last_observed_at_ist": "2026-11-26T18:08:15.643537"
     },
     "63989CEF5D15F053": {
       "current_name": "R\u00e5s\u00dclGh\u00fcL",
@@ -908,13 +908,13 @@
         {
           "name": "R\u00e5s\u00dclGh\u00fcL",
           "first_seen_at_ist": "2026-11-13T17:43:24.612315",
-          "last_seen_at_ist": "2026-11-26T12:08:21.270006",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:08:25.786216",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:08:21.270006"
+      "last_observed_at_ist": "2026-11-26T18:08:25.786216"
     },
     "B0036841F0183A12": {
       "current_name": "\u011e\u00f6Ku",
@@ -922,13 +922,13 @@
         {
           "name": "\u011e\u00f6Ku",
           "first_seen_at_ist": "2026-11-13T17:44:07.123635",
-          "last_seen_at_ist": "2026-11-26T12:08:31.197630",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:08:35.867174",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:08:31.197630"
+      "last_observed_at_ist": "2026-11-26T18:08:35.867174"
     },
     "A6DA56D3C46DF31B": {
       "current_name": "HareeshK",
@@ -936,13 +936,13 @@
         {
           "name": "HareeshK",
           "first_seen_at_ist": "2026-11-13T17:44:50.688748",
-          "last_seen_at_ist": "2026-11-26T12:08:44.598541",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-26T18:08:52.057876",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:08:44.598541"
+      "last_observed_at_ist": "2026-11-26T18:08:52.057876"
     },
     "7E53CF9C948CED45": {
       "current_name": "retH\u00e8llG\u00d8D",
@@ -950,13 +950,13 @@
         {
           "name": "retH\u00e8llG\u00d8D",
           "first_seen_at_ist": "2026-11-13T17:45:32.901979",
-          "last_seen_at_ist": "2026-11-26T12:08:54.573564",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:09:02.196048",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:08:54.573564"
+      "last_observed_at_ist": "2026-11-26T18:09:02.196048"
     },
     "E796C81690AB75C0": {
       "current_name": "DRSxSUJAN",
@@ -964,13 +964,13 @@
         {
           "name": "DRSxSUJAN",
           "first_seen_at_ist": "2026-11-13T17:46:14.323601",
-          "last_seen_at_ist": "2026-11-26T12:09:08.820904",
-          "observation_count": 43,
+          "last_seen_at_ist": "2026-11-26T18:09:18.389809",
+          "observation_count": 44,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:09:08.820904"
+      "last_observed_at_ist": "2026-11-26T18:09:18.389809"
     },
     "F820398935D2C403": {
       "current_name": "R\u00e8t\u0111 K\u00e8\u00f1",
@@ -978,13 +978,13 @@
         {
           "name": "R\u00e8t\u0111 K\u00e8\u00f1",
           "first_seen_at_ist": "2026-11-13T17:46:57.023708",
-          "last_seen_at_ist": "2026-11-26T12:09:22.777536",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:09:34.098860",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:09:22.777536"
+      "last_observed_at_ist": "2026-11-26T18:09:34.098860"
     },
     "C3960960443AF932": {
       "current_name": "LittleKane",
@@ -992,13 +992,13 @@
         {
           "name": "LittleKane",
           "first_seen_at_ist": "2026-11-13T17:47:37.950601",
-          "last_seen_at_ist": "2026-11-26T12:09:32.792927",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:09:44.093540",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:09:32.792927"
+      "last_observed_at_ist": "2026-11-26T18:09:44.093540"
     },
     "2B50290C73E02027": {
       "current_name": "top silly",
@@ -1006,13 +1006,13 @@
         {
           "name": "top silly",
           "first_seen_at_ist": "2026-11-13T17:48:19.544032",
-          "last_seen_at_ist": "2026-11-26T12:09:46.355175",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-26T18:10:00.074100",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:09:46.355175"
+      "last_observed_at_ist": "2026-11-26T18:10:00.074100"
     },
     "188A50EA1ABE0765": {
       "current_name": "LULL\u00ef",
@@ -1020,13 +1020,13 @@
         {
           "name": "LULL\u00ef",
           "first_seen_at_ist": "2026-11-13T17:49:02.179514",
-          "last_seen_at_ist": "2026-11-26T12:09:56.165854",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:10:10.296081",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:09:56.165854"
+      "last_observed_at_ist": "2026-11-26T18:10:10.296081"
     },
     "4D1AA8C2C628E73F": {
       "current_name": "SujanBckup",
@@ -1034,13 +1034,13 @@
         {
           "name": "SujanBckup",
           "first_seen_at_ist": "2026-11-13T17:49:44.197025",
-          "last_seen_at_ist": "2026-11-26T12:10:06.066776",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-26T18:10:21.485557",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:06.066776"
+      "last_observed_at_ist": "2026-11-26T18:10:21.485557"
     },
     "B4BAE5FC4CACA8F7": {
       "current_name": "B4BAE5FC4CACA8F7",
@@ -1048,13 +1048,13 @@
         {
           "name": "B4BAE5FC4CACA8F7",
           "first_seen_at_ist": "2026-11-13T17:50:26.368388",
-          "last_seen_at_ist": "2026-11-26T12:10:15.487419",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:10:31.710647",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:15.487419"
+      "last_observed_at_ist": "2026-11-26T18:10:31.710647"
     },
     "8FC80EF0CC5B9D39": {
       "current_name": "RITZEE17",
@@ -1062,13 +1062,13 @@
         {
           "name": "RITZEE17",
           "first_seen_at_ist": "2026-11-13T17:51:08.791378",
-          "last_seen_at_ist": "2026-11-26T12:10:25.737445",
-          "observation_count": 41,
+          "last_seen_at_ist": "2026-11-26T18:10:41.596122",
+          "observation_count": 42,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:25.737445"
+      "last_observed_at_ist": "2026-11-26T18:10:41.596122"
     },
     "1956988E56026BA7": {
       "current_name": "Hunter7575",
@@ -1076,13 +1076,13 @@
         {
           "name": "Hunter7575",
           "first_seen_at_ist": "2026-11-13T17:51:51.663053",
-          "last_seen_at_ist": "2026-11-26T12:10:35.331197",
-          "observation_count": 38,
+          "last_seen_at_ist": "2026-11-26T18:10:52.528796",
+          "observation_count": 39,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:35.331197"
+      "last_observed_at_ist": "2026-11-26T18:10:52.528796"
     },
     "631FEB500E5C1EB7": {
       "current_name": "Mickypt",
@@ -1090,13 +1090,13 @@
         {
           "name": "Mickypt",
           "first_seen_at_ist": "2026-11-13T17:52:34.267983",
-          "last_seen_at_ist": "2026-11-26T12:10:45.289410",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:11:03.080684",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:45.289410"
+      "last_observed_at_ist": "2026-11-26T18:11:03.080684"
     },
     "6163D9F946C4BD48": {
       "current_name": "Mickypt 1",
@@ -1104,13 +1104,13 @@
         {
           "name": "Mickypt 1",
           "first_seen_at_ist": "2026-11-13T17:53:16.583746",
-          "last_seen_at_ist": "2026-11-26T12:10:54.682874",
-          "observation_count": 39,
+          "last_seen_at_ist": "2026-11-26T18:11:15.007792",
+          "observation_count": 40,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:10:54.682874"
+      "last_observed_at_ist": "2026-11-26T18:11:15.007792"
     },
     "B3ED965EAECB6F7C": {
       "current_name": "AnwrHatela",
@@ -1118,13 +1118,13 @@
         {
           "name": "AnwrHatela",
           "first_seen_at_ist": "2026-11-13T17:54:00.115358",
-          "last_seen_at_ist": "2026-11-26T12:11:04.980892",
-          "observation_count": 43,
+          "last_seen_at_ist": "2026-11-26T18:11:24.976103",
+          "observation_count": 44,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:04.980892"
+      "last_observed_at_ist": "2026-11-26T18:11:24.976103"
     },
     "BB382E889AA37C4F": {
       "current_name": "SAVAggEEEE",
@@ -1132,13 +1132,13 @@
         {
           "name": "SAVAggEEEE",
           "first_seen_at_ist": "2026-11-13T17:54:42.480986",
-          "last_seen_at_ist": "2026-11-26T12:11:19.190806",
-          "observation_count": 45,
+          "last_seen_at_ist": "2026-11-26T18:11:40.479806",
+          "observation_count": 46,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:19.190806"
+      "last_observed_at_ist": "2026-11-26T18:11:40.479806"
     },
     "DA4C269DB53172C5": {
       "current_name": "\u0120od\u0141\u00eekeP\u015aR",
@@ -1146,13 +1146,13 @@
         {
           "name": "\u0120od\u0141\u00eekeP\u015aR",
           "first_seen_at_ist": "2026-11-13T17:55:24.146300",
-          "last_seen_at_ist": "2026-11-26T12:11:29.083941",
-          "observation_count": 40,
+          "last_seen_at_ist": "2026-11-26T18:11:50.794242",
+          "observation_count": 41,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:29.083941"
+      "last_observed_at_ist": "2026-11-26T18:11:50.794242"
     },
     "51001A5D6014F2DD": {
       "current_name": "Gupta00001",
@@ -1160,13 +1160,13 @@
         {
           "name": "Gupta00001",
           "first_seen_at_ist": "2026-11-13T17:56:08.145826",
-          "last_seen_at_ist": "2026-11-26T12:11:38.345759",
-          "observation_count": 43,
+          "last_seen_at_ist": "2026-11-26T18:12:01.523761",
+          "observation_count": 44,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:38.345759"
+      "last_observed_at_ist": "2026-11-26T18:12:01.523761"
     },
     "4443B75C454AEFF8": {
       "current_name": "4443B75C454AEFF8",
@@ -1174,13 +1174,13 @@
         {
           "name": "4443B75C454AEFF8",
           "first_seen_at_ist": "2026-11-13T17:56:52.175108",
-          "last_seen_at_ist": "2026-11-26T12:11:47.615321",
-          "observation_count": 40,
+          "last_seen_at_ist": "2026-11-26T18:12:12.265346",
+          "observation_count": 41,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:47.615321"
+      "last_observed_at_ist": "2026-11-26T18:12:12.265346"
     },
     "809109186A2962E4": {
       "current_name": "annu411",
@@ -1188,13 +1188,13 @@
         {
           "name": "annu411",
           "first_seen_at_ist": "2026-11-13T17:57:34.731507",
-          "last_seen_at_ist": "2026-11-26T12:11:57.949481",
-          "observation_count": 40,
+          "last_seen_at_ist": "2026-11-26T18:12:22.146564",
+          "observation_count": 41,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:11:57.949481"
+      "last_observed_at_ist": "2026-11-26T18:12:22.146564"
     },
     "90A110C58E410DDF": {
       "current_name": "ReddyRulz",
@@ -1202,13 +1202,13 @@
         {
           "name": "ReddyRulz",
           "first_seen_at_ist": "2026-11-13T17:58:17.191976",
-          "last_seen_at_ist": "2026-11-26T12:12:07.746416",
-          "observation_count": 40,
+          "last_seen_at_ist": "2026-11-26T18:12:33.506747",
+          "observation_count": 41,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:12:07.746416"
+      "last_observed_at_ist": "2026-11-26T18:12:33.506747"
     },
     "3F493D8C327FAF81": {
       "current_name": "VaR88",
@@ -1216,13 +1216,13 @@
         {
           "name": "VaR88",
           "first_seen_at_ist": "2026-11-13T17:58:59.657665",
-          "last_seen_at_ist": "2026-11-26T12:12:17.512211",
-          "observation_count": 42,
+          "last_seen_at_ist": "2026-11-26T18:12:43.811961",
+          "observation_count": 43,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:12:17.512211"
+      "last_observed_at_ist": "2026-11-26T18:12:43.811961"
     },
     "9C41181861FE2438": {
       "current_name": "1HULLK",
@@ -1230,13 +1230,13 @@
         {
           "name": "1HULLK",
           "first_seen_at_ist": "2026-11-22T05:58:05.026406",
-          "last_seen_at_ist": "2026-11-26T12:12:27.991996",
-          "observation_count": 14,
+          "last_seen_at_ist": "2026-11-26T18:12:53.822843",
+          "observation_count": 15,
           "source": "authenticated_profile_capture",
           "timestamp_precision": "run_observation"
         }
       ],
-      "last_observed_at_ist": "2026-11-26T12:12:27.991996"
+      "last_observed_at_ist": "2026-11-26T18:12:53.822843"
     }
   },
   "runtime_reconciliations": [
@@ -1281,24 +1281,25 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:05:43.701013",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:06:16.521844",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
+      "last_attempt_at": "2026-11-26T18:05:45.445235",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:06:14.543926",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
       "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
       "last_outcome_category": "overlay_blocked",
       "last_outcome_fingerprint": "bf91d511c643fc7bf630",
-      "same_outcome_count": 3,
-      "last_outcome_at": "2026-11-26T12:06:16.521844",
+      "same_outcome_count": 4,
+      "last_outcome_at": "2026-11-26T18:06:14.543926",
       "manual_attention_required": true,
       "manual_attention_since": "2026-11-26T12:06:16.521844",
-      "manual_attention_reason": "3 consecutive PP attempts produced the same overlay blocked outcome"
+      "manual_attention_reason": "4 consecutive PP attempts produced the same overlay blocked outcome"
     },
     "5899855DAA167B36": {
       "status": "deferred",
@@ -1309,21 +1310,22 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:06:47.336214",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:07:00.697175",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
-      "last_outcome_category": "empty_scan",
-      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:07:00.697175",
+      "last_attempt_at": "2026-11-26T18:06:45.620693",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:07:01.043624",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-26T18:07:01.043624",
       "manual_attention_required": false
     },
     "86CD85689FAE9549": {
@@ -1335,21 +1337,22 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:07:51.456274",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:08:04.583711",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
-      "last_outcome_category": "empty_scan",
-      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:08:04.583711",
+      "last_attempt_at": "2026-11-26T18:07:53.225925",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:08:08.611141",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-26T18:08:08.611141",
       "manual_attention_required": false
     },
     "B0036841F0183A12": {
@@ -1361,21 +1364,22 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:08:24.612592",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:08:37.965072",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
-      "last_outcome_category": "empty_scan",
-      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:08:37.965072",
+      "last_attempt_at": "2026-11-26T18:08:29.135752",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:08:44.025935",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-26T18:08:44.025935",
       "manual_attention_required": false
     },
     "7E53CF9C948CED45": {
@@ -1387,22 +1391,25 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:08:48.098554",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:09:01.268486",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
+      "last_attempt_at": "2026-11-26T18:08:55.464893",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:09:10.896679",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
       "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
       "last_outcome_category": "empty_scan",
       "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:09:01.268486",
-      "manual_attention_required": false
+      "same_outcome_count": 3,
+      "last_outcome_at": "2026-11-26T18:09:10.896679",
+      "manual_attention_required": true,
+      "manual_attention_since": "2026-11-26T18:09:10.896679",
+      "manual_attention_reason": "3 consecutive PP attempts produced the same empty scan outcome"
     },
     "E796C81690AB75C0": {
       "status": "deferred",
@@ -1413,21 +1420,22 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:09:01.775559",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:09:15.511069",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
-      "last_outcome_category": "empty_scan",
-      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:09:15.511069",
+      "last_attempt_at": "2026-11-26T18:09:11.401613",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:09:26.542047",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-26T18:09:26.542047",
       "manual_attention_required": false
     },
     "C3960960443AF932": {
@@ -1439,21 +1447,22 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:09:26.134860",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:09:39.802676",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
-      "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
-      "last_outcome_category": "empty_scan",
-      "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:09:39.802676",
+      "last_attempt_at": "2026-11-26T18:09:37.389518",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:09:52.627856",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
+      "last_reason": "popup/overlay safety guard blocked carousel recheck (unknown_fullscreen_overlay_blocks_page; dismissed=0; fullscreen_overlay_details=[{\"tag\":\"div\",\"className\":\"fixed inset-0 z-900 min-h-lvh w-full bg-sem-bg-bg-overlay/75 bg-cover bg-center",
+      "last_outcome_category": "overlay_blocked",
+      "last_outcome_fingerprint": "bf91d511c643fc7bf630",
+      "same_outcome_count": 1,
+      "last_outcome_at": "2026-11-26T18:09:52.627856",
       "manual_attention_required": false
     },
     "B3ED965EAECB6F7C": {
@@ -1465,22 +1474,25 @@
       "attempted_slots": [
         "Primary Run",
         "Immediate Progression Recovery",
-        "Promotional Check #1"
+        "Promotional Check #1",
+        "Promotional Check #2"
       ],
-      "total_attempts": 3,
+      "total_attempts": 4,
       "target_card_signature": null,
       "requires_exact_target": false,
-      "last_attempt_at": "2026-11-26T12:10:58.431577",
-      "last_attempt_slot": "Promotional Check #1",
-      "last_deferred_at": "2026-11-26T12:11:11.710686",
-      "last_source_run_label": "Promotional Check #1",
-      "last_source_run_id": "45769216089",
+      "last_attempt_at": "2026-11-26T18:11:18.460117",
+      "last_attempt_slot": "Promotional Check #2",
+      "last_deferred_at": "2026-11-26T18:11:32.861928",
+      "last_source_run_label": "Promotional Check #2",
+      "last_source_run_id": "45821033880",
       "last_reason": "Queued Progression inspection found no currently visible claimable reward; keeping the queue open for a later pass because an empty snapshot is not authoritative proof that no reward is available.",
       "last_outcome_category": "empty_scan",
       "last_outcome_fingerprint": "3d7c68f3171bda01b352",
-      "same_outcome_count": 2,
-      "last_outcome_at": "2026-11-26T12:11:11.710686",
-      "manual_attention_required": false
+      "same_outcome_count": 3,
+      "last_outcome_at": "2026-11-26T18:11:32.861928",
+      "manual_attention_required": true,
+      "manual_attention_since": "2026-11-26T18:11:32.861928",
+      "manual_attention_reason": "3 consecutive PP attempts produced the same empty scan outcome"
     }
   },
   "progression_deferred_inspection_history": [
