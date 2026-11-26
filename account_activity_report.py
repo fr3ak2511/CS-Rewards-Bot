@@ -542,6 +542,27 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
         other = _other_activity(player)
         hard_failure = _is_hard_failure(player)
         status = _text(player.get("status")) or "Status not recorded"
+        raw_status = _text(player.get("status")).casefold()
+        raw_fail_reason = _text(player.get("fail_reason"))
+        hidden_promotion_only = (
+            "at least one observed promotional claim was not confirmed by the portal"
+            in raw_fail_reason.casefold()
+            and not other["promotion_attention"]
+        )
+        existing_detail = " ".join([
+            _text(daily.get("detail")), _text(store.get("detail")),
+            _text(progression.get("detail")), _text(other.get("promotions")),
+        ]).casefold()
+        failure_reason_action = (
+            "Run exception: " + raw_fail_reason[:180]
+            if raw_fail_reason and not hidden_promotion_only
+            and raw_fail_reason.casefold() not in existing_detail
+            and not (
+                "progression" in raw_fail_reason.casefold()
+                and any(term in raw_fail_reason.casefold() for term in ("no currently visible", "inspection remains queued", "overlay"))
+            )
+            else ""
+        )
         promotion_next_action = (
             "Keep the promotion observation pending until the overlay is identified and safely dismissible; "
             "no claim was attempted. Do not click through."
@@ -555,6 +576,7 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
                 store.get("next_action"),
                 progression.get("next_action"),
                 promotion_next_action,
+                failure_reason_action,
                 "Review event reward confirmation; at least one event claim remains pending."
                     if other["event_attention"] else "",
                 f"Recovery: {other['recovery']}" if other["recovery"] else "",
@@ -567,12 +589,7 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
         else:
             next_action = "No account-level follow-up required from this run."
 
-        raw_status = _text(player.get("status")).casefold()
-        fail_reason = _text(player.get("fail_reason")).casefold()
-        hidden_promotion_only = (
-            "at least one observed promotional claim was not confirmed by the portal" in fail_reason
-            and not other["promotion_attention"]
-        )
+        fail_reason = raw_fail_reason.casefold()
         specific_attention = bool(
             daily["attention_required"]
             or store["attention_required"]
