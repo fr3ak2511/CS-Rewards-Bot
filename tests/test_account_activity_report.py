@@ -148,7 +148,7 @@ class AccountActivityReportTests(unittest.TestCase):
         self.assertEqual(second["state"], "pending")
         self.assertIn("empty scan", second["label"].lower())
         self.assertTrue(second["pending_inspection"])
-        self.assertIn("empty scan does not prove", second["next_action"].lower())
+        self.assertIn("empty scan is not proof", second["next_action"].lower())
 
     def test_render_shows_one_masked_account_entry_per_player_and_next_action(self):
         records = build_account_activity_records([
