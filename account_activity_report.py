@@ -437,8 +437,22 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     else:
         loyalty = "Checked · no claim confirmed"
 
-    promotions = player.get("promotions_observed")
-    promotions = promotions if isinstance(promotions, list) else []
+    raw_promotions = player.get("promotions_observed")
+    raw_promotions = raw_promotions if isinstance(raw_promotions, list) else []
+    if isinstance(player.get("reportable_promotions"), list):
+        promotions = player["reportable_promotions"]
+    else:
+        # Without the production reportability annotation, fail closed: only the
+        # generic blocker with no offer identity/details may enter user-facing output.
+        promotions = [
+            item for item in raw_promotions
+            if isinstance(item, dict)
+            and _text(item.get("status")).casefold() == "popup_blocked"
+            and (
+                _text(item.get("key")) == "store-popup-blocked"
+                or (not _text(item.get("card_text")) and not _text(item.get("button_text")))
+            )
+        ]
     promo_scanned = bool(player.get("promotion_scan_completed"))
     promo_claimed = sum(
         1 for item in promotions
@@ -448,25 +462,14 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
         item for item in promotions
         if isinstance(item, dict) and _text(item.get("status")).casefold() == "popup_blocked"
     ]
-    if isinstance(player.get("promotion_detail_attention"), bool):
-        reportable_promotion_issue = player["promotion_detail_attention"]
-    else:
-        # Legacy/direct callers: only a generic popup blocker with no card/CTA
-        # details is safe to surface. An identified offer must be filtered upstream.
-        reportable_promotion_issue = any(
-            _text(item.get("status")).casefold() == "popup_blocked"
-            and (
-                _text(item.get("key")) == "store-popup-blocked"
-                or (
-                    not _text(item.get("card_text"))
-                    and not _text(item.get("button_text"))
-                )
-            )
-            for item in popup_observations
-        )
-        reportable_promotion_issue = reportable_promotion_issue or bool(
-            player.get("promotion_detection_failed")
-        )
+    reportable_promotion_issue = bool(
+        player.get("promotion_detail_attention")
+        if isinstance(player.get("promotion_detail_attention"), bool)
+        else popup_observations or player.get("promotion_detection_failed")
+    )
+    reportable_promotion_issue = reportable_promotion_issue or bool(
+        player.get("promotion_detection_failed")
+    )
     popup_blocked = bool(reportable_promotion_issue and popup_observations)
     promo_details = []
     if popup_blocked:
