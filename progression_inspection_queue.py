@@ -280,10 +280,18 @@ def record_progression_inspection_result(
         resolved["resolved_at"] = now
         resolved["resolution_run_label"] = str(run_label or "")
         resolved["resolution_run_id"] = str(source_run_id or "") or None
+        resolution = str(result.get("progression_inspection_resolution") or "").strip()
         resolved["resolution"] = (
             "claim_confirmed" if confirmed_claims > 0
-            else "inspection_completed"
+            else (
+                "no_claimable_in_captured_rail"
+                if resolution == "no_claimable_in_captured_rail"
+                else "inspection_completed"
+            )
         )
+        resolution_note = str(result.get("progression_inspection_resolution_note") or "").strip()
+        if resolution_note and resolved["resolution"] == "no_claimable_in_captured_rail":
+            resolved["resolution_note"] = resolution_note
         queue.pop(pid, None)
         history = _history(meta)
         history.append(resolved)

@@ -389,6 +389,34 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(archived["resolution"], "inspection_completed")
         self.assertEqual(archived["resolution_run_id"], "4002")
 
+    def test_evidence_qualified_empty_captured_rail_archives_with_scoped_resolution(self):
+        record_progression_inspection_result(
+            self.meta, "PLAYER0001", self._deferred(),
+            run_label="Primary Run", now="2026-11-21T05:52:00+05:30",
+            source_run_id="3894",
+        )
+        action = record_progression_inspection_result(
+            self.meta, "PLAYER0001",
+            {
+                "progression_checked": True,
+                "progression_deferred": False,
+                "progression_unconfirmed": False,
+                "progression": 0,
+                "progression_inspection_complete": True,
+                "progression_inspection_resolution": "no_claimable_in_captured_rail",
+                "progression_inspection_resolution_note": (
+                    "Captured rail reached start and end; no Claimable or Unknown cards."
+                ),
+            },
+            run_label="Promotional Check #1",
+            now="2026-11-21T12:05:00+05:30",
+            source_run_id="4001",
+        )
+        self.assertEqual(action, "resolved")
+        archived = self.meta["progression_deferred_inspection_history"][-1]
+        self.assertEqual(archived["resolution"], "no_claimable_in_captured_rail")
+        self.assertIn("no Claimable or Unknown", archived["resolution_note"])
+
     def test_zero_claim_reinspection_without_completion_evidence_remains_pending(self):
         record_progression_inspection_result(
             self.meta, "PLAYER0001", self._deferred(),

@@ -115,6 +115,140 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertTrue(stats["progression_checked"])
         self.assertFalse(stats["progression_deferred"])
 
+    @staticmethod
+    def _complete_captured_rail_snapshots(*, include_end=True, unknown=False):
+        cards = [
+            {
+                "tag": "div", "class_name": "reward-card", "test_id": "reward-3",
+                "text_snippet": "Milestone 3 x20 Delivered",
+                "exact_status_text_hints": ["Delivered"],
+                "button_labels": ["Delivered"],
+                "milestone_number_hints": [3],
+                "rect": {"x": 0, "y": 0, "width": 200, "height": 180},
+            },
+            {
+                "tag": "div", "class_name": "reward-card", "test_id": "reward-6",
+                "text_snippet": "Milestone 6 x20" if unknown else "Milestone 6 x20 Locked",
+                "exact_status_text_hints": [] if unknown else ["Locked"],
+                "button_labels": [],
+                "milestone_number_hints": [6],
+                "rect": {"x": 220, "y": 0, "width": 200, "height": 180},
+            },
+        ]
+        common = {
+            "page_path": "/progression-program",
+            "ready_state": "complete",
+            "viewport": {"width": 1920, "height": 1080},
+            "body_text_length": 1200,
+            "page_valid": True,
+            "diagnostic_version": 2,
+            "carousel_containers": [{
+                "index": 0, "tag": "div", "class_name": "reward-carousel",
+                "overflow_x": "auto", "scroll_snap_type": "x mandatory",
+                "is_semantic_carousel_root": True,
+                "client_width": 900, "scroll_width": 1500,
+                "max_scroll_left": 600, "direct_child_count": 2,
+                "visible_child_count": 2, "captured_card_count": 2,
+                "captured_cards": cards,
+            }],
+        }
+        first = {
+            **common,
+            "observed_at_ist": "2026-11-26T12:05:10",
+            "carousel_containers": [{
+                **common["carousel_containers"][0],
+                "scroll_left": 0, "at_start": True, "at_end": False,
+            }],
+        }
+        last = {
+            **common,
+            "observed_at_ist": "2026-11-26T12:05:12",
+            "carousel_containers": [{
+                **common["carousel_containers"][0],
+                "scroll_left": 600, "at_start": False,
+                "at_end": include_end,
+            }],
+        }
+        return [first, last]
+
+    def test_queued_empty_scan_resolves_only_after_complete_stable_captured_rail(self):
+        player_id = "QUEUEDPLAYER0001"
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
+        driver = type("ProgressionDriver", (), {})()
+        stats = {"progression": 0}
+
+        def fake_claim(target_driver, pid, **kwargs):
+            self.assertTrue(target_driver._progression_diagnostic_rail_capture)
+            self.assertEqual(target_driver._progression_diagnostic_snapshot_limit, 24)
+            target_driver._progression_diagnostic_player_id = pid
+            _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER[pid] = (
+                self._complete_captured_rail_snapshots()
+            )
+            target_driver._progression_deferred = True
+            target_driver._progression_deferred_reason = (
+                "Queued Progression inspection found no currently visible claimable reward; "
+                "keeping the queue open for a later pass because an empty snapshot is not authoritative proof."
+            )
+            target_driver._progression_unconfirmed = False
+            target_driver._progression_claim_attempted = False
+            target_driver._progression_checked = False
+            target_driver._progression_inspection_complete = False
+            return 0
+
+        try:
+            with patch("master_claimer.claim_progression_program_rewards", side_effect=fake_claim) as claim:
+                _run_queued_progression_inspection(
+                    driver, player_id, stats,
+                    {"status": "deferred", "requires_exact_target": False},
+                )
+            self.assertEqual(claim.call_count, 1)
+            self.assertTrue(driver._progression_checked)
+            self.assertTrue(driver._progression_inspection_complete)
+            self.assertFalse(driver._progression_deferred)
+            self.assertFalse(driver._progression_claim_attempted)
+            self.assertFalse(hasattr(driver, "_progression_diagnostic_rail_capture"))
+            self.assertFalse(hasattr(driver, "_progression_diagnostic_snapshot_limit"))
+            self.assertEqual(stats["progression_inspection_resolution"], "no_claimable_in_captured_rail")
+        finally:
+            _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
+
+    def test_queued_empty_scan_stays_deferred_when_rail_end_or_status_is_unknown(self):
+        for suffix, snapshots in (
+            ("NOEND", self._complete_captured_rail_snapshots(include_end=False)),
+            ("UNKNOWN", self._complete_captured_rail_snapshots(unknown=True)),
+        ):
+            player_id = "QUEUEDPLAYER" + suffix
+            _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
+            driver = type("ProgressionDriver", (), {})()
+            stats = {"progression": 0}
+
+            def fake_claim(target_driver, pid, **kwargs):
+                target_driver._progression_diagnostic_player_id = pid
+                _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER[pid] = snapshots
+                target_driver._progression_deferred = True
+                target_driver._progression_deferred_reason = (
+                    "Queued Progression inspection found no currently visible claimable reward; "
+                    "keeping the queue open for a later pass because an empty snapshot is not authoritative proof."
+                )
+                target_driver._progression_unconfirmed = False
+                target_driver._progression_claim_attempted = False
+                target_driver._progression_checked = False
+                target_driver._progression_inspection_complete = False
+                return 0
+
+            try:
+                with patch("master_claimer.claim_progression_program_rewards", side_effect=fake_claim):
+                    _run_queued_progression_inspection(
+                        driver, player_id, stats,
+                        {"status": "deferred", "requires_exact_target": False},
+                    )
+                self.assertFalse(driver._progression_checked)
+                self.assertFalse(driver._progression_inspection_complete)
+                self.assertTrue(driver._progression_deferred)
+                self.assertNotIn("progression_inspection_resolution", stats)
+            finally:
+                _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
+
     def test_prior_unconfirmed_reinspection_passes_exact_target_signature(self):
         driver = type("ProgressionDriver", (), {})()
 
@@ -513,6 +647,39 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("2/14 delivered", section)
         self.assertIn("400 points", section)
         self.assertNotIn("Active Event Rewards", build_event_rewards_section([{"pid": "NONE", "event_rewards": []}]))
+
+    def test_popup_blocked_promotion_is_not_reported_as_unconfirmed_claim(self):
+        popup_blocked = {
+            "pid": "POPUPBLOCK0001",
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+            "promotions_observed": [{
+                "key": "store-popup-blocked",
+                "title": "Store promotion popup",
+                "status": "popup_blocked",
+                "claim_count": 0,
+            }],
+            "event_rewards": [],
+        }
+        counts = _summary_counts([popup_blocked])
+        self.assertEqual(counts["unconfirmed_claims"], 0)
+        self.assertEqual(counts["partial_results"], 1)
+        self.assertEqual(counts["actionable_promotion_results"], 1)
+        self.assertEqual(counts["promotional_claims_made"], 0)
+
+        # A click that actually failed remains an unconfirmed claim outcome.
+        click_failed = {
+            **popup_blocked,
+            "promotions_observed": [{
+                "key": "store-popup-blocked",
+                "title": "Store promotion",
+                "status": "click_failed",
+                "claim_count": 0,
+            }],
+        }
+        self.assertEqual(_summary_counts([click_failed])["unconfirmed_claims"], 1)
 
     def test_summary_counts_exclude_paid_promotion_from_promotional_claim_total(self):
         player = self.sample_player()

@@ -583,7 +583,7 @@ def _summary_counts(results):
                 actionable_promotion_results += 1
             unconfirmed += int(
                 promo_status in ("claim_unconfirmed", "click_failed", "available")
-                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available")
+                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available", "popup_blocked")
             )
         unconfirmed += int(bool(result.get("daily_unconfirmed")))
         unconfirmed += len(result.get("store_unconfirmed_indices", []) or [])
@@ -3721,6 +3721,68 @@ def claim_progression_program_rewards(
     return result
 
 
+def _queued_progression_empty_scan_has_complete_rail_evidence(player_id, snapshots):
+    """Require a stable, fully traversed captured rail before resolving an empty queued scan.
+
+    This is deliberately narrower than portal-wide completeness: only a v2 diagnostic
+    proving a stable, unique captured rail from its start to its end, with no Claimable
+    or Unknown cards, can close this specific inspection obligation.
+    """
+    if not isinstance(snapshots, list) or not snapshots:
+        return False
+    if any(
+        not isinstance(item, dict) or str(item.get("diagnostic_version") or "") != "2"
+        for item in snapshots
+    ):
+        return False
+    try:
+        summary = build_progression_inspection_diagnostic_summary(
+            {str(player_id): snapshots},
+            configured_player_count=1,
+        )
+        accounts = summary.get("accounts") or []
+        if (
+            summary.get("accounts_with_completed_rail_scan") != 1
+            or len(accounts) != 1
+            or accounts[0].get("player_id_last4") != str(player_id)[-4:]
+        ):
+            return False
+        rail = accounts[0].get("normalized_progression_rail") or {}
+        totals = rail.get("card_status_totals") or {}
+        selected = rail.get("selected_rail") or {}
+        if not rail.get("captured_rail_scan_completed"):
+            return False
+        if int(totals.get("Claimable", -1)) != 0 or int(totals.get("Unknown", -1)) != 0:
+            return False
+        known_cards = int(totals.get("Delivered", 0)) + int(totals.get("Locked", 0))
+        observed_milestones = rail.get("observed_milestone_thresholds") or []
+        if known_cards <= 0 or known_cards != len(observed_milestones):
+            return False
+
+        selected_index = selected.get("container_index")
+        selected_class = str(selected.get("container_class") or "")
+        saw_start = False
+        saw_end = False
+        for snapshot in accounts[0].get("snapshots") or []:
+            containers = snapshot.get("carousel_containers") or []
+            matching = [
+                item for item in containers
+                if isinstance(item, dict)
+                and item.get("index") == selected_index
+                and str(item.get("class_name") or "") == selected_class
+            ]
+            if len(matching) != 1:
+                return False
+            container = matching[0]
+            max_scroll = container.get("max_scroll_left")
+            no_horizontal_overflow = isinstance(max_scroll, int) and max_scroll == 0
+            saw_start = saw_start or bool(container.get("at_start")) or no_horizontal_overflow
+            saw_end = saw_end or bool(container.get("at_end")) or no_horizontal_overflow
+        return saw_start and saw_end
+    except (TypeError, ValueError, OverflowError, KeyError, AttributeError):
+        return False
+
+
 def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
     """Reinspect Progression only; exact-target entries never fall back to generic clicks."""
     queued = isinstance(queue_entry, dict) and bool(queue_entry)
@@ -3757,6 +3819,15 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         log(f"⏭️ {pid}: queued Progression reinspection held; exact target identity is unavailable.")
         return stats
 
+    capture_rail = bool(queued and not target_signature and not target_fragments)
+    previous_capture = getattr(driver, "_progression_diagnostic_rail_capture", None)
+    previous_limit = getattr(driver, "_progression_diagnostic_snapshot_limit", None)
+    diagnostics_before = len(_PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(pid), []))
+    if capture_rail:
+        driver._progression_diagnostic_rail_capture = True
+        # A seven-position carousel sweep needs more than the default six snapshots.
+        driver._progression_diagnostic_snapshot_limit = 24
+
     try:
         if target_signature:
             claimed = claim_progression_program_rewards(
@@ -3780,6 +3851,35 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
                 defer_if_more_claimable=True,
             )
         stats["progression"] = int(stats.get("progression", 0) or 0) + int(claimed or 0)
+        if (
+            capture_rail
+            and int(claimed or 0) == 0
+            and not bool(getattr(driver, "_progression_claim_attempted", False))
+            and bool(getattr(driver, "_progression_deferred", False))
+            and "no currently visible claimable reward" in str(
+                getattr(driver, "_progression_deferred_reason", "") or ""
+            ).casefold()
+        ):
+            recorded = _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(pid), [])
+            new_snapshots = list(recorded[diagnostics_before:])
+            if _queued_progression_empty_scan_has_complete_rail_evidence(pid, new_snapshots):
+                driver._progression_deferred = False
+                driver._progression_deferred_reason = None
+                driver._progression_unconfirmed = False
+                driver._progression_unconfirmed_card_signature = None
+                driver._progression_checked = True
+                driver._progression_inspection_complete = True
+                stats["progression_inspection_resolution"] = "no_claimable_in_captured_rail"
+                stats["progression_inspection_resolution_note"] = (
+                    "The captured Progression rail was scanned from start to end with stable, "
+                    "unique milestone identities; no Claimable or Unknown cards were observed. "
+                    "This does not establish portal-wide inventory completeness."
+                )
+                log(
+                    f"✅ {pid}: queued Progression inspection complete; the captured rail "
+                    "was fully traversed and contained no Claimable or Unknown cards."
+                )
+
         stats["progression_unconfirmed"] = bool(
             getattr(driver, "_progression_unconfirmed", False)
         )
@@ -3826,6 +3926,19 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
         )
         stats["progression_checked"] = False
         log(f"🚩 {pid}: queued Progression reinspection raised {type(exc).__name__}.")
+    finally:
+        if capture_rail:
+            try:
+                if previous_capture is None:
+                    delattr(driver, "_progression_diagnostic_rail_capture")
+                else:
+                    driver._progression_diagnostic_rail_capture = previous_capture
+                if previous_limit is None:
+                    delattr(driver, "_progression_diagnostic_snapshot_limit")
+                else:
+                    driver._progression_diagnostic_snapshot_limit = previous_limit
+            except Exception:
+                pass
     return stats
 
 
