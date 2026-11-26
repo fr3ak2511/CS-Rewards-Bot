@@ -724,10 +724,32 @@ def render_account_activity_section(records: Any) -> str:
 
     pending = sum(1 for row in rows if isinstance(row, dict) and row.get("pending_inspection"))
     attention = sum(1 for row in rows if isinstance(row, dict) and row.get("attention_required"))
-    intro = (
-        f"{len(rows)} account entries · {pending} Progression inspection(s) pending · "
-        f"{attention} account(s) need attention. Each player is shown separately."
-    )
+    progressions = [row.get("progression", {}) for row in rows if isinstance(row, dict)]
+    confirmed_progression = sum(_integer(item.get("count")) for item in progressions if isinstance(item, dict))
+    queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions if isinstance(item, dict))
+    balance_rows = [
+        item.get("grenades", {}) for item in progressions
+        if isinstance(item, dict) and isinstance(item.get("grenades"), dict)
+        and item["grenades"].get("available")
+    ]
+    balance_passed = sum(1 for item in balance_rows if item.get("status") == "pass")
+    intro_parts = [
+        f"{len(rows)} account entries",
+        f"{pending} Progression inspection(s) pending",
+        f"{attention} account(s) need attention",
+    ]
+    if confirmed_progression:
+        intro_parts.append(f"{confirmed_progression} Progression rewards confirmed")
+    if queued_attempts:
+        intro_parts.append(f"{queued_attempts} queued reinspection attempts made")
+    if pending:
+        intro_parts.append(f"{pending} account(s) remain open")
+    if balance_rows:
+        count = len(balance_rows)
+        intro_parts.append(
+            f"{count} account checked · {count} balance captured · {balance_passed} passed"
+        )
+    intro = " · ".join(intro_parts) + ". Each player is shown separately."
     cards = []
     for row in rows:
         if not isinstance(row, dict):
@@ -762,7 +784,9 @@ def render_account_activity_section(records: Any) -> str:
             f"<div><strong>Progression:</strong> {escape(progression_value)}{progression_extra}</div>"
             f"<div style='margin-top:3px'><strong>Grenades:</strong> {escape(_text(grenade_detail))}</div>"
             f"<div style='margin-top:3px'><strong>Other:</strong> Loyalty {escape(_text(row.get('loyalty')))} · "
-            f"Promotions {escape(_text(row.get('promotions')))} · Events {escape(_text(row.get('events')))}</div>"
+            f"Promotions {escape(_text(row.get('promotions')))} · Events {escape(_text(row.get('events')))}"
+            + (f" · Recovery {escape(_text(row.get('recovery')))}" if row.get("recovery") else "")
+            + "</div>"
             f"<div style='margin-top:5px;padding-top:5px;border-top:1px solid #edf1f6'><strong>Next action:</strong> "
             f"{escape(_text(row.get('next_action')) or 'No account-level follow-up required.')}</div>"
             "</div></article>"
