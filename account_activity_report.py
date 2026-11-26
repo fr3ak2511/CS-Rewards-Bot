@@ -259,10 +259,15 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
         observed_date = _text(live.get("last_observed_date"))
     elif carry.get("last_observed_count") is not None:
         count = _integer(carry.get("last_observed_count"))
-        minimum = _first_value(
-            carry, "expected_minimum_as_of", "expected_minimum_at_observation"
-        )
         minimum_at_observation = carry.get("expected_minimum_at_observation")
+        current_minimum = carry.get("expected_minimum_as_of")
+        # The saved count is compared with the minimum that applied when it was
+        # observed. A newer date minimum is shown separately and is not treated
+        # as a fresh validation of the carried-forward count.
+        minimum = (
+            minimum_at_observation if minimum_at_observation is not None
+            else current_minimum
+        )
         milestone = carry.get("next_milestone_at_observation")
         remaining = carry.get("remaining_to_milestone_at_observation")
         status = _text(carry.get("status_at_observation") or "not_validated")
@@ -278,7 +283,12 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
 
     minimum_text = str(_integer(minimum)) if minimum is not None else "not available"
     milestone_text = str(_integer(milestone)) if milestone is not None else "not available"
-    ratio_text = f"{count} / {minimum_text} vs date minimum" if minimum is not None else "date minimum not available"
+    ratio_text = (
+        f"{count} / {minimum_text} at observation"
+        if freshness.startswith("Carried forward") and minimum is not None
+        else f"{count} / {minimum_text} vs date minimum"
+        if minimum is not None else "date minimum not available"
+    )
     if remaining is None and milestone is not None:
         remaining = max(0, _integer(milestone) - count)
     remaining_text = f"{_integer(remaining)} to go" if remaining is not None else "remaining not available"
@@ -295,15 +305,18 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
         "not_validated": "Not validated",
     }
     status_label = status_labels.get(status, status.replace("_", " ").title())
-    if freshness.startswith("Carried forward") and minimum_at_observation is not None and minimum is not None:
-        minimum_context = f"date minimum {minimum_text} (at observation {minimum_at_observation})"
+    if freshness.startswith("Carried forward"):
+        current_minimum_text = (
+            str(_integer(current_minimum)) if current_minimum is not None else "not available"
+        )
+        minimum_context = f"current date minimum {current_minimum_text}"
+        if status == "pass":
+            status_label = "validated at observation"
     else:
         minimum_context = f"date minimum {minimum_text}"
-    if freshness.startswith("Carried forward") and status == "pass":
-        status_label = "validated at observation"
     detail = (
         f"{count} Grenades · {ratio_text} · {freshness} · {minimum_context} · "
-        f"next milestone {milestone_text} · {remaining_text} · {status_label}"
+        f"Next milestone {milestone_text} · {remaining_text} · {status_label}"
     )
     return {
         "available": True, "count": count, "minimum": minimum,
@@ -334,6 +347,17 @@ def _progression_activity(player: dict[str, Any]) -> dict[str, Any]:
     same_count = _integer(player.get("progression_same_outcome_count"))
     manual_attention = bool(player.get("progression_manual_attention_required"))
     grenade = _grenade_activity(player)
+
+    progression_in_scope = (
+        mode != "promotional_only"
+        and (
+            checked_value is True or deferred or unconfirmed
+            or bool(player.get("progression_claim_attempted"))
+            or reinspection_attempted
+        )
+    )
+    if not progression_in_scope:
+        count = 0
 
     if unconfirmed:
         state = "claim_unconfirmed"
@@ -775,18 +799,18 @@ def render_account_activity_section(records: Any) -> str:
         f"{attention} account(s) need attention",
     ]
     if confirmed_progression and pending:
-        open_word = "account" if pending == 1 else "accounts"
+        open_phrase = "account remains open" if pending == 1 else "accounts remain open"
         reward_word = "reward" if confirmed_progression == 1 else "rewards"
         intro_parts.append(
             f"{confirmed_progression} Progression {reward_word} confirmed in this run; "
-            f"{pending} {open_word} remain open"
+            f"{pending} {open_phrase}"
         )
     elif confirmed_progression:
         intro_parts.append(f"{confirmed_progression} Progression rewards confirmed")
     elif pending:
-        open_word = "account" if pending == 1 else "accounts"
+        open_phrase = "account remains open" if pending == 1 else "accounts remain open"
         intro_parts.append(
-            f"0 Progression rewards confirmed in this run; {pending} {open_word} remain open"
+            f"0 Progression rewards confirmed in this run; {pending} {open_phrase}"
         )
     if queued_attempts:
         attempt_word = "attempt" if queued_attempts == 1 else "attempts"
