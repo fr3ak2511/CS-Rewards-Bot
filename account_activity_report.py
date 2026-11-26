@@ -479,7 +479,13 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
         else:
             next_action = "No account-level follow-up required from this run."
 
-        attention = bool(
+        raw_status = _text(player.get("status")).casefold()
+        fail_reason = _text(player.get("fail_reason")).casefold()
+        hidden_promotion_only = (
+            "at least one observed promotional claim was not confirmed by the portal" in fail_reason
+            and not other["promotion_attention"]
+        )
+        specific_attention = bool(
             daily["attention_required"]
             or store["attention_required"]
             or progression["attention_required"]
@@ -487,6 +493,19 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
             or other["event_attention"]
             or hard_failure
         )
+        generic_attention = (
+            not specific_attention
+            and not hidden_promotion_only
+            and (
+                raw_status in {"partial", "no rewards"}
+                or (bool(player.get("retry_required")) and bool(fail_reason))
+            )
+        )
+        attention = specific_attention or generic_attention
+        if generic_attention:
+            next_actions.append(
+                "Review the run-level exception in the workflow log; do not infer a successful claim."
+            )
         account_status = (
             "Needs attention" if attention else
             "Pending inspection" if progression["pending_inspection"] else
