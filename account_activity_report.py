@@ -168,7 +168,20 @@ def _store_activity(player: dict[str, Any]) -> dict[str, Any]:
     states = [ _text(item).casefold() for item in (raw_states or []) ]
     checked = _standard_rewards_checked(player)
 
-    if count:
+    if count and unconfirmed:
+        item_note = (
+            " · confirmed item(s) " + ", ".join(f"#{item}" for item in claimed_indices)
+            if claimed_indices else ""
+        )
+        state = "retry_queued"
+        label = f"{count} confirmed · retry queued"
+        detail = (
+            f"{count} standard Store reward(s) were confirmed by the portal after the bot action{item_note}. "
+            "Unconfirmed Store item(s): " + ", ".join(f"#{item}" for item in unconfirmed) + "."
+        )
+        action = "Keep the listed Store item(s) on the existing saved-target recovery path; do not retry confirmed items."
+        attention = True
+    elif count:
         item_note = (
             " · confirmed item(s) " + ", ".join(f"#{item}" for item in claimed_indices)
             if claimed_indices else ""
@@ -680,7 +693,10 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
     not_checked = states.count("not_checked")
     if not states or not_checked == len(states):
         return "Not checked"
-    bot_count = sum(_integer(value.get("count")) for value in values if isinstance(value, dict) and value.get("state") == "claimed_by_bot")
+    bot_count = sum(
+        _integer(value.get("count")) for value in values
+        if isinstance(value, dict) and value.get("state") in {"claimed_by_bot", "retry_queued"}
+    )
     portal_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "portal_claimed")
     retry_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "retry_queued")
     pending_count = sum(1 for value in values if isinstance(value, dict) and value.get("pending_inspection"))
