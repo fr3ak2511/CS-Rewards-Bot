@@ -178,6 +178,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         stats = {"progression": 0}
 
         def fake_claim(target_driver, pid, **kwargs):
+            self.assertTrue(target_driver._progression_diagnostic_rail_capture)
+            self.assertEqual(target_driver._progression_diagnostic_snapshot_limit, 24)
             target_driver._progression_diagnostic_player_id = pid
             _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER[pid] = (
                 self._complete_captured_rail_snapshots()
@@ -204,6 +206,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             self.assertTrue(driver._progression_inspection_complete)
             self.assertFalse(driver._progression_deferred)
             self.assertFalse(driver._progression_claim_attempted)
+            self.assertFalse(hasattr(driver, "_progression_diagnostic_rail_capture"))
+            self.assertFalse(hasattr(driver, "_progression_diagnostic_snapshot_limit"))
             self.assertEqual(stats["progression_inspection_resolution"], "no_claimable_in_captured_rail")
         finally:
             _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
