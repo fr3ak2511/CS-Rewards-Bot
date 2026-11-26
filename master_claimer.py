@@ -583,7 +583,7 @@ def _summary_counts(results):
                 actionable_promotion_results += 1
             unconfirmed += int(
                 promo_status in ("claim_unconfirmed", "click_failed", "available")
-                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available")
+                or promo_status not in ("claimed_this_run", "portal_claimed", "unavailable", "claim_unconfirmed", "click_failed", "available", "popup_blocked")
             )
         unconfirmed += int(bool(result.get("daily_unconfirmed")))
         unconfirmed += len(result.get("store_unconfirmed_indices", []) or [])
