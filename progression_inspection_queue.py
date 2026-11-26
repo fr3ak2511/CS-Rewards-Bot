@@ -276,6 +276,10 @@ def record_progression_inspection_result(
             return "retained"
 
         resolved = deepcopy(entry)
+        # Active queue keys are the authoritative identity; copy that ID into
+        # history so every archived resolution remains independently auditable.
+        resolved["player_id"] = pid
+        resolved["player_id_last4"] = pid[-4:]
         resolved["status"] = "resolved"
         resolved["resolved_at"] = now
         resolved["resolution_run_label"] = str(run_label or "")
