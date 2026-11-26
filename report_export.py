@@ -11,6 +11,11 @@ import html
 from typing import Any
 
 from cycle_health_report import render_cycle_health_overview
+from account_activity_report import (
+    build_account_activity_records,
+    render_account_activity_section,
+    summarize_account_activity,
+)
 
 
 def _number(value: Any) -> int:
@@ -259,34 +264,26 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
 
     totals = summary.get("totals") if isinstance(summary.get("totals"), dict) else {}
     players = summary.get("player_results") if isinstance(summary.get("player_results"), list) else []
+    activity = summary.get("account_activity")
+    if not isinstance(activity, list):
+        activity = build_account_activity_records(players)
     accounts = _number(summary.get("accounts_processed"))
     configured = _number(summary.get("configured_player_count"))
     claims = _number(totals.get("all_claims_this_run", summary.get("claims_made")))
-    attention = sum(
-        1 for player in players
-        if isinstance(player, dict)
-        and not _deferred_progression_is_only_issue(player)
-        and (
-            bool(player.get("retry_required"))
-            or str(player.get("status") or "") in {
-                "Partial", "No Rewards", "Login Failed", "Error", "Failed"
-            }
-            or bool(player.get("daily_unconfirmed"))
-            or bool(player.get("standard_store_unconfirmed_indices"))
-            or bool(player.get("progression_unconfirmed"))
-            or (
-                isinstance(player.get("grenade_balance_carry_forward"), dict)
-                and str(player["grenade_balance_carry_forward"].get("status_at_observation") or "")
-                    in {"below_minimum", "counter_regressed"}
-            )
-        )
+    pending_progression = sum(
+        1 for row in activity if isinstance(row, dict) and row.get("pending_inspection")
     )
-    if not players:
+    attention = sum(
+        1 for row in activity if isinstance(row, dict) and row.get("attention_required")
+    )
+    if not activity:
         attention = (
             _number(summary.get("partial_results"))
             + _number(summary.get("actual_failures"))
             + _number(summary.get("unconfirmed_claims"))
         )
+    account_activity_html = render_account_activity_section(activity)
+    category_summary = summarize_account_activity(activity)
 
     reconciliation = summary.get("reconciliation") if isinstance(summary.get("reconciliation"), dict) else {}
     reconciliation_warnings = reconciliation.get("warnings") if isinstance(reconciliation.get("warnings"), list) else []
@@ -298,7 +295,6 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         if isinstance(reconciliation.get("grenade_balance_validation"), dict) else {}
     )
     grenade_status = str(grenade_validation.get("status") or "not_available")
-    grenade_table = _progression_milestone_table(players)
     grenade_summary = (
         "<p>Status: <strong>" + _safe(grenade_status.replace("_", " "))
         + "</strong> · Accounts observed: <strong>" + str(_number(grenade_validation.get("accounts_observed")))
@@ -306,81 +302,24 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         + "</strong> · Pending baseline: <strong>" + str(_number(grenade_validation.get("accounts_pending_baseline")))
         + "</strong></p>"
     )
-    grenade_section = grenade_summary + grenade_table
-
-    # Saved readings are folded into the milestone groups above; do not repeat them in a second table.
-    carry_forward_section = ""
-
-    deferred_count = sum(
-        1 for player in players
-        if isinstance(player, dict) and player.get("progression_deferred")
-    )
-    deferred_section = (
-        "<section class='section'><h2>Progression / Grenade balance — grouped by milestone</h2>"
-        + grenade_summary + grenade_table + "</section>"
-        if players else ""
-    )
     attention_note = (
-        "Claim / validation exceptions only; pending Progression accounts are grouped by milestone below"
-        if deferred_count else "Accounts with claim / validation exceptions"
+        f"{pending_progression} pending Progression inspection(s) included; "
+        "each affected account is listed below"
+        if pending_progression else "Accounts with claim / validation exceptions"
     )
 
     if attention:
         health = "ATTENTION REQUIRED"
         health_class = "warn"
-    elif deferred_count:
-        health = "COMPLETED — INSPECTIONS PENDING"
-        health_class = "neutral"
     else:
         health = "HEALTHY"
         health_class = "healthy"
 
-    categories = [
-        ("Daily", totals.get("daily_claimed_this_run", 0)),
-        ("Standard Store", totals.get("standard_store_claimed_this_run", 0)),
-        ("Promotions", totals.get("promotional_claims_this_run", 0)),
-        ("Event rewards", totals.get("event_reward_claims_this_run", 0)),
-        ("Progression", totals.get("progression_claimed_this_run", 0)),
-        ("Loyalty", totals.get("loyalty_claimed_this_run", 0)),
-    ]
     category_cards = "".join(
-        "<div class='category'><span>" + html.escape(label) + "</span><strong>"
-        + str(_number(value)) + "</strong></div>"
-        for label, value in categories
+        "<div class='category'><span>" + html.escape(item["label"]) + "</span><strong>"
+        + html.escape(item["value"]) + "</strong></div>"
+        for item in category_summary
     )
-
-    player_rows = []
-    for player in players:
-        if not isinstance(player, dict):
-            continue
-        status = str(player.get("status") or "Unknown")
-        if _deferred_progression_is_only_issue(player):
-            status = "Deferred check"
-        status_class = (
-            "bad" if status in {"Login Failed", "Error", "Failed"}
-            else "warn" if status in {"Partial", "No Rewards", "Deferred check"} or player.get("retry_required")
-            else "good"
-        )
-        reason = str(player.get("fail_reason") or "").strip()
-        details = (
-            "<small class='reason'>" + _safe(reason) + "</small>"
-            if reason and not _deferred_progression_is_only_issue(player) else ""
-        )
-        player_rows.append(
-            "<tr><td><strong>" + _safe(_player_label(player)) + "</strong>"
-            + details + "</td><td><span class='status " + status_class + "'>"
-            + _safe(status) + "</span></td><td>" + str(_number(player.get("daily_claimed_this_run")))
-            + "</td><td>" + str(_number(player.get("standard_store_claimed_this_run")))
-            + "</td><td>" + str(_number(player.get("progression_claimed_this_run")))
-            + "</td><td>" + str(_number(player.get("loyalty_claimed_this_run")))
-            + "</td><td>" + str(_number(player.get("event_reward_claims_this_run")))
-            + "</td></tr>"
-        )
-
-    if player_rows:
-        table_body = "".join(player_rows)
-    else:
-        table_body = "<tr><td colspan='7'>No per-account detail was included in this summary.</td></tr>"
 
     started = _safe(summary.get("started_at_ist"))
     finished = _safe(summary.get("finished_at_ist"))
@@ -478,17 +417,7 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 </section>
 {cycle_health_html}
 <section class="categories">{category_cards}</section>
-{deferred_section}
-{carry_forward_section}
-<section class="section">
-<h2>Account results</h2>
-<div class="table-wrap">
-<table>
-<thead><tr><th>Account</th><th>Status</th><th>Daily</th><th>Store</th><th>Progression</th><th>Loyalty</th><th>Events</th></tr></thead>
-<tbody>{table_body}</tbody>
-</table>
-</div>
-</section>
+{account_activity_html}
 <section class="section">
 <h2>Run checks</h2>
 <div>Full-claim efficiency: <strong>{efficiency_text}</strong></div>
