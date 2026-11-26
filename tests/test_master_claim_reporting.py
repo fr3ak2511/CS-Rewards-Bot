@@ -1190,7 +1190,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("66 / 66", report)
         self.assertIn("57 to go", report)
-        self.assertIn("Last observed 2026-11-22", report)
+        self.assertIn("last observed 2026-11-22", report)
         self.assertIn("date minimum 66", report)
         self.assertIn("Attention Required", report)
 
