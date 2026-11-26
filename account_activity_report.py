@@ -521,13 +521,19 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
         other = _other_activity(player)
         hard_failure = _is_hard_failure(player)
         status = _text(player.get("status")) or "Status not recorded"
+        promotion_next_action = (
+            "Keep the promotion observation pending until the overlay is identified and safely dismissible; "
+            "no claim was attempted. Do not click through."
+            if other["promotion_popup_blocked"] else
+            "Review promotional scan evidence; offer detection was incomplete."
+            if other["promotion_attention"] else ""
+        )
         next_actions = [
             item for item in (
                 daily.get("next_action"),
                 store.get("next_action"),
                 progression.get("next_action"),
-                "Review promotional scan evidence; offer detection was incomplete."
-                    if other["promotion_attention"] else "",
+                promotion_next_action,
                 "Review event reward confirmation; at least one event claim remains pending."
                     if other["event_attention"] else "",
                 "Review the account's login/processing failure before treating the cycle as complete."
