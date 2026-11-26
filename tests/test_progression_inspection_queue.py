@@ -415,6 +415,8 @@ class ProgressionInspectionQueueTests(unittest.TestCase):
         self.assertEqual(action, "resolved")
         archived = self.meta["progression_deferred_inspection_history"][-1]
         self.assertEqual(archived["resolution"], "no_claimable_in_captured_rail")
+        self.assertEqual(archived["player_id"], "PLAYER0001")
+        self.assertEqual(archived["player_id_last4"], "0001")
         self.assertIn("no Claimable or Unknown", archived["resolution_note"])
 
     def test_zero_claim_reinspection_without_completion_evidence_remains_pending(self):
