@@ -44,9 +44,13 @@ def _player_suffix(player: dict[str, Any]) -> str:
 
 
 def _account_label(player: dict[str, Any]) -> str:
-    name = _text(player.get("display_name"))[:80] or "IGN unavailable"
+    name = _text(player.get("display_name"))[:80]
     suffix = _player_suffix(player)
-    return f"{name} · …{suffix}" if suffix else name
+    if name and suffix:
+        return f"{name} · …{suffix}"
+    if name:
+        return name
+    return f"Player …{suffix}" if suffix else "Unknown player"
 
 
 def _portal_claimed(value: Any) -> bool:
@@ -246,6 +250,7 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
         minimum = _first_value(
             carry, "expected_minimum_as_of", "expected_minimum_at_observation"
         )
+        minimum_at_observation = carry.get("expected_minimum_at_observation")
         milestone = carry.get("next_milestone_at_observation")
         remaining = carry.get("remaining_to_milestone_at_observation")
         status = _text(carry.get("status_at_observation") or "not_validated")
@@ -273,8 +278,14 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
         "not_validated": "not validated",
     }
     status_label = status_labels.get(status, status.replace("_", " "))
+    if freshness.startswith("Carried forward") and minimum_at_observation is not None and minimum is not None:
+        minimum_context = f"date minimum {minimum_text} (at observation {minimum_at_observation})"
+    else:
+        minimum_context = f"date minimum {minimum_text}"
+    if freshness.startswith("Carried forward") and status == "pass":
+        status_label = "validated at observation"
     detail = (
-        f"{count} Grenades · {freshness} · date minimum {minimum_text} · "
+        f"{count} Grenades · {freshness} · {minimum_context} · "
         f"next milestone {milestone_text} · {remaining_text} · {status_label}"
     )
     return {
