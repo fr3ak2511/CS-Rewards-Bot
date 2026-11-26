@@ -337,10 +337,16 @@ def _progression_activity(player: dict[str, Any]) -> dict[str, Any]:
             detail_parts.append("manual attention required")
         detail = " · ".join(detail_parts) or "Inspection is deferred; no claim is inferred."
         if slots_used >= MAX_PROGRESS_INSPECTION_SLOTS:
-            action = (
-                f"Hold: all {MAX_PROGRESS_INSPECTION_SLOTS}/{MAX_PROGRESS_INSPECTION_SLOTS} safe inspection slots "
-                "are used this reset. Keep pending; do not force another run."
-            )
+            if state == "blocked":
+                action = (
+                    f"Hold: all {MAX_PROGRESS_INSPECTION_SLOTS}/{MAX_PROGRESS_INSPECTION_SLOTS} safe inspection slots "
+                    "are used this reset. Keep pending; do not bypass the unidentified overlay."
+                )
+            else:
+                action = (
+                    f"Hold: all {MAX_PROGRESS_INSPECTION_SLOTS}/{MAX_PROGRESS_INSPECTION_SLOTS} safe inspection slots "
+                    "are used this reset. Keep pending; an empty scan is not proof that no reward exists."
+                )
         elif state == "blocked":
             action = "Keep pending until the overlay is identified and safely dismissible. Do not click through."
         else:
@@ -541,36 +547,60 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
 def summarize_account_activity(records: Any) -> list[dict[str, str]]:
     """Produce scope-aware category cards without turning Not checked into zero."""
     rows = records if isinstance(records, list) else []
-    return [
+    categories = [
         {"label": "Daily", "value": _category_summary(rows, "daily")},
         {"label": "Standard Store", "value": _category_summary(rows, "store")},
         {"label": "Progression", "value": _category_summary(rows, "progression")},
-        {
-            "label": "Promotions",
-            "value": (
-                f"{sum(1 for row in rows if 'Scanned ·' in str(row.get('promotions', '')))} scanned · "
-                f"{sum(_integer((row.get('promotions') or '').split(' · ')[-1].split()[0]) if str(row.get('promotions', '')).split(' · ')[-1].split() and str(row.get('promotions', '')).split(' · ')[-1].split()[0].isdigit() else 0 for row in rows)} observed claims"
-                if any('Scanned ·' in str(row.get('promotions', '')) for row in rows)
-                else "Not checked"
-            ),
-        },
-        {
-            "label": "Event rewards",
-            "value": (
-                f"{sum(1 for row in rows if row.get('events') != 'Not checked')} checked"
-                if any(row.get("events") != "Not checked" for row in rows)
-                else "Not checked"
-            ),
-        },
-        {
-            "label": "Loyalty",
-            "value": (
-                f"{sum(1 for row in rows if row.get('loyalty') != 'Not checked')} checked / enrolled"
-                if any(row.get("loyalty") != "Not checked" for row in rows)
-                else "Not checked"
-            ),
-        },
     ]
+
+    scanned = [
+        str(row.get("promotions") or "") for row in rows
+        if "Scanned ·" in str(row.get("promotions") or "")
+    ]
+    if scanned:
+        def extract_count(value: str, marker: str) -> int:
+            try:
+                return _integer(value.split(marker, 1)[0].split("·")[-1].strip())
+            except (TypeError, ValueError, IndexError):
+                return 0
+        offer_count = sum(extract_count(value, " offer observation") for value in scanned)
+        confirmed_count = sum(extract_count(value, " confirmed claim") for value in scanned)
+        promo_value = (
+            f"{len(scanned)} account(s) scanned · {offer_count} offer observation(s) · "
+            f"{confirmed_count} confirmed claim(s)"
+        )
+    else:
+        promo_value = "Not checked"
+    categories.append({"label": "Promotions", "value": promo_value})
+
+    checked_events = [str(row.get("events") or "") for row in rows if row.get("events") != "Not checked"]
+    if checked_events:
+        event_claims = sum(
+            _integer(value.split(" confirmed claim", 1)[0])
+            for value in checked_events if " confirmed claim" in value
+        )
+        event_pending = sum(1 for value in checked_events if "pending" in value.casefold())
+        event_value = f"{event_claims} confirmed claim(s) · {len(checked_events)} account(s) checked"
+        if event_pending:
+            event_value += f" · {event_pending} pending"
+    else:
+        event_value = "Not checked"
+    categories.append({"label": "Event rewards", "value": event_value})
+
+    checked_loyalty = [str(row.get("loyalty") or "") for row in rows if row.get("loyalty") != "Not checked"]
+    if checked_loyalty:
+        loyalty_claims = sum(
+            _integer(value.split(" confirmed", 1)[0])
+            for value in checked_loyalty if " confirmed" in value
+        )
+        not_enrolled = sum(1 for value in checked_loyalty if value == "Not enrolled")
+        categories.append({
+            "label": "Loyalty",
+            "value": f"{loyalty_claims} confirmed · {not_enrolled} not enrolled · {len(checked_loyalty)} checked",
+        })
+    else:
+        categories.append({"label": "Loyalty", "value": "Not checked"})
+    return categories
 
 
 def render_account_activity_section(records: Any) -> str:
