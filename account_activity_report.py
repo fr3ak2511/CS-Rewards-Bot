@@ -220,7 +220,7 @@ def _progression_reason(player: dict[str, Any]) -> str:
     outcome = _text(player.get("progression_last_outcome_category")).casefold()
     raw = _text(player.get("progression_last_reason") or player.get("progression_deferred_reason"))
     if outcome == "overlay_blocked" or "unknown_fullscreen_overlay" in raw.casefold():
-        return "The safety guard blocked inspection because an unidentified full-screen overlay covered the page."
+        return "Blocked by an on-screen popup or overlay. The safety guard did not click through."
     if outcome == "empty_scan" or "no currently visible claimable reward" in raw.casefold():
         return (
             "No currently visible claimable reward was found. An empty scan does not prove "
@@ -278,6 +278,7 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
 
     minimum_text = str(_integer(minimum)) if minimum is not None else "not available"
     milestone_text = str(_integer(milestone)) if milestone is not None else "not available"
+    ratio_text = f"{count} / {minimum_text} vs date minimum" if minimum is not None else "date minimum not available"
     if remaining is None and milestone is not None:
         remaining = max(0, _integer(milestone) - count)
     remaining_text = f"{_integer(remaining)} to go" if remaining is not None else "remaining not available"
@@ -301,7 +302,7 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
     if freshness.startswith("Carried forward") and status == "pass":
         status_label = "validated at observation"
     detail = (
-        f"{count} Grenades · {freshness} · {minimum_context} · "
+        f"{count} Grenades · {ratio_text} · {freshness} · {minimum_context} · "
         f"next milestone {milestone_text} · {remaining_text} · {status_label}"
     )
     return {
@@ -485,7 +486,7 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     if reportable_promotion_issue and player.get("promotion_detection_failed"):
         promo_details.append("Promotional offer detection was incomplete.")
     promo_text = (
-        f"Scanned · {len(promotions)} offer observation(s) · {promo_claimed} confirmed claim(s)"
+        f"Scanned · {len(promotions)} reportable offer observation(s) · {promo_claimed} confirmed claim(s)"
         if promo_scanned else "Not checked"
     )
     if popup_blocked:
@@ -511,6 +512,13 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     if event_retry:
         event_text += " · confirmation pending"
 
+    recovery = player.get("immediate_recovery")
+    recovery = recovery if isinstance(recovery, dict) else {}
+    recovery_text = ""
+    if recovery.get("attempted"):
+        recovery_status = _text(recovery.get("status") or "pending").replace("_", " ").title()
+        recovery_text = f"{recovery_status} · { _text(recovery.get('reason'))[:100] }".strip(" ·")
+
     return {
         "loyalty": loyalty,
         "promotions": promo_text,
@@ -518,6 +526,7 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
         "promotion_popup_blocked": popup_blocked,
         "events": event_text,
         "event_attention": event_retry,
+        "recovery": recovery_text,
     }
 
 
@@ -548,6 +557,7 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
                 promotion_next_action,
                 "Review event reward confirmation; at least one event claim remains pending."
                     if other["event_attention"] else "",
+                f"Recovery: {other['recovery']}" if other["recovery"] else "",
                 "Review the account's login/processing failure before treating the cycle as complete."
                     if hard_failure else "",
             ) if item
@@ -601,6 +611,7 @@ def build_account_activity_records(players: Any) -> list[dict[str, Any]]:
             "loyalty": other["loyalty"],
             "promotions": other["promotions"],
             "events": other["events"],
+            "recovery": other["recovery"],
             "next_action": next_action,
             "attention_required": attention,
             "pending_inspection": bool(progression["pending_inspection"]),
