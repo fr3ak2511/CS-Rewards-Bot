@@ -7415,6 +7415,27 @@ def _cycle_health_snapshot_for_report(results, configured_player_count, meta, da
         return None
 
 
+def _attach_reportable_promotion_activity(results):
+    """Attach only Email V2-approved promotion observations to account reporting."""
+    visible_statuses = {"claimed_this_run", "claim_unconfirmed", "click_failed", "available", "popup_blocked"}
+    issue_statuses = {"claim_unconfirmed", "click_failed", "available", "popup_blocked"}
+    for result in results or []:
+        if not isinstance(result, dict):
+            continue
+        observations = result.get("promotions_observed")
+        observations = observations if isinstance(observations, list) else []
+        reportable = [
+            dict(item) for item in observations
+            if isinstance(item, dict)
+            and str(item.get("status") or "") in visible_statuses
+            and _promotion_detail_worthy(item)
+        ]
+        result["reportable_promotions"] = reportable
+        result["promotion_detail_attention"] = any(
+            str(item.get("status") or "") in issue_statuses for item in reportable
+        )
+
+
 def build_email(results, run_label, run_index, job_start, meta, followup_summary=None, configured_player_count=None):
     """Build the compact Email V2 report; streak remains internal in bot_meta.json."""
     ist_now = get_ist_time()
@@ -7432,6 +7453,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         configured_count = account_count
     cycle_summary = meta.get("daily_cycle_email_summary") if isinstance(meta.get("daily_cycle_email_summary"), dict) else None
     display_name_map = meta.get("player_display_names", {}) if isinstance(meta.get("player_display_names"), dict) else {}
+    _attach_reportable_promotion_activity(results)
     for result in results:
         pid = str(result.get("pid") or "").strip()
         if pid and not result.get("display_name") and display_name_map.get(pid):
@@ -8617,6 +8639,7 @@ def _full_claim_efficiency(results):
 
 def write_run_summary(results, run_label, started_at, finished_at, email_sent, configured_player_count=None, promotional_followups=None, reporting_meta=None, daily_cycle_summary=None):
     """Write a privacy-minimized per-player report, including only live promotions observed this run."""
+    _attach_reportable_promotion_activity(results)
     _attach_progression_queue_observability(results, reporting_meta if isinstance(reporting_meta, dict) else {})
     _attach_grenade_balance_carry_forward(results)
     cycle_health_snapshot = _cycle_health_snapshot_for_report(
