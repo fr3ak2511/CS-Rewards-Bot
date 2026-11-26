@@ -223,7 +223,7 @@ def _progression_reason(player: dict[str, Any]) -> str:
         return "Blocked by an on-screen popup or overlay. The safety guard did not click through."
     if outcome == "empty_scan" or "no currently visible claimable reward" in raw.casefold():
         return (
-            "No currently visible claimable reward was found. An empty scan does not prove "
+            "No claimable reward card visible in the captured scan. An empty scan is not proof "
             "that the full reward inventory has no claimable reward."
         )
     if outcome == "incomplete_scan":
@@ -517,7 +517,21 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     recovery_text = ""
     if recovery.get("attempted"):
         recovery_status = _text(recovery.get("status") or "pending").replace("_", " ").title()
-        recovery_text = f"{recovery_status} · { _text(recovery.get('reason'))[:100] }".strip(" ·")
+        resolved_categories = recovery.get("resolved_categories")
+        resolved_categories = [
+            _text(item) for item in resolved_categories if _text(item)
+        ] if isinstance(resolved_categories, list) else []
+        recovered_claims = _integer(recovery.get("recovered_claims"))
+        recovery_parts = [f"Post-run Recovery: {recovery_status}"]
+        if resolved_categories:
+            recovery_parts.append(
+                "Replayed exact saved target(s): " + ", ".join(resolved_categories)
+            )
+        if recovered_claims:
+            recovery_parts.append(f"{recovered_claims} claim(s) confirmed")
+        if _text(recovery.get("reason")):
+            recovery_parts.append(_text(recovery.get("reason"))[:100])
+        recovery_text = " · ".join(recovery_parts)
 
     return {
         "loyalty": loyalty,
@@ -750,17 +764,32 @@ def render_account_activity_section(records: Any) -> str:
         and item["grenades"].get("available")
     ]
     balance_passed = sum(1 for item in balance_rows if item.get("status") == "pass")
+    if queued_attempts == 0:
+        queued_attempts = sum(
+            1 for item in progressions
+            if isinstance(item, dict) and item.get("reinspection_attempted")
+        )
     intro_parts = [
         f"{len(rows)} account entries",
         f"{pending} Progression inspection(s) pending",
         f"{attention} account(s) need attention",
     ]
-    if confirmed_progression:
+    if confirmed_progression and pending:
+        open_word = "account" if pending == 1 else "accounts"
+        reward_word = "reward" if confirmed_progression == 1 else "rewards"
+        intro_parts.append(
+            f"{confirmed_progression} Progression {reward_word} confirmed in this run; "
+            f"{pending} {open_word} remain open"
+        )
+    elif confirmed_progression:
         intro_parts.append(f"{confirmed_progression} Progression rewards confirmed")
+    elif pending:
+        open_word = "account" if pending == 1 else "accounts"
+        intro_parts.append(
+            f"0 Progression rewards confirmed in this run; {pending} {open_word} remain open"
+        )
     if queued_attempts:
         intro_parts.append(f"{queued_attempts} queued reinspection attempts made")
-    if pending:
-        intro_parts.append(f"{pending} account(s) remain open")
     if balance_rows:
         count = len(balance_rows)
         intro_parts.append(
@@ -814,6 +843,7 @@ def render_account_activity_section(records: Any) -> str:
         "<section class='account-activity-section' "
         "style='margin:0 0 12px;padding:15px;border:1px solid #e1e7ef;border-radius:12px;background:#ffffff'>"
         "<h2 style='font-size:15px;margin:0 0 5px;color:#172b4d'>Account Activity</h2>"
+        "<p style='font-size:11px;color:#52647d;margin:0 0 5px'><strong>Progression Program — Grenade Balance Check</strong></p>"
         f"<p style='font-size:11px;color:#64748b;line-height:1.45;margin:0 0 10px'>{escape(intro)}</p>"
         + "".join(cards)
         + "</section>"
