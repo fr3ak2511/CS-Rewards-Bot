@@ -128,7 +128,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             },
             {
                 "tag": "div", "class_name": "reward-card", "test_id": "reward-6",
-                "text_snippet": "Milestone 6 x20 Locked",
+                "text_snippet": "Milestone 6 x20" if unknown else "Milestone 6 x20 Locked",
                 "exact_status_text_hints": [] if unknown else ["Locked"],
                 "button_labels": [],
                 "milestone_number_hints": [6],
