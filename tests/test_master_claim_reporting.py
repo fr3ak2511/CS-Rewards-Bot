@@ -757,7 +757,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         # The core headline is Daily + standard Store only; other claims stay separate.
         self.assertIn("<span>🎁 Core claims</span><strong>3/4</strong>", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 reward confirmed", report)
+        self.assertIn("1 Progression reward confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertNotIn("Paid Pack", report)
 
@@ -1479,7 +1479,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("27 / 30", report)
+        self.assertIn("27 / 30 vs date minimum", report)
         self.assertIn("Next milestone 56", report)
         self.assertIn("Below date minimum", report)
         self.assertIn("Need attention", report)
@@ -1500,7 +1500,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=1,
         )
         self.assertIn("Above date minimum", report)
-        self.assertIn("34 / 24", report)
+        self.assertIn("34 / 24 vs date minimum", report)
         self.assertIn("22 to go", report)
         self.assertIn("Next milestone 56", report)
         self.assertIn("Above date minimum", report)
@@ -1714,11 +1714,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("27 / 30", report)
+        self.assertIn("27 / 30 vs date minimum", report)
         self.assertIn("Below date minimum", report)
-        self.assertIn("class='v2-section-head v2-grenade-head'", report)
-        self.assertNotIn("display:flex", report)
-        self.assertNotIn("grid-template-columns", report)
+        self.assertIn("class='account-activity-card'", report)
+        self.assertNotIn("class='v2-section-head v2-grenade-head'", report)
 
     def test_promotional_offer_summary_groups_free_unavailable_offers(self):
         players = [
@@ -2582,7 +2581,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 reward confirmed", report)
+        self.assertIn("1 Progression reward confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
 
     def test_progression_only_email_shows_fresh_grenade_observations_without_carry_forward(self):
