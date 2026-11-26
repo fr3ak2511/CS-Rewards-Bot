@@ -282,14 +282,18 @@ def _grenade_activity(player: dict[str, Any]) -> dict[str, Any]:
         remaining = max(0, _integer(milestone) - count)
     remaining_text = f"{_integer(remaining)} to go" if remaining is not None else "remaining not available"
     status_labels = {
-        "pass": "validated",
-        "below_minimum": "below date minimum",
-        "counter_regressed": "counter regressed",
-        "pending_baseline": "pending baseline",
-        "status_not_retained": "status not retained",
-        "not_validated": "not validated",
+        "pass": (
+            "Above date minimum" if minimum is not None and count > _integer(minimum)
+            else "At date minimum" if minimum is not None
+            else "Validated"
+        ),
+        "below_minimum": "Below date minimum",
+        "counter_regressed": "Counter regressed",
+        "pending_baseline": "Pending baseline",
+        "status_not_retained": "Status not retained",
+        "not_validated": "Not validated",
     }
-    status_label = status_labels.get(status, status.replace("_", " "))
+    status_label = status_labels.get(status, status.replace("_", " ").title())
     if freshness.startswith("Carried forward") and minimum_at_observation is not None and minimum is not None:
         minimum_context = f"date minimum {minimum_text} (at observation {minimum_at_observation})"
     else:
@@ -368,12 +372,12 @@ def _progression_activity(player: dict[str, Any]) -> dict[str, Any]:
             else:
                 action = (
                     f"Hold: all {MAX_PROGRESS_INSPECTION_SLOTS}/{MAX_PROGRESS_INSPECTION_SLOTS} safe inspection slots "
-                    "are used this reset. Keep pending; an empty scan is not proof that no reward exists."
+                    "are used this reset; an empty scan is not proof that no reward exists."
                 )
         elif state == "blocked":
             action = "Keep pending until the overlay is identified and safely dismissible. Do not click through."
         else:
-            action = "Keep pending for the next eligible safe inspection. An empty scan does not prove no reward exists."
+            action = "Keep pending for another eligible safe inspection. An empty scan is not proof that no reward exists."
         if manual_attention:
             action = "Manual attention required. " + action
         attention = True
@@ -440,37 +444,50 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
         1 for item in promotions
         if isinstance(item, dict) and _text(item.get("status")).casefold() == "claimed_this_run"
     )
-    popup_blocked = bool(player.get("promotion_popup_blocked")) or any(
-        isinstance(item, dict) and _text(item.get("status")).casefold() == "popup_blocked"
-        for item in promotions
-    )
-    promo_details = []
-    for item in promotions:
-        if not isinstance(item, dict):
-            continue
-        status = _text(item.get("status")).casefold()
-        title = _text(item.get("title") or item.get("name") or "Promotional offer")[:70]
-        if status == "popup_blocked":
-            promo_details.append(
-                f"{title}: safety popup blocked inspection before any claim click; no claim was attempted."
+    popup_observations = [
+        item for item in promotions
+        if isinstance(item, dict) and _text(item.get("status")).casefold() == "popup_blocked"
+    ]
+    if isinstance(player.get("promotion_detail_attention"), bool):
+        reportable_promotion_issue = player["promotion_detail_attention"]
+    else:
+        # Legacy/direct callers: only a generic popup blocker with no card/CTA
+        # details is safe to surface. An identified offer must be filtered upstream.
+        reportable_promotion_issue = any(
+            _text(item.get("status")).casefold() == "popup_blocked"
+            and (
+                _text(item.get("key")) == "store-popup-blocked"
+                or (
+                    not _text(item.get("card_text"))
+                    and not _text(item.get("button_text"))
+                )
             )
-        elif status in {"claim_unconfirmed", "click_failed", "available"}:
-            promo_details.append(f"{title}: claim state requires review ({status.replace('_', ' ')}).")
-        elif status == "claimed_this_run":
-            promo_details.append(f"{title}: claim confirmed by the portal.")
-        elif status == "portal_claimed":
-            promo_details.append(f"{title}: portal says claimed; actor not identified.")
-    if popup_blocked and not promo_details:
-        promo_details.append(
-            "A safety popup blocked the Store promotion inspection before any claim click; no claim was attempted."
+            for item in popup_observations
         )
+        reportable_promotion_issue = reportable_promotion_issue or bool(
+            player.get("promotion_detection_failed")
+        )
+    popup_blocked = bool(reportable_promotion_issue and popup_observations)
+    promo_details = []
+    if popup_blocked:
+        promo_details.append(
+            "Safety popup blocked Store promotion inspection before any claim click; no claim was attempted."
+        )
+    if reportable_promotion_issue and any(
+        isinstance(item, dict)
+        and _text(item.get("status")).casefold() in {"claim_unconfirmed", "click_failed", "available"}
+        for item in promotions
+    ):
+        promo_details.append("A free/actionable promotional offer needs portal confirmation.")
+    if reportable_promotion_issue and player.get("promotion_detection_failed"):
+        promo_details.append("Promotional offer detection was incomplete.")
     promo_text = (
         f"Scanned · {len(promotions)} offer observation(s) · {promo_claimed} confirmed claim(s)"
         if promo_scanned else "Not checked"
     )
     if popup_blocked:
         promo_text += " · safety popup blocked before click; no claim attempted"
-    if player.get("promotion_detection_failed"):
+    if player.get("promotion_detection_failed") and reportable_promotion_issue:
         promo_text += " · scan incomplete"
     if promo_details:
         promo_text += " · " + " ".join(promo_details)
@@ -494,15 +511,7 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     return {
         "loyalty": loyalty,
         "promotions": promo_text,
-        "promotion_attention": bool(
-            player.get("promotion_detection_failed")
-            or popup_blocked
-            or any(
-                isinstance(item, dict)
-                and _text(item.get("status")).casefold() in {"claim_unconfirmed", "click_failed", "available"}
-                for item in promotions
-            )
-        ),
+        "promotion_attention": bool(reportable_promotion_issue),
         "promotion_popup_blocked": popup_blocked,
         "events": event_text,
         "event_attention": event_retry,
