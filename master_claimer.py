@@ -3731,7 +3731,7 @@ def _queued_progression_empty_scan_has_complete_rail_evidence(player_id, snapsho
     if not isinstance(snapshots, list) or not snapshots:
         return False
     if any(
-        not isinstance(item, dict) or int(item.get("diagnostic_version", 0) or 0) != 2
+        not isinstance(item, dict) or str(item.get("diagnostic_version") or "") != "2"
         for item in snapshots
     ):
         return False
@@ -3778,7 +3778,7 @@ def _queued_progression_empty_scan_has_complete_rail_evidence(player_id, snapsho
             saw_start = saw_start or bool(container.get("at_start")) or no_horizontal_overflow
             saw_end = saw_end or bool(container.get("at_end")) or no_horizontal_overflow
         return saw_start and saw_end
-    except (TypeError, ValueError, OverflowError, KeyError):
+    except (TypeError, ValueError, OverflowError, KeyError, AttributeError):
         return False
 
 
