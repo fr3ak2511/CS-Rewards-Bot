@@ -48,6 +48,7 @@ from recovery_policy import (
     manual_daily_recovery_targets,
 )
 from report_export import build_copyable_report
+from account_activity_report import build_account_activity_records, render_account_activity_section
 from run_reconciliation import build_run_reconciliation
 from email_cycle_summary import update_daily_cycle_summary
 from cycle_health_report import build_cycle_health_overview, render_cycle_health_overview
@@ -6249,6 +6250,13 @@ def _attach_progression_queue_observability(results, meta):
         result["progression_inspection_slots_used"] = len({
             str(slot).strip() for slot in slots if isinstance(slot, str) and str(slot).strip()
         }) if isinstance(slots, list) else 0
+        try:
+            result["progression_inspection_attempts"] = max(0, int(entry.get("total_attempts", 0) or 0))
+        except (TypeError, ValueError, OverflowError):
+            result["progression_inspection_attempts"] = 0
+        result["progression_last_attempt_slot"] = str(entry.get("last_attempt_slot") or "")
+        result["progression_last_attempt_at"] = str(entry.get("last_attempt_at") or "")
+        result["progression_last_reason"] = _deferred_progression_reason_summary(entry.get("last_reason"))
 
 
 def build_deferred_checks_section(results):
@@ -7430,6 +7438,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             result["display_name"] = str(display_name_map[pid])
     _attach_progression_queue_observability(results, meta)
     _attach_grenade_balance_carry_forward(results)
+    account_activity_records = build_account_activity_records(results)
+    account_activity_html = render_account_activity_section(account_activity_records)
     cycle_health_snapshot = _cycle_health_snapshot_for_report(
         results, configured_count, meta, daily_cycle_summary=cycle_summary
     )
@@ -7603,6 +7613,12 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     for item in (followup_summary or {}).get("open_items", []):
         player_id = str(item.get("player_key") or "").strip()
         attention_player_ids.add(player_id or f"followup:{item.get('key', item.get('title', 'unknown'))}")
+    # Deferred/blocked Progression inspections are actionable account-level work,
+    # not a clean zero-attention outcome. They belong in the same attention count.
+    for result in results:
+        if result.get("progression_deferred") or result.get("progression_unconfirmed"):
+            player_id = str(result.get("pid") or "").strip()
+            attention_player_ids.add(player_id or _display_label(result))
     if is_recovery_rollup:
         for raw_suffix in (cycle_summary.get("pending_player_last4") or []):
             suffix = str(raw_suffix).strip()[-4:]
@@ -7620,7 +7636,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     deferred_check_count = sum(1 for result in results if result.get("progression_deferred"))
     if deferred_check_count:
         attention_note = (
-            "Claim / validation exceptions only; deferred Progression inspections shown separately"
+            f"Includes {deferred_check_count} pending Progression inspection(s) and any claim/validation exceptions"
         )
     else:
         attention_note = "Accounts with claim / validation exceptions"
@@ -8050,6 +8066,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + kpi_html
         + (cycle_health_html or "")
         + processing_html
+        + (account_activity_html or "")
         + (
             "<section class='v2-section v2-rewards'>"
             + _email_section_header(rewards_heading, rewards_subtitle)
@@ -8058,12 +8075,8 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
             if category_html else ""
         )
         + (daily_cycle_html or "")
-        + (deferred_checks_html or "")
         + additional_claims_html
         + validation_html
-        + (immediate_recovery_html or "")
-        + attention_html
-        + (preexisting_portal_claim_html or "")
         + ("" if is_progression_only_run else (promotion_html or ""))
         + (followup_html or "")
         + ("" if is_progression_only_run else (event_html or ""))
@@ -8717,12 +8730,19 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "daily_portal_status": r.get("daily_portal_status", "unknown"),
                 "daily_unconfirmed": bool(r.get("daily_unconfirmed", False)),
                 "standard_store_claimed_this_run": int(r.get("store", 0) or 0),
+                "standard_rewards_checked": bool(r.get("standard_rewards_checked", False)),
+                "has_loyalty": bool(r.get("has_loyalty", False)),
                 "standard_store_unconfirmed_indices": list(r.get("store_unconfirmed_indices", []) or []),
                 "standard_store_claimed_indices": list(r.get("store_claimed_indices", []) or []),
                 "progression_unconfirmed": bool(r.get("progression_unconfirmed", False)),
                 "progression_deferred": bool(r.get("progression_deferred", False)),
                 "progression_deferred_reason": r.get("progression_deferred_reason"),
                 "progression_claim_attempted": bool(r.get("progression_claim_attempted", False)),
+                "progression_reinspection_attempted": bool(r.get("progression_reinspection_attempted", False)),
+                "progression_inspection_attempts": int(r.get("progression_inspection_attempts", 0) or 0),
+                "progression_last_attempt_slot": r.get("progression_last_attempt_slot"),
+                "progression_last_attempt_at": r.get("progression_last_attempt_at"),
+                "progression_last_reason": r.get("progression_last_reason"),
                 "progression_checked": bool(r.get("progression_checked", False)),
                 "progression_diagnostic_snapshot_count": len(
                     _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(r.get("pid") or ""), [])
@@ -8746,6 +8766,9 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
             } for r in results
         ],
     }
+    # The browser Copy Report and email consume the same normalized account-level
+    # records. Keep only masked account identifiers in this canonical payload.
+    summary["account_activity"] = build_account_activity_records(results)
     summary["reconciliation"] = build_run_reconciliation(
         results,
         run_label=run_label,
