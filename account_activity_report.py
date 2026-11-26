@@ -217,9 +217,21 @@ def _store_activity(player: dict[str, Any]) -> dict[str, Any]:
 
 
 def _progression_reason(player: dict[str, Any]) -> str:
-    raw = _text(_first_value(
-        player, "progression_last_reason", "progression_deferred_reason", default=""
-    ))
+    outcome = _text(player.get("progression_last_outcome_category")).casefold()
+    raw = _text(player.get("progression_last_reason") or player.get("progression_deferred_reason"))
+    if outcome == "overlay_blocked" or "unknown_fullscreen_overlay" in raw.casefold():
+        return "The safety guard blocked inspection because an unidentified full-screen overlay covered the page."
+    if outcome == "empty_scan" or "no currently visible claimable reward" in raw.casefold():
+        return (
+            "No currently visible claimable reward was found. An empty scan does not prove "
+            "that the full reward inventory has no claimable reward."
+        )
+    if outcome == "incomplete_scan":
+        return "The Progression inspection did not capture a complete, reliable reward rail."
+    if outcome == "login_failed":
+        return "The account could not authenticate for the Progression inspection."
+    if outcome == "claim_unconfirmed":
+        return "A Progression claim was attempted, but the portal did not confirm the same card as Delivered."
     if not raw:
         return ""
     # Popup details can include a large DOM snapshot. Never copy that into a report.
@@ -227,7 +239,7 @@ def _progression_reason(player: dict[str, Any]) -> str:
     if raw.endswith("("):
         raw = raw[:-1].rstrip()
     if "(" in raw and not raw.endswith(")"):
-        raw += ")"
+        raw = raw.split("(", 1)[0].strip()
     return raw[:180].rstrip()
 
 
@@ -428,12 +440,40 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
         1 for item in promotions
         if isinstance(item, dict) and _text(item.get("status")).casefold() == "claimed_this_run"
     )
+    popup_blocked = bool(player.get("promotion_popup_blocked")) or any(
+        isinstance(item, dict) and _text(item.get("status")).casefold() == "popup_blocked"
+        for item in promotions
+    )
+    promo_details = []
+    for item in promotions:
+        if not isinstance(item, dict):
+            continue
+        status = _text(item.get("status")).casefold()
+        title = _text(item.get("title") or item.get("name") or "Promotional offer")[:70]
+        if status == "popup_blocked":
+            promo_details.append(
+                f"{title}: safety popup blocked inspection before any claim click; no claim was attempted."
+            )
+        elif status in {"claim_unconfirmed", "click_failed", "available"}:
+            promo_details.append(f"{title}: claim state requires review ({status.replace('_', ' ')}).")
+        elif status == "claimed_this_run":
+            promo_details.append(f"{title}: claim confirmed by the portal.")
+        elif status == "portal_claimed":
+            promo_details.append(f"{title}: portal says claimed; actor not identified.")
+    if popup_blocked and not promo_details:
+        promo_details.append(
+            "A safety popup blocked the Store promotion inspection before any claim click; no claim was attempted."
+        )
     promo_text = (
         f"Scanned · {len(promotions)} offer observation(s) · {promo_claimed} confirmed claim(s)"
         if promo_scanned else "Not checked"
     )
+    if popup_blocked:
+        promo_text += " · safety popup blocked before click; no claim attempted"
     if player.get("promotion_detection_failed"):
         promo_text += " · scan incomplete"
+    if promo_details:
+        promo_text += " · " + " ".join(promo_details)
 
     events = player.get("event_rewards")
     events = events if isinstance(events, list) else []
@@ -454,7 +494,16 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
     return {
         "loyalty": loyalty,
         "promotions": promo_text,
-        "promotion_attention": bool(player.get("promotion_detection_failed")),
+        "promotion_attention": bool(
+            player.get("promotion_detection_failed")
+            or popup_blocked
+            or any(
+                isinstance(item, dict)
+                and _text(item.get("status")).casefold() in {"claim_unconfirmed", "click_failed", "available"}
+                for item in promotions
+            )
+        ),
+        "promotion_popup_blocked": popup_blocked,
         "events": event_text,
         "event_attention": event_retry,
     }
