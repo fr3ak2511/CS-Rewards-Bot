@@ -514,6 +514,39 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("400 points", section)
         self.assertNotIn("Active Event Rewards", build_event_rewards_section([{"pid": "NONE", "event_rewards": []}]))
 
+    def test_popup_blocked_promotion_is_not_reported_as_unconfirmed_claim(self):
+        popup_blocked = {
+            "pid": "POPUPBLOCK0001",
+            "processing_mode": "promotional_only",
+            "status": "Partial",
+            "retry_required": True,
+            "promotion_popup_blocked": True,
+            "promotions_observed": [{
+                "key": "store-popup-blocked",
+                "title": "Store promotion popup",
+                "status": "popup_blocked",
+                "claim_count": 0,
+            }],
+            "event_rewards": [],
+        }
+        counts = _summary_counts([popup_blocked])
+        self.assertEqual(counts["unconfirmed_claims"], 0)
+        self.assertEqual(counts["partial_results"], 1)
+        self.assertEqual(counts["actionable_promotion_results"], 1)
+        self.assertEqual(counts["promotional_claims_made"], 0)
+
+        # A click that actually failed remains an unconfirmed claim outcome.
+        click_failed = {
+            **popup_blocked,
+            "promotions_observed": [{
+                "key": "store-popup-blocked",
+                "title": "Store promotion",
+                "status": "click_failed",
+                "claim_count": 0,
+            }],
+        }
+        self.assertEqual(_summary_counts([click_failed])["unconfirmed_claims"], 1)
+
     def test_summary_counts_exclude_paid_promotion_from_promotional_claim_total(self):
         player = self.sample_player()
         # Simulate two confirmed Store promotion claims in run telemetry: one free
