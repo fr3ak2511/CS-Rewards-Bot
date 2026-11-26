@@ -313,7 +313,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("Claim attempted · portal confirmation missing", report)
-        self.assertIn("same card as Delivered", report)
+        self.assertIn("same card to show Delivered", report)
 
     def test_carry_forward_balance_is_explicitly_stale_and_keeps_date_minimum_context(self):
         deferred = dict(self.summary["player_results"][0])
@@ -387,7 +387,7 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn("1 confirmed · inspection still pending", report)
-        self.assertIn("another safe inspection", report.lower())
+        self.assertIn("another eligible safe inspection", report.lower())
 
     def test_saved_grenade_deficit_remains_attention_when_inspection_is_deferred(self):
         deferred = dict(self.summary["player_results"][0])
