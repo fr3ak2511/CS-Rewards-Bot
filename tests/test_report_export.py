@@ -144,7 +144,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Account Activity", report)
         self.assertIn("Grenades:", report)
         self.assertIn("34 Grenades", report)
-        self.assertIn("next milestone 56", report)
+        self.assertIn("Next milestone 56", report)
         self.assertIn("22 to go", report)
         self.assertNotIn("Progression / Grenade balance — grouped by milestone", report)
 
@@ -344,7 +344,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("last observed 2026-11-22", report)
         self.assertIn("66 / 66 at observation", report)
         self.assertIn("current date minimum 69", report)
-        self.assertIn("next milestone 123", report)
+        self.assertIn("Next milestone 123", report)
         self.assertIn("57 to go", report)
 
     def test_legacy_carried_balance_does_not_infer_a_pass(self):
