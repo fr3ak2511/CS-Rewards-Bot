@@ -339,7 +339,7 @@ def _progression_activity(player: dict[str, Any]) -> dict[str, Any]:
         state = "claim_unconfirmed"
         label = f"{count} confirmed · another claim unconfirmed" if count else "Claim attempted · portal confirmation missing"
         detail = reason or "The exact Progression reward was not confirmed as Delivered."
-        action = "Keep the exact target pending; require same-card portal Delivered confirmation. Do not broaden the retry."
+        action = "Keep the exact target pending; require the same card to show Delivered in the portal. Do not broaden the retry."
         attention = True
         pending = True
     elif deferred:
@@ -522,7 +522,7 @@ def _other_activity(player: dict[str, Any]) -> dict[str, Any]:
             _text(item) for item in resolved_categories if _text(item)
         ] if isinstance(resolved_categories, list) else []
         recovered_claims = _integer(recovery.get("recovered_claims"))
-        recovery_parts = [f"Post-run Recovery: {recovery_status}"]
+        recovery_parts = [f"Targeted Recovery · Post-run Recovery: {recovery_status}"]
         if resolved_categories:
             recovery_parts.append(
                 "Replayed exact saved target(s): " + ", ".join(resolved_categories)
@@ -789,7 +789,8 @@ def render_account_activity_section(records: Any) -> str:
             f"0 Progression rewards confirmed in this run; {pending} {open_word} remain open"
         )
     if queued_attempts:
-        intro_parts.append(f"{queued_attempts} queued reinspection attempts made")
+        attempt_word = "attempt" if queued_attempts == 1 else "attempts"
+        intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} made")
     if balance_rows:
         count = len(balance_rows)
         intro_parts.append(
