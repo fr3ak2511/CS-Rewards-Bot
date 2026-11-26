@@ -3228,10 +3228,106 @@ def _record_progression_inspection_defer_without_snapshot(driver, player_id, rea
         log(f"⚠️ Progression defer diagnostic could not be retained: {type(exc).__name__}")
 
 
+def _reset_progression_diagnostic_rail_to_start(driver):
+    """Reset only one uniquely identifiable horizontal reward rail before diagnostics."""
+    try:
+        result = driver.execute_script(r"""
+            const norm = value => (value || '').replace(/\s+/g, ' ').trim();
+            const visible = el => {
+              if (!el) return false;
+              const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+              return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+                && s.display !== 'none' && s.visibility !== 'hidden'
+                && Number(s.opacity || '1') > 0);
+            };
+            const path = String(location.pathname || '').toLowerCase();
+            if (!path.includes('/progression-program')) {
+              return {reset:false, reason:'not_on_progression_program'};
+            }
+            const thresholds = new Set([
+              3,6,12,15,18,56,59,62,65,123,126,129,141,147,
+              186,189,192,195,400,600,680,750,880,950,1000
+            ]);
+            const statusTerms = new Set([
+              'claim','claim all','delivered','already delivered','claimed',
+              'already claimed','collected','redeemed','locked'
+            ]);
+            const hasRewardCardShape = node => {
+              const text = norm(node.innerText || node.textContent || '');
+              const values = (text.match(/[0-9,]+/g) || [])
+                .map(value => Number(value.replaceAll(',', '')))
+                .filter(Number.isFinite);
+              if (!values.some(value => thresholds.has(value))) return false;
+              const actionLabels = Array.from(node.querySelectorAll('button,[role="button"]'))
+                .filter(visible)
+                .map(button => norm(button.innerText || button.textContent
+                  || button.getAttribute('aria-label')).toLowerCase());
+              const lines = text.split(/\n+/).map(value => value.toLowerCase().trim());
+              const hasAmount = /x\s*[\d,]+/i.test(text) && values.length >= 2;
+              const hasStatus = actionLabels.some(label => statusTerms.has(label))
+                || lines.some(line => statusTerms.has(line));
+              return hasAmount || hasStatus;
+            };
+            const candidates = Array.from(document.querySelectorAll('div,section,ul'))
+              .filter(visible)
+              .filter(node => !node.closest(
+                '[role="dialog"],[aria-modal="true"],[class*="modal"],[class*="Modal"]'
+              ))
+              .filter(node => node.scrollWidth > node.clientWidth + 40
+                && node.clientWidth > 180 && node.clientHeight > 80)
+              .map(node => ({
+                node,
+                cardCount: Array.from(node.children)
+                  .filter(child => visible(child) && hasRewardCardShape(child)).length,
+                maxScroll: Math.max(0, node.scrollWidth - node.clientWidth)
+              }))
+              .filter(item => item.cardCount >= 2 && item.maxScroll > 40);
+            if (candidates.length !== 1) {
+              return {
+                reset:false,
+                reason:candidates.length === 0
+                  ? 'no_unique_horizontal_reward_rail'
+                  : 'multiple_horizontal_reward_rails',
+                candidate_count:candidates.length
+              };
+            }
+            const rail = candidates[0].node;
+            const before = Math.round(rail.scrollLeft || 0);
+            rail.scrollLeft = 0;
+            const after = Math.round(rail.scrollLeft || 0);
+            return {
+              reset:after <= 2,
+              reason:after <= 2 ? 'unique_reward_rail_reset' : 'rail_did_not_reach_start',
+              before_scroll_left:before,
+              after_scroll_left:after,
+              max_scroll_left:candidates[0].maxScroll,
+              reward_card_count:candidates[0].cardCount
+            };
+        """);
+        if isinstance(result, dict) and result.get("reset") is True:
+            log(
+                "🧭 Progression diagnostic rail positioned at its left edge "
+                f"(unique reward rail; {result.get('reward_card_count', 0)} cards; "
+                f"previous offset {result.get('before_scroll_left', 'unknown')})."
+            )
+            return True
+        reason = result.get("reason") if isinstance(result, dict) else "no reliable reset result"
+        log(f"⚠️ Progression diagnostic rail reset skipped fail-closed: {reason}.")
+        return False
+    except Exception as exc:
+        log(f"⚠️ Progression diagnostic rail reset failed safely: {type(exc).__name__}.")
+        return False
+
+
 def _progression_claim_snapshot(driver):
     """Return visible Progression claim controls with card-level identity."""
     try:
         diagnostic_rail_capture = bool(getattr(driver, "_progression_diagnostic_rail_capture", False))
+        if diagnostic_rail_capture and not bool(
+            getattr(driver, "_progression_diagnostic_rail_reset_attempted", False)
+        ):
+            driver._progression_diagnostic_rail_reset_attempted = True
+            _reset_progression_diagnostic_rail_to_start(driver)
         snapshot = driver.execute_script(r"""
             /* PROGRESSION_CARD_SNAPSHOT_V1 */
             const norm = value => (value || '').replace(/\s+/g, ' ').trim();
@@ -3822,9 +3918,11 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
     capture_rail = bool(queued and not target_signature and not target_fragments)
     previous_capture = getattr(driver, "_progression_diagnostic_rail_capture", None)
     previous_limit = getattr(driver, "_progression_diagnostic_snapshot_limit", None)
+    previous_reset_attempted = getattr(driver, "_progression_diagnostic_rail_reset_attempted", None)
     diagnostics_before = len(_PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.get(str(pid), []))
     if capture_rail:
         driver._progression_diagnostic_rail_capture = True
+        driver._progression_diagnostic_rail_reset_attempted = False
         # A seven-position carousel sweep needs more than the default six snapshots.
         driver._progression_diagnostic_snapshot_limit = 24
 
@@ -3937,6 +4035,10 @@ def _run_queued_progression_inspection(driver, pid, stats, queue_entry=None):
                     delattr(driver, "_progression_diagnostic_snapshot_limit")
                 else:
                     driver._progression_diagnostic_snapshot_limit = previous_limit
+                if previous_reset_attempted is None:
+                    delattr(driver, "_progression_diagnostic_rail_reset_attempted")
+                else:
+                    driver._progression_diagnostic_rail_reset_attempted = previous_reset_attempted
             except Exception:
                 pass
     return stats

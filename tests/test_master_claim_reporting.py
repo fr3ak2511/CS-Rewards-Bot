@@ -25,6 +25,8 @@ from master_claimer import (
     _mark_daily_recovery_slot_attempt,
     _preserve_queued_progression_state,
     _run_queued_progression_inspection,
+    _progression_claim_snapshot,
+    _reset_progression_diagnostic_rail_to_start,
     process_player_progression_only,
     _attach_progression_queue_observability,
     _summary_counts,
@@ -82,6 +84,59 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertEqual(rows[0]["carousel_containers"][0]["captured_cards"][0]["text_snippet"], "Milestone 62 x20 Claim")
         self.assertNotIn("0123456789ABCDEF", str(rows))
         _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
+
+    def test_diagnostic_rail_reset_requires_one_unique_reward_rail(self):
+        class Driver:
+            def __init__(self, result):
+                self.result = result
+                self.script = ""
+
+            def execute_script(self, script):
+                self.script = script
+                return self.result
+
+        unique = Driver({
+            "reset": True,
+            "reason": "unique_reward_rail_reset",
+            "before_scroll_left": 2016,
+            "after_scroll_left": 0,
+            "max_scroll_left": 5860,
+            "reward_card_count": 23,
+        })
+        self.assertTrue(_reset_progression_diagnostic_rail_to_start(unique))
+        self.assertIn("candidates.length !== 1", unique.script)
+        self.assertIn("rail.scrollLeft = 0", unique.script)
+
+        ambiguous = Driver({
+            "reset": False,
+            "reason": "multiple_horizontal_reward_rails",
+            "candidate_count": 2,
+        })
+        self.assertFalse(_reset_progression_diagnostic_rail_to_start(ambiguous))
+        self.assertIn("candidates.length !== 1", ambiguous.script)
+
+    def test_diagnostic_snapshot_attempts_left_edge_reset_only_once(self):
+        player_id = "DIAGRESETPLAYER01"
+
+        class Driver:
+            def __init__(self):
+                self._progression_diagnostic_player_id = player_id
+                self._progression_diagnostic_rail_capture = True
+                self._progression_diagnostic_rail_reset_attempted = False
+
+            def execute_script(self, script, *args):
+                return {"inspection_diagnostics": None}
+
+        driver = Driver()
+        _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
+        try:
+            with patch("master_claimer._reset_progression_diagnostic_rail_to_start") as reset:
+                self.assertIsNotNone(_progression_claim_snapshot(driver))
+                self.assertIsNotNone(_progression_claim_snapshot(driver))
+                reset.assert_called_once_with(driver)
+                self.assertTrue(driver._progression_diagnostic_rail_reset_attempted)
+        finally:
+            _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.pop(player_id, None)
 
     def test_first_deferred_reinspection_uses_existing_generic_scan_without_target_keyword(self):
         driver = type("ProgressionDriver", (), {})()
