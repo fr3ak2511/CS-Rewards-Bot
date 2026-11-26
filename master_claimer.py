@@ -8757,6 +8757,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
                 "standard_store_portal_status": r.get("store_portal_status", ["unknown", "unknown", "unknown"]),
                 "promotions_observed": r.get("promotions_observed", []),
                 "promotion_scan_completed": bool(r.get("promotion_scan_completed", False)),
+                "promotion_popup_blocked": bool(r.get("promotion_popup_blocked", False)),
                 "promotion_detection_failed": bool(r.get("promotion_detection_failed", False)),
                 "event_rewards": r.get("event_rewards", []),
                 "event_reward_claims_this_run": event_claim_count(r.get("event_rewards")),
