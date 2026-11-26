@@ -3755,7 +3755,8 @@ def _queued_progression_empty_scan_has_complete_rail_evidence(player_id, snapsho
         if int(totals.get("Claimable", -1)) != 0 or int(totals.get("Unknown", -1)) != 0:
             return False
         known_cards = int(totals.get("Delivered", 0)) + int(totals.get("Locked", 0))
-        if known_cards <= 0 or known_cards != int(rail.get("captured_milestone_count", 0)):
+        observed_milestones = rail.get("observed_milestone_thresholds") or []
+        if known_cards <= 0 or known_cards != len(observed_milestones):
             return False
 
         selected_index = selected.get("container_index")
