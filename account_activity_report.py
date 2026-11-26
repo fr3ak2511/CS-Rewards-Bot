@@ -787,7 +787,12 @@ def render_account_activity_section(records: Any) -> str:
         if isinstance(item, dict) and isinstance(item.get("grenades"), dict)
         and item["grenades"].get("available")
     ]
-    balance_passed = sum(1 for item in balance_rows if item.get("status") == "pass")
+    fresh_balance_rows = [
+        item for item in balance_rows
+        if _text(item.get("freshness")).startswith("Fresh")
+    ]
+    carried_balance_count = len(balance_rows) - len(fresh_balance_rows)
+    fresh_balance_passed = sum(1 for item in fresh_balance_rows if item.get("status") == "pass")
     if queued_attempts == 0:
         queued_attempts = sum(
             1 for item in progressions
@@ -816,9 +821,12 @@ def render_account_activity_section(records: Any) -> str:
         attempt_word = "attempt" if queued_attempts == 1 else "attempts"
         intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} made")
     if balance_rows:
-        count = len(balance_rows)
+        total = len(balance_rows)
+        fresh = len(fresh_balance_rows)
+        carried = carried_balance_count
         intro_parts.append(
-            f"{count} account checked · {count} balance captured · {balance_passed} passed"
+            f"{total} balance observation(s) · {fresh} fresh · {carried} carried forward · "
+            f"{fresh_balance_passed} fresh validation(s) passed"
         )
     intro = " · ".join(intro_parts) + ". Each player is shown separately."
     cards = []
