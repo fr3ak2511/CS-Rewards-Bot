@@ -1538,7 +1538,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(seconds=30), {},
             configured_player_count=35,
         )
-        self.assertIn("1 account checked · 1 balance captured · 1 passed", report)
+        self.assertIn("1 balance observation(s) · 1 fresh · 0 carried forward · 1 fresh validation(s) passed", report)
 
     def test_recovery_email_shows_combined_cycle_totals_and_completion(self):
         player = {
@@ -2613,7 +2613,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=36,
         )
         self.assertIn("Grenade Balance Check", report)
-        self.assertIn("1 account checked · 1 balance captured · 1 passed", report)
+        self.assertIn("1 balance observation(s) · 1 fresh · 0 carried forward · 1 fresh validation(s) passed", report)
         self.assertNotIn("Grenade Balance History", report)
         self.assertNotIn("Core Daily Claims", report)
         self.assertNotIn("Full Claim Path", report)
