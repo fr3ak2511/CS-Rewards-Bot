@@ -173,5 +173,31 @@ class AccountActivityReportTests(unittest.TestCase):
         self.assertNotIn("SENSITIVEPLAYER0002", report)
 
 
+    def test_partial_store_confirmations_keep_unconfirmed_item_and_retry_visible(self):
+        record = build_account_activity_records([{
+            "pid": "STOREPARTIAL0001",
+            "display_name": "Partial Store Player",
+            "status": "Partial",
+            "processing_mode": "full_claim",
+            "standard_rewards_checked": True,
+            "daily": 1,
+            "daily_portal_status": "claimed",
+            "store": 2,
+            "store_claimed_indices": [1, 2],
+            "store_unconfirmed_indices": [3],
+            "store_portal_status": ["claimed", "claimed", "available"],
+            "progression_checked": True,
+            "event_rewards": [],
+        }])[0]
+
+        store = record["store"]
+        self.assertEqual(store["state"], "retry_queued")
+        self.assertEqual(store["count"], 2)
+        self.assertIn("2 confirmed · retry queued", store["label"])
+        self.assertIn("confirmed item(s) #1, #2", store["detail"])
+        self.assertIn("Unconfirmed Store item(s): #3", store["detail"])
+        self.assertIn("do not retry confirmed items", store["next_action"])
+        self.assertTrue(record["attention_required"])
+
 if __name__ == "__main__":
     unittest.main()
