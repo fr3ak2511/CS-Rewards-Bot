@@ -280,7 +280,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("Pending · empty scan", report)
-        self.assertIn("An empty scan does not prove", report)
+        self.assertIn("An empty scan is not proof", report)
         self.assertIn("4/4 safe inspection slots", report)
 
     def test_generic_claim_exception_remains_visible_with_deferred_progression(self):
@@ -342,7 +342,8 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("66 Grenades", report)
         self.assertIn("Carried forward", report)
         self.assertIn("last observed 2026-11-22", report)
-        self.assertIn("date minimum 69 (at observation 66)", report)
+        self.assertIn("66 / 66 at observation", report)
+        self.assertIn("current date minimum 69", report)
         self.assertIn("next milestone 123", report)
         self.assertIn("57 to go", report)
 
@@ -368,7 +369,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("status not retained", report)
+        self.assertIn("Status not retained", report)
         self.assertIn("last observed 2026-11-22", report)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
 
