@@ -926,9 +926,11 @@ def render_account_activity_section(records: Any) -> str:
         item for item in balance_rows
         if _text(item.get("freshness")).startswith("Fresh")
     ]
+    fresh_balance_passed = sum(
+        1 for item in fresh_balance_rows if item.get("status") == "pass"
+    )
     intro_parts = [
-        f"{len(rows)} accounts",
-        f"{len(groups)} distinct activity group(s)",
+        f"{len(rows)} account entries",
         f"{pending} Progression inspection(s) pending",
         f"{attention} account(s) need attention",
     ]
@@ -948,11 +950,12 @@ def render_account_activity_section(records: Any) -> str:
         )
     if queued_attempts:
         attempt_word = "attempt" if queued_attempts == 1 else "attempts"
-        intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} recorded")
+        intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} made")
     if balance_rows:
         intro_parts.append(
-            f"{len(balance_rows)} Grenade balance(s) · {len(fresh_balance_rows)} fresh · "
-            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward"
+            f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
+            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
+            f"{fresh_balance_passed} fresh validation(s) passed"
         )
     intro = (
         " · ".join(intro_parts)
