@@ -173,6 +173,84 @@ class AccountActivityReportTests(unittest.TestCase):
         self.assertNotIn("SENSITIVEPLAYER0002", report)
 
 
+    def test_identical_activity_groups_accounts_and_preserves_per_account_details(self):
+        players = [
+            {
+                "pid": "FULLIDENTIFIERPLAYER0001", "display_name": "Player One",
+                "status": "Partial", "processing_mode": "progression_queue_only",
+                "standard_rewards_checked": False, "daily_portal_status": "not_checked",
+                "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+                "progression_deferred": True, "progression_checked": False,
+                "progression_reinspection_attempted": True,
+                "progression_last_outcome_category": "empty_scan",
+                "progression_last_reason": "Queued Progression inspection found no currently visible claimable reward.",
+                "progression_same_outcome_count": 1,
+                "progression_inspection_attempts": 2,
+                "progression_inspection_slots_used": 2,
+                "progression_manual_attention_required": False,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 81, "expected_minimum": 81,
+                    "next_milestone": 123, "remaining_to_next_milestone": 42,
+                },
+            },
+            {
+                "pid": "FULLIDENTIFIERPLAYER0002", "display_name": "Player Two",
+                "status": "Partial", "processing_mode": "progression_queue_only",
+                "standard_rewards_checked": False, "daily_portal_status": "not_checked",
+                "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+                "progression_deferred": True, "progression_checked": False,
+                "progression_reinspection_attempted": True,
+                "progression_last_outcome_category": "empty_scan",
+                "progression_last_reason": "Queued Progression inspection found no currently visible claimable reward.",
+                "progression_same_outcome_count": 4,
+                "progression_inspection_attempts": 6,
+                "progression_inspection_slots_used": 2,
+                "progression_manual_attention_required": False,
+                "grenade_balance": {
+                    "status": "pass", "current_count": 24, "expected_minimum": 24,
+                    "next_milestone": 56, "remaining_to_next_milestone": 32,
+                },
+            },
+        ]
+        records = build_account_activity_records(players)
+        report = render_account_activity_section(records)
+
+        self.assertEqual(report.count("class='account-activity-card'"), 1)
+        self.assertIn(
+            "Accounts:</strong> Player One · …0001 (2/4 slots; 2 total attempts), "
+            "Player Two · …0002 (2/4 slots; 6 total attempts; same outcome 4x)",
+            report,
+        )
+        self.assertIn("Grenade balances by account:", report)
+        self.assertIn("81 Grenades", report)
+        self.assertIn("24 Grenades", report)
+        self.assertEqual(report.count("Next action:"), 1)
+        self.assertNotIn("FULLIDENTIFIERPLAYER0001", report)
+        self.assertNotIn("FULLIDENTIFIERPLAYER0002", report)
+
+    def test_different_manual_attention_action_keeps_accounts_in_separate_groups(self):
+        common = {
+            "status": "Partial", "processing_mode": "progression_queue_only",
+            "standard_rewards_checked": False, "daily_portal_status": "not_checked",
+            "store_portal_status": ["not_checked", "not_checked", "not_checked"],
+            "progression_deferred": True, "progression_checked": False,
+            "progression_reinspection_attempted": True,
+            "progression_last_outcome_category": "empty_scan",
+            "progression_last_reason": "Queued Progression inspection found no currently visible claimable reward.",
+            "progression_inspection_slots_used": 2,
+        }
+        records = build_account_activity_records([
+            {**common, "pid": "PLAYER0001", "display_name": "Needs Review",
+             "progression_same_outcome_count": 5, "progression_manual_attention_required": True},
+            {**common, "pid": "PLAYER0002", "display_name": "Still Eligible",
+             "progression_same_outcome_count": 1, "progression_manual_attention_required": False},
+        ])
+        report = render_account_activity_section(records)
+
+        self.assertEqual(report.count("class='account-activity-card'"), 2)
+        self.assertIn("Needs Review · …0001", report)
+        self.assertIn("Still Eligible · …0002", report)
+
     def test_partial_store_confirmations_keep_unconfirmed_item_and_retry_visible(self):
         record = build_account_activity_records([{
             "pid": "STOREPARTIAL0001",
