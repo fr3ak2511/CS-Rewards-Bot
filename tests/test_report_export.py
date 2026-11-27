@@ -437,7 +437,8 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("Umang1984 · …B91F", report)
         self.assertIn("annu411 · …62E4", report)
-        self.assertEqual(report.count("Portal says claimed"), 2)
+        self.assertEqual(report.count("Portal says claimed"), 1)
+        self.assertIn("Umang1984 · …B91F, annu411 · …62E4", report)
         self.assertIn("Actor is unknown", report)
         self.assertNotIn("Claimed by bot", report)
 
