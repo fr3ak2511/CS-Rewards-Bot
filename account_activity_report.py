@@ -782,9 +782,117 @@ def summarize_account_activity(records: Any) -> list[dict[str, str]]:
     return categories
 
 
+def _shared_progression_detail(progression: dict[str, Any]) -> str:
+    """Return the common inspection reason, excluding per-account attempt counters."""
+    detail = _text(progression.get("detail"))
+    for marker in (" · latest outcome:", " · same outcome ", " · "):
+        if marker in detail:
+            detail = detail.split(marker, 1)[0].strip()
+            break
+    return detail
+
+
+def _account_activity_group_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    """Group only records with identical reward states, explanations and next action.
+
+    Grenade readings and Progression attempt counters remain account-specific and
+    are rendered alongside the grouped account names rather than splitting an
+    otherwise identical operational group.
+    """
+    daily = row.get("daily") if isinstance(row.get("daily"), dict) else {}
+    store = row.get("store") if isinstance(row.get("store"), dict) else {}
+    progression = row.get("progression") if isinstance(row.get("progression"), dict) else {}
+
+    daily_key = tuple(
+        daily.get(key) for key in
+        ("state", "label", "detail", "count", "attention_required", "next_action")
+    )
+    store_key = tuple(
+        (tuple(store.get(key) or []) if key in {"claimed_indices", "unconfirmed_indices"}
+         else store.get(key))
+        for key in
+        ("state", "label", "detail", "count", "claimed_indices",
+         "unconfirmed_indices", "attention_required", "next_action")
+    )
+    progression_key = (
+        progression.get("state"),
+        progression.get("label"),
+        _shared_progression_detail(progression),
+        progression.get("count"),
+        progression.get("pending_inspection"),
+        progression.get("attention_required"),
+        progression.get("next_action"),
+    )
+    return (
+        _text(row.get("account_status")),
+        daily_key,
+        store_key,
+        progression_key,
+        _text(row.get("loyalty")),
+        _text(row.get("promotions")),
+        _text(row.get("events")),
+        _text(row.get("recovery")),
+        _text(row.get("next_action")),
+        bool(row.get("attention_required")),
+        bool(row.get("pending_inspection")),
+    )
+
+
+def _grouped_account_label(row: dict[str, Any], include_inspection_history: bool) -> str:
+    """Keep each masked account identifiable and retain its own PP retry counters."""
+    label = _text(row.get("account")) or "Unknown account"
+    if not include_inspection_history:
+        return label
+    progression = row.get("progression") if isinstance(row.get("progression"), dict) else {}
+    if not progression.get("pending_inspection"):
+        return label
+    notes = []
+    slots = _integer(progression.get("slots_used"))
+    attempts = _integer(progression.get("inspection_attempts"))
+    repeats = _integer(progression.get("same_outcome_count"))
+    if slots:
+        notes.append(f"{slots}/{MAX_PROGRESS_INSPECTION_SLOTS} slots")
+    if attempts:
+        notes.append(f"{attempts} total attempts")
+    if repeats > 1:
+        notes.append(f"same outcome {repeats}x")
+    if progression.get("manual_attention_required"):
+        notes.append("manual review")
+    return label + (f" ({'; '.join(notes)})" if notes else "")
+
+
+def _render_group_grenade_balances(group: list[dict[str, Any]]) -> str:
+    """Render a shared balance once, or map differing balances to their accounts."""
+    balances: dict[str, list[str]] = {}
+    for row in group:
+        progression = row.get("progression") if isinstance(row.get("progression"), dict) else {}
+        grenade = progression.get("grenades") if isinstance(progression.get("grenades"), dict) else {}
+        detail = _text(grenade.get("detail")) or "Grenade balance not captured."
+        balances.setdefault(detail, []).append(
+            _text(row.get("account")) or "Unknown account"
+        )
+    if not balances:
+        return ""
+    if len(balances) == 1:
+        return (
+            "<div style='margin-top:3px'><strong>Grenades:</strong> "
+            + escape(next(iter(balances))) + "</div>"
+        )
+    parts = []
+    for detail, accounts in balances.items():
+        parts.append(
+            "<div style='margin-top:3px'><strong>"
+            + escape(detail)
+            + ":</strong> "
+            + escape(", ".join(accounts))
+            + "</div>"
+        )
+    return "<div style='margin-top:3px'><strong>Grenade balances by account:</strong>" + "".join(parts) + "</div>"
+
+
 def render_account_activity_section(records: Any) -> str:
-    """Render one compact card per account, shared unchanged by email and Copy Report."""
-    rows = records if isinstance(records, list) else []
+    """Render compact groups of identical account activity for Email and Copy Report."""
+    rows = [row for row in records if isinstance(row, dict)] if isinstance(records, list) else []
     if not rows:
         return (
             "<section class='account-activity-section'>"
@@ -793,27 +901,34 @@ def render_account_activity_section(records: Any) -> str:
             "</section>"
         )
 
-    pending = sum(1 for row in rows if isinstance(row, dict) and row.get("pending_inspection"))
-    attention = sum(1 for row in rows if isinstance(row, dict) and row.get("attention_required"))
-    progressions = [row.get("progression", {}) for row in rows if isinstance(row, dict)]
-    confirmed_progression = sum(_integer(item.get("count")) for item in progressions if isinstance(item, dict))
-    queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions if isinstance(item, dict))
+    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(_account_activity_group_key(row), []).append(row)
+    groups = list(grouped.values())
+
+    pending = sum(1 for row in rows if row.get("pending_inspection"))
+    attention = sum(1 for row in rows if row.get("attention_required"))
+    progressions = [
+        row.get("progression", {}) for row in rows
+        if isinstance(row.get("progression"), dict)
+    ]
+    confirmed_progression = sum(_integer(item.get("count")) for item in progressions)
+    queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions)
+    if queued_attempts == 0:
+        queued_attempts = sum(
+            1 for item in progressions if item.get("reinspection_attempted")
+        )
     balance_rows = [
         item.get("grenades", {}) for item in progressions
-        if isinstance(item, dict) and isinstance(item.get("grenades"), dict)
-        and item["grenades"].get("available")
+        if isinstance(item.get("grenades"), dict) and item["grenades"].get("available")
     ]
     fresh_balance_rows = [
         item for item in balance_rows
         if _text(item.get("freshness")).startswith("Fresh")
     ]
-    carried_balance_count = len(balance_rows) - len(fresh_balance_rows)
-    fresh_balance_passed = sum(1 for item in fresh_balance_rows if item.get("status") == "pass")
-    if queued_attempts == 0:
-        queued_attempts = sum(
-            1 for item in progressions
-            if isinstance(item, dict) and item.get("reinspection_attempted")
-        )
+    fresh_balance_passed = sum(
+        1 for item in fresh_balance_rows if item.get("status") == "pass"
+    )
     intro_parts = [
         f"{len(rows)} account entries",
         f"{pending} Progression inspection(s) pending",
@@ -837,54 +952,68 @@ def render_account_activity_section(records: Any) -> str:
         attempt_word = "attempt" if queued_attempts == 1 else "attempts"
         intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} made")
     if balance_rows:
-        total = len(balance_rows)
-        fresh = len(fresh_balance_rows)
-        carried = carried_balance_count
         intro_parts.append(
-            f"{total} balance observation(s) · {fresh} fresh · {carried} carried forward · "
+            f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
+            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
             f"{fresh_balance_passed} fresh validation(s) passed"
         )
-    intro = " · ".join(intro_parts) + ". Each player is shown separately."
+    intro = (
+        " · ".join(intro_parts)
+        + ". Accounts with identical reward states and next actions are grouped; "
+          "account-specific Grenade readings and inspection history remain identified."
+    )
+
     cards = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        daily = row.get("daily") if isinstance(row.get("daily"), dict) else {}
-        store = row.get("store") if isinstance(row.get("store"), dict) else {}
-        progression = row.get("progression") if isinstance(row.get("progression"), dict) else {}
-        grenades = progression.get("grenades") if isinstance(progression.get("grenades"), dict) else {}
-        grenade_detail = grenades.get("detail") or "Grenade balance not captured."
-        progression_detail = _text(progression.get("detail"))
-        progression_value = _text(progression.get("label")) or "Not checked"
-        progression_extra = (
-            f"<div style='margin-top:3px;color:#52647d;font-size:11px;line-height:1.4'>{escape(progression_detail)}</div>"
-            if progression_detail else ""
-        )
-        status_label = _text(row.get("account_status")) or "Status not recorded"
+    for group in groups:
+        representative = group[0]
+        daily = representative.get("daily") if isinstance(representative.get("daily"), dict) else {}
+        store = representative.get("store") if isinstance(representative.get("store"), dict) else {}
+        progression = representative.get("progression") if isinstance(representative.get("progression"), dict) else {}
+        group_attention = bool(representative.get("attention_required"))
+        group_pending = bool(representative.get("pending_inspection"))
+        status_label = _text(representative.get("account_status")) or "Status not recorded"
         status_style = (
-            "background:#fef3c7;color:#92400e" if row.get("attention_required")
-            else "background:#e0f2fe;color:#075985" if row.get("pending_inspection")
+            "background:#fef3c7;color:#92400e" if group_attention
+            else "background:#e0f2fe;color:#075985" if group_pending
             else "background:#dcfce7;color:#166534"
         )
+        account_labels = [
+            _grouped_account_label(row, include_inspection_history=len(group) > 1)
+            for row in group
+        ]
+        progression_detail = (
+            _shared_progression_detail(progression)
+            if len(group) > 1 else _text(progression.get("detail"))
+        )
+        progression_value = _text(progression.get("label")) or "Not checked"
+        recovery = _text(representative.get("recovery"))
+        other = (
+            "Loyalty " + _text(representative.get("loyalty"))
+            + " · Promotions " + _text(representative.get("promotions"))
+            + " · Events " + _text(representative.get("events"))
+        )
+        if recovery:
+            other += " · Recovery " + recovery
+        account_word = "account" if len(group) == 1 else "accounts"
         card = (
             "<article class='account-activity-card' "
             "style='margin:0 0 9px;padding:11px 12px;border:1px solid #dbe3ec;border-radius:9px;background:#ffffff'>"
             "<div style='display:block;margin-bottom:7px'>"
-            f"<strong style='font-size:13px;color:#172b4d'>{escape(_text(row.get('account')) or 'Unknown account')}</strong>"
+            f"<strong style='font-size:13px;color:#172b4d'>{escape(status_label)} · {len(group)} {account_word}</strong>"
             f"<span style='display:inline-block;margin:4px 0 0 6px;padding:3px 7px;border-radius:12px;font-size:10px;font-weight:700;{status_style}'>"
-            f"{escape(status_label)}</span></div>"
+            f"{'Needs attention' if group_attention else 'Pending inspection' if group_pending else 'Recorded'}</span></div>"
             "<div style='font-size:11px;line-height:1.5;color:#334155'>"
-            f"<div><strong>Daily:</strong> {escape(_text(daily.get('label')) or 'Unknown')} — {escape(_text(daily.get('detail')))}</div>"
+            f"<div><strong>Accounts:</strong> {escape(', '.join(account_labels))}</div>"
+            f"<div style='margin-top:3px'><strong>Daily:</strong> {escape(_text(daily.get('label')) or 'Unknown')} — {escape(_text(daily.get('detail')))}</div>"
             f"<div><strong>Store:</strong> {escape(_text(store.get('label')) or 'Unknown')} — {escape(_text(store.get('detail')))}</div>"
-            f"<div><strong>Progression:</strong> {escape(progression_value)}{progression_extra}</div>"
-            f"<div style='margin-top:3px'><strong>Grenades:</strong> {escape(_text(grenade_detail))}</div>"
-            f"<div style='margin-top:3px'><strong>Other:</strong> Loyalty {escape(_text(row.get('loyalty')))} · "
-            f"Promotions {escape(_text(row.get('promotions')))} · Events {escape(_text(row.get('events')))}"
-            + (f" · Recovery {escape(_text(row.get('recovery')))}" if row.get("recovery") else "")
+            f"<div><strong>Progression:</strong> {escape(progression_value)}"
+            + (f" — {escape(progression_detail)}" if progression_detail else "")
             + "</div>"
-            f"<div style='margin-top:5px;padding-top:5px;border-top:1px solid #edf1f6'><strong>Next action:</strong> "
-            f"{escape(_text(row.get('next_action')) or 'No account-level follow-up required.')}</div>"
-            "</div></article>"
+            + _render_group_grenade_balances(group)
+            + f"<div style='margin-top:3px'><strong>Other:</strong> {escape(other)}</div>"
+            + "<div style='margin-top:5px;padding-top:5px;border-top:1px solid #edf1f6'><strong>Next action:</strong> "
+            + escape(_text(representative.get("next_action")) or "No account-level follow-up required.")
+            + "</div></div></article>"
         )
         cards.append(card)
 

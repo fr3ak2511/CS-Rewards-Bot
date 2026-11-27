@@ -437,7 +437,8 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("Umang1984 · …B91F", report)
         self.assertIn("annu411 · …62E4", report)
-        self.assertEqual(report.count("Portal says claimed"), 2)
+        self.assertEqual(report.count("Portal says claimed"), 1)
+        self.assertIn("Umang1984 · …B91F, annu411 · …62E4", report)
         self.assertIn("Actor is unknown", report)
         self.assertNotIn("Claimed by bot", report)
 
@@ -511,7 +512,7 @@ class CopyableReportTests(unittest.TestCase):
         self.assertIn("Standard Store</span><strong>Not checked", report)
         self.assertNotIn("Daily</span><strong>0</strong>", report)
 
-    def test_every_account_has_a_separate_card_and_ids_are_masked(self):
+    def test_identical_accounts_are_grouped_and_ids_remain_masked(self):
         players = [
             {
                 "pid": "SENSITIVEPLAYER0001", "display_name": "Player One",
@@ -526,12 +527,21 @@ class CopyableReportTests(unittest.TestCase):
         ]
         records = build_account_activity_records(players)
         report = render_account_activity_section(records)
-        self.assertEqual(report.count("class='account-activity-card'"), 2)
-        self.assertIn("Player One", report)
-        self.assertIn("Player Two", report)
-        self.assertIn("Next action:", report)
+        self.assertEqual(report.count("class='account-activity-card'"), 1)
+        self.assertIn("Accounts:</strong> Player One · …0001, Player Two · …0002", report)
+        self.assertEqual(report.count("Next action:"), 1)
         self.assertNotIn("SENSITIVEPLAYER0001", report)
         self.assertNotIn("SENSITIVEPLAYER0002", report)
+
+    def test_copy_report_uses_the_same_grouped_account_renderer(self):
+        players = [
+            dict(self.summary["player_results"][0], player_id_last4="AB12", display_name="Player One"),
+            dict(self.summary["player_results"][0], player_id_last4="CD34", display_name="Player Two"),
+        ]
+        summary = {**self.summary, "player_results": players, "accounts_processed": 2}
+        report = build_copyable_report(summary)
+        self.assertEqual(report.count("class='account-activity-card'"), 1)
+        self.assertIn("Player One · …AB12, Player Two · …CD34", report)
 
     def test_no_milestone_grouping_or_multi_player_rows_remain(self):
         players = [
