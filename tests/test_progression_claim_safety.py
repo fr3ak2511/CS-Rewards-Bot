@@ -15,7 +15,7 @@ class ProgressionSafetyTests(unittest.TestCase):
     def _run(self, snapshots, *, dismiss_results=None, verify_polls=3,
              target_card_signature=None, target_card_text_fragments=None,
              require_unique_claimable_card=False, defer_if_more_claimable=False,
-             max_claims_per_visit=6):
+             max_claims_per_visit=6, scroll_carousel=None):
         driver = BrowserStub()
         click_calls = []
         history_calls = []
@@ -44,7 +44,7 @@ class ProgressionSafetyTests(unittest.TestCase):
             bypass_cloudflare=lambda _d: None, snapshot_fn=snapshot,
             click_fn=click,
             update_history=lambda *args, **kwargs: history_calls.append((args, kwargs)),
-            dismiss_popups=dismiss, scroll_carousel=lambda _d: False,
+            dismiss_popups=dismiss, scroll_carousel=scroll_carousel or (lambda _d: False),
             sleep=lambda _seconds: None, verify_polls=verify_polls,
             target_card_signature=target_card_signature,
             target_card_text_fragments=target_card_text_fragments,
@@ -435,6 +435,49 @@ class ProgressionSafetyTests(unittest.TestCase):
         self.assertEqual(clicks, [button])
         self.assertFalse(driver._progression_deferred)
         self.assertTrue(driver._progression_checked)
+
+    def test_empty_rail_scan_takes_final_snapshot_after_seventh_scroll(self):
+        position = {"left": 0}
+        snapshot_positions = []
+        scroll_calls = []
+
+        def snapshot():
+            snapshot_positions.append(position["left"])
+            return {
+                "valid_page": True,
+                "claimable_count": 0,
+                "delivered_count": 0,
+                "claimable_cards": [],
+                "delivered_signatures": [],
+                "inspection_diagnostics": {
+                    "carousel_containers": [{
+                        "scroll_left": position["left"],
+                        "max_scroll_left": 5860,
+                        "at_start": position["left"] == 0,
+                        "at_end": position["left"] >= 5860,
+                    }]
+                },
+            }
+
+        def scroll(_driver):
+            scroll_calls.append(position["left"])
+            position["left"] = min(5860, position["left"] + 864)
+            return position["left"] > scroll_calls[-1]
+
+        claimed, driver, clicks, history = self._run(
+            snapshot,
+            require_unique_claimable_card=True,
+            defer_if_more_claimable=True,
+            max_claims_per_visit=1,
+            scroll_carousel=scroll,
+        )
+
+        self.assertEqual(claimed, 0)
+        self.assertEqual(clicks, [])
+        self.assertEqual(history, [])
+        self.assertEqual(snapshot_positions[-1], 5860)
+        self.assertEqual(len(snapshot_positions), 8)
+        self.assertTrue(driver._progression_deferred)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
