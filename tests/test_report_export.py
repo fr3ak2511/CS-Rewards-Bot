@@ -279,8 +279,9 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn(">HEALTHY</span>", report)
         self.assertIn("Progression reinspection queue: 1 account(s) pending", report)
+        self.assertIn("<strong>0</strong>", report)
         self.assertNotIn("Pending Player", report)
         self.assertNotIn("An empty scan is not proof", report)
 
