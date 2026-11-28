@@ -706,7 +706,9 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
     )
     checked_count = len(states) - not_checked
     parts = []
-    if bot_count:
+    if key == "progression" and states and not_checked < len(states):
+        parts.append(f"{bot_count} confirmed")
+    elif bot_count:
         parts.append(f"{bot_count} bot-confirmed")
     if portal_count:
         parts.append(f"{portal_count} portal says claimed")
@@ -1037,7 +1039,7 @@ def render_account_activity_section(records: Any) -> str:
     )
     queue_note = (
         f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
-        "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred."
+        "after a valid empty scan. No claimable reward card was visible in the captured scan; these remain queued for a later safe pass and are not account-level failures."
         + (f" {queued_attempts} queued reinspection attempts made." if queued_attempts else "") + "</p>"
         if empty_scan_pending else ""
     )
