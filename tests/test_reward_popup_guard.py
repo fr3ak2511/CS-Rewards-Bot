@@ -670,5 +670,55 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertNotIn("user@example.com", result)
         self.assertNotIn("abc123", result)
 
+    def test_promotion_only_blocker_reason_includes_fullscreen_dom_context(self):
+        from reward_popup_guard import dismiss_known_promotional_upsell_only
+
+        class DiagnosticDriver:
+            def execute_script(self, script, *args):
+                if "REWARD_POPUP_LAYER_INSPECT_V1" in script:
+                    return {
+                        "url": "https://hub.vertigogames.co/progression-program",
+                        "dialogCount": 0,
+                        "fullscreenOverlayCount": 1,
+                        "fullscreenOverlayDetails": [{
+                            "tag": "div",
+                            "className": "fixed inset-0 z-900 backdrop-blur-3xl",
+                            "position": "fixed", "zIndex": "900",
+                            "pointerEvents": "auto",
+                            "rect": {"x": 0, "y": 0, "width": 1905, "height": 993},
+                        }],
+                    }
+                if "REWARD_PROMOTIONAL_UPSELL_CLOSE_CANDIDATE_V1" in script:
+                    return {"ok": False, "reason": "promotion_close_not_found", "count": 0}
+                if "REWARD_POPUP_CONTEXT_DIAGNOSTICS_V2" in script:
+                    return {
+                        "url": "https://hub.vertigogames.co/progression-program",
+                        "viewport": {"width": 1920, "height": 993},
+                        "dialogRootCount": 0,
+                        "dialogRoots": [],
+                        "visibleOverlays": [],
+                        "fullscreenBlockers": [{
+                            "root": {
+                                "tag": "div", "className": "fixed inset-0 z-900",
+                                "text": "Loading", "position": "fixed",
+                                "zIndex": "900", "pointerEvents": "auto",
+                                "rect": {"x": 0, "y": 0, "width": 1905, "height": 993},
+                            },
+                            "ancestors": [], "directChildren": [],
+                            "descendantControls": [], "directChildCount": 0,
+                            "descendantCount": 0, "text": "Loading",
+                        }],
+                    }
+                raise AssertionError("unexpected diagnostic script")
+
+        ok, reason = dismiss_known_promotional_upsell_only(DiagnosticDriver())
+
+        self.assertFalse(ok)
+        self.assertIn("promotion_close_not_found", reason)
+        self.assertIn("fullscreen_overlay_details=", reason)
+        self.assertIn("popup_context=", reason)
+        self.assertIn('"fullscreenBlockers"', reason)
+        self.assertIn("backdrop-blur-3xl", reason)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
