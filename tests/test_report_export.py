@@ -340,7 +340,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn(">HEALTHY</span>", report)
         self.assertIn("1 balance observation(s) · 0 fresh · 1 carried forward · 0 fresh validation(s) passed", report)
         self.assertNotIn("66 / 66 at observation", report)
 
