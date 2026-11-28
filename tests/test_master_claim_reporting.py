@@ -758,7 +758,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>🎁 Core claims</span><strong>3/4</strong>", report)
         self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 confirmed", report)
-        self.assertIn("Other Confirmed Rewards", report)
+        self.assertIn("Reward Summary", report)
         self.assertNotIn("Paid Pack", report)
 
     def test_free_bundle_is_not_mistaken_for_a_paid_offer(self):
@@ -1002,8 +1002,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             "Mixed Run", 1, get_ist_time() - timedelta(seconds=30), {},
         )
         self.assertIn("<span>🎁 Core claims</span><strong>29</strong>", report)
-        self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
-        self.assertIn("<span>Standard Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
+        self.assertIn("<strong style='display:block;font-size:12px;color:#172b4d'>Daily</strong>", report)
+        self.assertIn("13 bot-confirmed", report)
+        self.assertIn("<strong style='display:block;font-size:12px;color:#172b4d'>Standard Store</strong>", report)
+        self.assertIn("16 bot-confirmed", report)
         self.assertIn("12 confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertIn("Loyalty", report)
@@ -1460,7 +1462,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=35,
         )
         self.assertIn("<span>👥 Accounts processed</span><strong>1 / 35</strong>", report)
-        self.assertIn("<span>Standard Store Rewards</span>", report)
+        self.assertIn(">Standard Store</strong>", report)
 
     def test_email_includes_compact_grenade_balance_result_and_flags_shortfall(self):
         player = self.sample_player()
@@ -1597,8 +1599,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>👥 Accounts complete</span><strong>3 / 3</strong>", report)
         self.assertIn("Today&#x27;s Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
-        self.assertIn("<span>Standard Store Rewards</span><strong>9</strong>", report)
-        self.assertIn("Core Daily Claims", report)
+        self.assertIn(">Standard Store</strong>", report)
+        self.assertIn("9 bot-confirmed", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
 
@@ -2579,8 +2581,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=36,
         )
         self.assertIn("<span>🎁 Core claims</span><strong>144/144</strong>", report)
-        self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
-        self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
+        self.assertIn(">Daily</strong>", report)
+        self.assertIn("36 bot-confirmed", report)
+        self.assertIn(">Standard Store</strong>", report)
+        self.assertIn("108 bot-confirmed", report)
         self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
