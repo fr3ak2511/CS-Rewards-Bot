@@ -909,6 +909,26 @@ def render_account_activity_section(records: Any) -> str:
         for item in categories
     )
 
+    progressions = [
+        row.get("progression", {}) for row in rows
+        if isinstance(row.get("progression"), dict)
+    ]
+    balance_rows = [
+        item.get("grenades", {}) for item in progressions
+        if isinstance(item.get("grenades"), dict) and item["grenades"].get("available")
+    ]
+    fresh_balance_rows = [
+        item for item in balance_rows
+        if _text(item.get("freshness")).startswith("Fresh")
+    ]
+    fresh_balance_passed = sum(
+        1 for item in fresh_balance_rows if item.get("status") == "pass"
+    )
+    balance_below = sum(
+        1 for item in balance_rows
+        if item.get("status") in {"below_minimum", "counter_regressed"}
+    )
+
     portal_claimed: list[str] = []
     actionable: dict[str, list[str]] = {
         "Daily": [], "Store": [], "Progression": [],
@@ -922,7 +942,7 @@ def render_account_activity_section(records: Any) -> str:
             item = row.get(key) if isinstance(row.get(key), dict) else {}
             state = _text(item.get("state"))
             if state == "portal_claimed":
-                portal_claimed.append(f"{label} — {account}")
+                portal_claimed.append(f"Portal says claimed — {label} — {account}")
             elif item.get("attention_required"):
                 detail = _text(item.get("detail"))
                 action = _text(item.get("next_action"))
@@ -936,10 +956,17 @@ def render_account_activity_section(records: Any) -> str:
             pp.get("pending_inspection")
             and _text(pp.get("outcome")) == "empty_scan"
             and not pp.get("manual_attention_required")
+            and not (
+                isinstance(pp.get("grenades"), dict)
+                and pp["grenades"].get("status") in {"below_minimum", "counter_regressed"}
+            )
         ):
             empty_scan_pending += 1
         elif pp.get("attention_required"):
             detail = _text(pp.get("detail"))
+            grenade = pp.get("grenades") if isinstance(pp.get("grenades"), dict) else {}
+            if grenade.get("available") and grenade.get("status") in {"below_minimum", "counter_regressed"}:
+                detail = " · ".join(part for part in (detail, _text(grenade.get("detail"))) if part)
             action = _text(pp.get("next_action"))
             actionable["Progression"].append(
                 account + (f" — {detail}" if detail else "")
@@ -985,6 +1012,18 @@ def render_account_activity_section(records: Any) -> str:
                 + "</ul></div>"
             )
 
+    balance_summary = (
+        "<div class='progression-balance-summary' style='margin-top:10px;padding:9px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11px'>"
+        "<strong>Progression Program — Grenade Balance Check</strong><p style='margin:4px 0 0;color:#475569'>"
+        + (
+            f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
+            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
+            f"{fresh_balance_passed} fresh validation(s) passed"
+            + (f" · {balance_below} below minimum / regressed" if balance_below else "")
+            if balance_rows else "Grenade balance not checked in this run."
+        )
+        + "</p></div>"
+    )
     queue_note = (
         f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
         "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred.</p>"
@@ -1007,5 +1046,5 @@ def render_account_activity_section(records: Any) -> str:
         "<section class='account-activity-section'>"
         "<h2>Reward Summary</h2>"
         "<div class='reward-categories' style='margin-top:8px'>" + category_html + "</div>"
-        + exceptions + "</section>"
+        + balance_summary + exceptions + "</section>"
     )
