@@ -115,7 +115,7 @@ class CopyableReportTests(unittest.TestCase):
             "text/html",
             "text/plain",
             "ATTENTION REQUIRED",
-            "Account Activity",
+            "Reward Summary",
         ):
             self.assertIn(expected, report)
 
@@ -186,7 +186,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(pending)
         self.assertIn("ATTENTION REQUIRED", report)
         self.assertIn("Pending baseline", report)
-        self.assertIn("Player Two · …CD34", report)
+        self.assertNotIn("Player Two · …CD34", report)
 
     def test_report_shows_full_cycle_health_separately_from_run_attention(self):
         summary = dict(self.summary)
