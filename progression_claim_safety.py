@@ -186,7 +186,9 @@ def claim_progression_rewards(
             _defer(f"popup/overlay safety guard blocked inspection ({popup_reason})")
         else:
             sweep = 0
-            while claimed < max_claims_per_visit and sweep < 7:
+            # Seven forward movements can require an eighth snapshot to observe the terminal edge.
+            # The initial snapshot is sweep 1; do not stop immediately after the final scroll.
+            while claimed < max_claims_per_visit and sweep < 8:
                 before = _safe_snapshot(snapshot_fn, driver, log)
                 if before is None:
                     _defer("Progression page snapshot was unavailable")
