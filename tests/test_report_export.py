@@ -254,6 +254,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("1 Progression inspection(s) pending", report)
+        self.assertIn("Progression reinspection queue: 1 account(s) pending", report)
         self.assertIn("Pending · blocked by overlay", report)
         self.assertIn("all 4/4 safe inspection slots", report)
         self.assertIn("manual attention", report)
@@ -527,9 +528,10 @@ class CopyableReportTests(unittest.TestCase):
         ]
         records = build_account_activity_records(players)
         report = render_account_activity_section(records)
-        self.assertEqual(report.count("class='account-activity-card'"), 1)
-        self.assertIn("Accounts:</strong> Player One · …0001, Player Two · …0002", report)
-        self.assertEqual(report.count("Next action:"), 1)
+        self.assertIn("Reward Summary", report)
+        self.assertNotIn("account-activity-card", report)
+        self.assertNotIn("Player One", report)
+        self.assertNotIn("Player Two", report)
         self.assertNotIn("SENSITIVEPLAYER0001", report)
         self.assertNotIn("SENSITIVEPLAYER0002", report)
 
@@ -540,8 +542,8 @@ class CopyableReportTests(unittest.TestCase):
         ]
         summary = {**self.summary, "player_results": players, "accounts_processed": 2}
         report = build_copyable_report(summary)
-        self.assertEqual(report.count("class='account-activity-card'"), 1)
-        self.assertIn("Player One · …AB12, Player Two · …CD34", report)
+        self.assertIn("Reward Summary", report)
+        self.assertNotIn("account-activity-card", report)
 
     def test_no_milestone_grouping_or_multi_player_rows_remain(self):
         players = [
@@ -567,9 +569,10 @@ class CopyableReportTests(unittest.TestCase):
             },
         ]
         report = build_copyable_report({**self.summary, "player_results": players})
-        self.assertEqual(report.count("class='account-activity-card'"), 2)
-        self.assertIn("Claimed Player · …0001", report)
-        self.assertIn("Pending Player · …0002", report)
+        self.assertIn("Reward Summary", report)
+        self.assertNotIn("account-activity-card", report)
+        self.assertNotIn("Claimed Player", report)
+        self.assertNotIn("Pending Player", report)
         self.assertNotIn("grouped by milestone", report)
         self.assertNotIn("PP status and accounts", report)
 
