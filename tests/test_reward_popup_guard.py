@@ -620,5 +620,55 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertEqual(driver.close_count, 0)
 
 
+    def test_popup_context_includes_fullscreen_blocker_controls_and_redacts_secrets(self):
+        from reward_popup_guard import _popup_context_diagnostics
+
+        class ContextDriver:
+            def execute_script(self, script):
+                self.script = script
+                return {
+                    "url": "https://hub.vertigogames.co/progression-program",
+                    "viewport": {"width": 1920, "height": 993},
+                    "dialogRootCount": 0,
+                    "dialogRoots": [],
+                    "visibleOverlays": [],
+                    "fullscreenBlockers": [{
+                        "root": {
+                            "tag": "div",
+                            "className": "fixed inset-0 z-900 bg-sem-bg-bg-overlay/75",
+                            "text": "Blocked account FC8E0BBD0BBC0587",
+                            "position": "fixed",
+                            "zIndex": "900",
+                            "pointerEvents": "auto",
+                            "rect": {"x": 0, "y": 0, "width": 1905, "height": 993},
+                        },
+                        "ancestors": [],
+                        "directChildren": [{
+                            "tag": "div", "className": "portal-layer", "text": "Loading"
+                        }],
+                        "descendantControls": [{
+                            "tag": "button", "aria": "Close panel",
+                            "text": "Close", "className": "close-button"
+                        }],
+                        "directChildCount": 1,
+                        "descendantCount": 2,
+                        "text": "Loading user@example.com token=abc123",
+                    }],
+                }
+
+        driver = ContextDriver()
+        result = _popup_context_diagnostics(driver)
+
+        self.assertIn("REWARD_POPUP_CONTEXT_DIAGNOSTICS_V2", driver.script)
+        self.assertIn('"fullscreenBlockers"', result)
+        self.assertIn("bg-sem-bg-bg-overlay/75", result)
+        self.assertIn("Close panel", result)
+        self.assertIn("[id-redacted]", result)
+        self.assertIn("[email-redacted]", result)
+        self.assertIn("[credential-redacted]", result)
+        self.assertNotIn("FC8E0BBD0BBC0587", result)
+        self.assertNotIn("user@example.com", result)
+        self.assertNotIn("abc123", result)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
