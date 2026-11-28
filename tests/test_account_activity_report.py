@@ -165,10 +165,10 @@ class AccountActivityReportTests(unittest.TestCase):
             },
         ])
         report = render_account_activity_section(records)
-        self.assertEqual(report.count("class='account-activity-card'"), 2)
-        self.assertIn("Player One", report)
-        self.assertIn("Player Two", report)
-        self.assertIn("Next action:", report)
+        self.assertIn("Reward Summary", report)
+        self.assertIn("Progression reinspection queue: 1 account(s) pending", report)
+        self.assertNotIn("Player One", report)
+        self.assertNotIn("Player Two", report)
         self.assertNotIn("SENSITIVEPLAYER0001", report)
         self.assertNotIn("SENSITIVEPLAYER0002", report)
 
@@ -215,16 +215,10 @@ class AccountActivityReportTests(unittest.TestCase):
         records = build_account_activity_records(players)
         report = render_account_activity_section(records)
 
-        self.assertEqual(report.count("class='account-activity-card'"), 1)
-        self.assertIn(
-            "Accounts:</strong> Player One · …0001 (2/4 slots; 2 total attempts), "
-            "Player Two · …0002 (2/4 slots; 6 total attempts; same outcome 4x)",
-            report,
-        )
-        self.assertIn("Grenade balances by account:", report)
-        self.assertIn("81 Grenades", report)
-        self.assertIn("24 Grenades", report)
-        self.assertEqual(report.count("Next action:"), 1)
+        self.assertIn("Reward Summary", report)
+        self.assertIn("Progression reinspection queue: 2 account(s) pending", report)
+        self.assertNotIn("Player One", report)
+        self.assertNotIn("Player Two", report)
         self.assertNotIn("FULLIDENTIFIERPLAYER0001", report)
         self.assertNotIn("FULLIDENTIFIERPLAYER0002", report)
 
@@ -247,9 +241,9 @@ class AccountActivityReportTests(unittest.TestCase):
         ])
         report = render_account_activity_section(records)
 
-        self.assertEqual(report.count("class='account-activity-card'"), 2)
         self.assertIn("Needs Review · …0001", report)
-        self.assertIn("Still Eligible · …0002", report)
+        self.assertNotIn("Still Eligible · …0002", report)
+        self.assertIn("Manual attention required", report)
 
     def test_partial_store_confirmations_keep_unconfirmed_item_and_retry_visible(self):
         record = build_account_activity_records([{

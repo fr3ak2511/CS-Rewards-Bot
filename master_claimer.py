@@ -7638,9 +7638,35 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     # Deferred/blocked Progression inspections are actionable account-level work,
     # not a clean zero-attention outcome. They belong in the same attention count.
     for result in results:
-        if result.get("progression_deferred") or result.get("progression_unconfirmed"):
+        if result.get("progression_unconfirmed"):
             player_id = str(result.get("pid") or "").strip()
             attention_player_ids.add(player_id or _display_label(result))
+            continue
+        if result.get("progression_deferred"):
+            outcome = str(result.get("progression_last_outcome_category") or "").strip().lower()
+            reason = str(
+                result.get("progression_last_reason")
+                or result.get("progression_deferred_reason")
+                or result.get("fail_reason")
+                or ""
+            ).strip().lower()
+            balance = result.get("grenade_balance")
+            balance = balance if isinstance(balance, dict) else {}
+            carry = result.get("grenade_balance_carry_forward")
+            carry = carry if isinstance(carry, dict) else {}
+            balance_status = str(
+                balance.get("status")
+                or carry.get("status_at_observation")
+                or ""
+            ).strip().lower()
+            benign_empty_scan = (
+                (outcome == "empty_scan" or "no currently visible claimable reward" in reason)
+                and not result.get("progression_manual_attention_required")
+                and balance_status not in {"below_minimum", "counter_regressed"}
+            )
+            if not benign_empty_scan:
+                player_id = str(result.get("pid") or "").strip()
+                attention_player_ids.add(player_id or _display_label(result))
     if is_recovery_rollup:
         for raw_suffix in (cycle_summary.get("pending_player_last4") or []):
             suffix = str(raw_suffix).strip()[-4:]
@@ -7658,7 +7684,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
     deferred_check_count = sum(1 for result in results if result.get("progression_deferred"))
     if deferred_check_count:
         attention_note = (
-            f"Includes {deferred_check_count} pending Progression inspection(s) and any claim/validation exceptions"
+            f"{deferred_check_count} Progression inspection(s) remain queued; valid empty scans are not counted as attention"
         )
     else:
         attention_note = "Accounts with claim / validation exceptions"
@@ -8089,15 +8115,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + (cycle_health_html or "")
         + processing_html
         + (account_activity_html or "")
-        + (
-            "<section class='v2-section v2-rewards'>"
-            + _email_section_header(rewards_heading, rewards_subtitle)
-            + category_html
-            + "</section>"
-            if category_html else ""
-        )
         + (daily_cycle_html or "")
-        + additional_claims_html
         + validation_html
         + ("" if is_progression_only_run else (promotion_html or ""))
         + (followup_html or "")

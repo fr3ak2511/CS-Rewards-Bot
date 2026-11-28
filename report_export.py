@@ -273,8 +273,24 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
     pending_progression = sum(
         1 for row in activity if isinstance(row, dict) and row.get("pending_inspection")
     )
+    def _report_attention_required(row: dict[str, Any]) -> bool:
+        if not row.get("attention_required"):
+            return False
+        progression = row.get("progression") if isinstance(row.get("progression"), dict) else {}
+        grenade = progression.get("grenades") if isinstance(progression.get("grenades"), dict) else {}
+        benign_empty_scan = (
+            progression.get("pending_inspection")
+            and (
+                str(progression.get("outcome") or "") == "empty_scan"
+                or str(progression.get("label") or "") == "Pending · empty scan"
+            )
+            and not progression.get("manual_attention_required")
+            and grenade.get("status") not in {"below_minimum", "counter_regressed"}
+        )
+        return not benign_empty_scan
+
     attention = sum(
-        1 for row in activity if isinstance(row, dict) and row.get("attention_required")
+        1 for row in activity if isinstance(row, dict) and _report_attention_required(row)
     )
     if not activity:
         attention = (
@@ -303,8 +319,8 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         + "</strong></p>"
     )
     attention_note = (
-        f"{pending_progression} pending Progression inspection(s) included; "
-        "each affected account is listed below"
+        f"{pending_progression} pending Progression inspection(s) remain queued; "
+        "empty scans are summarized without treating them as failures"
         if pending_progression else "Accounts with claim / validation exceptions"
     )
 
@@ -416,7 +432,6 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div class="kpi"><span>Need attention</span><strong>{attention}</strong><small>{attention_note}</small></div>
 </section>
 {cycle_health_html}
-<section class="categories">{category_cards}</section>
 {account_activity_html}
 <section class="section">
 <h2>Run checks</h2>
