@@ -1670,27 +1670,16 @@ def login_to_hub(driver, pid):
         return False
 
 def close_popup(driver):
-    try:
-        for sel in [
-            "//button[contains(text(),'Close') or contains(text(),'×') "
-            "or contains(@class,'close')]",
-            "//div[contains(@class,'modal')]//button",
-            "//*[@aria-label='Close' or @title='Close']",
-        ]:
-            try:
-                for btn in driver.find_elements(By.XPATH, sel):
-                    if btn.is_displayed():
-                        btn.click()
-                        time.sleep(0.3)
-                        return
-            except:
-                continue
-        driver.execute_script(
-            "document.querySelectorAll('[class*=\"modal\"],[class*=\"overlay\"]')"
-            ".forEach(m=>{ if(m.offsetParent!==null) m.click(); });"
-        )
-    except:
-        pass
+    """Use the shared, fail-closed popup policy on every reward page."""
+    if not callable(getattr(driver, "execute_script", None)):
+        raise RuntimeError("popup_guard_unavailable; refusing page interaction")
+    ok, reason = dismiss_all_safe_popups(
+        driver, log=log, max_popups=8, timeout=3.0, poll_interval=0.15
+    )
+    if not ok:
+        log(f"⚠️ Reward page remains blocked by a popup; stopping this page flow: {reason}")
+        raise RuntimeError(f"reward_page_popup_blocked:{str(reason)[:500]}")
+    return True
 
 def _dismiss_store_promotion_popups(driver):
     """Use the conservative shared guard before interacting with Store promotions."""
