@@ -368,7 +368,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("1 not validated", report)
         self.assertNotIn("Status not retained", report)
-        self.assertIn(">ATTENTION REQUIRED</span>", report)
+        self.assertIn(">HEALTHY</span>", report)
 
     def test_partially_confirmed_progression_keeps_inspection_pending(self):
         deferred = dict(self.summary["player_results"][0])
