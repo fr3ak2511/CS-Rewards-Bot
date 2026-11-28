@@ -903,9 +903,9 @@ def render_account_activity_section(records: Any) -> str:
 
     categories = summarize_account_activity(rows)
     category_html = "".join(
-        "<div class='reward-category'>"
-        "<strong>" + escape(item["label"]) + "</strong>"
-        "<span>" + escape(item["value"]) + "</span></div>"
+        "<div class='reward-category' style='padding:9px 10px;margin:0 0 6px;border:1px solid #e2e8f0;border-radius:8px'>"
+        "<strong style='display:block;font-size:12px;color:#172b4d'>" + escape(item["label"]) + "</strong>"
+        "<span style='display:block;margin-top:3px;font-size:12px;color:#334155'>" + escape(item["value"]) + "</span></div>"
         for item in categories
     )
 
@@ -980,25 +980,25 @@ def render_account_activity_section(records: Any) -> str:
     for label, entries in actionable.items():
         if entries:
             sections.append(
-                "<div class='exception-group'><strong>" + escape(label) + "</strong><ul>"
+                "<div class='exception-group' style='margin:0 0 9px;font-size:11px'><strong>" + escape(label) + "</strong><ul style='margin:4px 0 0;padding-left:18px'>"
                 + "".join("<li>" + escape(entry) + "</li>" for entry in dict.fromkeys(entries))
                 + "</ul></div>"
             )
 
     queue_note = (
-        f"<p class='queue-note'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
+        f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
         "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred.</p>"
         if empty_scan_pending else ""
     )
     already_claimed = (
-        "<div class='exception-group portal-claimed'><strong>Portal already claimed "
+        "<div class='exception-group portal-claimed' style='margin:0 0 9px;font-size:11px'><strong>Portal already claimed "
         "(actor unknown; not credited to the bot)</strong><ul>"
         + "".join("<li>" + escape(item) + "</li>" for item in dict.fromkeys(portal_claimed))
         + "</ul></div>"
         if portal_claimed else ""
     )
     exceptions = (
-        "<section class='report-exceptions'><h3>Exceptions &amp; follow-up</h3>"
+        "<section class='report-exceptions' style='margin-top:12px;padding-top:10px;border-top:1px solid #e2e8f0'><h3 style='font-size:14px;margin:0 0 8px'>Exceptions &amp; follow-up</h3>"
         + ("".join(sections) if sections else "<p>No actionable exceptions recorded.</p>")
         + already_claimed + queue_note + "</section>"
     )
@@ -1006,6 +1006,6 @@ def render_account_activity_section(records: Any) -> str:
     return (
         "<section class='account-activity-section'>"
         "<h2>Reward Summary</h2>"
-        "<div class='reward-categories'>" + category_html + "</div>"
+        "<div class='reward-categories' style='margin-top:8px'>" + category_html + "</div>"
         + exceptions + "</section>"
     )
