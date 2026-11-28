@@ -1259,7 +1259,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("0 Progression rewards confirmed in this run; 3 accounts remain open", report)
         self.assertNotIn("<span>Progression Checks</span>", report)
         self.assertIn("0 Progression rewards confirmed in this run; 3 accounts remain open", report)
-        self.assertIn("No claimable reward card visible", report)
+        self.assertIn("No claimable reward card was visible", report)
         self.assertEqual(report.count("No claimable reward card visible"), 1)
         self.assertIn("Queued Player 0 · …0000, Queued Player 1 · …0001, Queued Player 2 · …0002", report)
         self.assertNotIn("QUEUEPLAYER0000", report)
@@ -2582,7 +2582,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
         self.assertNotIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 Progression reward confirmed", report)
+        self.assertIn("1 confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
 
     def test_progression_only_email_shows_fresh_grenade_observations_without_carry_forward(self):
