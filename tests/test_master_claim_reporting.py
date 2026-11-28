@@ -1004,7 +1004,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>🎁 Core claims</span><strong>29</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>13</strong><small>3 accounts checked</small>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>16</strong><small>3 accounts checked</small>", report)
-        self.assertIn("12 Progression rewards confirmed", report)
+        self.assertIn("12 confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertIn("Loyalty", report)
         self.assertNotIn("<span>Progression Rewards</span>", report)
@@ -1051,7 +1051,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 account remains open", report)
+        self.assertIn("1 pending", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("Attention Required", report)
@@ -1091,7 +1091,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
-        self.assertIn("Progression Program — Grenade Balance Check", report)
+        self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("No claimable reward card visible", report)
         self.assertIn("Attention Required", report)
 
@@ -1311,13 +1311,12 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 [player1, player2], "Promotional Check #1", 1,
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
-        self.assertIn("2 account entries", report)
-        self.assertIn("66 / 66", report)
-        self.assertEqual(report.count("66 / 66"), 1)
-        self.assertEqual(report.count("class='account-activity-card'"), 1)
-        self.assertIn("Group Player One · …0001, Group Player Two · …0002", report)
-        self.assertIn("Group Player One", report)
-        self.assertIn("Group Player Two", report)
+        self.assertIn("2 balance observation(s)", report)
+        self.assertIn("0 fresh · 2 carried forward", report)
+        self.assertNotIn("66 / 66", report)
+        self.assertNotIn("Group Player One", report)
+        self.assertNotIn("Group Player Two", report)
+        self.assertNotIn("account-activity-card", report)
         self.assertNotIn("GROUPPLAYER0001", report)
         self.assertNotIn("GROUPPLAYER0002", report)
 
@@ -1502,10 +1501,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             configured_player_count=1,
         )
         self.assertIn("Above date minimum", report)
-        self.assertIn("34 / 24 vs date minimum", report)
-        self.assertIn("22 to go", report)
-        self.assertIn("Next milestone 56", report)
         self.assertIn("Above date minimum", report)
+        self.assertNotIn("34 / 24 vs date minimum", report)
+        self.assertNotIn("Next milestone 56", report)
         self.assertNotIn("Tracking Incomplete", report)
 
     def test_pending_baseline_is_informational_not_attention(self):
@@ -2648,7 +2646,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Not checked in this run", report)
         self.assertNotIn("Core Daily Claims", report)
         self.assertNotIn("Full Claim Path", report)
-        self.assertIn("Progression Program — Grenade Balance Check", report)
+        self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertNotIn("Grenade Balance History", report)
         self.assertIn("1 queued reinspection attempt made.", report)
         self.assertIn("0 Progression rewards confirmed in this run", report)
