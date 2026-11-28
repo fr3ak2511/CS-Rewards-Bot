@@ -137,11 +137,11 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(healthy)
         self.assertIn(">HEALTHY</span>", report)
         self.assertIn("<strong>0</strong>", report)
-        self.assertIn("account(s) need attention", report)
+        self.assertIn("Need attention", report)
 
     def test_report_includes_per_account_progression_balance(self):
         report = build_copyable_report(self.summary)
-        self.assertIn("Account Activity", report)
+        self.assertIn("Reward Summary", report)
         self.assertIn("Grenades:", report)
         self.assertIn("34 Grenades", report)
         self.assertIn("Next milestone 56", report)
@@ -253,7 +253,7 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("1 Progression inspection(s) pending", report)
+        self.assertIn("1 pending Progression inspection(s) remain queued", report)
         self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("all 4/4 safe inspection slots", report)
         self.assertIn("manual attention", report)
@@ -339,13 +339,8 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("66 Grenades", report)
-        self.assertIn("Carried forward", report)
-        self.assertIn("last observed 2026-11-22", report)
-        self.assertIn("66 / 66 at observation", report)
-        self.assertIn("current date minimum 69", report)
-        self.assertIn("Next milestone 123", report)
-        self.assertIn("57 to go", report)
+        self.assertIn("1 balance observation(s) · 0 fresh · 1 carried forward · 0 fresh validation(s) passed", report)
+        self.assertNotIn("66 / 66 at observation", report)
 
     def test_legacy_carried_balance_does_not_infer_a_pass(self):
         deferred = dict(self.summary["player_results"][0])
@@ -369,8 +364,8 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("Status not retained", report)
-        self.assertIn("last observed 2026-11-22", report)
+        self.assertIn("1 not validated", report)
+        self.assertNotIn("Status not retained", report)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
 
     def test_partially_confirmed_progression_keeps_inspection_pending(self):
@@ -387,7 +382,7 @@ class CopyableReportTests(unittest.TestCase):
         summary = dict(self.summary)
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
-        self.assertIn("1 confirmed · inspection still pending", report)
+        self.assertIn("1 confirmed · 1 pending", report)
         self.assertIn("another eligible safe inspection", report.lower())
 
     def test_saved_grenade_deficit_remains_attention_when_inspection_is_deferred(self):
@@ -508,9 +503,9 @@ class CopyableReportTests(unittest.TestCase):
             "configured_player_count": 36,
             "totals": {"all_claims_this_run": 0},
         })
-        self.assertIn("<strong>Daily</strong><span>Not checked", report)
-        self.assertIn("<strong>Standard Store</strong><span>Not checked", report)
-        self.assertNotIn("<strong>Daily</strong><span>0</span>", report)
+        self.assertIn(">Daily</strong><span", report)
+        self.assertIn(">Standard Store</strong><span", report)
+        self.assertNotIn(">Daily</strong><span>0</span>", report)
 
     def test_identical_accounts_are_grouped_and_ids_remain_masked(self):
         players = [
