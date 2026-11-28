@@ -963,7 +963,7 @@ def render_account_activity_section(records: Any) -> str:
         ):
             empty_scan_pending += 1
         elif pp.get("attention_required"):
-            detail = _text(pp.get("detail"))
+            detail = " — ".join(part for part in (_text(pp.get("label")), _text(pp.get("detail"))) if part)
             grenade = pp.get("grenades") if isinstance(pp.get("grenades"), dict) else {}
             if grenade.get("available") and grenade.get("status") in {"below_minimum", "counter_regressed"}:
                 detail = " · ".join(part for part in (detail, _text(grenade.get("detail"))) if part)
