@@ -1188,10 +1188,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("66 / 66", report)
-        self.assertIn("57 to go", report)
-        self.assertIn("last observed 2026-11-22", report)
-        self.assertIn("current date minimum 69", report)
+        self.assertIn("1 balance observation(s) · 0 fresh · 1 carried forward · 0 fresh validation(s) passed", report)
+        self.assertNotIn("66 / 66", report)
+        self.assertNotIn("57 to go", report)
+        self.assertNotIn("last observed 2026-11-22", report)
         self.assertIn("Attention Required", report)
 
         saved_state["cycles"]["2026-11"]["players"]["TESTPLAYER0001"].update({
