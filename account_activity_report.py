@@ -932,7 +932,11 @@ def render_account_activity_section(records: Any) -> str:
                 )
 
         pp = row.get("progression") if isinstance(row.get("progression"), dict) else {}
-        if pp.get("pending_inspection") and _text(pp.get("outcome")) == "empty_scan":
+        if (
+            pp.get("pending_inspection")
+            and _text(pp.get("outcome")) == "empty_scan"
+            and not pp.get("manual_attention_required")
+        ):
             empty_scan_pending += 1
         elif pp.get("attention_required"):
             detail = _text(pp.get("detail"))
@@ -956,10 +960,18 @@ def render_account_activity_section(records: Any) -> str:
         if "pending" in _text(row.get("events")).casefold():
             actionable["Event rewards"].append(account + " — " + _text(row.get("events")))
 
-        if row.get("attention_required") and not any(
-            (isinstance(row.get(k), dict) and row[k].get("attention_required"))
+        has_category_attention = any(
+            isinstance(row.get(k), dict) and row[k].get("attention_required")
             for k in ("daily", "store", "progression")
-        ) and not actionable["Promotions"] and not actionable["Event rewards"]:
+        )
+        has_promo_attention = (
+            "safety popup blocked" in _text(row.get("promotions")).casefold()
+            or "incomplete" in _text(row.get("promotions")).casefold()
+        )
+        has_event_attention = "pending" in _text(row.get("events")).casefold()
+        if row.get("attention_required") and not (
+            has_category_attention or has_promo_attention or has_event_attention
+        ):
             actionable["Run / recovery"].append(
                 account + " — " + (_text(row.get("next_action")) or "Review run outcome.")
             )
