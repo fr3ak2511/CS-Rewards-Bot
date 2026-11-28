@@ -123,7 +123,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(self.summary)
         self.assertNotIn("&lt;Player One&gt;", report)
         self.assertNotIn("<Player One>", report)
-        self.assertIn("Daily and Store confirmation pending", report)
+        self.assertIn("not confirmed by the portal", report)
         self.assertIn("Player …CD34", report)
 
     def test_report_uses_masked_suffix_not_full_player_identifier(self):
@@ -143,8 +143,8 @@ class CopyableReportTests(unittest.TestCase):
     def test_report_includes_per_account_progression_balance(self):
         report = build_copyable_report(self.summary)
         self.assertIn("Reward Summary", report)
-        self.assertIn("2 balance observation(s)", report)
-        self.assertIn("2 fresh", report)
+        self.assertIn("1 balance observation(s)", report)
+        self.assertIn("1 fresh", report)
         self.assertNotIn("34 Grenades", report)
         self.assertNotIn("Next milestone 56", report)
         self.assertNotIn("Progression / Grenade balance — grouped by milestone", report)
