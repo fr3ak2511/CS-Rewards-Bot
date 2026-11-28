@@ -303,8 +303,8 @@ def build_copyable_report(summary: dict[str, Any]) -> str:
         + "</strong></p>"
     )
     attention_note = (
-        f"{pending_progression} pending Progression inspection(s) included; "
-        "each affected account is listed below"
+        f"{pending_progression} pending Progression inspection(s) remain queued; "
+        "empty scans are summarized without treating them as failures"
         if pending_progression else "Accounts with claim / validation exceptions"
     )
 
@@ -416,7 +416,6 @@ th{{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;ba
 <div class="kpi"><span>Need attention</span><strong>{attention}</strong><small>{attention_note}</small></div>
 </section>
 {cycle_health_html}
-<section class="categories">{category_cards}</section>
 {account_activity_html}
 <section class="section">
 <h2>Run checks</h2>
