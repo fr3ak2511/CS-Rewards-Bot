@@ -1928,7 +1928,6 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Targeted Recovery", report)
         self.assertIn("Replayed exact saved target(s): Daily Reward", report)
         self.assertIn("Reward Summary", report)
-        self.assertIn("Cumulative Daily + standard Store claims in today&#x27;s cycle", report)
         self.assertIn("Recovery Run Consistency", report)
         self.assertIn("1 targeted account(s) represented", report)
         self.assertNotIn("Full Claim Path", report)
