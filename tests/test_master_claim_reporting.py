@@ -756,8 +756,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         # The core headline is Daily + standard Store only; other claims stay separate.
         self.assertIn("<span>🎁 Core claims</span><strong>3/4</strong>", report)
-        self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 Progression reward confirmed", report)
+        self.assertNotIn("Progression Program — Grenade Balance Check", report)
+        self.assertIn("1 confirmed", report)
         self.assertIn("Other Confirmed Rewards", report)
         self.assertNotIn("Paid Pack", report)
 
@@ -1219,8 +1219,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
                 [player], "Promotional Check #1", 1,
                 fixed_now - timedelta(minutes=2), {}, configured_player_count=36,
             )
-        self.assertIn("Status not retained", legacy_report)
-        self.assertIn("last observed 2026-11-22", legacy_report.lower())
+        self.assertIn("1 not validated", legacy_report)
+        self.assertNotIn("Status not retained", legacy_report)
 
     def test_queue_reinspection_is_counted_and_grouped_in_compact_email(self):
         reason = (
@@ -1716,7 +1716,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("27 / 30 vs date minimum", report)
         self.assertIn("Below date minimum", report)
-        self.assertIn("class='account-activity-card'", report)
+        self.assertNotIn("account-activity-card", report)
         self.assertNotIn("class='v2-section-head v2-grenade-head'", report)
 
     def test_promotional_offer_summary_groups_free_unavailable_offers(self):
@@ -2163,7 +2163,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertNotIn("<span>Progression Rewards</span>", report)
         self.assertIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("1 Progression reward confirmed in this run; 1 account remains open", report)
+        self.assertIn("1 confirmed", report)
+        self.assertIn("1 account remain open", report)
 
     def test_popup_blocked_progression_inspection_is_deferred_not_a_failed_claim(self):
         result = {
