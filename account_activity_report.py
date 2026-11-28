@@ -891,138 +891,109 @@ def _render_group_grenade_balances(group: list[dict[str, Any]]) -> str:
 
 
 def render_account_activity_section(records: Any) -> str:
-    """Render compact groups of identical account activity for Email and Copy Report."""
+    """Render category-first outcomes and only actionable account-level exceptions."""
     rows = [row for row in records if isinstance(row, dict)] if isinstance(records, list) else []
     if not rows:
         return (
             "<section class='account-activity-section'>"
-            "<h2>Account Activity</h2>"
+            "<h2>Reward Summary</h2>"
             "<p>No per-account activity records were available for this run.</p>"
             "</section>"
         )
 
-    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    categories = summarize_account_activity(rows)
+    category_html = "".join(
+        "<div class='reward-category'>"
+        "<strong>" + escape(item["label"]) + "</strong>"
+        "<span>" + escape(item["value"]) + "</span></div>"
+        for item in categories
+    )
+
+    portal_claimed: list[str] = []
+    actionable: dict[str, list[str]] = {
+        "Daily": [], "Store": [], "Progression": [],
+        "Loyalty": [], "Promotions": [], "Event rewards": [], "Run / recovery": [],
+    }
+    empty_scan_pending = 0
+
     for row in rows:
-        grouped.setdefault(_account_activity_group_key(row), []).append(row)
-    groups = list(grouped.values())
+        account = _text(row.get("account")) or "Unknown player"
+        for key, label in (("daily", "Daily"), ("store", "Store")):
+            item = row.get(key) if isinstance(row.get(key), dict) else {}
+            state = _text(item.get("state"))
+            if state == "portal_claimed":
+                portal_claimed.append(f"{label} — {account}")
+            elif item.get("attention_required"):
+                detail = _text(item.get("detail"))
+                action = _text(item.get("next_action"))
+                actionable[label].append(
+                    account + (f" — {detail}" if detail else "")
+                    + (f" Next: {action}" if action else "")
+                )
 
-    pending = sum(1 for row in rows if row.get("pending_inspection"))
-    attention = sum(1 for row in rows if row.get("attention_required"))
-    progressions = [
-        row.get("progression", {}) for row in rows
-        if isinstance(row.get("progression"), dict)
-    ]
-    confirmed_progression = sum(_integer(item.get("count")) for item in progressions)
-    queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions)
-    if queued_attempts == 0:
-        queued_attempts = sum(
-            1 for item in progressions if item.get("reinspection_attempted")
-        )
-    balance_rows = [
-        item.get("grenades", {}) for item in progressions
-        if isinstance(item.get("grenades"), dict) and item["grenades"].get("available")
-    ]
-    fresh_balance_rows = [
-        item for item in balance_rows
-        if _text(item.get("freshness")).startswith("Fresh")
-    ]
-    fresh_balance_passed = sum(
-        1 for item in fresh_balance_rows if item.get("status") == "pass"
-    )
-    intro_parts = [
-        f"{len(rows)} account entries",
-        f"{pending} Progression inspection(s) pending",
-        f"{attention} account(s) need attention",
-    ]
-    if confirmed_progression and pending:
-        open_phrase = "account remains open" if pending == 1 else "accounts remain open"
-        reward_word = "reward" if confirmed_progression == 1 else "rewards"
-        intro_parts.append(
-            f"{confirmed_progression} Progression {reward_word} confirmed in this run; "
-            f"{pending} {open_phrase}"
-        )
-    elif confirmed_progression:
-        intro_parts.append(f"{confirmed_progression} Progression rewards confirmed")
-    elif pending:
-        open_phrase = "account remains open" if pending == 1 else "accounts remain open"
-        intro_parts.append(
-            f"0 Progression rewards confirmed in this run; {pending} {open_phrase}"
-        )
-    if queued_attempts:
-        attempt_word = "attempt" if queued_attempts == 1 else "attempts"
-        intro_parts.append(f"{queued_attempts} queued reinspection {attempt_word} made")
-    if balance_rows:
-        intro_parts.append(
-            f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
-            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
-            f"{fresh_balance_passed} fresh validation(s) passed"
-        )
-    intro = (
-        " · ".join(intro_parts)
-        + ". Accounts with identical reward states and next actions are grouped; "
-          "account-specific Grenade readings and inspection history remain identified."
-    )
+        pp = row.get("progression") if isinstance(row.get("progression"), dict) else {}
+        if pp.get("pending_inspection") and _text(pp.get("outcome")) == "empty_scan":
+            empty_scan_pending += 1
+        elif pp.get("attention_required"):
+            detail = _text(pp.get("detail"))
+            action = _text(pp.get("next_action"))
+            actionable["Progression"].append(
+                account + (f" — {detail}" if detail else "")
+                + (f" Next: {action}" if action else "")
+            )
 
-    cards = []
-    for group in groups:
-        representative = group[0]
-        daily = representative.get("daily") if isinstance(representative.get("daily"), dict) else {}
-        store = representative.get("store") if isinstance(representative.get("store"), dict) else {}
-        progression = representative.get("progression") if isinstance(representative.get("progression"), dict) else {}
-        group_attention = bool(representative.get("attention_required"))
-        group_pending = bool(representative.get("pending_inspection"))
-        status_label = _text(representative.get("account_status")) or "Status not recorded"
-        status_style = (
-            "background:#fef3c7;color:#92400e" if group_attention
-            else "background:#e0f2fe;color:#075985" if group_pending
-            else "background:#dcfce7;color:#166534"
-        )
-        account_labels = [
-            _grouped_account_label(row, include_inspection_history=len(group) > 1)
-            for row in group
-        ]
-        progression_detail = (
-            _shared_progression_detail(progression)
-            if len(group) > 1 else _text(progression.get("detail"))
-        )
-        progression_value = _text(progression.get("label")) or "Not checked"
-        recovery = _text(representative.get("recovery"))
-        other = (
-            "Loyalty " + _text(representative.get("loyalty"))
-            + " · Promotions " + _text(representative.get("promotions"))
-            + " · Events " + _text(representative.get("events"))
-        )
-        if recovery:
-            other += " · Recovery " + recovery
-        account_word = "account" if len(group) == 1 else "accounts"
-        card = (
-            "<article class='account-activity-card' "
-            "style='margin:0 0 9px;padding:11px 12px;border:1px solid #dbe3ec;border-radius:9px;background:#ffffff'>"
-            "<div style='display:block;margin-bottom:7px'>"
-            f"<strong style='font-size:13px;color:#172b4d'>{escape(status_label)} · {len(group)} {account_word}</strong>"
-            f"<span style='display:inline-block;margin:4px 0 0 6px;padding:3px 7px;border-radius:12px;font-size:10px;font-weight:700;{status_style}'>"
-            f"{'Needs attention' if group_attention else 'Pending inspection' if group_pending else 'Recorded'}</span></div>"
-            "<div style='font-size:11px;line-height:1.5;color:#334155'>"
-            f"<div><strong>Accounts:</strong> {escape(', '.join(account_labels))}</div>"
-            f"<div style='margin-top:3px'><strong>Daily:</strong> {escape(_text(daily.get('label')) or 'Unknown')} — {escape(_text(daily.get('detail')))}</div>"
-            f"<div><strong>Store:</strong> {escape(_text(store.get('label')) or 'Unknown')} — {escape(_text(store.get('detail')))}</div>"
-            f"<div><strong>Progression:</strong> {escape(progression_value)}"
-            + (f" — {escape(progression_detail)}" if progression_detail else "")
-            + "</div>"
-            + _render_group_grenade_balances(group)
-            + f"<div style='margin-top:3px'><strong>Other:</strong> {escape(other)}</div>"
-            + "<div style='margin-top:5px;padding-top:5px;border-top:1px solid #edf1f6'><strong>Next action:</strong> "
-            + escape(_text(representative.get("next_action")) or "No account-level follow-up required.")
-            + "</div></div></article>"
-        )
-        cards.append(card)
+        if _text(row.get("loyalty")) not in {"", "Not checked", "Not enrolled"} and (
+            "pending" in _text(row.get("loyalty")).casefold()
+            or "unconfirmed" in _text(row.get("loyalty")).casefold()
+        ):
+            actionable["Loyalty"].append(account + " — " + _text(row.get("loyalty")))
+
+        if "safety popup blocked" in _text(row.get("promotions")).casefold() or (
+            "incomplete" in _text(row.get("promotions")).casefold()
+        ):
+            actionable["Promotions"].append(account + " — " + _text(row.get("promotions")))
+
+        if "pending" in _text(row.get("events")).casefold():
+            actionable["Event rewards"].append(account + " — " + _text(row.get("events")))
+
+        if row.get("attention_required") and not any(
+            (isinstance(row.get(k), dict) and row[k].get("attention_required"))
+            for k in ("daily", "store", "progression")
+        ) and not actionable["Promotions"] and not actionable["Event rewards"]:
+            actionable["Run / recovery"].append(
+                account + " — " + (_text(row.get("next_action")) or "Review run outcome.")
+            )
+
+    sections = []
+    for label, entries in actionable.items():
+        if entries:
+            sections.append(
+                "<div class='exception-group'><strong>" + escape(label) + "</strong><ul>"
+                + "".join("<li>" + escape(entry) + "</li>" for entry in dict.fromkeys(entries))
+                + "</ul></div>"
+            )
+
+    queue_note = (
+        f"<p class='queue-note'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
+        "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred.</p>"
+        if empty_scan_pending else ""
+    )
+    already_claimed = (
+        "<div class='exception-group portal-claimed'><strong>Portal already claimed "
+        "(actor unknown; not credited to the bot)</strong><ul>"
+        + "".join("<li>" + escape(item) + "</li>" for item in dict.fromkeys(portal_claimed))
+        + "</ul></div>"
+        if portal_claimed else ""
+    )
+    exceptions = (
+        "<section class='report-exceptions'><h3>Exceptions &amp; follow-up</h3>"
+        + ("".join(sections) if sections else "<p>No actionable exceptions recorded.</p>")
+        + already_claimed + queue_note + "</section>"
+    )
 
     return (
-        "<section class='account-activity-section' "
-        "style='margin:0 0 12px;padding:15px;border:1px solid #e1e7ef;border-radius:12px;background:#ffffff'>"
-        "<h2 style='font-size:15px;margin:0 0 5px;color:#172b4d'>Account Activity</h2>"
-        "<p style='font-size:11px;color:#52647d;margin:0 0 5px'><strong>Progression Program — Grenade Balance Check</strong></p>"
-        f"<p style='font-size:11px;color:#64748b;line-height:1.45;margin:0 0 10px'>{escape(intro)}</p>"
-        + "".join(cards)
-        + "</section>"
+        "<section class='account-activity-section'>"
+        "<h2>Reward Summary</h2>"
+        "<div class='reward-categories'>" + category_html + "</div>"
+        + exceptions + "</section>"
     )
