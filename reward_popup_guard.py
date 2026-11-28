@@ -33,6 +33,71 @@ DIALOG_SELECTOR = (
 )
 BUTTON_SELECTOR = 'button, [role="button"]'
 
+# Recognise only the portal's exact recurring purchase upsell. This overlay
+# has no dialog role/class, so its own heading and top-right close control are
+# required before any native click is considered.
+_PROMOTIONAL_UPSELL_CLOSE_CANDIDATE_JS = r"""/* REWARD_PROMOTIONAL_UPSELL_CLOSE_CANDIDATE_V1 */
+const norm = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+const visible = el => {
+  if (!el || !el.isConnected) return false;
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return !!(el.getClientRects().length && r.width > 0 && r.height > 0
+    && s.display !== 'none' && s.visibility !== 'hidden'
+    && Number(s.opacity || '1') > 0 && s.pointerEvents !== 'none');
+};
+const headingText = 'exclusive discount activated!';
+const headings = Array.from(document.querySelectorAll('h1,h2,h3,[role="heading"],div,span,p'))
+  .filter(el => visible(el) && norm(el.innerText || el.textContent) === headingText);
+const candidates = [];
+for (const heading of headings) {
+  let panel = heading.parentElement;
+  for (let depth = 0; panel && panel !== document.body && depth < 8;
+       depth++, panel = panel.parentElement) {
+    if (!visible(panel)) continue;
+    const panelText = norm(panel.innerText || panel.textContent);
+    if (!panelText.includes('purchase or lose it!')) continue;
+    const pr = panel.getBoundingClientRect();
+    const controls = Array.from(panel.querySelectorAll('button,[role="button"]'))
+      .filter(button => {
+        if (!visible(button) || button.disabled
+            || button.getAttribute('aria-disabled') === 'true') return false;
+        const r = button.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const inTopRight = cx >= pr.right - Math.max(48, Math.min(112, pr.width * 0.18))
+          && cx <= pr.right + 12
+          && cy >= pr.top - 8 && cy <= pr.top + Math.max(64, Math.min(112, pr.height * 0.18));
+        if (!inTopRight) return false;
+        const action = [
+          norm(button.innerText || button.textContent),
+          norm(button.getAttribute('aria-label')),
+          norm(button.getAttribute('title')),
+          norm(button.getAttribute('data-testid')),
+          norm(button.getAttribute('data-variant'))
+        ].join(' ');
+        if (/\b(buy|purchase|claim|confirm|accept|redeem|subscribe|pay|submit|yes)\b/i.test(action))
+          return false;
+        const explicitClose = ['x','×','close','dismiss'].includes(norm(button.innerText || button.textContent))
+          || ['close','close dialog','dismiss'].includes(norm(button.getAttribute('aria-label')))
+          || ['close','dismiss'].includes(norm(button.getAttribute('title')))
+          || norm(button.getAttribute('data-testid')) === 'close'
+          || /(^|[\s_-])(button-close|modal-close|dialog-close)([\s_-]|$)/i.test(String(button.className || ''));
+        const svg = button.querySelector('svg');
+        const svgCross = !!(svg && svg.querySelectorAll('line,path').length >= 2
+          && (svg.querySelectorAll('line').length >= 2 || svg.querySelectorAll('path').length >= 2));
+        if (!explicitClose && !svgCross) return false;
+        const hit = document.elementFromPoint(cx, cy);
+        return !!(hit && (hit === button || button.contains(hit)));
+      });
+    for (const button of controls) candidates.push({button, panel});
+    if (controls.length) break;
+  }
+}
+const uniqueCandidates = Array.from(new Map(candidates.map(item => [item.button, item])).values());
+if (uniqueCandidates.length !== 1)
+  return {ok:false, reason:uniqueCandidates.length ? 'ambiguous_promotion_close_controls' : 'promotion_close_not_found', count:uniqueCandidates.length};
+return {ok:true, button:uniqueCandidates[0].button, panel:uniqueCandidates[0].panel};
+""";
+
 _LAYER_INSPECT_JS = r"""/* REWARD_POPUP_LAYER_INSPECT_V1 */
 const isVisible = el => {
   if (!el) return false;
@@ -820,6 +885,41 @@ def _fullscreen_overlay_diagnostics(state: dict) -> str:
     return json.dumps(safe, ensure_ascii=True, separators=(",", ":"))[:1600]
 
 
+def _dismiss_known_promotional_upsell(
+    driver, *, state: dict, timeout: float, poll_interval: float
+) -> tuple[bool, str]:
+    """Dismiss only the exact Vertigo discount upsell with its own top-right close."""
+    if int(state.get("dialogCount", 0) or 0) != 0:
+        return False, "promotion_handler_requires_no_dialog"
+    if int(state.get("fullscreenOverlayCount", 0) or 0) == 0:
+        return False, "no_fullscreen_promotion_overlay"
+    try:
+        candidate = driver.execute_script(_PROMOTIONAL_UPSELL_CLOSE_CANDIDATE_JS) or {}
+    except Exception as exc:
+        return False, f"promotion_close_inspection_failed:{type(exc).__name__}"
+    if not isinstance(candidate, dict) or not candidate.get("ok") or candidate.get("button") is None:
+        reason = candidate.get("reason", "invalid_candidate") if isinstance(candidate, dict) else "invalid_candidate"
+        return False, f"known_promotion_not_safely_identified:{reason}"
+    before_url = str(state.get("url") or "")
+    try:
+        candidate["button"].click()
+    except Exception as exc:
+        return False, f"promotion_native_close_click_failed:{type(exc).__name__}"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            after = _inspect(driver)
+            after_url = str(after.get("url") or "")
+            if before_url and after_url and before_url != after_url:
+                return False, "promotion_close_changed_page_url"
+            if int(after.get("dialogCount", 0) or 0) == 0 and int(after.get("fullscreenOverlayCount", 0) or 0) == 0:
+                return True, "known_promotion_closed_and_overlay_clear"
+        except Exception as exc:
+            return False, f"promotion_close_verification_failed:{type(exc).__name__}"
+        time.sleep(poll_interval)
+    return False, "known_promotion_overlay_persisted_after_close"
+
+
 def dismiss_all_safe_popups(
     driver,
     *,
@@ -856,6 +956,22 @@ def dismiss_all_safe_popups(
                 if dismissed:
                     _log(log, f"✅ Reward popup guard: dismissed and verified {dismissed} popup(s)")
                 return True, reason
+
+            # Exact known marketing overlay: heading + purchase copy + own X.
+            if dialog_count == 0 and overlay_count > 0:
+                promo_closed, promo_reason = _dismiss_known_promotional_upsell(
+                    driver, state=state, timeout=timeout, poll_interval=poll_interval
+                )
+                if promo_closed:
+                    dismissed += 1
+                    _log(log, "🧹 Reward popup guard: dismissed and verified the known promotional upsell")
+                    continue
+                diagnostics = _popup_context_diagnostics(driver)
+                overlay_details = _fullscreen_overlay_diagnostics(state)
+                return False, (
+                    f"unknown_fullscreen_overlay_blocks_page; promotion_handler={promo_reason}; "
+                    f"dismissed={dismissed}; fullscreen_overlay_details={overlay_details}; {diagnostics}"
+                )
 
             try:
                 dialogs = driver.find_elements("css selector", DIALOG_SELECTOR)
