@@ -695,7 +695,7 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
         return "Not checked"
     bot_count = sum(
         _integer(value.get("count")) for value in values
-        if isinstance(value, dict) and value.get("state") in {"claimed_by_bot", "retry_queued"}
+        if isinstance(value, dict) and value.get("state") in {"claimed_by_bot", "retry_queued", "confirmed"}
     )
     portal_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "portal_claimed")
     retry_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "retry_queued")
@@ -928,6 +928,13 @@ def render_account_activity_section(records: Any) -> str:
         1 for item in balance_rows
         if item.get("status") in {"below_minimum", "counter_regressed"}
     )
+    balance_above = sum(
+        1 for item in fresh_balance_rows
+        if item.get("status") == "pass" and item.get("count") is not None
+        and item.get("minimum") is not None and _integer(item.get("count")) > _integer(item.get("minimum"))
+    )
+    balance_pending_baseline = sum(1 for item in balance_rows if item.get("status") == "pending_baseline")
+    balance_not_validated = sum(1 for item in balance_rows if item.get("status") in {"not_validated", "status_not_retained"})
 
     portal_claimed: list[str] = []
     actionable: dict[str, list[str]] = {
@@ -935,6 +942,7 @@ def render_account_activity_section(records: Any) -> str:
         "Loyalty": [], "Promotions": [], "Event rewards": [], "Run / recovery": [],
     }
     empty_scan_pending = 0
+    queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions)
 
     for row in rows:
         account = _text(row.get("account")) or "Unknown player"
@@ -1019,14 +1027,18 @@ def render_account_activity_section(records: Any) -> str:
             f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
             f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
             f"{fresh_balance_passed} fresh validation(s) passed"
+            + (f" · {balance_above} above date minimum" if balance_above else "")
             + (f" · {balance_below} below minimum / regressed" if balance_below else "")
+            + (f" · {balance_pending_baseline} pending baseline" if balance_pending_baseline else "")
+            + (f" · {balance_not_validated} not validated" if balance_not_validated else "")
             if balance_rows else "Grenade balance not checked in this run."
         )
         + "</p></div>"
     )
     queue_note = (
         f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
-        "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred.</p>"
+        "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred."
+        + (f" {queued_attempts} inspection attempts recorded." if queued_attempts else "") + "</p>"
         if empty_scan_pending else ""
     )
     already_claimed = (
