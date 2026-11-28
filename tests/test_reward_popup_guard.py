@@ -572,5 +572,53 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
 
 
+    def test_promotion_only_guard_dismisses_verified_upsell_and_verifies_clearance(self):
+        from reward_popup_guard import dismiss_known_promotional_upsell_only
+
+        driver = LayerDriver(layers=0, promotional_overlay=True)
+        ok, reason = dismiss_known_promotional_upsell_only(driver, timeout=0.2)
+
+        self.assertTrue(ok, reason)
+        self.assertEqual(reason, "known_promotion_closed_and_overlay_clear")
+        self.assertTrue(driver.promotion_button.clicked)
+        self.assertFalse(driver.overlay_only)
+        self.assertEqual(driver.close_count, 0)
+
+    def test_promotion_only_guard_does_not_touch_unknown_fullscreen_overlay(self):
+        from reward_popup_guard import dismiss_known_promotional_upsell_only
+
+        driver = LayerDriver(layers=0, overlay_only=True)
+        ok, reason = dismiss_known_promotional_upsell_only(driver, timeout=0.2)
+
+        self.assertFalse(ok)
+        self.assertIn("promotion_close_not_found", reason)
+        self.assertFalse(driver.close_count)
+
+    def test_promotion_only_guard_does_not_dismiss_unrelated_dialog(self):
+        from reward_popup_guard import dismiss_known_promotional_upsell_only
+
+        driver = LayerDriver(
+            dialog_text="Your rewards! x20 Continue",
+            action_text="Continue",
+            closable=False,
+        )
+        ok, reason = dismiss_known_promotional_upsell_only(driver, timeout=0.2)
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "promotion_handler_requires_no_dialog")
+        self.assertFalse(driver.continue_buttons[0].clicked)
+        self.assertEqual(driver.close_count, 0)
+
+    def test_promotion_only_guard_reports_absent_overlay_without_clicking(self):
+        from reward_popup_guard import dismiss_known_promotional_upsell_only
+
+        driver = LayerDriver(layers=0)
+        ok, reason = dismiss_known_promotional_upsell_only(driver, timeout=0.2)
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "no_fullscreen_promotion_overlay")
+        self.assertEqual(driver.close_count, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

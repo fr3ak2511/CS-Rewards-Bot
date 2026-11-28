@@ -28,7 +28,9 @@ from event_rewards import (
     event_retry_required,
     merge_claim_ledger,
 )
-from reward_popup_guard import dismiss_all_safe_popups
+from reward_popup_guard import (
+    dismiss_all_safe_popups, dismiss_known_promotional_upsell_only,
+)
 from progression_claim_safety import claim_progression_rewards
 from progression_inspection_queue import (
     eligible_progression_inspection_ids,
@@ -8837,7 +8839,7 @@ def write_run_summary(results, run_label, started_at, finished_at, email_sent, c
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def run_progression_diagnostic_only():
+def run_progression_diagnostic_only(*, popup_validation=False):
     """Run a no-claim, no-runtime-write Progression DOM survey for the full roster."""
     forbidden_flags = (
         "RECOVERY_ONLY_FAILED",
@@ -8853,7 +8855,11 @@ def run_progression_diagnostic_only():
         log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: a claim/recovery execution flag is also enabled.")
         return 2
 
-    unexpected_args = [arg for arg in sys.argv[1:] if arg != "--progression-diagnostic-only"]
+    expected_arg = (
+        "--progression-popup-diagnostic-only" if popup_validation
+        else "--progression-diagnostic-only"
+    )
+    unexpected_args = [arg for arg in sys.argv[1:] if arg != expected_arg]
     if unexpected_args:
         log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: diagnostic mode cannot be combined with other command-line modes.")
         return 2
@@ -8873,14 +8879,14 @@ def run_progression_diagnostic_only():
         log("⛔ PROGRESSION_DIAGNOSTIC_REJECTED: configured roster is empty or contains duplicate Player IDs.")
         return 2
 
-    max_scroll_steps = 8
+    max_scroll_steps = 0 if popup_validation else 8
     snapshot_limit = max_scroll_steps + 1
     _PROGRESSION_INSPECTION_DIAGNOSTICS_BY_PLAYER.clear()
     os.makedirs(RUN_ARTIFACTS_DIR, exist_ok=True)
     account_results = []
 
     log("=" * 60)
-    log("PROGRESSION DIAGNOSTIC ONLY — READ-ONLY MODE")
+    log("PROGRESSION POPUP DIAGNOSTIC ONLY — READ-ONLY MODE" if popup_validation else "PROGRESSION DIAGNOSTIC ONLY — READ-ONLY MODE")
     log(f"Configured accounts: {len(players)} | Reward claims: DISABLED | Runtime-state writes: DISABLED")
     log("=" * 60)
 
@@ -8897,6 +8903,14 @@ def run_progression_diagnostic_only():
             "claimable_control_counts_by_snapshot": [],
             "delivered_control_counts_by_snapshot": [],
         }
+        if popup_validation:
+            account.update({
+                "popup_guard_status": "not_run",
+                "popup_guard_reason": None,
+                "known_promotional_overlay_detected": False,
+                "known_promotional_overlay_dismissed": False,
+                "progression_card_rail_visible_after_popup_check": False,
+            })
         try:
             log(f"🔎 Progression diagnostic {index}/{len(players)} — account ending {player_id[-4:]}")
             driver = create_driver()
@@ -8913,6 +8927,20 @@ def run_progression_diagnostic_only():
             driver.get("https://hub.vertigogames.co/progression-program")
             bypass_cloudflare(driver)
             time.sleep(1.5)
+
+            if popup_validation:
+                popup_ok, popup_reason = dismiss_known_promotional_upsell_only(
+                    driver, timeout=3.0, poll_interval=0.15
+                )
+                account["popup_guard_status"] = "verified" if popup_ok else "blocked"
+                account["popup_guard_reason"] = str(popup_reason)[:300]
+                known_promotion_closed = popup_reason == "known_promotion_closed_and_overlay_clear"
+                account["known_promotional_overlay_detected"] = known_promotion_closed
+                account["known_promotional_overlay_dismissed"] = known_promotion_closed
+                if not popup_ok:
+                    account["page_status"] = "popup_guard_blocked"
+                    account["scroll_stop_reason"] = f"popup_guard_blocked:{popup_reason}"
+                    continue
 
             page_valid = False
             for scan_index in range(snapshot_limit):
@@ -8942,6 +8970,22 @@ def run_progression_diagnostic_only():
                     break
 
                 page_valid = True
+                if popup_validation:
+                    inspection = snapshot.get("inspection_diagnostics") or {}
+                    rails = inspection.get("carousel_containers") or []
+                    rail_visible = any(
+                        int(rail.get("visible_child_count", 0) or 0) > 0
+                        and int(rail.get("captured_card_count", 0) or 0) > 0
+                        for rail in rails if isinstance(rail, dict)
+                    )
+                    account["progression_card_rail_visible_after_popup_check"] = rail_visible
+                    if not rail_visible:
+                        account["page_status"] = "progression_rail_not_observed"
+                        account["scroll_stop_reason"] = "progression_card_rail_not_visible_after_popup_check"
+                        break
+                    account["page_status"] = "authenticated_progression_page_observed"
+                    account["scroll_stop_reason"] = "popup_check_and_card_rail_verified"
+                    break
                 account["page_status"] = "authenticated_progression_page_observed"
                 moved = _scroll_progression_carousel(driver)
                 if not moved:
@@ -8979,7 +9023,7 @@ def run_progression_diagnostic_only():
         if item.get("page_status") == "authenticated_progression_page_observed"
     )
     diagnostic_summary.update({
-        "run_mode": "PROGRESSION_DIAGNOSTIC_ONLY",
+        "run_mode": "PROGRESSION_POPUP_DIAGNOSTIC_ONLY" if popup_validation else "PROGRESSION_DIAGNOSTIC_ONLY",
         "generated_at_ist": get_ist_time().isoformat(),
         "run_scope": "all_configured_accounts",
         "configured_player_count": len(players),
@@ -8990,6 +9034,12 @@ def run_progression_diagnostic_only():
         "accounts_with_diagnostic_error": sum(
             1 for item in account_results if item.get("page_status") == "diagnostic_error"
         ),
+        "popup_guard_accounts_verified": sum(1 for item in account_results if item.get("popup_guard_status") == "verified"),
+        "accounts_with_popup_guard_blocker": sum(1 for item in account_results if item.get("popup_guard_status") == "blocked"),
+        "known_promotional_overlay_detected_accounts": sum(1 for item in account_results if item.get("known_promotional_overlay_detected")),
+        "known_promotional_overlay_dismissed_accounts": sum(1 for item in account_results if item.get("known_promotional_overlay_dismissed")),
+        "progression_card_rail_visible_after_popup_check_accounts": sum(1 for item in account_results if item.get("progression_card_rail_visible_after_popup_check")),
+        "live_popup_dismissal_established": any(item.get("known_promotional_overlay_dismissed") and item.get("progression_card_rail_visible_after_popup_check") for item in account_results),
         "claim_actions_permitted": False,
         "claim_clicks_dispatched": 0,
         "claim_history_modified": False,
@@ -9005,18 +9055,19 @@ def run_progression_diagnostic_only():
             "milestone delivery, Locked state, or a resolved Progression inspection."
         ),
     })
-    output_path = os.path.join(RUN_ARTIFACTS_DIR, "progression_diagnostic_summary.json")
+    output_name = "progression_popup_diagnostic_summary.json" if popup_validation else "progression_diagnostic_summary.json"
+    output_path = os.path.join(RUN_ARTIFACTS_DIR, output_name)
     with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(diagnostic_summary, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
 
     log(f"📦 Read-only Progression diagnostic artifact saved: {output_path}")
     log(
-        "PROGRESSION_DIAGNOSTIC_RESULT="
+        ("PROGRESSION_POPUP_DIAGNOSTIC_RESULT=" if popup_validation else "PROGRESSION_DIAGNOSTIC_RESULT=")
         + ("COMPLETED" if successful_pages == len(players) else "COMPLETED_WITH_ATTENTION")
     )
     log("No reward claim function, claim-history update, queue update, or runtime-state save was executed.")
-    return 0
+    return 1 if popup_validation and successful_pages != len(players) else 0
 
 
 def main():
@@ -9025,6 +9076,8 @@ def main():
         return run_login_diagnostic()
     if "--test-login-only" in sys.argv[1:]:
         return run_login_only_test()
+    if "--progression-popup-diagnostic-only" in sys.argv[1:]:
+        return run_progression_diagnostic_only(popup_validation=True)
     if "--progression-diagnostic-only" in sys.argv[1:]:
         return run_progression_diagnostic_only()
 
