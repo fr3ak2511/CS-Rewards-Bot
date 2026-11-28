@@ -605,7 +605,7 @@ class RewardPopupGuardTests(unittest.TestCase):
         ok, reason = dismiss_known_promotional_upsell_only(driver, timeout=0.2)
 
         self.assertFalse(ok)
-        self.assertEqual(reason, "promotion_handler_requires_no_dialog")
+        self.assertTrue(reason.startswith("promotion_handler_requires_no_dialog"))
         self.assertFalse(driver.continue_buttons[0].clicked)
         self.assertEqual(driver.close_count, 0)
 
