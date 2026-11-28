@@ -89,6 +89,8 @@ def _daily_activity(player: dict[str, Any]) -> dict[str, Any]:
     unconfirmed = bool(player.get("daily_unconfirmed"))
     audited = _daily_audit_present(player)
     checked = _standard_rewards_checked(player)
+    if not checked:
+        count = 0
 
     if count:
         state = "claimed_by_bot"
@@ -167,6 +169,9 @@ def _store_activity(player: dict[str, Any]) -> dict[str, Any]:
     )
     states = [ _text(item).casefold() for item in (raw_states or []) ]
     checked = _standard_rewards_checked(player)
+    if not checked:
+        count = 0
+        unconfirmed = []
 
     if count and unconfirmed:
         item_note = (
@@ -1054,7 +1059,11 @@ def render_account_activity_section(records: Any) -> str:
         f"after a valid empty scan. 0 Progression rewards confirmed in this run; {empty_scan_pending} "
         + ("account remains open" if empty_scan_pending == 1 else "accounts remain open")
         + ". No claimable reward card was visible in the captured scan; these remain queued for a later safe pass and are not account-level failures."
-        + (f" {queued_attempts} queued reinspection attempts made." if queued_attempts else "") + "</p>"
+        + (
+            f" {queued_attempts} queued reinspection "
+            + ("attempt made." if queued_attempts == 1 else "attempts made.")
+            if queued_attempts else ""
+        ) + "</p>"
         if empty_scan_pending else ""
     )
     already_claimed = (
