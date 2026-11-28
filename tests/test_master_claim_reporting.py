@@ -1092,7 +1092,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         )
         self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
         self.assertNotIn("Progression Program — Grenade Balance Check", report)
-        self.assertIn("No claimable reward card visible", report)
+        self.assertIn("No claimable reward card was visible", report)
         self.assertIn("Attention Required", report)
 
         player["progression_unconfirmed"] = True
@@ -2581,7 +2581,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<span>🎁 Core claims</span><strong>144/144</strong>", report)
         self.assertIn("<span>Daily Rewards</span><strong>36</strong>", report)
         self.assertIn("<span>Standard Store Rewards</span><strong>108</strong>", report)
-        self.assertIn("Progression Program — Grenade Balance Check", report)
+        self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("1 Progression reward confirmed", report)
         self.assertNotIn("<span>🎁 Core claims</span><strong>145</strong>", report)
 
