@@ -8115,15 +8115,7 @@ def build_email(results, run_label, run_index, job_start, meta, followup_summary
         + (cycle_health_html or "")
         + processing_html
         + (account_activity_html or "")
-        + (
-            "<section class='v2-section v2-rewards'>"
-            + _email_section_header(rewards_heading, rewards_subtitle)
-            + category_html
-            + "</section>"
-            if category_html else ""
-        )
         + (daily_cycle_html or "")
-        + additional_claims_html
         + validation_html
         + ("" if is_progression_only_run else (promotion_html or ""))
         + (followup_html or "")
