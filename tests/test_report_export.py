@@ -121,9 +121,10 @@ class CopyableReportTests(unittest.TestCase):
 
     def test_report_escapes_untrusted_display_names_and_reasons(self):
         report = build_copyable_report(self.summary)
-        self.assertIn("&lt;Player One&gt;", report)
+        self.assertNotIn("&lt;Player One&gt;", report)
         self.assertNotIn("<Player One>", report)
         self.assertIn("Daily and Store confirmation pending", report)
+        self.assertIn("Player …CD34", report)
 
     def test_report_uses_masked_suffix_not_full_player_identifier(self):
         report = build_copyable_report(self.summary)
@@ -142,10 +143,10 @@ class CopyableReportTests(unittest.TestCase):
     def test_report_includes_per_account_progression_balance(self):
         report = build_copyable_report(self.summary)
         self.assertIn("Reward Summary", report)
-        self.assertIn("Grenades:", report)
-        self.assertIn("34 Grenades", report)
-        self.assertIn("Next milestone 56", report)
-        self.assertIn("22 to go", report)
+        self.assertIn("2 balance observation(s)", report)
+        self.assertIn("2 fresh", report)
+        self.assertNotIn("34 Grenades", report)
+        self.assertNotIn("Next milestone 56", report)
         self.assertNotIn("Progression / Grenade balance — grouped by milestone", report)
 
     def test_pending_grenade_baseline_remains_visible_as_account_attention(self):
@@ -432,9 +433,10 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn("Umang1984 · …B91F", report)
         self.assertIn("annu411 · …62E4", report)
-        self.assertEqual(report.count("Portal says claimed"), 1)
-        self.assertIn("Umang1984 · …B91F, annu411 · …62E4", report)
-        self.assertIn("Actor is unknown", report)
+        self.assertEqual(report.count("Portal says claimed"), 2)
+        self.assertIn("Umang1984 · …B91F", report)
+        self.assertIn("annu411 · …62E4", report)
+        self.assertIn("actor unknown", report.lower())
         self.assertNotIn("Claimed by bot", report)
 
     def test_audited_preexisting_daily_state_is_not_attributed_to_bot(self):
