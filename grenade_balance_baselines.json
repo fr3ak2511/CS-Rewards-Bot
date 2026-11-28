@@ -511,6 +511,21 @@
           "last_observed_status": "pass",
           "last_observed_next_milestone": 56,
           "last_observed_remaining_to_next_milestone": 29
+        },
+        "FC8E0BBD0BBC0587": {
+          "baseline_status": "active",
+          "first_seen_date": "2026-11-28",
+          "baseline_source": "new_account_join_day_post_store_check",
+          "baseline_count": 33,
+          "baseline_date": "2026-11-28",
+          "tracking_start_date": "2026-11-29",
+          "last_observed_count": 33,
+          "last_observed_date": "2026-11-28",
+          "last_observed_at_ist": "2026-11-28T18:14:00.598349+05:30",
+          "last_observed_expected_minimum": 33,
+          "last_observed_status": "pass",
+          "last_observed_next_milestone": 56,
+          "last_observed_remaining_to_next_milestone": 23
         }
       }
     }

@@ -3113,7 +3113,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:07:33.593284"
+        "last_seen_at": "2026-11-28T18:07:09.892309"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -9303,7 +9303,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:10:28.846739"
+        "last_seen_at": "2026-11-28T18:10:03.330379"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -9788,7 +9788,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:10:43.399338"
+        "last_seen_at": "2026-11-28T18:10:18.043866"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -10271,7 +10271,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:10:58.002173"
+        "last_seen_at": "2026-11-28T18:10:33.158906"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -10756,7 +10756,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:11:07.478679"
+        "last_seen_at": "2026-11-28T18:10:42.657103"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -12953,7 +12953,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:11:57.522666"
+        "last_seen_at": "2026-11-28T18:11:31.724591"
       },
       "promo_fc4bebe1fb9b140f5a89": {
         "title": "Death Character Card",
@@ -15659,7 +15659,7 @@
         "campaign_id": null,
         "href": null,
         "status": "unavailable",
-        "last_seen_at": "2026-11-28T12:13:03.568922"
+        "last_seen_at": "2026-11-28T18:12:35.341049"
       },
       "promo_70668005a422a3661b15": {
         "title": "Welcome Bundle",
@@ -17438,6 +17438,48 @@
       "last_claim": "2026-11-25T05:55:58.548091",
       "last_count": 1,
       "last_visit": "2026-11-26T05:57:31.949996",
+      "status": "checked_no_claimable_reward"
+    },
+    "loyalty": {
+      "last_claim": null,
+      "next_available": null,
+      "status": "unavailable"
+    },
+    "promotions": {},
+    "event_rewards": {}
+  },
+  "FC8E0BBD0BBC0587": {
+    "daily": {
+      "last_claim": "2026-11-28T18:13:39.120952",
+      "next_available": "2026-11-29T05:30:00",
+      "status": "claimed"
+    },
+    "store": {
+      "reward_1": {
+        "last_claim": "2026-11-28T18:13:45.008264",
+        "next_available": "2026-11-29T05:30:00",
+        "status": "claimed"
+      },
+      "reward_2": {
+        "last_claim": "2026-11-28T18:13:48.200454",
+        "next_available": "2026-11-29T05:30:00",
+        "status": "claimed"
+      },
+      "reward_3": {
+        "last_claim": "2026-11-28T18:13:51.399952",
+        "next_available": "2026-11-29T05:30:00",
+        "status": "claimed"
+      },
+      "reward_4": {
+        "last_claim": null,
+        "next_available": null,
+        "status": "unknown"
+      }
+    },
+    "progression": {
+      "last_claim": null,
+      "last_count": 0,
+      "last_visit": "2026-11-28T18:14:00.567879",
       "status": "checked_no_claimable_reward"
     },
     "loyalty": {
