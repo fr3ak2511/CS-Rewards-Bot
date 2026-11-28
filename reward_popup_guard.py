@@ -92,9 +92,10 @@ for (const heading of headings) {
     if (controls.length) break;
   }
 }
-if (candidates.length !== 1)
-  return {ok:false, reason:candidates.length ? 'ambiguous_promotion_close_controls' : 'promotion_close_not_found', count:candidates.length};
-return {ok:true, button:candidates[0].button, panel:candidates[0].panel};
+const uniqueCandidates = Array.from(new Map(candidates.map(item => [item.button, item])).values());
+if (uniqueCandidates.length !== 1)
+  return {ok:false, reason:uniqueCandidates.length ? 'ambiguous_promotion_close_controls' : 'promotion_close_not_found', count:uniqueCandidates.length};
+return {ok:true, button:uniqueCandidates[0].button, panel:uniqueCandidates[0].panel};
 """;
 
 _LAYER_INSPECT_JS = r"""/* REWARD_POPUP_LAYER_INSPECT_V1 */
