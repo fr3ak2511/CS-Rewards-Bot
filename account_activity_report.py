@@ -951,6 +951,8 @@ def render_account_activity_section(records: Any) -> str:
     }
     empty_scan_pending = 0
     queued_attempts = sum(_integer(item.get("inspection_attempts")) for item in progressions)
+    if queued_attempts == 0:
+        queued_attempts = sum(1 for item in progressions if item.get("reinspection_attempted"))
 
     for row in rows:
         account = _text(row.get("account")) or "Unknown player"
