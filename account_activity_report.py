@@ -716,6 +716,9 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
         parts.append(f"{retry_count} retry queued")
     if pending_count:
         parts.append(f"{pending_count} pending")
+        if key == "progression":
+            account_word = "account" if pending_count == 1 else "accounts"
+            parts.append(f"{pending_count} {account_word} remain open")
     if other_attention:
         parts.append(f"{other_attention} needs review")
     if not parts:
@@ -1039,7 +1042,9 @@ def render_account_activity_section(records: Any) -> str:
     )
     queue_note = (
         f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
-        "after a valid empty scan. No claimable reward card was visible in the captured scan; these remain queued for a later safe pass and are not account-level failures."
+        f"after a valid empty scan. 0 Progression rewards confirmed in this run; {empty_scan_pending} "
+        + ("account remains open" if empty_scan_pending == 1 else "accounts remain open")
+        + ". No claimable reward card was visible in the captured scan; these remain queued for a later safe pass and are not account-level failures."
         + (f" {queued_attempts} queued reinspection attempts made." if queued_attempts else "") + "</p>"
         if empty_scan_pending else ""
     )
