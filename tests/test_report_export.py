@@ -254,8 +254,7 @@ class CopyableReportTests(unittest.TestCase):
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
         self.assertIn("1 Progression inspection(s) pending", report)
-        self.assertIn("Progression reinspection queue: 1 account(s) pending", report)
-        self.assertIn("Pending · blocked by overlay", report)
+        self.assertIn("Blocked by an on-screen popup or overlay", report)
         self.assertIn("all 4/4 safe inspection slots", report)
         self.assertIn("manual attention", report)
         self.assertNotIn("unknown_fullscreen_overlay_blocks_page", report)
@@ -280,9 +279,9 @@ class CopyableReportTests(unittest.TestCase):
         summary["player_results"] = [deferred]
         report = build_copyable_report(summary)
         self.assertIn(">ATTENTION REQUIRED</span>", report)
-        self.assertIn("Pending · empty scan", report)
-        self.assertIn("An empty scan is not proof", report)
-        self.assertIn("4/4 safe inspection slots", report)
+        self.assertIn("Progression reinspection queue: 1 account(s) pending", report)
+        self.assertNotIn("Pending Player", report)
+        self.assertNotIn("An empty scan is not proof", report)
 
     def test_generic_claim_exception_remains_visible_with_deferred_progression(self):
         deferred = dict(self.summary["player_results"][0])
@@ -509,9 +508,9 @@ class CopyableReportTests(unittest.TestCase):
             "configured_player_count": 36,
             "totals": {"all_claims_this_run": 0},
         })
-        self.assertIn("Daily</span><strong>Not checked", report)
-        self.assertIn("Standard Store</span><strong>Not checked", report)
-        self.assertNotIn("Daily</span><strong>0</strong>", report)
+        self.assertIn("<strong>Daily</strong><span>Not checked", report)
+        self.assertIn("<strong>Standard Store</strong><span>Not checked", report)
+        self.assertNotIn("<strong>Daily</strong><span>0</span>", report)
 
     def test_identical_accounts_are_grouped_and_ids_remain_masked(self):
         players = [
