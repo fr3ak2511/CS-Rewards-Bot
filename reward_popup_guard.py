@@ -83,9 +83,7 @@ for (const heading of headings) {
           || /(^|[\s_-])(button-close|modal-close|dialog-close)([\s_-]|$)/i.test(String(button.className || ''));
         const svg = button.querySelector('svg');
         const svgCross = !!(svg && svg.querySelectorAll('line,path').length >= 2
-          && /(^|[ML])\s*[\d.]+[\s,]+[\d.]+.*[ML]\s*[\d.]+[\s,]+[\d.]+/i.test(
-            Array.from(svg.querySelectorAll('path')).map(path => path.getAttribute('d') || '').join(' ')
-          ));
+          && (svg.querySelectorAll('line').length >= 2 || svg.querySelectorAll('path').length >= 2));
         if (!explicitClose && !svgCross) return false;
         const hit = document.elementFromPoint(cx, cy);
         return !!(hit && (hit === button || button.contains(hit)));
