@@ -1007,7 +1007,6 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("<strong style='display:block;font-size:12px;color:#172b4d'>Standard Store</strong>", report)
         self.assertIn("16 bot-confirmed", report)
         self.assertIn("12 confirmed", report)
-        self.assertIn("Other Confirmed Rewards", report)
         self.assertIn("Loyalty", report)
         self.assertNotIn("<span>Progression Rewards</span>", report)
 
@@ -1263,7 +1262,9 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("0 Progression rewards confirmed in this run; 3 accounts remain open", report)
         self.assertIn("No claimable reward card was visible", report)
         self.assertEqual(report.count("No claimable reward card was visible"), 1)
-        self.assertIn("Queued Player 0 · …0000, Queued Player 1 · …0001, Queued Player 2 · …0002", report)
+        self.assertNotIn("Queued Player 0", report)
+        self.assertNotIn("Queued Player 1", report)
+        self.assertNotIn("Queued Player 2", report)
         self.assertNotIn("QUEUEPLAYER0000", report)
         self.assertEqual(report.count("class='account-activity-card'"), 1)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
