@@ -994,6 +994,8 @@ def render_account_activity_section(records: Any) -> str:
 
         if "pending" in _text(row.get("events")).casefold():
             actionable["Event rewards"].append(account + " — " + _text(row.get("events")))
+        if _text(row.get("recovery")):
+            actionable["Run / recovery"].append(account + " — " + _text(row.get("recovery")))
 
         has_category_attention = any(
             isinstance(row.get(k), dict) and row[k].get("attention_required")
@@ -1023,22 +1025,20 @@ def render_account_activity_section(records: Any) -> str:
     balance_summary = (
         "<div class='progression-balance-summary' style='margin-top:10px;padding:9px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11px'>"
         "<strong>Progression Program — Grenade Balance Check</strong><p style='margin:4px 0 0;color:#475569'>"
-        + (
-            f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
-            f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
-            f"{fresh_balance_passed} fresh validation(s) passed"
-            + (f" · {balance_above} above date minimum" if balance_above else "")
-            + (f" · {balance_below} below minimum / regressed" if balance_below else "")
-            + (f" · {balance_pending_baseline} pending baseline" if balance_pending_baseline else "")
-            + (f" · {balance_not_validated} not validated" if balance_not_validated else "")
-            if balance_rows else "Grenade balance not checked in this run."
-        )
+        + f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
+          f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
+          f"{fresh_balance_passed} fresh validation(s) passed"
+          + (f" · {balance_above} above date minimum" if balance_above else "")
+          + (f" · {balance_below} below minimum / regressed" if balance_below else "")
+          + (f" · {balance_pending_baseline} pending baseline" if balance_pending_baseline else "")
+          + (f" · {balance_not_validated} not validated" if balance_not_validated else "")
         + "</p></div>"
+        if balance_rows else ""
     )
     queue_note = (
         f"<p class='queue-note' style='font-size:11px;color:#64748b'>Progression reinspection queue: {empty_scan_pending} account(s) pending "
         "after a valid empty scan. These remain queued for a later safe pass; no account-level failure is inferred."
-        + (f" {queued_attempts} inspection attempts recorded." if queued_attempts else "") + "</p>"
+        + (f" {queued_attempts} queued reinspection attempts made." if queued_attempts else "") + "</p>"
         if empty_scan_pending else ""
     )
     already_claimed = (
