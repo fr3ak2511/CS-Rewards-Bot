@@ -695,7 +695,10 @@ def _category_summary(records: list[dict[str, Any]], key: str) -> str:
         return "Not checked"
     bot_count = sum(
         _integer(value.get("count")) for value in values
-        if isinstance(value, dict) and value.get("state") in {"claimed_by_bot", "retry_queued", "confirmed"}
+        if isinstance(value, dict) and (
+            value.get("state") in {"claimed_by_bot", "retry_queued", "confirmed"}
+            or (key == "progression" and value.get("state") in {"pending", "blocked", "claim_unconfirmed"})
+        )
     )
     portal_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "portal_claimed")
     retry_count = sum(1 for value in values if isinstance(value, dict) and value.get("state") == "retry_queued")
