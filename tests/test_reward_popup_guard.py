@@ -40,9 +40,11 @@ class LayerDriver:
         dialog_text=None, action_text="Buy now", extra_action=False,
         residual_success_inspections=0,
         transition_residue_inspections=0,
-        close_validation_reason=None,
+        close_validation_reason=None, promotional_overlay=False,
     ):
-        self.overlay_only = overlay_only
+        self.overlay_only = overlay_only or promotional_overlay
+        self.promotional_overlay = promotional_overlay
+        self.promotion_button = None
         self.dialogs = []
         self.purchase_buttons = []
         self.close_buttons = []
@@ -54,6 +56,11 @@ class LayerDriver:
         self.transition_residue_inspections = transition_residue_inspections
         self.transition_residue = None
         self.close_validation_reason = close_validation_reason
+        if promotional_overlay:
+            self.promotion_button = Element(
+                "", {"type": "button", "aria-label": "Close dialog", "class": "promotion-close"},
+                click_action=lambda: setattr(self, "overlay_only", False),
+            )
         for i in range(layers):
             description = dialog_text if dialog_text is not None else f"Promotional offer layer {i+1}"
             dialog = Element(
@@ -125,6 +132,10 @@ class LayerDriver:
         return []
 
     def execute_script(self, script, *args):
+        if "REWARD_PROMOTIONAL_UPSELL_CLOSE_CANDIDATE_V1" in script:
+            if self.promotional_overlay and self.promotion_button is not None:
+                return {"ok": True, "button": self.promotion_button}
+            return {"ok": False, "reason": "promotion_close_not_found", "count": 0}
         if "REWARD_POPUP_LAYER_INSPECT_V1" in script:
             if self.transition_residue is not None and self.transition_residue_inspections > 0:
                 self.transition_residue_inspections -= 1
@@ -498,6 +509,42 @@ class RewardPopupGuardTests(unittest.TestCase):
         self.assertIn("no_verified_blank_backdrop", reason)
         self.assertEqual(driver.close_count, 0)
         self.assertFalse(any(button.clicked for button in driver.purchase_buttons))
+
+    def test_dismisses_exact_known_promotional_upsell_without_dialog_root(self):
+        driver = LayerDriver(layers=0, promotional_overlay=True)
+        log = []
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=log.append, timeout=0.2, poll_interval=0.05
+        )
+
+        self.assertTrue(ok, reason)
+        self.assertTrue(driver.promotion_button.clicked)
+        self.assertFalse(driver.overlay_only)
+        self.assertIn("known promotional upsell", " ".join(log).lower())
+
+    def test_unknown_fullscreen_overlay_does_not_use_promotion_close_handler(self):
+        driver = LayerDriver(layers=0, overlay_only=True)
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2, poll_interval=0.05
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("promotion_close_not_found", reason)
+        self.assertFalse(driver.close_count)
+
+    def test_promotion_close_failure_keeps_fullscreen_overlay_blocked(self):
+        driver = LayerDriver(layers=0, promotional_overlay=True)
+        driver.promotion_button.click_action = lambda: None
+
+        ok, reason = dismiss_all_safe_popups(
+            driver, log=lambda _m: None, timeout=0.2, poll_interval=0.05
+        )
+
+        self.assertFalse(ok)
+        self.assertIn("promotion_overlay_persisted_after_close", reason)
+        self.assertTrue(driver.overlay_only)
 
     def test_fullscreen_overlay_without_dialog_fails_closed_with_blocker_geometry(self):
         driver = LayerDriver(layers=0, overlay_only=True)
