@@ -920,6 +920,28 @@ def _dismiss_known_promotional_upsell(
     return False, "known_promotion_overlay_persisted_after_close"
 
 
+
+def dismiss_known_promotional_upsell_only(
+    driver, *, timeout: float = 2.5, poll_interval: float = 0.15
+) -> tuple[bool, str]:
+    """Dismiss only the exact known marketing overlay; never touch other dialogs."""
+    timeout = max(0.2, min(8.0, float(timeout)))
+    poll_interval = max(0.05, min(0.5, float(poll_interval)))
+    try:
+        state = _inspect(driver)
+    except Exception as exc:
+        return False, f"promotion_only_inspection_failed:{type(exc).__name__}"
+
+    if int(state.get("dialogCount", 0) or 0) != 0:
+        return False, "promotion_handler_requires_no_dialog"
+    if int(state.get("fullscreenOverlayCount", 0) or 0) == 0:
+        return True, "no_fullscreen_promotion_overlay"
+
+    return _dismiss_known_promotional_upsell(
+        driver, state=state, timeout=timeout, poll_interval=poll_interval
+    )
+
+
 def dismiss_all_safe_popups(
     driver,
     *,
