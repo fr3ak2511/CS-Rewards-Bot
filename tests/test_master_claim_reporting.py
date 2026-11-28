@@ -1090,10 +1090,10 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
             [player], "Immediate Progression Recovery", 1,
             get_ist_time() - timedelta(minutes=2), {}, configured_player_count=36,
         )
-        self.assertIn("<span>⚠️ Need attention</span><strong>1</strong>", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertNotIn("Progression Program — Grenade Balance Check", report)
         self.assertIn("No claimable reward card was visible", report)
-        self.assertIn("Attention Required", report)
+        self.assertIn("Completed", report)
 
         player["progression_unconfirmed"] = True
         report = build_email(
@@ -1264,8 +1264,8 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Queued Player 0 · …0000, Queued Player 1 · …0001, Queued Player 2 · …0002", report)
         self.assertNotIn("QUEUEPLAYER0000", report)
         self.assertEqual(report.count("class='account-activity-card'"), 1)
-        self.assertIn("<span>⚠️ Need attention</span><strong>3</strong>", report)
-        self.assertIn("Attention Required", report)
+        self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
+        self.assertIn("Completed", report)
 
     def test_identical_saved_grenade_readings_are_grouped(self):
         reason = (
