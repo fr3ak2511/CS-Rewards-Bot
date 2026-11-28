@@ -967,7 +967,11 @@ def render_account_activity_section(records: Any) -> str:
         pp = row.get("progression") if isinstance(row.get("progression"), dict) else {}
         if (
             pp.get("pending_inspection")
-            and _text(pp.get("outcome")) == "empty_scan"
+            and (
+                _text(pp.get("outcome")) == "empty_scan"
+                or _text(pp.get("label")) == "Pending · empty scan"
+                or "no claimable reward card visible" in _text(pp.get("detail")).casefold()
+            )
             and not pp.get("manual_attention_required")
             and not (
                 isinstance(pp.get("grenades"), dict)
@@ -1033,9 +1037,9 @@ def render_account_activity_section(records: Any) -> str:
         + f"{len(balance_rows)} balance observation(s) · {len(fresh_balance_rows)} fresh · "
           f"{len(balance_rows) - len(fresh_balance_rows)} carried forward · "
           f"{fresh_balance_passed} fresh validation(s) passed"
-          + (f" · {balance_above} above date minimum" if balance_above else "")
+          + (f" · {balance_above} Above date minimum" if balance_above else "")
           + (f" · {balance_below} below minimum / regressed" if balance_below else "")
-          + (f" · {balance_pending_baseline} pending baseline" if balance_pending_baseline else "")
+          + (f" · {balance_pending_baseline} Pending baseline" if balance_pending_baseline else "")
           + (f" · {balance_not_validated} not validated" if balance_not_validated else "")
         + "</p></div>"
         if balance_rows else ""
