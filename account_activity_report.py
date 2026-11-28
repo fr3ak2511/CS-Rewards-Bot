@@ -91,8 +91,15 @@ def _daily_activity(player: dict[str, Any]) -> dict[str, Any]:
     checked = _standard_rewards_checked(player)
     if not checked:
         count = 0
+        unconfirmed = False
 
-    if count:
+    if not checked:
+        state = "not_checked"
+        label = "Not checked"
+        detail = "Daily was outside this account's scope in this run."
+        action = ""
+        attention = False
+    elif count:
         state = "claimed_by_bot"
         label = "Claimed by bot"
         detail = f"{count} Daily reward{'s' if count != 1 else ''} confirmed by the portal after the bot action."
@@ -121,7 +128,7 @@ def _daily_activity(player: dict[str, Any]) -> dict[str, Any]:
         detail = "The portal state was available, but no confirmed claim is recorded."
         action = "Review the exact Daily outcome; do not count it as claimed."
         attention = True
-    elif portal == "not_checked" or not checked:
+    elif portal == "not_checked":
         state = "not_checked"
         label = "Not checked"
         detail = "Daily was outside this account's scope in this run."
@@ -172,8 +179,12 @@ def _store_activity(player: dict[str, Any]) -> dict[str, Any]:
     if not checked:
         count = 0
         unconfirmed = []
-
-    if count and unconfirmed:
+        state = "not_checked"
+        label = "Not checked"
+        detail = "Standard Store rewards were outside this account's scope in this run."
+        action = ""
+        attention = False
+    elif count and unconfirmed:
         item_note = (
             " · confirmed item(s) " + ", ".join(f"#{item}" for item in claimed_indices)
             if claimed_indices else ""
@@ -208,7 +219,7 @@ def _store_activity(player: dict[str, Any]) -> dict[str, Any]:
         detail = "The Store portal shows Claimed/cooldown; the portal does not identify the actor."
         action = "Do not credit these items as bot claims unless this run has matching claim-confirmation evidence."
         attention = False
-    elif not checked or any(item == "not_checked" for item in states):
+    elif any(item == "not_checked" for item in states):
         state = "not_checked"
         label = "Not checked"
         detail = "Standard Store rewards were outside this account's scope in this run."
