@@ -674,12 +674,12 @@ def _popup_context_diagnostics(driver) -> str:
     # Sanitize and cap once more in Python. Never include input values, HTML,
     # arbitrary attributes, or page-wide text in the diagnostic payload.
     def safe_text(value, limit):
-        value = re.sub(r"\\s+", " ", str(value or "")).strip()
-        value = re.sub(r"https?://\\S+", "[url-redacted]", value, flags=re.I)
-        value = re.sub(r"\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+        value = re.sub(r"\s+", " ", str(value or "")).strip()
+        value = re.sub(r"https?://\S+", "[url-redacted]", value, flags=re.I)
+        value = re.sub(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
                        "[email-redacted]", value, flags=re.I)
-        value = re.sub(r"\\b[0-9a-f]{16,}\\b", "[id-redacted]", value, flags=re.I)
-        value = re.sub(r"(?i)\\b(?:token|session|authorization|password|secret)=?\\s*[^\\s,;]+",
+        value = re.sub(r"\b[0-9a-f]{16,}\b", "[id-redacted]", value, flags=re.I)
+        value = re.sub(r"(?i)\b(?:token|session|authorization|password|secret)=?\s*[^\s,;]+",
                        "[credential-redacted]", value)
         return value[:limit]
 
