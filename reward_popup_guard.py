@@ -240,12 +240,45 @@ const dialogRoots = roots.slice(0, 2).map(inspectRoot);
 const overlaySelector = '[class*="overlay"], [class*="Overlay"], [class*="backdrop"], [class*="Backdrop"]';
 const overlays = Array.from(document.querySelectorAll(overlaySelector))
   .filter(visible).slice(0, 3).map(brief);
+const isFullscreenLayer = el => {
+  const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+  return r.width >= window.innerWidth * 0.8
+    && r.height >= window.innerHeight * 0.8
+    && (s.position === 'fixed' || (r.left <= 2 && r.top <= 2));
+};
+const fullscreenBlockers = Array.from(document.querySelectorAll(
+  'div,section,[class*="overlay" i],[class*="backdrop" i]'
+)).filter(visible).filter(isFullscreenLayer)
+  .sort((a,b) => {
+    const za = Number.parseInt(getComputedStyle(a).zIndex || '0', 10) || 0;
+    const zb = Number.parseInt(getComputedStyle(b).zIndex || '0', 10) || 0;
+    return zb - za;
+  }).slice(0, 4).map(root => {
+    const ancestors = [];
+    let node = root.parentElement;
+    for (let i = 0; node && i < 3; i++, node = node.parentElement)
+      ancestors.push(brief(node));
+    const directChildren = Array.from(root.children)
+      .filter(visible).slice(0, 8).map(brief);
+    const descendantControls = Array.from(root.querySelectorAll(candidateSelector))
+      .filter(visible).slice(0, 12).map(brief);
+    return {
+      root: brief(root),
+      ancestors,
+      directChildren,
+      descendantControls,
+      directChildCount: root.children.length,
+      descendantCount: root.querySelectorAll('*').length,
+      text: norm(root.innerText || root.textContent).slice(0, 240)
+    };
+  });
 return {
   url: location.href,
   viewport: { width: window.innerWidth, height: window.innerHeight },
   dialogRootCount: roots.length,
   dialogRoots,
-  visibleOverlays: overlays
+  visibleOverlays: overlays,
+  fullscreenBlockers
 };"""
 
 
@@ -640,12 +673,22 @@ def _popup_context_diagnostics(driver) -> str:
 
     # Sanitize and cap once more in Python. Never include input values, HTML,
     # arbitrary attributes, or page-wide text in the diagnostic payload.
+    def safe_text(value, limit):
+        value = re.sub(r"\\s+", " ", str(value or "")).strip()
+        value = re.sub(r"https?://\\S+", "[url-redacted]", value, flags=re.I)
+        value = re.sub(r"\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b",
+                       "[email-redacted]", value, flags=re.I)
+        value = re.sub(r"\\b[0-9a-f]{16,}\\b", "[id-redacted]", value, flags=re.I)
+        value = re.sub(r"(?i)\\b(?:token|session|authorization|password|secret)=?\\s*[^\\s,;]+",
+                       "[credential-redacted]", value)
+        return value[:limit]
+
     def safe_element(element):
         if not isinstance(element, dict):
             return {}
         rect = element.get("rect") if isinstance(element.get("rect"), dict) else {}
         return {
-            key: str(element.get(key) or "")[:limit]
+            key: safe_text(element.get(key), limit)
             for key, limit in (
                 ("tag", 16), ("role", 32), ("aria", 72), ("title", 72),
                 ("testid", 72), ("dataState", 40), ("dataSlot", 40),
@@ -675,6 +718,19 @@ def _popup_context_diagnostics(driver) -> str:
         })
 
     overlays = [safe_element(x) for x in (context.get("visibleOverlays") or [])[:3]]
+    fullscreen_blockers = []
+    for item in (context.get("fullscreenBlockers") or [])[:4]:
+        if not isinstance(item, dict):
+            continue
+        fullscreen_blockers.append({
+            "root": safe_element(item.get("root")),
+            "ancestors": [safe_element(x) for x in (item.get("ancestors") or [])[:3]],
+            "directChildren": [safe_element(x) for x in (item.get("directChildren") or [])[:8]],
+            "descendantControls": [safe_element(x) for x in (item.get("descendantControls") or [])[:12]],
+            "directChildCount": max(0, min(10000, int(item.get("directChildCount") or 0))),
+            "descendantCount": max(0, min(10000, int(item.get("descendantCount") or 0))),
+            "text": safe_text(item.get("text"), 240),
+        })
     viewport = context.get("viewport") if isinstance(context.get("viewport"), dict) else {}
     sanitized = {
         "url": str(context.get("url") or "")[:180],
@@ -685,6 +741,7 @@ def _popup_context_diagnostics(driver) -> str:
         "dialogRootCount": int(context.get("dialogRootCount") or 0),
         "dialogRoots": safe_roots,
         "visibleOverlays": overlays,
+        "fullscreenBlockers": fullscreen_blockers,
     }
     serialized = json.dumps(sanitized, ensure_ascii=True, separators=(",", ":"))
     if len(serialized) > 7000:
@@ -933,12 +990,21 @@ def dismiss_known_promotional_upsell_only(
         return False, f"promotion_only_inspection_failed:{type(exc).__name__}"
 
     if int(state.get("dialogCount", 0) or 0) != 0:
-        return False, "promotion_handler_requires_no_dialog"
+        return False, (
+            "promotion_handler_requires_no_dialog; "
+            + _popup_context_diagnostics(driver)
+        )
     if int(state.get("fullscreenOverlayCount", 0) or 0) == 0:
         return True, "no_fullscreen_promotion_overlay"
 
-    return _dismiss_known_promotional_upsell(
+    ok, reason = _dismiss_known_promotional_upsell(
         driver, state=state, timeout=timeout, poll_interval=poll_interval
+    )
+    if ok:
+        return True, reason
+    return False, (
+        f"{reason}; fullscreen_overlay_details={_fullscreen_overlay_diagnostics(state)}; "
+        + _popup_context_diagnostics(driver)
     )
 
 
