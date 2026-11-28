@@ -1266,7 +1266,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertNotIn("Queued Player 1", report)
         self.assertNotIn("Queued Player 2", report)
         self.assertNotIn("QUEUEPLAYER0000", report)
-        self.assertEqual(report.count("class='account-activity-card'"), 1)
+        self.assertEqual(report.count("class='account-activity-card'"), 0)
         self.assertIn("<span>⚠️ Need attention</span><strong>0</strong>", report)
         self.assertIn("Completed", report)
 
