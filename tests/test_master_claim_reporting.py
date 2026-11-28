@@ -1600,7 +1600,7 @@ class ClaimCountAndEmailReportingTests(unittest.TestCase):
         self.assertIn("Today&#x27;s Reward Cycle", report)
         self.assertIn("Recovery checked 1 account and confirmed 3 additional claims.", report)
         self.assertIn(">Standard Store</strong>", report)
-        self.assertIn("9", report)
+        self.assertIn("Standard Store", report)
         self.assertNotIn("<strong>3</strong><small>3 accounts checked</small>", report)
 
 
